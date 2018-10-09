@@ -71,7 +71,7 @@ jobs:
           name: Save Gradle reports
           command: |
             mkdir -p /tmp/gradle_reports
-            for x in */build/reports/tests/test; do cp -a $x /tmp/gradle_reports/${x%%/*}; done
+            cp -a build/reports/tests/test /tmp/gradle_reports/
           when: always
 
       - store_artifacts:
