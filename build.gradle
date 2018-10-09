@@ -1,0 +1,37 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'jacoco'
+apply plugin: 'java-library-distribution'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
+    compile group: 'com.google.inject', name: 'guice', version: '4.2.0'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
+}
+
+test {
+    maxHeapSize "512m"
+    testLogging.showStandardStreams = true
+}
+
+javadoc {
+    options.addStringOption("notimestamp", "com.scalar")
+}
+
+task testJar(type: Jar) {
+  classifier = 'tests'
+  from sourceSets.test.output
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
