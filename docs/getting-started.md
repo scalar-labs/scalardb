@@ -1,7 +1,7 @@
 ## Getting Started with Scalar DB v1
 
 ## Overview
-Scalar DB v1 is a library that provides an distributed storage abstraction and client-coordinated distributed transaction on the storage.
+Scalar DB v1 is a library that provides a distributed storage abstraction and client-coordinated distributed transaction on the storage.
 This document briefly explains how you can get started with Scalar DB with a simple electronic money application.
 
 ## Install prerequisites
@@ -22,19 +22,19 @@ $ cd /path/to/scalardb
 $ ./gradlew installDist
 ```
 
-Let's move to the getting started directory if you don't want to copy-and-paste the following codes.
+Let's move to the getting started directory so that we do not have to copy-and-paste too much.
 ```
 $ cd docs/getting-started
 ```
 
 ## Set up database schema
 
-First of all, you need to define how a data is organized (a.k.a database schema) in an application.
-Currently you need to define it with storage implementation specific schema.
+First of all, you need to define how the data will be organized (a.k.a database schema) in the application.
+Currently you will need to define it with a storage implementation specific schema.
 For the mapping between Cassandra schema and Scalar DB schema, please take a look at [this document](schema.md).
-NOTICE: We are planning to have Scalar DB specific schema definition and schema loader.
+NOTICE: We are planning to have a Scalar DB specific schema definition and schema loader.
 
-In this document, let's use the following Cassandra schema.
+The following ([`emoney-storage.cql`](getting-started/emoney-storage.cql)) specifies a Cassandra schema.
 
 ```sql:emoney-storage.cql
 DROP KEYSPACE IF EXISTS emoney;
@@ -49,16 +49,16 @@ CREATE TABLE emoney.account (
 );
 ```
 
-Now, you can load the schema to Cassandra with the following command.
+This schema may be loaded into Cassandra with the following command.
 ```
 $ cqlsh -f emoney-storage.cql
 ```
 
 ## Store & retrieve data with storage service
 
-Here is a simple electronic money application with storage service.
-(Be careful that it's simplified for ease of reading and far from practical and production-ready.)
-You can find the full source code at [here](./getting-started).
+[`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
+is a simple electronic money application with storage service.
+(Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
 
 ```java:ElectronicMoneyWithStorage.java
 public class ElectronicMoneyWithStorage extends ElectronicMoney {
@@ -120,18 +120,18 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 }
 ```
 
-LET's run the application.
+Now let's run the application.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
-$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1" 
+$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
 ```
 
 ## Store & retrieve data with transaction service
 
-The previous application seems fine in normal cases, but it's problematic when some failure happens during the operation or when multiple operations occur at the same time because it is not transactional. 
-In other words, money transfer (pay) from `from account's balance` to `to account's balance` is not done atomically in the application, and there might be case where only `from accont's balance` is decreased if a failure happens right after the first `put` or some money will be lost.
+The previous application seems fine in ideal conditions, but it's problematic when some failure happens during the operation or when multiple operations occur at the same time because it is not transactional.
+For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
 
-With transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
+With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
 Before updating the code, we need to update the schema to make it transaction capable.
 
 ```sql:emoney-transaction.cql
@@ -165,10 +165,10 @@ CREATE TABLE IF NOT EXISTS coordinator.state (
   PRIMARY KEY (tx_id)
 );
 ```
-We don't go deeper here to explan what are those, but added definitions are metadata used by client-coordinated transaction of Scalar DB.
-For more detail, please take a look at [this document](schema.md).
+We will not go deeper into the details here, but the added definitions are metadata used by client-coordinated transactions of Scalar DB.
+For more explanation, please take a look at [this document](schema.md).
 
-After re-applying the schema, we can update the code like the following to make it transactional.
+After reapplying the schema, we can update the code as follows to make it transactional.
 ```java:ElectronicMoneyWithTransaction.java
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   private final TransactionService service;
