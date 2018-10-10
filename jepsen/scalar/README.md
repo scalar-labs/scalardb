@@ -66,9 +66,3 @@ lein test :only scalar.transfer-test/transfer-bridge
 ```
 
   - You can find the list of tests in `/jepsen/scalar/test/scalar/transfer_test.clj`
-
-## License
-
-WIP
-
-Copyright © 2018 Scalar, Inc
