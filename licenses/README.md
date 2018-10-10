@@ -1,4 +1,4 @@
-This product uses open source software licensed under the followings.
+This product uses the following open source software.
 
 |Name  |License  |Copyright|Link |
 |---|---|---|---|
