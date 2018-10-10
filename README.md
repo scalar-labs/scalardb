@@ -7,7 +7,7 @@ A library that provides an distributed storage abstraction and client-coordinate
 # Docs
 * [Getting started](docs/getting-started.md)
 * [Design document](docs/design.md)
-* Javadoc
+* [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * Sample applications by 3rd party developers (coming soon)
 
 # Contributing 
