@@ -19,7 +19,7 @@ From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in
 For building Scalar DB, what you need to do to is pretty simple as follows.
 ```
 $ cd /path/to/scalardb
-$ ./gradle installDist
+$ ./gradlew installDist
 ```
 
 Let's move to the getting started directory so that we do not have to copy-and-paste too much.
@@ -122,8 +122,8 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 
 Now let's run the application.
 ```
-$ ../../gradle run --args="-mode storage -action charge -amount 1000 -to user1"
-$ ../../gradle run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
+$ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
+$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
 ```
 
 ## Store & retrieve data with transaction service
@@ -165,8 +165,8 @@ CREATE TABLE IF NOT EXISTS coordinator.state (
   PRIMARY KEY (tx_id)
 );
 ```
-We do not go deeper here to explain in detail, but the added definitions are metadata used by client-coordinated transactions of Scalar DB.
-For more details, please take a look at [this document](schema.md).
+We will not go deeper into the details here, but the added definitions are metadata used by client-coordinated transactions of Scalar DB.
+For more explanation, please take a look at [this document](schema.md).
 
 After reapplying the schema, we can update the code as follows to make it transactional.
 ```java:ElectronicMoneyWithTransaction.java
