@@ -9,8 +9,8 @@ repositories {
 mainClassName = "sample.ElectronicMoneyMain"
 
 dependencies {
-    compile fileTree(dir: '../../build/install/database', include: '*.jar')
-    compile fileTree(dir: '../../build/install/database/lib', include: '*.jar')
+    compile fileTree(dir: '../../build/install/scalardb', include: '*.jar')
+    compile fileTree(dir: '../../build/install/scalardb/lib', include: '*.jar')
 }
 
 sourceCompatibility = 1.8 
