@@ -4,17 +4,27 @@
 Scalar DB v1 is a library that provides an distributed storage abstraction and client-coordinated distributed transaction on the storage.
 This document briefly explains how you can get started with Scalar DB with a simple electronic money application.
 
-## Build & install
+## Install prerequisites
 
-The current version of Scalar DB v1 uses [Casssandra](http://cassandra.apache.org/) as an underlining storage implementation,
-so please take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
-From here, we assume Cassandra 3.11.x (the current stable version as of writing) is properly installed in your local environment.
+Scalar DB v1 is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
+* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
+* [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
+** Take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
+* Other libraries are automatically installed through gradle
 
+From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment.
+
+# Build
 
 For building Scalar DB, what you need to do to is pretty simple as follows.
 ```
 $ cd /path/to/scalardb
 $ ./gradlew installDist
+```
+
+Let's move to the getting started directory if you don't want to copy-and-paste the following codes.
+```
+$ cd docs/getting-started
 ```
 
 ## Set up database schema
@@ -112,8 +122,8 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 
 LET's run the application.
 ```
-$ gradle run --args="-mode storage -action charge -amount 1000 -to user1"
-$ gradle run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1" 
+$ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
+$ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1" 
 ```
 
 ## Store & retrieve data with transaction service
