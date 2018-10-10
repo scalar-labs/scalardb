@@ -247,6 +247,13 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
 As you can see, it's not very different from the code with `StorageService`.
 This code instead uses `TransactionService` and all the CRUD operations are done through the `DistributedTransaction` object returned from `TransactionService.start()`.
 
+Now let's run the application with transaction mode.
+```
+$ ../../gradlew run --args="-mode transaction -action charge -amount 1000 -to user1"
+$ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merchant1"
+$ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
+```
+
 ## Further documentation
 
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
