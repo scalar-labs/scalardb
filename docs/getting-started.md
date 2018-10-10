@@ -1,4 +1,4 @@
-# Getting Started with Scalar DB v1
+## Getting Started with Scalar DB v1
 
 ## Overview
 Scalar DB v1 is a library that provides an distributed storage abstraction and client-coordinated distributed transaction on the storage.
@@ -14,7 +14,7 @@ Scalar DB v1 is written in Java and uses Cassandra as an underlining storage imp
 
 From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment.
 
-# Build
+## Build
 
 For building Scalar DB, what you need to do to is pretty simple as follows.
 ```

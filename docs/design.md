@@ -1,4 +1,4 @@
-# Scalar DB v1 design document
+## Scalar DB v1 design document
 
 ## Introduction
 
