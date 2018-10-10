@@ -1,0 +1,9 @@
+com.scalar.database
+com.scalar.database.api
+com.scalar.database.config
+com.scalar.database.exception.storage
+com.scalar.database.exception.transaction
+com.scalar.database.io
+com.scalar.database.service
+com.scalar.database.storage.cassandra
+com.scalar.database.transaction.consensuscommit
