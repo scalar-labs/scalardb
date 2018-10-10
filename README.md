@@ -13,7 +13,7 @@ A library that provides an distributed storage abstraction and client-coordinate
 # Contributing 
 This library is mainly maintained Scalar Engineering Team, but we appreciate your help.
 
-* For asking questions, finding answers and helping other users, see public mailing list, scalardb-user@googlegroups.com (coming soon).
+* For asking questions, finding answers and helping other users, see public mailing list scalardb-user@googlegroups.com or go to https://groups.google.com/forum/#!forum/scalardb-user .
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 # License
