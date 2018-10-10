@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-A library that provides an distributed storage abstraction and client-coordinated distributed transaction on the storage, and makes non-ACID distributed database/storage ACID-compliant.
+A library that provides a distributed storage abstraction and client-coordinated distributed transaction on the storage, and makes non-ACID distributed database/storage ACID-compliant.
 
 ## Docs
 * [Getting started](docs/getting-started.md)
@@ -11,9 +11,9 @@ A library that provides an distributed storage abstraction and client-coordinate
 * Sample applications by 3rd party developers (coming soon)
 
 ## Contributing 
-This library is mainly maintained Scalar Engineering Team, but we appreciate your help.
+This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
-* For asking questions, finding answers and helping other users, see public mailing list scalardb-user@googlegroups.com or go to https://groups.google.com/forum/#!forum/scalardb-user .
+* For asking questions, finding answers and helping other users, please use the public mailing list scalardb-user@googlegroups.com or go to https://groups.google.com/forum/#!forum/scalardb-user.
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 ## License
