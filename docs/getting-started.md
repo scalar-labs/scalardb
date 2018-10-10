@@ -20,6 +20,7 @@ For building Scalar DB, what you need to do to is pretty simple as follows.
 ```
 $ cd /path/to/scalardb
 $ ./gradlew installDist
+$ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
 ```
 
 Let's move to the getting started directory so that we do not have to copy-and-paste too much.
