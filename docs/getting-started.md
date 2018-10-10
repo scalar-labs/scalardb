@@ -14,19 +14,22 @@ From here, we assume Cassandra 3.11.x (the current stable version as of writing)
 For building Scalar DB, what you need to do to is pretty simple as follows.
 ```
 $ cd /path/to/scalardb
-$ gradle installDist
+$ ./gradlew installDist
 ```
 
 ## Set up database schema
 
 First of all, you need to define how a data is organized (a.k.a database schema) in an application.
 Currently you need to define it with storage implementation specific schema.
-For the mapping between Cassandra schema and Scalar DB schema, please take a look at the [design document](/docs/design.md).
+For the mapping between Cassandra schema and Scalar DB schema, please take a look at [this document](schema.md).
 NOTICE: We are planning to have Scalar DB specific schema definition and schema loader.
 
 In this document, let's use the following Cassandra schema.
 
-```
+```sql:emoney-storage.cql
+DROP KEYSPACE IF EXISTS emoney;
+DROP KEYSPACE IF EXISTS coordinator;
+
 CREATE KEYSPACE emoney WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
 CREATE TABLE emoney.account (
@@ -38,12 +41,13 @@ CREATE TABLE emoney.account (
 
 Now, you can load the schema to Cassandra with the following command.
 ```
-$ cqlsh -f emoney.cql
+$ cqlsh -f emoney-storage.cql
 ```
 
 ## Store & retrieve data with storage service
 
 Here is a simple electronic money application with storage service.
+(Be careful that it's simplified for ease of reading and far from practical and production-ready.)
 You can find the full source code at [here](./getting-started).
 
 ```java:ElectronicMoneyWithStorage.java
@@ -114,32 +118,33 @@ $ gradle run --args="-mode storage -action pay -amount 100 -to merchant1 -from u
 
 ## Store & retrieve data with transaction service
 
-The previous application seems fine in normal cases, but it's problematic when some failure happens during the operation or when multiple operations occured at the same time because it is not transactional. 
+The previous application seems fine in normal cases, but it's problematic when some failure happens during the operation or when multiple operations occur at the same time because it is not transactional. 
 In other words, money transfer (pay) from `from account's balance` to `to account's balance` is not done atomically in the application, and there might be case where only `from accont's balance` is decreased if a failure happens right after the first `put` or some money will be lost.
 
 With transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
 Before updating the code, we need to update the schema to make it transaction capable.
 
-```
-DROP KEYSPACE emoney;
-DROP KEYSPACE coordinator;
+```sql:emoney-transaction.cql
+DROP KEYSPACE IF EXISTS emoney;
+DROP KEYSPACE IF EXISTS coordinator;
+
 CREATE KEYSPACE emoney WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
 CREATE KEYSPACE coordinator WITH replication = {'class': 'SimpleStrategy','replication_factor': 1 };
 
 CREATE TABLE emoney.account (
   id TEXT,
   balance INT,
-  before_balance INT,
-  before_tx_committed_at BIGINT,
-  before_tx_id TEXT,
-  before_tx_prepared_at BIGINT,
-  before_tx_state INT,
-  before_tx_version INT,
-  tx_committed_at BIGINT,
   tx_id TEXT,
   tx_prepared_at BIGINT,
+  tx_committed_at BIGINT,
   tx_state INT,
   tx_version INT,
+  before_balance INT,
+  before_tx_id TEXT,
+  before_tx_prepared_at BIGINT,
+  before_tx_committed_at BIGINT,
+  before_tx_state INT,
+  before_tx_version INT,
   PRIMARY KEY (id)
 );
 
