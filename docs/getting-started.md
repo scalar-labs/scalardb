@@ -6,9 +6,9 @@ This document briefly explains how you can get started with Scalar DB with a sim
 
 ## Build & install
 
-The current version of Scalar DB v1 uses [Casssandra]() as an underlining storage implementation,
-so please take a look at [the document]() for how to set up Cassandra.
-From here, we assume Cassandra is properly installed in your local environment.
+The current version of Scalar DB v1 uses [Casssandra](http://cassandra.apache.org/) as an underlining storage implementation,
+so please take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
+From here, we assume Cassandra 3.11.x (the current stable version as of writing) is properly installed in your local environment.
 
 
 For building Scalar DB, what you need to do to is pretty simple as follows.
@@ -21,7 +21,7 @@ $ gradle installDist
 
 First of all, you need to define how a data is organized (a.k.a database schema) in an application.
 Currently you need to define it with storage implementation specific schema.
-For the mapping between Cassandra schema and Scalar DB schema, please take a look at the [design document]().
+For the mapping between Cassandra schema and Scalar DB schema, please take a look at the [design document](/docs/design.md).
 NOTICE: We are planning to have Scalar DB specific schema definition and schema loader.
 
 In this document, let's use the following Cassandra schema.
@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS coordinator.state (
 );
 ```
 We don't go deeper here to explan what are those, but added definitions are metadata used by client-coordinated transaction of Scalar DB.
+For more detail, please take a look at [this document](schema.md).
 
 After re-applying the schema, we can update the code like the following to make it transactional.
 ```java:ElectronicMoneyWithTransaction.java
@@ -234,4 +235,4 @@ This code instead uses `TransactionService` and all the CRUD operations are done
 
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
 * [Design Document](/docs/design.md)
-* Javadoc
+* [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
