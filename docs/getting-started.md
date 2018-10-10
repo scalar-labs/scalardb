@@ -9,7 +9,7 @@ This document briefly explains how you can get started with Scalar DB with a sim
 Scalar DB v1 is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
-** Take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
+    * Take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
 * Other libraries are automatically installed through gradle
 
 From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment.
