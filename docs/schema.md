@@ -60,7 +60,7 @@ The rule behind it is as follows.
 * add `tx_id`, `tx_prepared_at`, `tx_committed_at`, `tx_state`, `tx_version` as metadata for the current record
 * add `before_` prefixed values for each existing value except for primary keys (partition keys and clustering keys) for managing before image
 
-Additionally, we a need state table for managing transaction states as follows.
+Additionally, we need a state table for managing transaction states as follows.
 
 ```sql
 CREATE TABLE IF NOT EXISTS coordinator.state (

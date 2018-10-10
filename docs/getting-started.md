@@ -34,7 +34,7 @@ Currently you will need to define it with a storage implementation specific sche
 For the mapping between Cassandra schema and Scalar DB schema, please take a look at [this document](schema.md).
 NOTICE: We are planning to have a Scalar DB specific schema definition and schema loader.
 
-The following document ([`emoney-storage.cql`](getting-started/emoney-storage.cql)) specifies a Cassandra schema.
+The following ([`emoney-storage.cql`](getting-started/emoney-storage.cql)) specifies a Cassandra schema.
 
 ```sql:emoney-storage.cql
 DROP KEYSPACE IF EXISTS emoney;
