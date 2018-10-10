@@ -123,6 +123,7 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 Now let's run the application.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
+$ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
 $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
 ```
 
