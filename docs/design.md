@@ -60,7 +60,7 @@ Please see the javadoc for more details and usage.
 ## Future Work
 
 * Support Hbase for another storage implementation for more performance.
-* Utilize deterministic nature of Scalar DL (ledger middleware used for storing ledger information with Scalar DB) to avoid heavy-write global consensus for linearizability and serializablity.
+* Utilize deterministic nature of Scalar DL (ledger middleware used for storing ledger information with Scalar DB) to avoid heavy-weight global consensus for linearizability and serializablity.
 
 ## References
 
