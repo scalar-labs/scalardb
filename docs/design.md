@@ -22,12 +22,14 @@ The primary design goals of Scalar DB v1 are high availability, horizontal scala
 
 ## Data Model
 
-<p align="center">
-<img src="./images/data_model.png" width="480" />
-</p>
 The data model of Scalar DB v1 is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of values. The value is uniquely mapped by a primary key composed of partition-key, clustering-key and value-name as described in the following scheme.
 
 (partition-key, clustering-key, value-name) -> value-content
+
+
+<p align="center">
+<img src="./images/data_model.png" width="480" />
+</p>
 
 ### Physical Data Model
 
