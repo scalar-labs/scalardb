@@ -16,6 +16,10 @@ The primary design goals of Scalar DB v1 are high availability, horizontal scala
 
 ## High-level Architecture
 
+Scalar DB is composed of distributed storage abstraction layer and client-coordinated distributed transaction manager.
+Distributed storage abstraction has storage implementation specific adapters such as Cassandra adapter.
+Another storage implementation can be added by creating an adapter which follows the abstraction interface.
+
 <p align="center">
 <img src="./images/software_stack.png" width="440" />
 </p>
