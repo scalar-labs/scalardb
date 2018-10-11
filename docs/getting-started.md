@@ -9,21 +9,21 @@ This document briefly explains how you can get started with Scalar DB with a sim
 Scalar DB v1 is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
-    * Take a look at [the document](http://cassandra.apache.org/download/) for how to set up Cassandra.
+    * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
 * Other libraries are automatically installed through gradle
 
 From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment.
 
 ## Build
 
-For building Scalar DB, what you need to do to is pretty simple as follows.
+For building Scalar DB, what you will need to do is as follows.
 ```
 $ cd /path/to/scalardb
 $ ./gradlew installDist
 $ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
 ```
 
-Let's move to the getting started directory so that we do not have to copy-and-paste too much.
+Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
 ```
 $ cd docs/getting-started
 ```
@@ -121,7 +121,7 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 }
 ```
 
-Now let's run the application.
+Now we can run the application.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
 $ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
@@ -130,7 +130,7 @@ $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 
 
 ## Store & retrieve data with transaction service
 
-The previous application seems fine in ideal conditions, but it's problematic when some failure happens during the operation or when multiple operations occur at the same time because it is not transactional.
+The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
 For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
 
 With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
