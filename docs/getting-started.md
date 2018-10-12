@@ -10,17 +10,25 @@ Scalar DB v1 is written in Java and uses Cassandra as an underlining storage imp
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
-* Other libraries are automatically installed through gradle
+* Other libraries used from the above are automatically installed through gradle
 
-From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment.
+In addition to the above, the following software is needed to use scheme tools.
+* make
+* [Golang](https://golang.org/)
+
+From here, we assume Oracle JDK 8, Cassandra 3.11.x, make and Golang are properly installed in your local environment.
 
 ## Build
 
 For building Scalar DB, what you will need to do is as follows.
 ```
-$ cd /path/to/scalardb
+$ SCALARDB_HOME=/path/to/scalardb
+$ cd $SCALARDB_HOME
 $ ./gradlew installDist
 $ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
+$ cd tools/schema
+$ make
+$ cd -
 ```
 
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
@@ -30,29 +38,23 @@ $ cd docs/getting-started
 
 ## Set up database schema
 
-First of all, you need to define how the data will be organized (a.k.a database schema) in the application.
-Currently you will need to define it with a storage implementation specific schema.
-For the mapping between Cassandra schema and Scalar DB schema, please take a look at [this document](schema.md).
-NOTICE: We are planning to have a Scalar DB specific schema definition and schema loader.
+First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
+Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
-The following ([`emoney-storage.cql`](getting-started/emoney-storage.cql)) specifies a Cassandra schema.
+```sql:emoney-storage.sdbql
+REPLICATION 1
 
-```sql:emoney-storage.cql
-DROP KEYSPACE IF EXISTS emoney;
-DROP KEYSPACE IF EXISTS coordinator;
-
-CREATE KEYSPACE emoney WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE NAMESPACE emoney
 
 CREATE TABLE emoney.account (
-  id TEXT,
-  balance INT,
-  PRIMARY KEY (id)
+  id TEXT PARTITIONKEY
+  balance INT
 );
 ```
 
-This schema may be loaded into Cassandra with the following command.
+To load the schema file, please run the following command.
 ```
-$ cqlsh -f emoney-storage.cql
+$ $SCALARDB_HOME/tools/schema/loader emoney-storage.sdbql
 ```
 
 ## Store & retrieve data with storage service
@@ -134,43 +136,27 @@ The previous application seems fine under ideal conditions, but it is problemati
 For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
 
 With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
-Before updating the code, we need to update the schema to make it transaction capable.
+Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
 
-```sql:emoney-transaction.cql
-DROP KEYSPACE IF EXISTS emoney;
-DROP KEYSPACE IF EXISTS coordinator;
+```sql:emoney-transaction.sdbql
+REPLICATION 1
 
-CREATE KEYSPACE emoney WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};
-CREATE KEYSPACE coordinator WITH replication = {'class': 'SimpleStrategy','replication_factor': 1 };
+CREATE NAMESPACE emoney
 
-CREATE TABLE emoney.account (
-  id TEXT,
-  balance INT,
-  tx_id TEXT,
-  tx_prepared_at BIGINT,
-  tx_committed_at BIGINT,
-  tx_state INT,
-  tx_version INT,
-  before_balance INT,
-  before_tx_id TEXT,
-  before_tx_prepared_at BIGINT,
-  before_tx_committed_at BIGINT,
-  before_tx_state INT,
-  before_tx_version INT,
-  PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS coordinator.state (
-  tx_id text,
-  tx_state int,
-  tx_created_at bigint,
-  PRIMARY KEY (tx_id)
+CREATE TRANSACTION TABLE emoney.account (
+  id TEXT PARTITIONKEY
+  balance INT
 );
 ```
-We will not go deeper into the details here, but the added definitions are metadata used by client-coordinated transactions of Scalar DB.
-For more explanation, please take a look at [this document](schema.md).
 
-After reapplying the schema, we can update the code as follows to make it transactional.
+Before reapplying the schema, please drop the existing namespace first by issuing the following.
+(Sorry you need to issue implmentation specific commands to do this.)
+```
+$ cqlsh -e "drop keyspace emoney"
+$ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql
+```
+
+Now we can update the code as follows to make it transactional.
 ```java:ElectronicMoneyWithTransaction.java
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   private final TransactionService service;
@@ -260,3 +246,4 @@ $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to mercha
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
 * [Design Document](/docs/design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
+* [Database schema in Scalar DB](/tools/schema/README.md)
