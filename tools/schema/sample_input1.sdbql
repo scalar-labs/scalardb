@@ -1,0 +1,8 @@
+REPLICATION FACTOR 2;
+CREATE NAMESPACE foo;
+
+CREATE TRANSACTION TABLE foo.xxx (
+    column_a TEXT PARTITIONKEY,
+    column_b INT CLUSTERINGKEY,
+    column_c BLOB,
+);

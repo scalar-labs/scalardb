@@ -1,0 +1,27 @@
+REPLICATION FACTOR 2;
+
+CREATE NAMESPACE foo;
+
+CREATE TABLE foo.xxx (
+    column_a TEXT PARTITIONKEY,
+    column_b INT CLUSTERINGKEY,
+    column_c BLOB,
+);
+
+CREATE TRANSACTION TABLE foo.yyy (
+    column_d TEXT PARTITIONKEY,
+    column_e INT PARTITIONKEY,
+    column_f BLOB CLUSTERINGKEY,
+    column_g BLOB,
+);
+
+CREATE NAMESPACE bar;
+
+CREATE TABLE bar.zzz (
+    column_h TEXT PARTITIONKEY,
+);
+
+CREATE TABLE bar.yyy (
+    column_i TEXT PARTITIONKEY,
+    column_j INT,
+);
