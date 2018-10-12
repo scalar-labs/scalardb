@@ -39,7 +39,7 @@ The grammer for defining tables is as stated above.
 If you add `TRANSACTION` keyword, the table is treated as transaction capable, and addtional metadata and coordinator namespace are added.
 please see [this](/docs/schema.md) for more information about the metadata and the coordinator.
 
-## Install & Build
+### Install & Build
 
 Before installing, please install and setup [golang](https://golang.org/doc/install).
 Then, `make` will download the required packages and build generator and loader.
@@ -50,7 +50,7 @@ $ make
 ```
 
 
-## Use
+### Use
 
 After defining a schema, please run the command as follows. You don't need `--database` option as of writing since the only supported database is `cassandra`.
 
