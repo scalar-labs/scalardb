@@ -2,7 +2,7 @@
 
 This document briefly explains tools used to generate and load database schemas for Scalar DB.
 
-### Scalar DB schema generator and loader
+## Scalar DB schema generator and loader
 
 Scalar DB schema generator (tools/schema/generator) generates storage implementation specific schema definition and metadata definition for Scalar DB transaction
 as described [here](/docs/schema.md) for a given Scalar DB database schema.
@@ -10,7 +10,7 @@ Scalar DB schema loader (tools/schema/loader) uses the generator to get an imple
 
 With the above tools, you don't need to think about implmentation specific schemas when modeling data for your applications.
 
-### Scalar DB schema definition
+## Scalar DB schema definition
 
 Scalar DB schema is an abstract schema to define applications data with Scalar DB.
 Here is a spec of the definition.
@@ -39,7 +39,7 @@ The grammer for defining tables is as stated above.
 If you add `TRANSACTION` keyword, the table is treated as transaction capable, and addtional metadata and coordinator namespace are added.
 please see [this](/docs/schema.md) for more information about the metadata and the coordinator.
 
-### Install & Build
+## Install & Build
 
 Before installing, please install and setup [golang](https://golang.org/doc/install).
 Then, `make` will download the required packages and build generator and loader.
@@ -49,8 +49,7 @@ $ cd /path/to/scalardb/tools/schema
 $ make
 ```
 
-
-### Use
+## Use
 
 After defining a schema, please run the command as follows. You don't need `--database` option as of writing since the only supported database is `cassandra`.
 
