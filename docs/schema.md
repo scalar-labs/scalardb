@@ -74,6 +74,5 @@ CREATE TABLE IF NOT EXISTS coordinator.state (
 ## Schema generator and loader
 
 It is a little hard for application developers to care for the schema mapping and metadata for transactions,
-so we are preparing tools to generate implementation-specific schema and to load the schema.
-
-coming soon
+so we offer tools for generating and loading schema without much knowledge about imlementation schema and Scalar DB internal metadata.
+Please see [this](/tools/schema/README.md) for more details.
