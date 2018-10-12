@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -15,7 +16,11 @@ func main() {
 
 	if *database == "cassandra" {
 		outputFile := "./generated.cql"
-		output, err := exec.Command("./generator", "--database", *database, *inputFile, outputFile).CombinedOutput()
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		output, err := exec.Command(filepath.Dir(ex)+"/generator", "--database", *database, *inputFile, outputFile).CombinedOutput()
 		if err != nil {
 			fmt.Printf("schema generation failed: %s", output)
 			os.Exit(1)
