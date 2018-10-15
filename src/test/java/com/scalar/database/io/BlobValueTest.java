@@ -130,6 +130,45 @@ public class BlobValueTest {
   }
 
   @Test
+  public void compareTo_ThisVsGivenNull_ShouldReturnPositive() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual > 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisNullVsGiven_ShouldReturnNegative() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual < 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisAndGivenNull_ShouldReturnZero() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual == 0).isTrue();
+  }
+
+  @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(
