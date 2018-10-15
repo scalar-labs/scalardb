@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	var database = kingpin.Flag("database", "select the database. Only 'cassandra' is supported for now").Default("cassandra").String()
+	var database = kingpin.Flag("database", "select the database. Only 'cassandra' is supported for now.").Default("cassandra").String()
+	var host = kingpin.Flag("host", "specify the host to connect.").Default("localhost").String()
 	var inputFile = kingpin.Arg("input_file", "path to the input schema file").Required().String()
 	kingpin.Parse()
 
@@ -26,7 +27,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("%s", output)
-		output, err = exec.Command("cqlsh", "-f", outputFile).CombinedOutput()
+		output, err = exec.Command("cqlsh", "-f", outputFile, *host).CombinedOutput()
 		if err != nil {
 			fmt.Printf("schema loding failed: %s", output)
 			os.Exit(1)

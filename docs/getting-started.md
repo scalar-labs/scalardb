@@ -16,7 +16,7 @@ In addition to the above, the following software is needed to use scheme tools.
 * make
 * [Golang](https://golang.org/)
 
-From here, we assume Oracle JDK 8, Cassandra 3.11.x, make and Golang are properly installed in your local environment.
+From here, we assume Oracle JDK 8, Cassandra 3.11.x, make and Golang are properly installed in your local environment, and Cassandra is running in your localhost.
 
 ## Build
 

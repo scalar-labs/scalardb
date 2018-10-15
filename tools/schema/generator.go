@@ -13,7 +13,7 @@ type SchemaFileGenerator interface {
 
 func main() {
 	//Define the program flags and positional parameters
-	var database = kingpin.Flag("database", "select the database of the generated schema file. Only 'cassandra' is supported for now").Default("cassandra").String()
+	var database = kingpin.Flag("database", "select the database of the generated schema file. Only 'cassandra' is supported for now.").Default("cassandra").String()
 	var inputFile = kingpin.Arg("input_file", "path to the input schema file").Required().String()
 	var outputFile = kingpin.Arg("output_file", "path to the generated output schema file").Required().String()
 	//Parse input parameters
