@@ -12,7 +12,7 @@ Scalar DB v1 is written in Java and uses Cassandra as an underlining storage imp
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
 * Other libraries used from the above are automatically installed through gradle
 
-In addition to the above, the following software is needed to use scheme tools.
+In addition to the above, the following software is needed to use schema tools.
 * make
 * [Golang](https://golang.org/)
 
@@ -42,13 +42,13 @@ First of all, you need to define how the data will be organized (a.k.a database 
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
 ```sql:emoney-storage.sdbql
-REPLICATION 1
+REPLICATION FACTOR 1;
 
-CREATE NAMESPACE emoney
+CREATE NAMESPACE emoney;
 
 CREATE TABLE emoney.account (
-  id TEXT PARTITIONKEY
-  balance INT
+    id TEXT PARTITIONKEY,
+    balance INT,
 );
 ```
 
@@ -139,18 +139,18 @@ With the transaction capability of Scalar DB, we can make such operations to be 
 Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
 
 ```sql:emoney-transaction.sdbql
-REPLICATION 1
+REPLICATION FACTOR 1;
 
-CREATE NAMESPACE emoney
+CREATE NAMESPACE emoney;
 
 CREATE TRANSACTION TABLE emoney.account (
-  id TEXT PARTITIONKEY
-  balance INT
+    id TEXT PARTITIONKEY,
+    balance INT,
 );
 ```
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following.
-(Sorry you need to issue implmentation specific commands to do this.)
+(Sorry you need to issue implementation specific commands to do this.)
 ```
 $ cqlsh -e "drop keyspace emoney"
 $ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql
