@@ -54,12 +54,14 @@ $ make
 After defining a schema, please run the command as follows. You don't need `--database` option as of writing since the only supported database is `cassandra`.
 
 ```
+$ ./loader --help
 $ ./loader your-schema-file
 ```
 
 You can also generate implementation schema file only.
 
 ```
+$ ./generator --help
 $ ./generator your-schema-file
 ```
 
