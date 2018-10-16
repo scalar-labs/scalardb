@@ -130,7 +130,7 @@ public class BlobValueTest {
   }
 
   @Test
-  public void compareTo_ThisVsGivenNull_ShouldReturnPositive() {
+  public void compareTo_ThisNonNullAndGivenNull_ShouldReturnPositive() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes());
     BlobValue anotherValue = new BlobValue(ANY_NAME, null);
@@ -143,7 +143,7 @@ public class BlobValueTest {
   }
 
   @Test
-  public void compareTo_ThisNullVsGiven_ShouldReturnNegative() {
+  public void compareTo_ThisNullVsGivenNonNull_ShouldReturnNegative() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, null);
     BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
@@ -156,7 +156,7 @@ public class BlobValueTest {
   }
 
   @Test
-  public void compareTo_ThisAndGivenNull_ShouldReturnZero() {
+  public void compareTo_ThisAndGivenAreNull_ShouldReturnZero() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, null);
     BlobValue anotherValue = new BlobValue(ANY_NAME, null);
