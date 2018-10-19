@@ -3,6 +3,8 @@ apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'jacoco'
 apply plugin: 'java-library-distribution'
+apply plugin: 'maven'
+apply plugin: 'signing'
 
 repositories {
     mavenCentral()
@@ -34,4 +36,3 @@ task testJar(type: Jar) {
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
-
