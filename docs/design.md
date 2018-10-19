@@ -39,7 +39,7 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 
 Scalar DB is a multi-dimensional map distributed to multiple nodes by key-based hash partitioning.
 Records are assumed to be hash-partitioned by partition-key (even though an underlining implementation may support range partitioning).
-Records with the same partition-key define a partition. Partitions are then sorted by the clustering-key.
+Records with the same partition-key define a partition. A partition is clustered (sorted) by the clustering-key.
 It is similar to Google BigTable [2] but it differs in clustering-key structure and partitioning scheme.
 
 ### Limitation of the data model
