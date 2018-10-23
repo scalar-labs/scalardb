@@ -35,3 +35,5 @@ task testJar(type: Jar) {
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+// for uploading to maven central
+apply from: 'archive.gradle'
