@@ -1,16 +1,6 @@
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
-}
-
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
 artifacts {
     archives javadocJar, sourcesJar
 }
@@ -18,10 +8,6 @@ artifacts {
 signing {
     sign configurations.archives
 }
-
-group = "com.scalar-labs"
-archivesBaseName = "scalardb"
-version = "1.0.0-rc1"
 
 uploadArchives {
     repositories {
