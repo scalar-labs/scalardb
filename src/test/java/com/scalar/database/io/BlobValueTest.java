@@ -27,6 +27,30 @@ public class BlobValueTest {
   }
 
   @Test
+  public void copyWith_WithValuePresent_ShouldReturnNewBlobWithSameValue() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
+
+    // Act
+    BlobValue newValue = oneValue.copyWith("new name");
+
+    // Assert
+    assertThat(oneValue.get().get()).isEqualTo(newValue.get().get());
+  }
+
+  @Test
+  public void copyWith_WithValueEmpty_ShouldReturnNewBlobWithValueEmpty() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    BlobValue newValue = oneValue.copyWith("new name");
+
+    // Assert
+    assertThat(newValue.get()).isEmpty();
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
