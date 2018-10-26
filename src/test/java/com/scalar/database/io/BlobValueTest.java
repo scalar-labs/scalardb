@@ -167,7 +167,7 @@ public class BlobValueTest {
   }
 
   @Test
-  public void compareTo_ThisNullVsGivenNonNull_ShouldReturnNegative() {
+  public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, null);
     BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
