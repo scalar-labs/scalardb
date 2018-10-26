@@ -172,7 +172,7 @@ public class TextValueTest {
   }
 
   @Test
-  public void compareTo_ThisNullVsGivenNonNull_ShouldReturnNegative() {
+  public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
     // Arrange
     TextValue oneValue = new TextValue(ANY_NAME, (byte[]) null);
     TextValue anotherValue = new TextValue(ANY_NAME, "some_value");
