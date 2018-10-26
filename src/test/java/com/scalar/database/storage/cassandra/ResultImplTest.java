@@ -140,13 +140,23 @@ public class ResultImplTest {
   }
 
   @Test
-  public void equals_TryToModifyReturned_ShouldThrowException() {
+  public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     ResultImpl r1 = new ResultImpl(prepareValues(), null);
     ResultImpl r2 = new ResultImpl(prepareValues(), null);
 
     // Act Assert
     assertThat(r1.equals(r2)).isTrue();
+  }
+
+  @Test
+  public void equals_DifferentObjectsDifferentValuesGiven_ShouldReturnFalse() {
+    // Arrange
+    ResultImpl r1 = new ResultImpl(Collections.singletonList(new IntValue("k1", 1)), null);
+    ResultImpl r2 = new ResultImpl(Collections.singletonList(new IntValue("k2", 2)), null);
+
+    // Act Assert
+    assertThat(r1.equals(r2)).isFalse();
   }
 
   @Test
@@ -188,6 +198,42 @@ public class ResultImplTest {
 
     // Act
     Optional<Key> key = spy.getPartitionKey();
+
+    // Assert
+    assertThat(key.isPresent()).isFalse();
+  }
+
+  @Test
+  public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
+    // Arrange
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(columnMetadata.getName()).thenReturn(ANY_COLUMN_NAME_2);
+    when(tableMetadata.getClusteringColumns())
+        .thenReturn(Collections.singletonList(columnMetadata));
+    doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
+    spy.interpret(row);
+
+    // Act
+    Optional<Key> key = spy.getClusteringKey();
+
+    // Assert
+    assertThat(key.get().get().size()).isEqualTo(1);
+    assertThat(key.get().get().get(0))
+        .isEqualTo(new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE));
+  }
+
+  @Test
+  public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
+    // Arrange
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(columnMetadata.getName()).thenReturn("another");
+    when(tableMetadata.getClusteringColumns())
+        .thenReturn(Collections.singletonList(columnMetadata));
+    doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
+    spy.interpret(row);
+
+    // Act
+    Optional<Key> key = spy.getClusteringKey();
 
     // Assert
     assertThat(key.isPresent()).isFalse();

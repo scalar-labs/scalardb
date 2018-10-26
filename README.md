@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-A library that provides a distributed storage abstraction and client-coordinated distributed transaction on the storage, and makes non-ACID distributed database/storage ACID-compliant.
+A library that provides a distributed storage abstraction and client-coordinated distributed transaction manager on the storage, and makes non-ACID distributed database/storage ACID-compliant.
 
 ## Docs
 * [Getting started](docs/getting-started.md)

@@ -8,7 +8,7 @@ Scalar DB schema generator (tools/schema/generator) generates storage implementa
 as described [here](/docs/schema.md) for a given Scalar DB database schema.
 Scalar DB schema loader (tools/schema/loader) uses the generator to get an implementation specific schema file and load it with a storage implemtation specific loader for a give Scalar DB database schema.
 
-With the above tools, you don't need to think about implmentation specific schemas when modeling data for your applications.
+With the above tools, you don't need to think about implementation specific schemas when modeling data for your applications.
 
 ## Scalar DB schema definition
 
@@ -16,9 +16,9 @@ Scalar DB schema is an abstract schema to define applications data with Scalar D
 Here is a spec of the definition.
 
 ```sql
-REPLICATION number
+REPLICATION FACTOR number ';'
 
-CREATE NAMESPACE namespace_name
+CREATE NAMESPACE namespace_name ';'
 
 create_table_statement ::=  CREATE [TRANSACTION] TABLE namespace_name'.'table_name  
                             '('   
@@ -35,7 +35,7 @@ All the namespaces defined in the same file will have the specified replication 
 
 `CREATE NAMESPACE` is a command to define namespaces.
 `CREATE [TRANSACTION] TABLE` is a command to define tables.
-The grammer for defining tables is as stated above.
+The grammar for defining tables is as stated above.
 If you add `TRANSACTION` keyword, the table is treated as transaction capable, and addtional metadata and coordinator namespace are added.
 please see [this](/docs/schema.md) for more information about the metadata and the coordinator.
 
