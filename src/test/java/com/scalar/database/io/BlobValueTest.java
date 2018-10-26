@@ -27,6 +27,30 @@ public class BlobValueTest {
   }
 
   @Test
+  public void copyWith_WithValuePresent_ShouldReturnNewBlobWithSameValue() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
+
+    // Act
+    BlobValue newValue = oneValue.copyWith("new name");
+
+    // Assert
+    assertThat(oneValue.get().get()).isEqualTo(newValue.get().get());
+  }
+
+  @Test
+  public void copyWith_WithValueEmpty_ShouldReturnNewBlobWithValueEmpty() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    BlobValue newValue = oneValue.copyWith("new name");
+
+    // Assert
+    assertThat(newValue.get()).isEmpty();
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
@@ -127,6 +151,45 @@ public class BlobValueTest {
 
     // Assert
     assertThat(actual < 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisNonNullAndGivenNull_ShouldReturnPositive() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual > 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual < 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisAndGivenAreNull_ShouldReturnZero() {
+    // Arrange
+    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual == 0).isTrue();
   }
 
   @Test
