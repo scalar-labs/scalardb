@@ -29,12 +29,12 @@ func main() {
 		fmt.Printf("%s", output)
 		output, err = exec.Command("cqlsh", "-f", outputFile, *host).CombinedOutput()
 		if err != nil {
-			fmt.Printf("schema loding failed: %s", output)
+			fmt.Printf("schema loading failed: %s", output)
 			os.Exit(1)
 		}
 	} else {
 		fmt.Printf("schemaloader is not supported for %s. Only 'cassandra' is supported for now.", *database)
 		os.Exit(1)
 	}
-	fmt.Printf("The schmea is loaded to %s sucessfully.\n", *database)
+	fmt.Printf("The schema is loaded to %s sucessfully.\n", *database)
 }

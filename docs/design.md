@@ -54,7 +54,7 @@ Range scan is only supported for clustering-key access within the same partition
 As of writing this, Scalar DB supports only Cassandra storage as a storage implementation. More correctly, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB and Azure Cosmos DB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
 - Atomic CRUD operations (each single-record operation needs to be atomic)
 - Sequential consistency support
-- Atomic/Linearlizable conditional mutation (Create/Update/Delete)
+- Atomic/Linearizable conditional mutation (Create/Update/Delete)
 - Ability to include user-defined meta-data for each record
 
 Please see the javadoc for more details and usage.
@@ -70,7 +70,7 @@ Please see the javadoc for more details and usage.
 ## Future Work
 
 * Support Hbase for another storage implementation for more performance.
-* Utilize deterministic nature of [Scalar DL](https://github.com/scalar-labs/scalardl) (ledger middleware used for storing ledger information with Scalar DB) to avoid heavy-weight global consensus for linearizability and serializablity.
+* Utilize deterministic nature of [Scalar DL](https://github.com/scalar-labs/scalardl) (ledger middleware used for storing ledger information with Scalar DB) to avoid heavy-weight global consensus for linearizability and serializability.
 
 ## References
 
