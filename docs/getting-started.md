@@ -30,6 +30,13 @@ $ cd tools/schema
 $ make
 $ cd -
 ```
+Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
+For example in Gradle, you can add the following dependency to your build.gradle.
+```
+dependencies {
+    compile group: 'com.scalar-labs', name: 'scalardb', version: '1.0.0-rc1'
+}
+```
 
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
 ```
