@@ -64,4 +64,4 @@ $ cd /jepsen/scalardb
 $ lein run test --test transfer --nemesis crash --join decommission --time-limit 300
 ```
 
-  - You can find full options by `lein run test --help`
+  - Use `lein run test --help` to see a list of the full options
