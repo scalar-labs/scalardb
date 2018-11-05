@@ -1,8 +1,7 @@
-# Scalar DB tests with Jepsen
+# Jepsen tests for Scalar DB
 
-Scalar DB is a storage abstraction and distributed transaction implementation on top of the storage.
-
-The current Scalar DB tests work with [Cassandra test tools in Jepsen](https://github.com/scalar-labs/jepsen/tree/cassandra).
+This guide will teach you how to run Jepsen tests for Scalar DB.
+The current tests use [Cassandra test tools in Jepsen](https://github.com/scalar-labs/jepsen/tree/cassandra).
 
 ## How to run tests
 
