@@ -1,4 +1,4 @@
-(ns scalar.core
+(ns scalardb.core
   (:require [jepsen.tests :as tests]
             [jepsen.os.debian :as debian]
             [cassandra.core :as c]
@@ -26,12 +26,12 @@
 (def VERSION "tx_version")
 
 (defn create-coordinator-table
-  [session]
+  [session test]
   (cql/create-keyspace session COORDINATOR
                        (if-not-exists)
                        (with {:replication
                               {"class" "SimpleStrategy"
-                               "replication_factor" 3}}))
+                               "replication_factor" (:rf test)}}))
   (cql/use-keyspace session COORDINATOR)
   (cql/create-table session STATE_TABLE
                     (if-not-exists)
@@ -121,13 +121,9 @@
            (filter true?)
            count))))
 
-(defn scalar-test
+(defn scalardb-test
   [name opts]
   (merge tests/noop-test
-         {:name    (str "scalar-" name)
-          :os      debian/os
-          :db      (c/db "3.11.3")
-          :bootstrap (atom #{})
-          :decommission (atom #{})
-          :unknown-tx (atom #{})}
+         {:name    (str "scalardb-" name)
+          :os      debian/os}
          opts))

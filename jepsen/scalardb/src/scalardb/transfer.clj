@@ -1,4 +1,4 @@
-(ns scalar.transfer
+(ns scalardb.transfer
   (:require [jepsen
              [client :as client]
              [checker :as checker]
@@ -17,7 +17,7 @@
             [clojure.tools.logging :refer [debug info warn]]
             [clojure.core.reducers :as r]
             [knossos.op :as op]
-            [scalar.core :as scalar])
+            [scalardb.core :as scalar])
   (:import (com.scalar.database.api Consistency
                                     DistributedStorage
                                     DistributedTransaction
@@ -41,12 +41,12 @@
 (def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
 (defn create-transfer-table
-  [session]
+  [session test]
   (cql/create-keyspace session KEYSPACE
                        (if-not-exists)
                        (with {:replication
                               {"class" "SimpleStrategy"
-                               "replication_factor" 3}}))
+                               "replication_factor" (:rf test)}}))
   (cql/use-keyspace session KEYSPACE)
   (cql/create-table session TABLE
                     (if-not-exists)
@@ -169,8 +169,8 @@
     (locking initialized?
       (when (compare-and-set! initialized? false true)
         (let [session (drv/connect (->> test :nodes (map name)))]
-          (create-transfer-table session)
-          (scalar/create-coordinator-table session)
+          (create-transfer-table session test)
+          (scalar/create-coordinator-table session test)
           (drv/disconnect! session))
         (populate-accounts test n initial-balance))))
 
@@ -269,122 +269,19 @@
          :bad-balance bad-balance
          :bad-version bad-version}))))
 
-(defn scalar-transfer-test
-  [name opts]
-  (merge (scalar/scalar-test (str "transfer-" name)
-                             {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
-                              :model  {:num NUM_ACCOUNTS}
-                              :generator (gen/phases
-                                          (->> [diff-transfer]
-                                               (conductors/std-gen opts 900))
-                                          (gen/clients (gen/once check-tx))
-                                          (gen/clients (gen/once get-all)))
-                              :checker (checker/compose
-                                         {:perf    (checker/perf)
-                                          :timeline (timeline/html)
-                                          :details (consistency-checker)})})
-         (conductors/combine-nemesis opts)))
-
-(def bridge-test
-  (scalar-transfer-test "bridge"
-                {:nemesis (nemesis/partitioner (comp nemesis/bridge shuffle))}))
-
-(def halves-test
-  (scalar-transfer-test "halves"
-                {:nemesis (nemesis/partition-random-halves)}))
-
-(def isolate-node-test
-  (scalar-transfer-test "isolate-node"
-                {:nemesis (nemesis/partition-random-node)}))
-
-(def crash-subset-test
-  (scalar-transfer-test "crash"
-                {:nemesis (c/crash-nemesis)}))
-
-(def flush-compact-test
-  (scalar-transfer-test "flush-and-compact"
-                     {:nemesis (conductors/flush-and-compacter)}))
-
-(def clock-drift-test
-  (scalar-transfer-test "clock-drift"
-                     {:nemesis (nemesis/clock-scrambler 10000)}))
-
-(def bridge-test-bootstrap
-  (scalar-transfer-test "bridge-bootstrap"
-                {:bootstrap (atom #{"n4" "n5"})
-                 :nemesis (nemesis/partitioner (comp nemesis/bridge shuffle))}))
-
-(def halves-test-bootstrap
-  (scalar-transfer-test "halves-bootstrap"
-                {:bootstrap (atom #{"n4" "n5"})
-                 :nemesis (nemesis/partition-random-halves)}))
-
-(def isolate-node-test-bootstrap
-  (scalar-transfer-test "isolate-node-bootstrap"
-                {:bootstrap (atom #{"n4" "n5"})
-                 :nemesis (nemesis/partition-random-node)}))
-
-(def crash-subset-test-bootstrap
-  (scalar-transfer-test "crash-bootstrap"
-                {:bootstrap (atom #{"n4" "n5"})
-                 :nemesis (c/crash-nemesis)}))
-
-(def clock-drift-test-bootstrap
-  (scalar-transfer-test "clock-drift-bootstrap"
-                     {:bootstrap (atom #{"n4" "n5"})
-                      :nemesis (nemesis/clock-scrambler 10000)}))
-
-(def bridge-test-decommission
-  (scalar-transfer-test "bridge-decommission"
-                {:nemesis (nemesis/partitioner (comp nemesis/bridge shuffle))
-                 :decommissioner true}))
-
-(def halves-test-decommission
-  (scalar-transfer-test "halves-decommission"
-                {:nemesis (nemesis/partition-random-halves)
-                 :decommissioner true}))
-
-(def isolate-node-test-decommission
-  (scalar-transfer-test "isolate-node-decommission"
-                {:nemesis (nemesis/partition-random-node)
-                 :decommissioner true}))
-
-(def crash-subset-test-decommission
-  (scalar-transfer-test "crash-decommission"
-                {:nemesis (c/crash-nemesis)
-                 :decommissioner true}))
-
-(def clock-drift-test-decommission
-  (scalar-transfer-test "clock-drift-decommission"
-                     {:nemesis (nemesis/clock-scrambler 10000)
-                      :decommissioner true}))
-
-(def bridge-test-mix
-  (scalar-transfer-test "bridge-bootstrap-decommission"
-                     {:bootstrap (atom #{"n5"})
-                      :nemesis (nemesis/partitioner (comp nemesis/bridge shuffle))
-                      :decommissioner true}))
-
-(def halves-test-mix
-  (scalar-transfer-test "halves-bootstrap-decommission"
-                     {:bootstrap (atom #{"n5"})
-                      :nemesis (nemesis/partition-random-halves)
-                      :decommissioner true}))
-
-(def isolate-node-test-mix
-  (scalar-transfer-test "isolate-node-bootstrap-decommission"
-                     {:bootstrap (atom #{"n5"})
-                      :nemesis (nemesis/partition-random-node)
-                      :decommissioner true}))
-
-(def crash-subset-test-mix
-  (scalar-transfer-test "crash-bootstrap-decommission"
-                     {:bootstrap (atom #{"n5"})
-                      :nemesis (c/crash-nemesis)
-                      :decommissioner true}))
-
-(def clock-drift-test-mix
-  (scalar-transfer-test "clock-drift-bootstrap-decommission"
-                     {:bootstrap (atom #{"n5"})
-                      :nemesis (nemesis/clock-scrambler 10000)
-                      :decommissioner true}))
+(defn transfer-test
+  [opts]
+  (merge (scalar/scalardb-test (str "transfer-" (:suffix opts))
+                               {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
+                                :model  {:num NUM_ACCOUNTS}
+                                :unknown-tx (atom #{})
+                                :generator (gen/phases
+                                            (->> [diff-transfer]
+                                                 (conductors/std-gen opts))
+                                            (gen/clients (gen/once check-tx))
+                                            (gen/clients (gen/once get-all)))
+                                :checker (checker/compose
+                                           {:perf    (checker/perf)
+                                            :timeline (timeline/html)
+                                            :details (consistency-checker)})})
+         opts))
