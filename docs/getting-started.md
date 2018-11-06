@@ -10,7 +10,7 @@ Scalar DB v1 is written in Java and uses Cassandra as an underlining storage imp
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
-    * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml`
+    * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
 ```yaml:cassandra.yaml
 commitlog_sync: batch
 commitlog_sync_batch_window_in_ms: 2
