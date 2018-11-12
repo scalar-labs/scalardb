@@ -8,6 +8,22 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
 dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
     compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
@@ -41,6 +57,16 @@ task testJar(type: Jar) {
   classifier = 'tests'
   from sourceSets.test.output
 }
+
+task integrationTest(type: Test) {
+    description = 'Runs the integration tests.'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    shouldRunAfter test
+}
+
+check.dependsOn integrationTest
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
