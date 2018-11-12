@@ -2,7 +2,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 artifacts {
-    archives javadocJar, sourcesJar
+    archives javadocJar, sourcesJar, testJar
 }
 
 signing {
