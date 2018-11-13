@@ -78,11 +78,11 @@ jobs:
           when: always
 
       - run:
-        name: Save Gradle integration test reports
-        command: |
-          mkdir -p /tmp/gradle_integration_test_reports
-          cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
-        when: always
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+          when: always
 
       - store_artifacts:
           path: /tmp/gradle_test_reports
