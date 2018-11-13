@@ -18,4 +18,4 @@ This library is mainly maintained by the Scalar Engineering Team, but of course 
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 ## License
-Scalar DB is dual-licensed under both the AGPL (found in the LICENSE file in the root directory) and commercial license. You may select, at your option, one of the above-listed licenses. Regarding the commercial license, [contact us](https://scalar-labs.com/contact_us/) for more information.
+Scalar DB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and commercial license. You may select, at your option, one of the above-listed licenses. Regarding the commercial license, [contact us](https://scalar-labs.com/contact_us/) for more information.
