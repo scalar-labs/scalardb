@@ -73,8 +73,6 @@ jobs:
           command: |
             mkdir -p /tmp/gradle_test_reports
             cp -a build/reports/tests/test /tmp/gradle_test_reports/
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
           when: always
 
       - run:
