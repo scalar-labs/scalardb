@@ -66,7 +66,8 @@ task integrationTest(type: Test) {
     shouldRunAfter test
 }
 
-check.dependsOn integrationTest
+// build should not depend on the integration tests
+check.dependsOn -= integrationTest
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
