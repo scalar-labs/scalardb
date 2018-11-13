@@ -2,12 +2,15 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-A library that provides a distributed storage abstraction and client-coordinated distributed transaction manager on the storage, and makes non-ACID distributed database/storage ACID-compliant.
+A library that provides a distributed storage abstraction and client-coordinated distributed transaction manager on the storage, and makes non-ACID distributed databases/storages ACID-compliant.
+
+It not only supports strongly-consistnt ACID transactions, but also scales linearly and achieves high availability when it is deployed with distributed databases/storages such as Cassandra.
 
 ## Docs
 * [Getting started](docs/getting-started.md)
 * [Design document](docs/design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
+* [Jepsen tests](jepsen/scalardb)
 * Sample applications by 3rd party developers (coming soon)
 
 ## Contributing 
