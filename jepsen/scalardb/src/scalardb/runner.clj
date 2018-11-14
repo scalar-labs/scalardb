@@ -24,6 +24,10 @@
                     [{:name "" :bootstrap false :decommission false}]
                     car/joinings)
 
+   (jc/repeated-opt nil "--clock NAME" "Which clock-drift to use"
+                    [{:name "" :bump false :strobe false}]
+                    car/clocks)
+
    [nil "--rf REPLICATION_FACTOR" "Replication factor"
     :default 3
     :parse-fn #(Long/parseLong %)
@@ -41,9 +45,10 @@
                    (doseq [i        (range (:test-count options))
                            test-fn  (:test options)
                            nemesis  (:nemesis options)
-                           joining  (:join options)]
+                           joining  (:join options)
+                           clock    (:clock options)]
                      (let [test (-> options
-                                    (car/combine-nemesis nemesis joining)
+                                    (car/combine-nemesis nemesis joining clock)
                                     (assoc :db (cassandra/db (:cassandra options)))
                                     (dissoc :test)
                                     test-fn
