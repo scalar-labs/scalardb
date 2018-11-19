@@ -12,7 +12,7 @@ Scalar DB v1 is a simple and practical solution to solve the above mentioned pro
 
 ## Design Goals
 
-The primary design goals of Scalar DB are high availability, horizontal scalability and strong consistency for distributed storage and transaction operations. It aims to tolerate disk, machine, rack, and even data-center failures, with minimal performance degradation. It achieves these goals with an unbundled transaction layer [1] with easy and unified API so that the underlining storage implementations can be replaced with others without application code change. The performance of the Scalar DB is highly dependent on the underlining storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.
+The primary design goals of Scalar DB are high availability, horizontal scalability and strong consistency for distributed storage and transaction operations. It aims to tolerate disk, machine, rack, and even data-center failures, with minimal performance degradation. It achieves these goals with an unbundled transaction layer [1] with easy and unified API so that the underlining storage implementations can be replaced with others without application code change. The performance of the Scalar DB is highly dependent on the underlying storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.
 
 ## High-level Architecture
 
