@@ -60,6 +60,7 @@ task testJar(type: Jar) {
 
 task integrationTest(type: Test) {
     description = 'Runs the integration tests.'
+    group = 'verification'
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
