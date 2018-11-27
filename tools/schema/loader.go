@@ -36,5 +36,5 @@ func main() {
 		fmt.Printf("schemaloader is not supported for %s. Only 'cassandra' is supported for now.", *database)
 		os.Exit(1)
 	}
-	fmt.Printf("The schmea is loaded to %s sucessfully.\n", *database)
+	fmt.Printf("The schema is loaded to %s sucessfully.\n", *database)
 }

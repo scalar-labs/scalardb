@@ -10,9 +10,17 @@ Scalar DB v1 is written in Java and uses Cassandra as an underlining storage imp
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
+    * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
+```yaml:cassandra.yaml
+commitlog_sync: batch
+commitlog_sync_batch_window_in_ms: 2
+
+# commitlog_sync: periodic
+# commitlog_sync_period_in_ms: 10000
+```
 * Other libraries used from the above are automatically installed through gradle
 
-In addition to the above, the following software is needed to use scheme tools.
+In addition to the above, the following software is needed to use schema tools.
 * make
 * [Golang](https://golang.org/)
 
@@ -30,6 +38,13 @@ $ cd tools/schema
 $ make
 $ cd -
 ```
+Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
+For example in Gradle, you can add the following dependency to your build.gradle.
+```
+dependencies {
+    compile group: 'com.scalar-labs', name: 'scalardb', version: '1.0.0-rc1'
+}
+```
 
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
 ```
@@ -42,13 +57,13 @@ First of all, you need to define how the data will be organized (a.k.a database 
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
 ```sql:emoney-storage.sdbql
-REPLICATION 1
+REPLICATION FACTOR 1;
 
-CREATE NAMESPACE emoney
+CREATE NAMESPACE emoney;
 
 CREATE TABLE emoney.account (
-  id TEXT PARTITIONKEY
-  balance INT
+    id TEXT PARTITIONKEY,
+    balance INT,
 );
 ```
 
@@ -139,18 +154,18 @@ With the transaction capability of Scalar DB, we can make such operations to be 
 Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
 
 ```sql:emoney-transaction.sdbql
-REPLICATION 1
+REPLICATION FACTOR 1;
 
-CREATE NAMESPACE emoney
+CREATE NAMESPACE emoney;
 
 CREATE TRANSACTION TABLE emoney.account (
-  id TEXT PARTITIONKEY
-  balance INT
+    id TEXT PARTITIONKEY,
+    balance INT,
 );
 ```
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following.
-(Sorry you need to issue implmentation specific commands to do this.)
+(Sorry you need to issue implementation specific commands to do this.)
 ```
 $ cqlsh -e "drop keyspace emoney"
 $ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql

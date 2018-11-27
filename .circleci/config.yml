@@ -66,14 +66,26 @@ jobs:
 
       # run tests!
       - run: gradle test
+      - run: gradle integrationTest
 
       - run:
-          name: Save Gradle reports
+          name: Save Gradle test reports
           command: |
-            mkdir -p /tmp/gradle_reports
-            cp -a build/reports/tests/test /tmp/gradle_reports/
+            mkdir -p /tmp/gradle_test_reports
+            cp -a build/reports/tests/test /tmp/gradle_test_reports/
+          when: always
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
-          path: /tmp/gradle_reports
-          destination: gradle_reports
+          path: /tmp/gradle_test_reports
+          destination: gradle_test_reports
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports

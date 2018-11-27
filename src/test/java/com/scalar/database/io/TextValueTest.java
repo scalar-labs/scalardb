@@ -159,6 +159,45 @@ public class TextValueTest {
   }
 
   @Test
+  public void compareTo_ThisNonNullAndGivenNull_ShouldReturnPositive() {
+    // Arrange
+    TextValue oneValue = new TextValue(ANY_NAME, "some_value");
+    TextValue anotherValue = new TextValue(ANY_NAME, (byte[]) null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual > 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
+    // Arrange
+    TextValue oneValue = new TextValue(ANY_NAME, (byte[]) null);
+    TextValue anotherValue = new TextValue(ANY_NAME, "some_value");
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual < 0).isTrue();
+  }
+
+  @Test
+  public void compareTo_ThisAndGivenAreNull_ShouldReturnZero() {
+    // Arrange
+    TextValue oneValue = new TextValue(ANY_NAME, (byte[]) null);
+    TextValue anotherValue = new TextValue(ANY_NAME, (byte[]) null);
+
+    // Act
+    int actual = oneValue.compareTo(anotherValue);
+
+    // Assert
+    assertThat(actual == 0).isTrue();
+  }
+
+  @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(
