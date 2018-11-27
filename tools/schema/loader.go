@@ -23,13 +23,13 @@ func main() {
 		}
 		output, err := exec.Command(filepath.Dir(ex)+"/generator", "--database", *database, *inputFile, outputFile).CombinedOutput()
 		if err != nil {
-			fmt.Printf("schema generation failed: %s", output)
+			fmt.Printf("schema generation failed: %s\n", output)
 			os.Exit(1)
 		}
 		fmt.Printf("%s", output)
 		output, err = exec.Command("cqlsh", "-f", outputFile, *host).CombinedOutput()
 		if err != nil {
-			fmt.Printf("schema loading failed: %s", output)
+			fmt.Printf("schema loading failed: %s\n", output)
 			os.Exit(1)
 		}
 	} else {
