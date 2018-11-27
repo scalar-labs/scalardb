@@ -29,7 +29,7 @@ func main() {
 		fmt.Printf("%s", output)
 		output, err = exec.Command("cqlsh", "-f", outputFile, *host).CombinedOutput()
 		if err != nil {
-			fmt.Printf("schema loding failed: %s\n", output)
+			fmt.Printf("schema loading failed: %s\n", output)
 			os.Exit(1)
 		}
 	} else {
