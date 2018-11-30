@@ -33,8 +33,7 @@
     :parse-fn #(Long/parseLong %)
     :validate [pos? "Must be positive"]]
 
-   [nil "--cassandra VERSION" "C* version to use"
-    :default "3.11.3"]])
+   (jc/tarball-opt "http://www.us.apache.org/dist/cassandra/3.11.3/apache-cassandra-3.11.3-bin.tar.gz")])
 
 (defn test-cmd
    []
