@@ -26,7 +26,7 @@ uploadArchives {
                 name 'Scalar DB'
                 packaging 'jar'
                 // optionally artifactId can be defined here 
-                description 'A library that provides a distributed storage abstraction and client-coordinated distributed transaction manager on the storage.'
+                description 'A library that makes non-ACID distributed databases/storages ACID-compliant.'
                 url 'https://github.com/scalar-labs/scalardb'
 
                 scm {
@@ -37,8 +37,8 @@ uploadArchives {
 
                 licenses {
                     license {
-                        name 'GNU Affero General Public License, Version 3'
-                        url 'http://www.gnu.org/licenses/agpl-3.0.html'
+                        name 'Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0'
                     }
                 }
 
