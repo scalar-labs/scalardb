@@ -14,7 +14,7 @@ A library that makes non-ACID distributed databases/storages ACID-compliant. It 
 ## Contributing 
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
-* For asking questions, finding answers and helping other users, please use the public mailing list scalardb-user@googlegroups.com or go to https://groups.google.com/forum/#!forum/scalardb-user.
+* For asking questions, finding answers and helping other users, please go to [scalardb-user (English only)](https://groups.google.com/forum/#!forum/scalardb-user) or [scalardb-user-ja (Japanese only)](https://groups.google.com/forum/#!forum/scalardb-user-ja).
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 ## License
