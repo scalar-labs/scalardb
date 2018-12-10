@@ -9,7 +9,7 @@ A library that makes non-ACID distributed databases/storages ACID-compliant. It 
 * [Design document](docs/design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * [Jepsen tests](jepsen/scalardb)
-* Sample applications by collaborators
+* Sample applications by contributors/collaborators
   * [Q&A application (From Indetail Engineering team)](https://github.com/indetail-blockchain/getting-started-with-scalardb)
 
 ## Contributing 
