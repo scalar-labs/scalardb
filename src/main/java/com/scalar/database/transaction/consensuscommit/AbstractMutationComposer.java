@@ -21,7 +21,7 @@ public abstract class AbstractMutationComposer implements MutationComposer {
   /**
    * Constructs an {@code AbstractMutationComposer} with the specified id
    *
-   * @param id {@code String}
+   * @param id a {@code String}
    */
   public AbstractMutationComposer(String id) {
     this.id = id;
