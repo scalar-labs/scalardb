@@ -21,7 +21,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class DeleteStatementHandler extends MutateStatementHandler {
 
   /**
-   * Constructs {@code DeleteStatementHandler} with the specified {@code Session}
+   * Constructs a {@code DeleteStatementHandler} with the specified {@code Session}
    *
    * @param session session to be used with this statement
    */

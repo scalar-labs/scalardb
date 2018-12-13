@@ -19,7 +19,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
+/** A class to manage transaction isolation (snapshot or serial) */
 @ThreadSafe
 public class Snapshot {
   private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);
@@ -29,10 +29,21 @@ public class Snapshot {
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
+  /**
+   * Constructs a {@code Snapshot} with the specified id
+   *
+   * @param id
+   */
   public Snapshot(String id) {
     this(id, Isolation.SNAPSHOT);
   }
 
+  /**
+   * Constructs a {@code Snapshot} with the specified id and {@link Isolation} level
+   *
+   * @param id
+   * @param isolation an {@link Isolation}
+   */
   public Snapshot(String id, Isolation isolation) {
     this.id = id;
     this.isolation = isolation;
@@ -65,18 +76,42 @@ public class Snapshot {
     return isolation;
   }
 
+  /**
+   * Associate the specified {@link Key} with the {@link TransactionResult} in the {@code Snapshot}
+   *
+   * @param key a {@link Key}
+   * @param result a {@link TransactionResult}
+   */
   public void put(Snapshot.Key key, TransactionResult result) {
     readSet.put(key, result);
   }
 
+  /**
+   * Associate the specified {@link Key} with the {@link Put} in the {@code Snapshot}
+   *
+   * @param key a {@link Key}
+   * @param put a {@link Put}
+   */
   public void put(Snapshot.Key key, Put put) {
     writeSet.put(key, put);
   }
 
+  /**
+   * Associate the specified {@link Key} with the {@link Delete} in the {@code Snapshot}
+   *
+   * @param key a {@link Key}
+   * @param delete a {@link Delete}
+   */
   public void put(Snapshot.Key key, Delete delete) {
     deleteSet.put(key, delete);
   }
 
+  /**
+   * Returns the {@link TransactionResult} associated with the specified {@link Key} in the {@code Snapshot}
+   *
+   * @param key a {@link Key}
+   * @return a {@link Optional} with value {@link TransactionResult}
+   */
   public Optional<TransactionResult> get(Snapshot.Key key) {
     if (writeSet.containsKey(key)) {
       throw new CrudRuntimeException("reading already written data is not allowed");

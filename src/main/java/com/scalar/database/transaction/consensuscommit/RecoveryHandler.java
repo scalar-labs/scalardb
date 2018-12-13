@@ -17,7 +17,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
+/** A recoverty handler for {@link DistributedStorage} */
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);

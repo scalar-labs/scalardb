@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class InsertStatementHandler extends MutateStatementHandler {
 
   /**
-   * Constructs {@code InsertStatementHandler} with the specified {@code Session}
+   * Constructs an {@code InsertStatementHandler} with the specified {@code Session}
    *
    * @param session session to be used with this statement
    */

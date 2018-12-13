@@ -43,7 +43,7 @@ public class BatchHandler {
 
   /**
    * Execute the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the list
-   * must be for the same partition. Otherwise, it throws {@link MultiPartitionException}.
+   * must be for the same partition. Otherwise, it throws a {@link MultiPartitionException}.
    *
    * @param mutations a list of {@code Mutation}s to execute
    * @throws RetriableExecutionException if it failed, but it can be retried

@@ -12,11 +12,18 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
+/**
+ * A class for partitioning mutations based on their partition key
+ */
 @Immutable
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;
 
+  /**
+   * Constructs a {@code PartitionedMutations} from the specified {@link Collection} of {@link Mutation}s
+   *
+   * @param collections a {@code Collection} of {@link Mutation}s
+   */
   public PartitionedMutations(Collection<? extends Mutation>... collections) {
     ImmutableListMultimap.Builder<Key, Mutation> builder = ImmutableListMultimap.builder();
     for (Collection<? extends Mutation> collection : collections) {
@@ -25,6 +32,11 @@ public class PartitionedMutations {
     partitions = builder.build();
   }
 
+  /**
+   * Returns the list of {@link Key}s contained in the {@code PartitionedMutations}
+   *
+   * @return the list of {@link Key}s contained in the {@code PartitionedMutations}
+   */
   @Nonnull
   public ImmutableList<Key> getOrderedKeys() {
     List<Key> keys = new ArrayList<>(partitions.keySet());
@@ -32,6 +44,12 @@ public class PartitionedMutations {
     return ImmutableList.copyOf(keys);
   }
 
+  /**
+   * Returns an {@link ImmutableList} of {@link Mutation}s associated with the specified {@link Key}
+   *
+   * @param key a {@link Key}
+   * @return the list of {@link Key}s contained in the {@code PartitionedMutations}
+   */
   @Nonnull
   public ImmutableList<Mutation> get(Key key) {
     return partitions.get(key);

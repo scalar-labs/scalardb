@@ -25,7 +25,9 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
+/**
+ * A coordinator for distributed storage
+ */
 @Immutable
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
