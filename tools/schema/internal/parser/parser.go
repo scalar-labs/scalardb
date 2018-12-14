@@ -39,7 +39,7 @@ type Column struct {
 }
 
 func Parse(filePath *string) *Schema {
-	parser, err := participle.Build(&Schema{}, participle.UseLookahead())
+	parser, err := participle.Build(&Schema{})
 	kingpin.FatalIfError(err, "")
 	r, err := os.Open(*filePath)
 	kingpin.FatalIfError(err, "")
