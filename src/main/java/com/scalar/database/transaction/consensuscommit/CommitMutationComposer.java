@@ -19,15 +19,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * A commit mutation composer
- */
+/** A commit mutation composer */
 @NotThreadSafe
 public class CommitMutationComposer extends AbstractMutationComposer {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitMutationComposer.class);
 
   /**
    * Constructs a {@code CommitMutationComposer} with specified id
+   *
    * @param id
    */
   public CommitMutationComposer(String id) {

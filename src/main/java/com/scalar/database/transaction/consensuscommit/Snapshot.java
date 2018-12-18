@@ -19,7 +19,11 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A class to manage transaction isolation (snapshot or serial) */
+/**
+ * A snapshot used to do snapshot isolation. It can be changed to serializable if all the reads are
+ * converted to writes to avoid write skew and read only anomalies. From a performance perspective
+ * making it serializable should be avoided if possible as writes come with heavier operations.
+ */
 @ThreadSafe
 public class Snapshot {
   private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);
@@ -107,7 +111,8 @@ public class Snapshot {
   }
 
   /**
-   * Returns the {@link TransactionResult} associated with the specified {@link Key} in the {@code Snapshot}
+   * Returns the {@link TransactionResult} associated with the specified {@link Key} in the {@code
+   * Snapshot}
    *
    * @param key a {@link Key}
    * @return a {@link Optional} with value {@link TransactionResult}

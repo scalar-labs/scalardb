@@ -12,15 +12,14 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/**
- * A class for partitioning mutations based on their partition key
- */
+/** Mutations partitioned by their partition key */
 @Immutable
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;
 
   /**
-   * Constructs a {@code PartitionedMutations} from the specified {@link Collection} of {@link Mutation}s
+   * Constructs a {@code PartitionedMutations} from the specified {@link Collection} of {@link
+   * Mutation}s
    *
    * @param collections a {@code Collection} of {@link Mutation}s
    */

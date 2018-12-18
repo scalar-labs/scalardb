@@ -17,7 +17,10 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A recovery handler for {@link DistributedStorage} */
+/**
+ * A recovery handler for {@link DistributedStorage}. Used to rollback {@link DistributedStorage} to
+ * a given {@link Snapshot} or to recover a given {@link TransactionResult}.
+ */
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
@@ -29,7 +32,17 @@ public class RecoveryHandler {
     this.coordinator = checkNotNull(coordinator);
   }
 
-  // lazy recovery in read phase
+  /**
+   * Given a specified {@link Selection} and {@link TransactionResult} will first check if the
+   * result has been committed or not. If it has been committed the result will be rolled forward
+   * (added to {@link DistributedStorage} and if not then rolled back (removed from {@link
+   * DistributedStorage}.
+   *
+   * <p>Used for lazy recovery in read phase
+   *
+   * @param selection a {@code Selection}
+   * @param result a {@code TransactionResult}
+   */
   public void recover(Selection selection, TransactionResult result) {
     LOGGER.info("recovering for " + result.getId());
     Optional<Coordinator.State> state = null;
@@ -51,6 +64,11 @@ public class RecoveryHandler {
     }
   }
 
+  /**
+   * Rollback {@link DistributedStorage} to the specified {@link Snapshot}
+   *
+   * @param snapshot
+   */
   public void rollback(Snapshot snapshot) {
     LOGGER.info("rollback from snapshot for " + snapshot.getId());
     RollbackMutationComposer composer = new RollbackMutationComposer(snapshot.getId(), storage);

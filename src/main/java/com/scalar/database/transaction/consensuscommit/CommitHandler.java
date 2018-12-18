@@ -18,9 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * A handler class for commits
- */
+/** A handler class for commits */
 @ThreadSafe
 public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
@@ -29,7 +27,8 @@ public class CommitHandler {
   private final RecoveryHandler recovery;
 
   /**
-   * Constructs a {@code CommitHandler} with specified {@link DistributedStorage}, {@link Coordinator}, and {@link RecoveryHandler}
+   * Constructs a {@code CommitHandler} with specified {@link DistributedStorage}, {@link
+   * Coordinator}, and {@link RecoveryHandler}
    *
    * @param storage a {@link DistributedStorage}
    * @param coordinator a {@link Coordinator}

@@ -10,9 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * An abstract mutation composer
- */
+/** An abstract mutation composer */
 public abstract class AbstractMutationComposer implements MutationComposer {
   protected final String id;
   protected final List<Mutation> mutations;

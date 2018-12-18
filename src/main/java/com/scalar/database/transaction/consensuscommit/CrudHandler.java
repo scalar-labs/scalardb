@@ -38,7 +38,7 @@ public class CrudHandler {
    * Returns a {@link Result} as the result of performing a {@link Get}
    *
    * @param get the {@code Get} to be performed
-   * @return a {@link Result} as the result of performing a  {@link Get}
+   * @return a {@link Result} as the result of performing a {@link Get}
    * @throws CrudException
    */
   public Optional<Result> get(Get get) throws CrudException {

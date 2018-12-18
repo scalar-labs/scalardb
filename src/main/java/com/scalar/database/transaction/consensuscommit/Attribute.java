@@ -6,9 +6,7 @@ import com.scalar.database.io.IntValue;
 import com.scalar.database.io.TextValue;
 import com.scalar.database.io.Value;
 
-/**
- * A utility class for constructing {@code Value}s to be used as {@code Attributes}
- */
+/** A utility class for constructing {@code Value}s to be used as {@code Attributes} */
 public final class Attribute {
   public static final String ID = "tx_id";
   public static final String STATE = "tx_state";
@@ -35,10 +33,12 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.STATE} and value the int representation of the specified {@link TransactionState}
+   * Return an {@link IntValue} with name {@code Attribute.STATE} and value the int representation
+   * of the specified {@link TransactionState}
    *
    * @param state a {@link TransactionState}
-   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of the specified {@link TransactionState}
+   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of
+   *     the specified {@link TransactionState}
    */
   public static Value toStateValue(TransactionState state) {
     return new IntValue(Attribute.STATE, state.get());
@@ -105,10 +105,12 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.BEFORE_STATE} and value the int representation of the specified {@link TransactionState}
+   * Return an {@link IntValue} with name {@code Attribute.BEFORE_STATE} and value the int
+   * representation of the specified {@link TransactionState}
    *
    * @param state a {@link TransactionState}
-   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of the specified {@link TransactionState}
+   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of
+   *     the specified {@link TransactionState}
    */
   public static Value toBeforeStateValue(TransactionState state) {
     return new IntValue(Attribute.BEFORE_STATE, state.get());
@@ -125,20 +127,24 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified value
+   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
+   * value
    *
    * @param preparedAt a long representing a prepared at time
-   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified value
+   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
+   *     value
    */
   public static Value toBeforePreparedAtValue(long preparedAt) {
     return new BigIntValue(Attribute.BEFORE_PREPARED_AT, preparedAt);
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified value
+   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
+   * value
    *
    * @param committedAt a long representing a committed at time
-   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified value
+   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
+   *     value
    */
   public static Value toBeforeCommittedAtValue(long committedAt) {
     return new BigIntValue(Attribute.BEFORE_COMMITTED_AT, committedAt);

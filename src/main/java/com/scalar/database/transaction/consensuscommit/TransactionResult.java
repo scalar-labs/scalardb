@@ -17,9 +17,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/**
- *  A result retrieved from storage.
- */
+/** A result retrieved from storage. */
 @Immutable
 public class TransactionResult implements Result {
   private final Result result;
@@ -87,7 +85,6 @@ public class TransactionResult implements Result {
   public String toString() {
     return MoreObjects.toStringHelper(this).add("values", values).toString();
   }
-
 
   public String getId() {
     return ((TextValue) getValue(Attribute.ID).get()).getString().get();

@@ -26,7 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A coordinator for distributed storage
+ * Keeps track of the {@link State} of a {@link Snapshot} or {@link Result} for {@link
+ * DistributedStorage}
  */
 @Immutable
 public class Coordinator {
