@@ -34,10 +34,10 @@ seed_provider:
 - class_name: org.apache.cassandra.locator.SimpleSeedProvider
   parameters:
   - seeds: _SEEDS_
-concurrent_reads: 512
-concurrent_writes: 512
-concurrent_counter_writes: 32
-concurrent_materialized_view_writes: 32
+concurrent_reads: _CONCURRENCY_
+concurrent_writes: _CONCURRENCY_
+concurrent_counter_writes: 2
+concurrent_materialized_view_writes: 1
 memtable_cleanup_threshold: 0.67
 memtable_allocation_type: offheap_buffers
 index_summary_capacity_in_mb: 
