@@ -62,7 +62,7 @@ cassandra_cmd:sudo /etc/init.d/cassandra start
 ```
 - `core` and `memory_gb` of selected nodes
 - `request_concurrency` is the estimated concurrency from clients at peak time for your system
-- It is better to set `message_coalescing` `true` when concurrency will be always high (more than 48)
+- It is better to set `message_coalescing` `true` when concurrency is always high (more than 48)
 - `data_drive` is a data drive for Cassandra whose name can be seen by `lsblk` etc.
   - In this example, it is the drive which `/data` is mounted on
 
