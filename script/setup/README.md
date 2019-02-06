@@ -48,12 +48,23 @@ sudo chown -R cassandra:cassandra /data/cassandra
 ```
 node:192.168.1.1,192.168.1.2,192.168.1.3
 seed:192.168.1.1,192.168.1.3
+core:4
+memory_gb:16
+request_concurrency:32
 commitlog_dir:/data/cassandra/commitlog
 data_dir:/data/cassandra/data
 hints_dir:/data/cassandra/hints
 saved_caches_dir:/data/cassandra/saved_caches
 conf_dir:/etc/cassandra/conf
+data_drive:nvme0n1
+message_coalescing:false
+cassandra_cmd:sudo /etc/init.d/cassandra start
 ```
+- `core` and `memory_gb` of selected nodes
+- `request_concurrency` is the estimated concurrency from clients at peak time for your system
+- It is better to set `message_coalescing` `true` when concurrency is always high (more than 48)
+- `data_drive` is a data drive for Cassandra whose name can be seen by `lsblk` etc.
+  - In this example, it is the drive which is mounted to `/data`
 
 5. Make C* config files and copy them to each node with the script
 ```

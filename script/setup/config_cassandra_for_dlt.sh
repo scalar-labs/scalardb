@@ -22,12 +22,17 @@ do
         "node" ) NODES=$params
                  NODE_LIST=(${NODES//,/ }) ;;
         "seed" ) SEED_LIST=$params ;;
+        "core" ) CORES=$params ;;
+        "memory_gb" ) MEMORY_GB=$params ;;
+        "request_concurrency" ) CONCURRENCY=$params ;;
         "commitlog_dir" ) COMMITLOG_DIR=${params//\//\\/} ;;
         "data_dir" ) DATA_DIR=${params//\//\\/} ;;
         "hints_dir" ) HINTS_DIR=${params//\//\\/} ;;
         "saved_caches_dir" ) SAVED_CACHES_DIR=${params//\//\\/} ;;
         "conf_dir") CONF_DIR=$params ;;
+        "message_coalescing") MESSAGE_COALESCING=$params ;;
         "cassandra_cmd") CASSANDRA_CMD=$params ;;
+        "data_drive") DATA_DRIVE=$params ;;
         * ) echo "ERROR: unexpected parameters"
             exit 1 ;;
     esac
@@ -37,9 +42,12 @@ done < node_params
 cp $DEFAULT_LOGBACK ./$LOGBACK_FILE
 
 # check system
-half_memory_in_gb=$(free -m | awk '/:/ {printf("%.f", $2/1024/2);exit}')
-cores=$(egrep -c 'processor([[:space:]]+):.*' /proc/cpuinfo)
-heap_newsize=$(expr $cores \* 100)
+half_memory_in_gb=$(expr $MEMORY_GB / 2)
+heap_newsize=$(expr $CORES \* 100)
+cpu_concurrency=$(expr $CORES \* 8)
+if [ $cpu_concurrency -gt $CONCURRENCY ]; then
+    CONCURRENCY=$cpu_concurrency
+fi
 
 # change cassandra-env.sh
 sed -e "s/_MAX_HEAP_SIZE_/$half_memory_in_gb/" \
@@ -51,11 +59,17 @@ for node in ${NODE_LIST[@]}
 do
     sed -e "s/_IP_/$node/g" \
         -e "s/_SEEDS_/$SEED_LIST/" \
+        -e "s/_CONCURRENCY_/$CONCURRENCY/" \
         -e "s/_COMMITLOG_DIR_/$COMMITLOG_DIR/" \
         -e "s/_DATA_DIR_/$DATA_DIR/" \
         -e "s/_HINTS_DIR_/$HINTS_DIR/" \
         -e "s/_SAVED_CACHES_DIR_/$SAVED_CACHES_DIR/" \
         $DEFAULT_YAML > $YAML_FILE.$node
+
+    if $MESSAGE_COALESCING; then
+        echo "otc_coalescing_strategy: TIMEHORIZON" >> $YAML_FILE.$node
+        echo "otc_coalescing_window_us: 1000" >> $YAML_FILE.$node
+    fi
 
     scp $YAML_FILE.$node $node:~/$YAML_FILE
     scp $LOGBACK_FILE $node:~/$LOGBACK_FILE
@@ -67,8 +81,7 @@ pdsh -w $NODES "sudo mv ~/$LOGBACK_FILE $CONF_DIR"
 pdsh -w $NODES "sudo mv ~/$ENV_FILE $CONF_DIR"
 
 # Linux tuning
-pdsh -w $NODES "sudo sh -c 'echo 8 > /sys/block/nvme0n1/queue/read_ahead_kb'"
-##pdsh -w $NODES "sudo sh -c 'echo deadline > /sys/block/nvme0n1/queue/scheduler'"
+pdsh -w $NODES "sudo sh -c 'echo 8 > /sys/block/${DATA_DRIVE}/queue/read_ahead_kb'"
 pdsh -w $NODES "sudo swapoff --all"
 
 # start C*
