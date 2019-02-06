@@ -1,8 +1,13 @@
 node:192.168.1.1,192.168.1.2,192.168.1.3
 seed:192.168.1.1,192.168.1.3
+core:4
+memory_gb:16
+request_concurrency:32
 commitlog_dir:/data/cassandra/commitlog
 data_dir:/data/cassandra/data
 hints_dir:/data/cassandra/hints
 saved_caches_dir:/data/cassandra/saved_caches
 conf_dir:/etc/cassandra/conf
+data_drive:nvme0n1
+message_coalescing:false
 cassandra_cmd:sudo /etc/init.d/cassandra start
