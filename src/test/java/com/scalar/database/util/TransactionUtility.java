@@ -108,7 +108,13 @@ public class TransactionUtility {
         .skipNulls()
         .join(
             new String[] {
-              "CREATE TABLE", namespace + "." + table, "(", strAttributes, ",", strPrimaryKey, ")",
+              "CREATE TABLE",
+              namespace + "." + table,
+              "(",
+              strAttributes,
+              ",",
+              strPrimaryKey,
+              ") WITH compaction = { 'class' : 'LeveledCompactionStrategy' }",
             });
   }
 
