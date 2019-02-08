@@ -11,9 +11,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/** You can create tables for this program by using `script/sample_schema/tx_transfer.cql` */
 public class TransactionVerification {
-  private static final String NAMESPACE = "verification";
-  private static final String TABLE = "tx_simple_transfer";
   private static final int DEFAULT_CONCURRENCY = 5;
   private static final int DEFAULT_NUM_ACCOUNTS = 10;
   private static final int DEFAULT_RUN_FOR_SEC = 60;
@@ -21,7 +20,7 @@ public class TransactionVerification {
   private static int numAccounts = DEFAULT_NUM_ACCOUNTS;
   private static int runFor = DEFAULT_RUN_FOR_SEC;
   private static int clientSeed = 0;
-  private static String propertiesFile;
+  private static String propertiesFile = null;
   private static String killerStarter = null;
   private static String killerStopper = null;
 
@@ -45,15 +44,14 @@ public class TransactionVerification {
         printUsageAndExit();
       }
     }
-    if (propertiesFile == null) {
-      printUsageAndExit();
+
+    DatabaseConfig config = null;
+    if (propertiesFile != null) {
+      config = new DatabaseConfig(new File(propertiesFile));
     }
 
-    DatabaseConfig config = new DatabaseConfig(new File(propertiesFile));
     TransferContext context = new TransferContext(numAccounts, runFor, 0, clientSeed);
-    AccountBalanceTransferHandler handler =
-        new AccountBalanceTransferHandler(config, context, NAMESPACE, TABLE);
-    handler.prepareTables();
+    AccountBalanceTransferHandler handler = new AccountBalanceTransferHandler(config, context);
 
     handler.populateRecords();
 
@@ -108,7 +106,7 @@ public class TransactionVerification {
 
   private static void printUsageAndExit() {
     System.err.println(
-        "TransactionVerification -f database.properties "
+        "TransactionVerification [-f database.properties] "
             + "[-c concurrency] [-n num_accounts] [-t run_time_sec] [-s client_seed]"
             + "[-killer_starter command_path] [-killer_stopper command_path]");
     System.exit(1);

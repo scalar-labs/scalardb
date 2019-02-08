@@ -10,8 +10,6 @@ import java.io.IOException;
 import java.util.List;
 
 public class GetTotal {
-  private static final String NAMESPACE = "verification";
-  private static final String TABLE = "tx_simple_transfer";
   private static final int DEFAULT_NUM_ACCOUNTS = 10;
   private static int numAccounts = DEFAULT_NUM_ACCOUNTS;
   private static String propertiesFile;
@@ -27,10 +25,13 @@ public class GetTotal {
       }
     }
 
-    DatabaseConfig config = new DatabaseConfig(new File(propertiesFile));
+    DatabaseConfig config = null;
+    if (propertiesFile != null) {
+      config = new DatabaseConfig(new File(propertiesFile));
+    }
+
     TransferContext context = new TransferContext(numAccounts, 0, 0, 0);
-    AccountBalanceTransferHandler handler =
-        new AccountBalanceTransferHandler(config, context, NAMESPACE, TABLE);
+    AccountBalanceTransferHandler handler = new AccountBalanceTransferHandler(config, context);
 
     List<Result> results = handler.readRecordsWithRetry();
     int totalVersion = results.stream().mapToInt(r -> ((TransactionResult) r).getVersion()).sum();
@@ -43,7 +44,7 @@ public class GetTotal {
   }
 
   private static void printUsageAndExit() {
-    System.err.println("GetTotal -f database.properties [-n num_accounts]");
+    System.err.println("GetTotal [-f database.properties] [-n num_accounts]");
     System.exit(1);
   }
 }
