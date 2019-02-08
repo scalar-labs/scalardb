@@ -38,9 +38,8 @@ public class AccountBalanceTransferHandler {
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
   private static final long SLEEP_BASE_MILLIS = 100;
-  private static final int DEFAULT_CONCURRENCY = 8;
+  private static final int DEFAULT_POPULATION_CONCURRENCY = 32;
   private static final int NUM_TYPES = 2;
-  private static final int CONCURRENCY = 8;
   private static final int DEFAULT_INITIAL_BALANCE = 10000;
   private static final int NUM_PER_TX = 100;
 
@@ -63,17 +62,21 @@ public class AccountBalanceTransferHandler {
   }
 
   public void populateRecords() {
+    populateRecords(DEFAULT_POPULATION_CONCURRENCY);
+  }
+
+  public void populateRecords(int concurrency) {
     System.out.println("insert initial values ... ");
 
     ExecutorService es = Executors.newCachedThreadPool();
     List<CompletableFuture> futures = new ArrayList<>();
-    IntStream.range(0, DEFAULT_CONCURRENCY)
+    IntStream.range(0, concurrency)
         .forEach(
             i -> {
               CompletableFuture<Void> future =
                   CompletableFuture.runAsync(
                       () -> {
-                        new PopulationRunner(i).run();
+                        new PopulationRunner(i, concurrency).run();
                       },
                       es);
               futures.add(future);
@@ -160,13 +163,15 @@ public class AccountBalanceTransferHandler {
 
   private class PopulationRunner {
     private final int id;
+    private final int concurrency;
 
-    public PopulationRunner(int threadId) {
+    public PopulationRunner(int threadId, int concurrency) {
       this.id = threadId;
+      this.concurrency = concurrency;
     }
 
     public void run() {
-      int numPerThread = (context.getNumAccounts() + CONCURRENCY - 1) / CONCURRENCY;
+      int numPerThread = (context.getNumAccounts() + concurrency - 1) / concurrency;
       int start = numPerThread * id;
       int end = Math.min(numPerThread * (id + 1), context.getNumAccounts());
       IntStream.range(0, (numPerThread + NUM_PER_TX - 1) / NUM_PER_TX)

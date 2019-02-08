@@ -13,10 +13,12 @@ import java.util.concurrent.CompletableFuture;
 
 /** You can create tables for this program by using `script/sample_schema/tx_transfer.cql` */
 public class TransactionVerification {
+  private static final int DEFAULT_POPULATION_CONCURRENCY = 1;
   private static final int DEFAULT_CONCURRENCY = 5;
   private static final int DEFAULT_NUM_ACCOUNTS = 10;
   private static final int DEFAULT_RUN_FOR_SEC = 60;
   private static int concurrency = DEFAULT_CONCURRENCY;
+  private static int populationConcurrency = DEFAULT_POPULATION_CONCURRENCY;
   private static int numAccounts = DEFAULT_NUM_ACCOUNTS;
   private static int runFor = DEFAULT_RUN_FOR_SEC;
   private static int clientSeed = 0;
@@ -34,6 +36,8 @@ public class TransactionVerification {
         runFor = Integer.parseInt(args[++i]);
       } else if ("-s".equals(args[i])) {
         clientSeed = Integer.parseInt(args[++i]);
+      } else if ("-pc".equals(args[i])) {
+        populationConcurrency = Integer.parseInt(args[++i]);
       } else if ("-f".equals(args[i])) {
         propertiesFile = args[++i];
       } else if ("-killer_starter".equals(args[i])) {
@@ -53,7 +57,7 @@ public class TransactionVerification {
     TransferContext context = new TransferContext(numAccounts, runFor, 0, clientSeed);
     AccountBalanceTransferHandler handler = new AccountBalanceTransferHandler(config, context);
 
-    handler.populateRecords();
+    handler.populateRecords(populationConcurrency);
 
     CompletableFuture.runAsync(() -> TransactionUtility.executeCommand(killerStarter));
 
@@ -107,7 +111,8 @@ public class TransactionVerification {
   private static void printUsageAndExit() {
     System.err.println(
         "TransactionVerification [-f database.properties] "
-            + "[-c concurrency] [-n num_accounts] [-t run_time_sec] [-s client_seed]"
+            + "[-c concurrency] [-n num_accounts] [-t run_time_sec] "
+            + "[-s client_seed] [-pc population_concurrency]"
             + "[-killer_starter command_path] [-killer_stopper command_path]");
     System.exit(1);
   }
