@@ -36,12 +36,12 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class Cassandra implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
+  private final StatementHandlerManager handlers;
+  private final BatchHandler batch;
+  private final ClusterManager clusterManager;
+  private final Map<String, TableMetadata> tableMetadataMap;
   private Optional<String> namespace;
   private Optional<String> tableName;
-  private StatementHandlerManager handlers;
-  private BatchHandler batch;
-  private ClusterManager clusterManager;
-  private Map<String, TableMetadata> tableMetadataMap;
 
   @Inject
   public Cassandra(DatabaseConfig config) {
