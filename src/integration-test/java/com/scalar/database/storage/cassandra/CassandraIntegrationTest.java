@@ -1016,6 +1016,37 @@ public class CassandraIntegrationTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void put_PutWithoutClusteringKeyGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    int pKey = 0;
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Put put = new Put(partitionKey);
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              storage.put(put);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void put_IncorrectPutGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    int pKey = 0;
+    int cKey = 0;
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Put put = new Put(partitionKey).withValue(new IntValue(COL_NAME4, cKey));
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              storage.put(put);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   private void populateRecords() {
     puts = preparePuts();
     puts.forEach(

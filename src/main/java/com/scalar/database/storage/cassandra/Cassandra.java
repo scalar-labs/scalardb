@@ -3,7 +3,6 @@ package com.scalar.database.storage.cassandra;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.TableMetadata;
 import com.google.inject.Inject;
 import com.scalar.database.api.Delete;
 import com.scalar.database.api.DistributedStorage;
@@ -18,8 +17,12 @@ import com.scalar.database.api.Selection;
 import com.scalar.database.config.DatabaseConfig;
 import com.scalar.database.exception.storage.ExecutionException;
 import com.scalar.database.exception.storage.InvalidUsageException;
+import com.scalar.database.io.Key;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -38,6 +41,7 @@ public class Cassandra implements DistributedStorage {
   private StatementHandlerManager handlers;
   private BatchHandler batch;
   private ClusterManager clusterManager;
+  private Map<String, TableMetadata> tableMetadataMap;
 
   @Inject
   public Cassandra(DatabaseConfig config) {
@@ -57,6 +61,7 @@ public class Cassandra implements DistributedStorage {
 
     namespace = Optional.empty();
     tableName = Optional.empty();
+    tableMetadataMap = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -71,7 +76,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing get operation with " + get);
     setTargetToIfNot(get);
     addProjectionsForKeys(get);
-    TableMetadata metadata = getTableMetadata(get.forNamespace(), get.forTable());
+    TableMetadata metadata = getTableMetadata(get.forNamespace().get(), get.forTable().get());
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -89,7 +94,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing scan operation with " + scan);
     setTargetToIfNot(scan);
     addProjectionsForKeys(scan);
-    TableMetadata metadata = getTableMetadata(scan.forNamespace(), scan.forTable());
+    TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -99,6 +104,7 @@ public class Cassandra implements DistributedStorage {
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
     setTargetToIfNot(put);
+    checkIfPrimaryKeyExists(put);
     handlers.get(put).handle(put);
   }
 
@@ -172,8 +178,34 @@ public class Cassandra implements DistributedStorage {
             });
   }
 
-  private TableMetadata getTableMetadata(Optional<String> namespace, Optional<String> tableName) {
-    // assumes that namespace and tableName are not empty
-    return clusterManager.getMetadata(namespace.get(), tableName.get());
+  private synchronized TableMetadata getTableMetadata(String namespace, String tableName) {
+    String fullName = namespace + "." + tableName;
+    if (!tableMetadataMap.containsKey(fullName)) {
+      tableMetadataMap.put(fullName, new TableMetadata(clusterManager, namespace, tableName));
+    }
+    return tableMetadataMap.get(fullName);
+  }
+
+  private void checkIfPrimaryKeyExists(Put put) {
+    TableMetadata metadata = getTableMetadata(put.forNamespace().get(), put.forTable().get());
+
+    throwIfNotMatched(Optional.of(put.getPartitionKey()), metadata.getPartitionKeyNames());
+    throwIfNotMatched(put.getClusteringKey(), metadata.getClusteringColumnNames());
+  }
+
+  private void throwIfNotMatched(Optional<Key> key, Set<String> names) {
+    String message = "The primary key is not properly specified.";
+    if ((!key.isPresent() && names.size() > 0)
+        || (key.isPresent() && (key.get().size() != names.size()))) {
+      throw new IllegalArgumentException(message);
+    }
+    key.ifPresent(
+        k ->
+            k.forEach(
+                v -> {
+                  if (!names.contains(v.getName())) {
+                    throw new IllegalArgumentException(message);
+                  }
+                }));
   }
 }

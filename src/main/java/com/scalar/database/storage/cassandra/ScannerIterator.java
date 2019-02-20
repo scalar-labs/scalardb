@@ -2,7 +2,6 @@ package com.scalar.database.storage.cassandra;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.TableMetadata;
 import com.scalar.database.api.Result;
 import java.util.Iterator;
 import javax.annotation.Nullable;
