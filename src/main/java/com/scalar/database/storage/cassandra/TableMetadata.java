@@ -8,18 +8,10 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class TableMetadata {
-  private final ClusterManager manager;
-  private final String keyspace;
-  private final String tableName;
-  private final com.datastax.driver.core.TableMetadata tableMetadata;
   private final Set<String> partitionKeyNames;
   private final Set<String> clusteringColumnNames;
 
-  public TableMetadata(ClusterManager manager, String keyspace, String tableName) {
-    this.manager = manager;
-    this.keyspace = keyspace;
-    this.tableName = tableName;
-    this.tableMetadata = manager.getMetadata(keyspace, tableName);
+  public TableMetadata(com.datastax.driver.core.TableMetadata tableMetadata) {
     this.partitionKeyNames =
         ImmutableSet.copyOf(
             tableMetadata

@@ -181,7 +181,8 @@ public class Cassandra implements DistributedStorage {
   private synchronized TableMetadata getTableMetadata(String namespace, String tableName) {
     String fullName = namespace + "." + tableName;
     if (!tableMetadataMap.containsKey(fullName)) {
-      tableMetadataMap.put(fullName, new TableMetadata(clusterManager, namespace, tableName));
+      tableMetadataMap.put(
+          fullName, new TableMetadata(clusterManager.getMetadata(namespace, tableName)));
     }
     return tableMetadataMap.get(fullName);
   }
