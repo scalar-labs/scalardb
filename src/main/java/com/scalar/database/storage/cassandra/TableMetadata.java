@@ -11,9 +11,9 @@ public class TableMetadata {
   private final ClusterManager manager;
   private final String keyspace;
   private final String tableName;
-  private com.datastax.driver.core.TableMetadata tableMetadata;
-  private Set<String> partitionKeyNames;
-  private Set<String> clusteringColumnNames;
+  private final com.datastax.driver.core.TableMetadata tableMetadata;
+  private final Set<String> partitionKeyNames;
+  private final Set<String> clusteringColumnNames;
 
   public TableMetadata(ClusterManager manager, String keyspace, String tableName) {
     this.manager = manager;
