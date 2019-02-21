@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.TableMetadata;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.database.io.IntValue;
 import com.scalar.database.io.Key;
 import com.scalar.database.io.TextValue;
@@ -173,8 +173,7 @@ public class ResultImplTest {
   public void getPartitionKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(columnMetadata.getName()).thenReturn(ANY_COLUMN_NAME_2);
-    when(tableMetadata.getPartitionKey()).thenReturn(Arrays.asList(columnMetadata));
+    when(tableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -191,8 +190,7 @@ public class ResultImplTest {
   public void getPartitionKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(columnMetadata.getName()).thenReturn("another");
-    when(tableMetadata.getPartitionKey()).thenReturn(Arrays.asList(columnMetadata));
+    when(tableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of("another"));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -207,9 +205,7 @@ public class ResultImplTest {
   public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(columnMetadata.getName()).thenReturn(ANY_COLUMN_NAME_2);
-    when(tableMetadata.getClusteringColumns())
-        .thenReturn(Collections.singletonList(columnMetadata));
+    when(tableMetadata.getClusteringColumnNames()).thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -226,9 +222,7 @@ public class ResultImplTest {
   public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(columnMetadata.getName()).thenReturn("another");
-    when(tableMetadata.getClusteringColumns())
-        .thenReturn(Collections.singletonList(columnMetadata));
+    when(tableMetadata.getClusteringColumnNames()).thenReturn(ImmutableSet.of("another"));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
