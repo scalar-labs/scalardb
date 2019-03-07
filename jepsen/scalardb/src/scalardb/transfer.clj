@@ -31,16 +31,18 @@
                                                       CrudException
                                                       UnknownTransactionStatusException)))
 
-(def KEYSPACE "jepsen")
-(def TABLE "transfer")
-(def ACCOUNT_ID "account_id")
-(def BALANCE "balance")
+(def ^:const KEYSPACE "jepsen")
+(def ^:const TABLE "transfer")
+(def ^:const ACCOUNT_ID "account_id")
+(def ^:const BALANCE "balance")
 
-(def INITIAL_BALANCE 1000)
-(def NUM_ACCOUNTS 10)
+(def ^:const INITIAL_BALANCE 1000)
+(def ^:const NUM_ACCOUNTS 10)
 (def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
-(defn create-transfer-table
+(def ^:const NUM_FAILURES_FOR_RECONNECTION 1000)
+
+(defn- create-transfer-table!
   [session test]
   (cql/create-keyspace session KEYSPACE
                        (if-not-exists)
@@ -89,7 +91,7 @@
   "Insert initial records with transaction.
   This method assumes that n is small (< 100)"
   [test n balance]
-  (let [tx (scalar/start-transaction (scalar/get-properties test))]
+  (let [tx (scalar/start-transaction test)]
     (try
       (dotimes [i n]
         (->>
@@ -127,7 +129,7 @@
 (defn read-all-records
   "Read records from 0 .. (n - 1)"
   [test n]
-  (let [tx (scalar/start-transaction (scalar/get-properties test))]
+  (let [tx (scalar/start-transaction test)]
     (map #(read-record tx %) (range n))))
 
 (defn read-all-with-retry
@@ -136,6 +138,8 @@
   (loop [tries scalar/RETRIES]
     (when (< tries scalar/RETRIES)
       (scalar/exponential-backoff (- scalar/RETRIES tries)))
+    (when (zero? (mod tries scalar/RETRIES_FOR_RECONNECTION))
+      (scalar/prepare-transaction-service! test))
     (let [results (read-all-records test n)]
       (if (empty? (filter nil? results))
         results
@@ -169,14 +173,16 @@
     (locking initialized?
       (when (compare-and-set! initialized? false true)
         (let [session (drv/connect (->> test :nodes (map name)))]
-          (create-transfer-table session test)
-          (scalar/create-coordinator-table session test)
+          (create-transfer-table! session test)
+          (scalar/create-coordinator-table! session test)
           (drv/disconnect! session))
+        (scalar/prepare-storage-service! test)
+        (scalar/prepare-transaction-service! test)
         (populate-accounts test n initial-balance))))
 
   (invoke! [_ test op]
     (case (:f op)
-      :transfer (let [tx (scalar/start-transaction (scalar/get-properties test))]
+      :transfer (let [tx (scalar/start-transaction test)]
                   (try
                     (tx-transfer tx (-> op :value :from) (-> op :value :to) (-> op :value :amount))
                     (assoc op :type :ok)
@@ -184,16 +190,21 @@
                       (swap! (:unknown-tx test) conj (.getId tx))
                       (assoc op :type :fail :error {:unknown-tx-status (.getId tx)}))
                     (catch Exception e
+                      (swap! (:failures test) inc)
+                      (locking (:failures test)
+                        (when (compare-and-set! (:failures test) NUM_FAILURES_FOR_RECONNECTION 0)
+                          (scalar/prepare-transaction-service! test))) ; reconnect
                       (assoc op :type :fail :error (.getMessage e)))))
       :get-all  (if-let [results (get-balances-and-versions test (:num op))]
                   (assoc op :type :ok :value results)
                   (assoc op :type :fail :error "Failed to get balances"))
       :check-tx (let [unknown (:unknown-tx test)]
-                  (if-let [num-committed (scalar/check-coordinator (scalar/get-properties test) @unknown)]
+                  (if-let [num-committed (scalar/check-coordinator test @unknown)]
                     (assoc op :type :ok :value num-committed)
                     (assoc op :type :fail :value 0 :error "Failed to check status")))))
 
-  (close! [_ _])
+  (close! [_ test]
+    (scalar/close-all! test))
 
   (teardown! [_ _]))
 
@@ -275,6 +286,7 @@
                                {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
                                 :model  {:num NUM_ACCOUNTS}
                                 :unknown-tx (atom #{})
+                                :failures (atom 0)
                                 :generator (gen/phases
                                             (->> [diff-transfer]
                                                  (conductors/std-gen opts))

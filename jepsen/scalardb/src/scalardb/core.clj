@@ -19,13 +19,14 @@
            (com.google.inject Guice)
            (java.util Properties)))
 
-(def RETRIES 5)
+(def ^:const RETRIES 5)
+(def ^:const RETRIES_FOR_RECONNECTION 3)
 
-(def COORDINATOR "coordinator")
-(def STATE_TABLE "state")
-(def VERSION "tx_version")
+(def ^:const COORDINATOR "coordinator")
+(def ^:const STATE_TABLE "state")
+(def ^:const VERSION "tx_version")
 
-(defn create-coordinator-table
+(defn create-coordinator-table!
   [session test]
   (cql/create-keyspace session COORDINATOR
                        (if-not-exists)
@@ -40,48 +41,46 @@
                                          :tx_created_at :bigint
                                          :primary-key [:tx_id]})))
 
-(defn create-properties
-  [test]
+(defn- create-properties
+  [nodes]
   (let [props (Properties.)]
     (.setProperty props "scalar.database.contact_points"
-      (reduce #(str %1 "," %2) (:nodes test)))
+      (reduce #(str %1 "," %2) nodes))
     (.setProperty props "scalar.database.username" "cassandra")
     (.setProperty props "scalar.database.password" "cassandra")
     props))
 
-(def get-properties (memoize create-properties))
+(defn prepare-storage-service!
+  [test]
+  (let [storage (:storage test)]
+    (when-not (nil? @storage)
+      (.close @storage))
+    (reset! storage
+            (.getInstance
+              (->> (create-properties (c/live-nodes test))
+                   DatabaseConfig.
+                   StorageModule.
+                   vector
+                   Guice/createInjector)
+              StorageService))))
 
-(defn prepare-storage-service
-  [props]
-  (->
-    (->> props
-         DatabaseConfig.
-         StorageModule.
-         vector
-         Guice/createInjector)
-    (.getInstance StorageService)))
-
-(def get-storage-service (memoize prepare-storage-service))
-
-(defn prepare-storage-instance
-  [props]
-  (-> (DatabaseConfig. props) Cassandra.))
-
-(defn prepare-transaction-service
-  [props]
-  (->
-    (->> props
-         DatabaseConfig.
-         TransactionModule.
-         vector
-         Guice/createInjector)
-    (.getInstance TransactionService)))
-
-(def get-transaction-service (memoize prepare-transaction-service))
+(defn prepare-transaction-service!
+  [test]
+  (let [transaction (:transaction test)]
+    (when-not (nil? @transaction)
+      (.close @transaction))
+    (reset! transaction
+            (.getInstance
+              (->> (create-properties (c/live-nodes test))
+                   DatabaseConfig.
+                   TransactionModule.
+                   vector
+                   Guice/createInjector)
+              TransactionService))))
 
 (defn start-transaction
-  [props]
-  (-> props get-transaction-service .start))
+  [test]
+  (-> test :transaction deref .start))
 
 (defn read-coordinator
   "Return true if the status is COMMITTED. Retrun nil if the read fails."
@@ -98,11 +97,14 @@
 
 (defn read-coordinator-with-retry
   "Return true if the status is COMMITTED. When the read fails, retry to read"
-  [coordinator id]
+  [test id]
   (loop [tries RETRIES]
     (when (< tries RETRIES)
       (exponential-backoff (- RETRIES tries)))
-    (let [committed (read-coordinator coordinator id)]
+    (when (zero? (mod tries RETRIES_FOR_RECONNECTION))
+      (prepare-storage-service! test)) ; reconnection
+    (let [coordinator (Coordinator. (deref (:storage test)))
+          committed (read-coordinator coordinator id)]
       (if-not (nil? committed)
         committed
         (if (pos? tries)
@@ -112,18 +114,31 @@
 
 (defn check-coordinator
   "Return the number of COMMITTED states by checking the coordinator"
-  [props ids]
+  [test ids]
   (if (empty? ids)
     0
-    (let [coordinator (Coordinator. (prepare-storage-instance props))]
+    (let [coordinator (Coordinator. (deref (:storage test)))]
       (->> ids
-           (map #(read-coordinator-with-retry coordinator %))
+           (map #(read-coordinator-with-retry test %))
            (filter true?)
            count))))
+
+(defn close-all!
+  [test]
+  (let [storage (:storage test)
+        transaction (:transaction test)]
+    (when-not (nil? @storage)
+      (.close @storage)
+      (compare-and-set! storage @storage nil))
+    (when-not (nil? @transaction)
+      (.close @transaction)
+      (compare-and-set! transaction @transaction nil))))
 
 (defn scalardb-test
   [name opts]
   (merge tests/noop-test
          {:name    (str "scalardb-" name)
-          :os      debian/os}
+          :os      debian/os
+          :storage (atom nil)
+          :transaction (atom nil)}
          opts))
