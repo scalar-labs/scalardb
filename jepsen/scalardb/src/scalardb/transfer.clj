@@ -190,10 +190,9 @@
                       (swap! (:unknown-tx test) conj (.getId tx))
                       (assoc op :type :fail :error {:unknown-tx-status (.getId tx)}))
                     (catch Exception e
-                      (swap! (:failures test) inc)
-                      (locking (:failures test)
-                        (when (compare-and-set! (:failures test) NUM_FAILURES_FOR_RECONNECTION 0)
-                          (scalar/prepare-transaction-service! test))) ; reconnect
+                      (when (= (swap! (:failures test) inc) NUM_FAILURES_FOR_RECONNECTION)
+                        (scalar/prepare-transaction-service! test)
+                        (reset! (:failures test) 0)) ; reconnect
                       (assoc op :type :fail :error (.getMessage e)))))
       :get-all  (if-let [results (get-balances-and-versions test (:num op))]
                   (assoc op :type :ok :value results)

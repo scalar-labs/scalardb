@@ -44,8 +44,13 @@
 (defn- create-properties
   [nodes]
   (let [props (Properties.)]
-    (.setProperty props "scalar.database.contact_points"
-      (reduce #(str %1 "," %2) nodes))
+    (if (= (count nodes) 1)
+      (.setProperty props
+                    "scalar.database.contact_points"
+                    (first nodes))
+      (.setProperty props
+                    "scalar.database.contact_points"
+                    (reduce #(str %1 "," %2) nodes)))
     (.setProperty props "scalar.database.username" "cassandra")
     (.setProperty props "scalar.database.password" "cassandra")
     props))
@@ -54,29 +59,31 @@
   [test]
   (let [storage (:storage test)]
     (when-not (nil? @storage)
-      (.close @storage))
-    (reset! storage
-            (.getInstance
-              (->> (create-properties (c/live-nodes test))
-                   DatabaseConfig.
-                   StorageModule.
-                   vector
-                   Guice/createInjector)
-              StorageService))))
+      (.close @storage)
+      (info "reconnecting to the cluster"))
+    (when-let [injector (some->> (c/live-nodes test)
+                                 not-empty
+                                 create-properties
+                                 DatabaseConfig.
+                                 StorageModule.
+                                 vector
+                                 Guice/createInjector)]
+      (reset! storage (.getInstance injector StorageService)))))
 
 (defn prepare-transaction-service!
   [test]
   (let [transaction (:transaction test)]
     (when-not (nil? @transaction)
-      (.close @transaction))
-    (reset! transaction
-            (.getInstance
-              (->> (create-properties (c/live-nodes test))
-                   DatabaseConfig.
-                   TransactionModule.
-                   vector
-                   Guice/createInjector)
-              TransactionService))))
+      (.close @transaction)
+      (info "reconnecting to the cluster"))
+    (when-let [injector (some->> (c/live-nodes test)
+                                 not-empty
+                                 create-properties
+                                 DatabaseConfig.
+                                 TransactionModule.
+                                 vector
+                                 Guice/createInjector)]
+      (reset! transaction (.getInstance injector TransactionService)))))
 
 (defn start-transaction
   [test]
