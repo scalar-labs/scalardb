@@ -6,9 +6,8 @@ import com.scalar.database.util.TransferContext;
 import java.io.File;
 import java.io.IOException;
 
+/** You can create tables for this program by using `script/sample_schema/tx_transfer.cql` */
 public class BenchmarkPreparation {
-  private static final String NAMESPACE = "benchmark";
-  private static final String TABLE = "tx_transfer";
   private static final int DEFAULT_CONCURRENCY = 8;
   private static final int DEFAULT_NUM_ACCOUNTS = 100000;
   private static int concurrency = DEFAULT_CONCURRENCY;
@@ -27,15 +26,14 @@ public class BenchmarkPreparation {
         printUsageAndExit();
       }
     }
-    if (propertiesFile == null) {
-      printUsageAndExit();
+
+    DatabaseConfig config = null;
+    if (propertiesFile != null) {
+      config = new DatabaseConfig(new File(propertiesFile));
     }
 
-    DatabaseConfig config = new DatabaseConfig(new File(propertiesFile));
     TransferContext context = new TransferContext(numAccounts, 0, 0, 0);
-    AccountBalanceTransferHandler handler =
-        new AccountBalanceTransferHandler(config, context, NAMESPACE, TABLE);
-    handler.prepareTables();
+    AccountBalanceTransferHandler handler = new AccountBalanceTransferHandler(config, context);
 
     handler.populateRecords();
 
@@ -44,7 +42,7 @@ public class BenchmarkPreparation {
 
   private static void printUsageAndExit() {
     System.err.println(
-        "BenchmarkPreparation -f database.properties "
+        "BenchmarkPreparation [-f database.properties] "
             + "[-c concurrency] [-n num_accounts] [-h host_address]");
     System.exit(1);
   }

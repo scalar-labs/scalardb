@@ -70,12 +70,19 @@ task integrationTest(type: Test) {
 // build should not depend on the integration tests
 check.dependsOn -= integrationTest
 
+task copyTestJarsToTestLib(type: Copy) {
+    from configurations.testCompile
+    into file("$buildDir/test-libs")
+}
+
+test.dependsOn += copyTestJarsToTestLib
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 group = "com.scalar-labs"
 archivesBaseName = "scalardb"
-//version = "1.0.0-rc1"
+//version = "1.0.0"
 
 // for archiving and uploading to maven central
 //apply from: 'archive.gradle'

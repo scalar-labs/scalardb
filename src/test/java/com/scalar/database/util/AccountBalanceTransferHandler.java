@@ -2,8 +2,9 @@ package com.scalar.database.util;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.scalar.database.api.Consistency;
-import com.scalar.database.api.DistributedStorage;
 import com.scalar.database.api.DistributedTransaction;
 import com.scalar.database.api.DistributedTransactionManager;
 import com.scalar.database.api.Get;
@@ -15,12 +16,12 @@ import com.scalar.database.exception.transaction.CrudException;
 import com.scalar.database.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.database.io.IntValue;
 import com.scalar.database.io.Key;
+import com.scalar.database.service.TransactionModule;
+import com.scalar.database.service.TransactionService;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -29,74 +30,53 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
-/**
- * CREATE KEYSPACE transfer WITH replication = {'class': 'SimpleStrategy', 'replication_factor':
- * 'x'} CREATE KEYSPACE coordinator WITH replication = {'class': 'SimpleStrategy',
- * 'replication_factor': 'x'}
- */
-
-/**
- * CREATE TABLE transfer.tx_transfer (account_id int, balance int, tx_id text, tx_version int,
- * tx_state int, tx_prepared_at bigint, tx_committed_at bigint, before_account_id int,
- * before_balance int, before_tx_id text, before_tx_version int, before_tx_state int,
- * before_tx_prepared_at bigint, before_tx_committed_at bigint, PRIMARY KEY ((account_id)))
- */
+/** You can create tables for this program by using `script/sample_schema/tx_transfer.cql` */
 public class AccountBalanceTransferHandler {
+  private static final String NAMESPACE = "transfer";
+  private static final String TABLE = "tx_transfer";
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
   private static final long SLEEP_BASE_MILLIS = 100;
-  private static final int DEFAULT_CONCURRENCY = 8;
+  private static final int DEFAULT_POPULATION_CONCURRENCY = 32;
   private static final int NUM_TYPES = 2;
-  private static final int CONCURRENCY = 8;
   private static final int DEFAULT_INITIAL_BALANCE = 10000;
   private static final int NUM_PER_TX = 100;
 
-  private final DatabaseConfig config;
-  private final DistributedStorage storage;
   private final DistributedTransactionManager manager;
   private final TransferContext context;
-  private final String namespace;
-  private final String table;
 
-  public AccountBalanceTransferHandler(
-      DatabaseConfig config, TransferContext context, String namespace, String table) {
-    this.config = config;
+  public AccountBalanceTransferHandler(DatabaseConfig config, TransferContext context) {
+    if (config == null) {
+      Properties props = new Properties();
+      props.setProperty("scalar.database.contact_points", "localhost");
+      props.setProperty("scalar.database.username", "cassandra");
+      props.setProperty("scalar.database.password", "cassandra");
+      config = new DatabaseConfig(props);
+    }
     this.context = checkNotNull(context);
-    this.namespace = namespace;
-    this.table = table;
-    this.storage = TransactionUtility.prepareStorage(config);
-    this.manager = TransactionUtility.prepareTransactionManager(storage, namespace, table);
-  }
 
-  public void prepareTables() {
-    TransactionUtility.prepareCoordinatorTable(config);
-
-    Map<String, String> attributes = new HashMap<>();
-    attributes.put(ACCOUNT_ID, "int");
-    attributes.put(ACCOUNT_TYPE, "int");
-    attributes.put(BALANCE, "int");
-    TransactionUtility.prepareUserTable(
-        config,
-        namespace,
-        table,
-        Arrays.asList(ACCOUNT_ID),
-        Arrays.asList(ACCOUNT_TYPE),
-        attributes);
+    Injector injector = Guice.createInjector(new TransactionModule(config));
+    this.manager = injector.getInstance(TransactionService.class);
+    manager.with(NAMESPACE, TABLE);
   }
 
   public void populateRecords() {
+    populateRecords(DEFAULT_POPULATION_CONCURRENCY);
+  }
+
+  public void populateRecords(int concurrency) {
     System.out.println("insert initial values ... ");
 
     ExecutorService es = Executors.newCachedThreadPool();
     List<CompletableFuture> futures = new ArrayList<>();
-    IntStream.range(0, DEFAULT_CONCURRENCY)
+    IntStream.range(0, concurrency)
         .forEach(
             i -> {
               CompletableFuture<Void> future =
                   CompletableFuture.runAsync(
                       () -> {
-                        new PopulationRunner(i).run();
+                        new PopulationRunner(i, concurrency).run();
                       },
                       es);
               futures.add(future);
@@ -183,13 +163,15 @@ public class AccountBalanceTransferHandler {
 
   private class PopulationRunner {
     private final int id;
+    private final int concurrency;
 
-    public PopulationRunner(int threadId) {
+    public PopulationRunner(int threadId, int concurrency) {
       this.id = threadId;
+      this.concurrency = concurrency;
     }
 
     public void run() {
-      int numPerThread = (context.getNumAccounts() + CONCURRENCY - 1) / CONCURRENCY;
+      int numPerThread = (context.getNumAccounts() + concurrency - 1) / concurrency;
       int start = numPerThread * id;
       int end = Math.min(numPerThread * (id + 1), context.getNumAccounts());
       IntStream.range(0, (numPerThread + NUM_PER_TX - 1) / NUM_PER_TX)
@@ -302,8 +284,8 @@ public class AccountBalanceTransferHandler {
       Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
       return new Get(partitionKey, clusteringKey)
           .withConsistency(Consistency.LINEARIZABLE)
-          .forNamespace(namespace)
-          .forTable(table);
+          .forNamespace(NAMESPACE)
+          .forTable(TABLE);
     }
 
     private Put preparePut(int id, int type, IntValue balance) {
@@ -311,8 +293,8 @@ public class AccountBalanceTransferHandler {
       Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
       return new Put(partitionKey, clusteringKey)
           .withConsistency(Consistency.LINEARIZABLE)
-          .forNamespace(namespace)
-          .forTable(table)
+          .forNamespace(NAMESPACE)
+          .forTable(TABLE)
           .withValue(balance);
     }
 

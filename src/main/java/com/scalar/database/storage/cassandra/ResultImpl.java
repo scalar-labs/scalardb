@@ -3,10 +3,8 @@ package com.scalar.database.storage.cassandra;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.datastax.driver.core.ColumnDefinitions.Definition;
-import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.TableMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.scalar.database.api.Result;
@@ -29,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -61,12 +60,12 @@ public class ResultImpl implements Result {
 
   @Override
   public Optional<Key> getPartitionKey() {
-    return getKey(metadata.getPartitionKey());
+    return getKey(metadata.getPartitionKeyNames());
   }
 
   @Override
   public Optional<Key> getClusteringKey() {
-    return getKey(metadata.getClusteringColumns());
+    return getKey(metadata.getClusteringColumnNames());
   }
 
   @Override
@@ -130,10 +129,10 @@ public class ResultImpl implements Result {
                 }));
   }
 
-  private Optional<Key> getKey(List<ColumnMetadata> metadata) {
+  private Optional<Key> getKey(Set<String> names) {
     List<Value> list = new ArrayList<>();
-    for (ColumnMetadata m : metadata) {
-      Value value = values.get(m.getName());
+    for (String name : names) {
+      Value value = values.get(name);
       if (value == null) {
         LOGGER.warn("full key doesn't seem to be projected into the result");
         return Optional.empty();

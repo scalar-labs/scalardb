@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.TableMetadata;
 import com.scalar.database.api.Result;
 import com.scalar.database.api.Scanner;
 import java.util.ArrayList;
