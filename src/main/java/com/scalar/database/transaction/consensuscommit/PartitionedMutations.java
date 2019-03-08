@@ -12,7 +12,7 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** Mutations partitioned by their partition key */
+/** Partition mutations based on their partition key */
 @Immutable
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;
@@ -95,6 +95,18 @@ public class PartitionedMutations {
     }
   }
 
+  /**
+   * Indicates whether some other object is "equal to" this object. The other object is considered
+   * equal if it is the same instance or if:
+   *
+   * <ul>
+   *   <li>it is also a {@code PartitionedMutations} and
+   *   <li>both instances have the same partitions.
+   * </ul>
+   *
+   * @param o an object to be tested for equality
+   * @return {@code true} if the other object is "equal to" this object otherwise {@code false}
+   */
   @Override
   public boolean equals(Object o) {
     if (o == this) {

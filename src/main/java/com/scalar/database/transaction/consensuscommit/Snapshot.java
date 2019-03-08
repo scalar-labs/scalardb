@@ -126,6 +126,12 @@ public class Snapshot {
     return Optional.empty();
   }
 
+  /**
+   * Add all the {@link com.scalar.database.api.Mutation}s from the {@link Snapshot} into the given
+   * {@link MutationComposer}
+   *
+   * @param composer a {@link MutationComposer}
+   */
   public void to(MutationComposer composer) {
     if ((composer instanceof PrepareMutationComposer) && isolation == Isolation.SERIALIZABLE) {
       toSerializable();

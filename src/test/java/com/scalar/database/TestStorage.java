@@ -3,7 +3,6 @@ import com.scalar.database.config.DatabaseConfig;
 import com.scalar.database.exception.storage.ExecutionException;
 import com.scalar.database.io.*;
 import com.scalar.database.storage.cassandra.Cassandra;
-
 import java.util.Optional;
 import java.util.Properties;
 
@@ -59,9 +58,8 @@ public class TestStorage {
           r.getValue(NAME).ifPresent(v -> System.out.println(((TextValue) v).getString().get()));
         });
 
-
     storage.close();
 
-    //System.exit(0);
+    // System.exit(0);
   }
 }

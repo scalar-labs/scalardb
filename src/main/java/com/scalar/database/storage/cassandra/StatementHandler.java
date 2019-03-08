@@ -17,9 +17,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * A handler class for statements
- */
+/** A handler class for statements */
 @ThreadSafe
 public abstract class StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
@@ -27,7 +25,8 @@ public abstract class StatementHandler {
   protected StatementCache cache;
 
   /**
-   * Constructs a {@code StatementHandler} with the specified {@link Session} and a new {@link StatementCache}
+   * Constructs a {@code StatementHandler} with the specified {@link Session} and a new {@link
+   * StatementCache}
    *
    * @param session {@code Session}
    */
@@ -111,7 +110,8 @@ public abstract class StatementHandler {
   protected abstract void overwriteConsistency(BoundStatement bound, Operation operation);
 
   /**
-   * Returns a {@link ConsistencyLevel} based on the specified {@link Operation} and {@link Consistency}
+   * Returns a {@link ConsistencyLevel} based on the specified {@link Operation} and {@link
+   * Consistency}
    *
    * @param operation an {@code Operation}
    * @param consistency a {@code Consistency}

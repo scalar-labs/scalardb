@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Handler class for CRUD operations */
+/** Perform CRUD operations on {@link DistributedStorage} */
 @ThreadSafe
 public class CrudHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CrudHandler.class);

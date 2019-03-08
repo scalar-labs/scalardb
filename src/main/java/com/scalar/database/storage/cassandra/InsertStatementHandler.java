@@ -14,7 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A handler class for insert statement
+ * A handler class for insert statements
  *
  * @author Hiroyuki Yamada
  */

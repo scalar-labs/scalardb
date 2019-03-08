@@ -19,7 +19,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A commit mutation composer */
+/**
+ * Keep track of mutations that need to be committed to {@link
+ * com.scalar.database.api.DistributedStorage}
+ */
 @NotThreadSafe
 public class CommitMutationComposer extends AbstractMutationComposer {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitMutationComposer.class);
@@ -27,7 +30,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
   /**
    * Constructs a {@code CommitMutationComposer} with specified id
    *
-   * @param id
+   * @param id a String
    */
   public CommitMutationComposer(String id) {
     super(id);

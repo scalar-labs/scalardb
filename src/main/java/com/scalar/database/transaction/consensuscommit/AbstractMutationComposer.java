@@ -10,14 +10,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** An abstract mutation composer */
+/** An abstraction for a mutation composer */
 public abstract class AbstractMutationComposer implements MutationComposer {
   protected final String id;
   protected final List<Mutation> mutations;
   protected final long current;
 
   /**
-   * Constructs an {@code AbstractMutationComposer} with the specified id
+   * Constructs an {@code AbstractMutationComposer} with the specified {@code id}
    *
    * @param id a {@code String}
    */
@@ -34,6 +34,11 @@ public abstract class AbstractMutationComposer implements MutationComposer {
     this.current = current;
   }
 
+  /**
+   * Returns an immutable list of all the {@link Mutation}s
+   *
+   * @return an immutable list of all the {@link Mutation}s
+   */
   @Override
   public List<Mutation> get() {
     return ImmutableList.copyOf(mutations);

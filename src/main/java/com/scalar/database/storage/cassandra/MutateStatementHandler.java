@@ -18,6 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);

@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A handler class for delete statement
+ * A handler class for delete statements
  *
  * @author Hiroyuki Yamada
  */

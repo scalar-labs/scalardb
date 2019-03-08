@@ -18,7 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A handler class for commits */
+/** Commit snapshots to {@link DistributedStorage} */
 @ThreadSafe
 public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
