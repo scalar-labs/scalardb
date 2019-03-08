@@ -33,7 +33,7 @@
     :parse-fn #(Long/parseLong %)
     :validate [pos? "Must be positive"]]
 
-   (jc/tarball-opt "http://www.us.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz")])
+   (jc/tarball-opt "https://archive.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz")])
 
 (defn test-cmd
    []
