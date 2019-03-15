@@ -54,6 +54,15 @@ public final class Key implements Comparable<Key>, Iterable<Value> {
     return Collections.unmodifiableList(values);
   }
 
+  /**
+   * Returns the size of the list of {@code Value} which this key is composed of
+   *
+   * @return the size of list of {@code Value} which this key is composed of
+   */
+  public int size() {
+    return values.size();
+  }
+
   @Override
   public int hashCode() {
     return values.hashCode();

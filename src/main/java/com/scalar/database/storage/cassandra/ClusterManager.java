@@ -85,9 +85,7 @@ public class ClusterManager {
     return metadata.getTable(table);
   }
 
-  /**
-   * Closes the cluster.
-   */
+  /** Closes the cluster. */
   public void close() {
     cluster.close();
   }
