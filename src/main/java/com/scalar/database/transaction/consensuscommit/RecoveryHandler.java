@@ -18,8 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A recovery handler for {@link DistributedStorage}. Used to rollback {@link DistributedStorage} to
- * a given {@link Snapshot} or to recover a given {@link TransactionResult}.
+ * A recovery handler for transactions on {@link DistributedStorage}. Used to rollback records on
+ * {@link DistributedStorage} to a given {@link Snapshot} or to recover a given {@link
+ * TransactionResult}.
  */
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
@@ -65,7 +66,7 @@ public class RecoveryHandler {
   }
 
   /**
-   * Rollback {@link DistributedStorage} to the specified {@link Snapshot}
+   * Rollback records on {@link DistributedStorage} to the specified {@link Snapshot}
    *
    * @param snapshot
    */

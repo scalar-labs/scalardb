@@ -25,10 +25,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Keeps track of the {@link State} of a {@link Snapshot} or {@link Result} for {@link
- * DistributedStorage}
- */
+/** Manage the coordinator.state table in {@link DistributedStorage}. */
 @Immutable
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
@@ -38,6 +35,11 @@ public class Coordinator {
   private static final Logger LOGGER = LoggerFactory.getLogger(Coordinator.class);
   private final DistributedStorage storage;
 
+  /**
+   * Constructs a {@code Coordinator} with the specified {@link DistributedStorage}.
+   *
+   * @param storage a {@link DistributedStorage}
+   */
   public Coordinator(DistributedStorage storage) {
     this.storage = storage;
   }
