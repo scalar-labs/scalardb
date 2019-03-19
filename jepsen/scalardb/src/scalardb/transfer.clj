@@ -164,6 +164,12 @@
   (let [results (read-all-with-retry test n)]
     (map #(assoc {} :balance (get-balance %) :version (get-version %)) results)))
 
+(defn- try-reconnection!
+  [test]
+  (when (= (swap! (:failures test) inc) NUM_FAILURES_FOR_RECONNECTION)
+    (scalar/prepare-transaction-service! test)
+    (reset! (:failures test) 0)))
+
 (defrecord TransferClient [initialized? n initial-balance]
   client/Client
   (open! [_ _ _]
@@ -182,7 +188,7 @@
 
   (invoke! [_ test op]
     (case (:f op)
-      :transfer (let [tx (scalar/start-transaction test)]
+      :transfer (if-let [tx (scalar/start-transaction test)]
                   (try
                     (tx-transfer tx (-> op :value :from) (-> op :value :to) (-> op :value :amount))
                     (assoc op :type :ok)
@@ -190,22 +196,25 @@
                       (swap! (:unknown-tx test) conj (.getId tx))
                       (assoc op :type :fail :error {:unknown-tx-status (.getId tx)}))
                     (catch Exception e
-                      (when (= (swap! (:failures test) inc) NUM_FAILURES_FOR_RECONNECTION)
-                        (scalar/prepare-transaction-service! test)
-                        (reset! (:failures test) 0)) ; reconnect
-                      (assoc op :type :fail :error (.getMessage e)))))
+                      (try-reconnection! test)
+                      (assoc op :type :fail :error (.getMessage e))))
+                  (do
+                    (try-reconnection! test)
+                    (assoc op :type :fail :error "Skipped due to no connection")))
       :get-all  (if-let [results (get-balances-and-versions test (:num op))]
                   (assoc op :type :ok :value results)
                   (assoc op :type :fail :error "Failed to get balances"))
       :check-tx (let [unknown (:unknown-tx test)]
-                  (if-let [num-committed (scalar/check-coordinator test @unknown)]
+                  (if-let [num-committed (if (empty? @unknown)
+                                           0
+                                           (scalar/check-transaction-states test @unknown))]
                     (assoc op :type :ok :value num-committed)
-                    (assoc op :type :fail :value 0 :error "Failed to check status")))))
+                    (assoc op :type :fail :error "Failed to check status")))))
 
-  (close! [_ test]
-    (scalar/close-all! test))
+  (close! [_ _])
 
-  (teardown! [_ _]))
+  (teardown! [_ test]
+    (scalar/close-all! test)))
 
 (defn transfer
   [test _]
@@ -258,7 +267,8 @@
                                    (r/filter identity)
                                    (into [])
                                    last
-                                   :value)
+                                   ((fn [x]
+                                      (if (= (:type x) :ok) (:value x) 0))))
             total-ok (->> history
                           (r/filter op/ok?)
                           (r/filter #(= :transfer (:f %)))
