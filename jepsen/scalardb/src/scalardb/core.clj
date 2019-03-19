@@ -1,6 +1,5 @@
 (ns scalardb.core
   (:require [jepsen.tests :as tests]
-            [jepsen.os.debian :as debian]
             [cassandra.core :as c]
             [clojurewerkz.cassaforte
              [client :as drv]
@@ -164,7 +163,6 @@
   [name opts]
   (merge tests/noop-test
          {:name    (str "scalardb-" name)
-          :os      debian/os
           :storage (atom nil)
           :transaction (atom nil)}
          opts))
