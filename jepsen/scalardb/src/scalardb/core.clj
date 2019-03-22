@@ -27,7 +27,7 @@
 
 (defn exponential-backoff
   [r]
-  (Thread/sleep (* 1000 (reduce * (repeat r 2)))))
+  (Thread/sleep (reduce * 1000 (repeat r 2))))
 
 (defn create-coordinator-table!
   [session test]
