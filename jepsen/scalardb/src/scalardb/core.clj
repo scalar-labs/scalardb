@@ -1,6 +1,5 @@
 (ns scalardb.core
   (:require [jepsen.tests :as tests]
-            [jepsen.os.debian :as debian]
             [cassandra.core :as c]
             [clojurewerkz.cassaforte
              [client :as drv]
@@ -19,12 +18,16 @@
            (com.google.inject Guice)
            (java.util Properties)))
 
-(def ^:const RETRIES 5)
+(def ^:const RETRIES 8)
 (def ^:const RETRIES_FOR_RECONNECTION 3)
 
 (def ^:const COORDINATOR "coordinator")
 (def ^:const STATE_TABLE "state")
 (def ^:const VERSION "tx_version")
+
+(defn exponential-backoff
+  [r]
+  (Thread/sleep (reduce * 1000 (repeat r 2))))
 
 (defn create-coordinator-table!
   [session test]
@@ -55,41 +58,82 @@
     (.setProperty props "scalar.database.password" "cassandra")
     props))
 
-(defn prepare-storage-service!
+(defn- close-storage!
   [test]
   (let [storage (:storage test)]
-    (when-not (nil? @storage)
-      (.close @storage)
-      (info "reconnecting to the cluster"))
-    (when-let [injector (some->> (c/live-nodes test)
+    (locking storage
+      (when-not (nil? @storage)
+        (.close @storage)
+        (reset! storage nil)
+        (info "The current storage service closed")))))
+
+(defn- close-transaction!
+  [test]
+  (let [transaction (:transaction test)]
+    (locking transaction
+      (when-not (nil? @transaction)
+        (.close @transaction)
+        (reset! transaction nil)
+        (info "The current transaction service closed")))))
+
+(defn close-all!
+  [test]
+  (close-storage! test)
+  (close-transaction! test))
+
+(defn prepare-storage-service!
+  [test]
+  (close-storage! test)
+  (info "reconnecting to the cluster")
+  (loop [tries RETRIES]
+    (when (< tries RETRIES)
+      (exponential-backoff (- RETRIES tries)))
+    (if-not (pos? tries)
+      (warn "Failed to connect to the cluster")
+      (if-let [injector (some->> (c/live-nodes test)
                                  not-empty
                                  create-properties
                                  DatabaseConfig.
                                  StorageModule.
                                  vector
                                  Guice/createInjector)]
-      (reset! storage (.getInstance injector StorageService)))))
+        (try
+          (->> (.getInstance injector StorageService)
+               (reset! (:storage test)))
+          (catch Exception e
+            (warn (.getMessage e))))
+        (when-not (nil? (:storage test))
+          (recur (dec tries)))))))
 
 (defn prepare-transaction-service!
   [test]
-  (let [transaction (:transaction test)]
-    (when-not (nil? @transaction)
-      (.close @transaction)
-      (info "reconnecting to the cluster"))
-    (when-let [injector (some->> (c/live-nodes test)
+  (close-transaction! test)
+  (info "reconnecting to the cluster")
+  (loop [tries RETRIES]
+    (when (< tries RETRIES)
+      (exponential-backoff (- RETRIES tries)))
+    (if-not (pos? tries)
+      (warn "Failed to connect to the cluster")
+      (if-let [injector (some->> (c/live-nodes test)
                                  not-empty
                                  create-properties
                                  DatabaseConfig.
                                  TransactionModule.
                                  vector
                                  Guice/createInjector)]
-      (reset! transaction (.getInstance injector TransactionService)))))
+        (try
+          (->> (.getInstance injector TransactionService)
+               (reset! (:transaction test)))
+          (catch Exception e
+            (warn (.getMessage e))))
+        (when-not (nil? (:transaction test))
+          (recur (dec tries)))))))
 
 (defn start-transaction
   [test]
-  (-> test :transaction deref .start))
+  (some-> test :transaction deref .start))
 
-(defn read-coordinator
+(defn- is-committed-state?
   "Return true if the status is COMMITTED. Retrun nil if the read fails."
   [coordinator id]
   (try
@@ -98,54 +142,27 @@
              (-> state .get .getState (.equals TransactionState/COMMITTED))))
       (catch Exception e nil)))
 
-(defn exponential-backoff
-  [r]
-  (Thread/sleep (* 1000 (reduce * (repeat r 2)))))
-
-(defn read-coordinator-with-retry
-  "Return true if the status is COMMITTED. When the read fails, retry to read"
-  [test id]
-  (loop [tries RETRIES]
-    (when (< tries RETRIES)
-      (exponential-backoff (- RETRIES tries)))
-    (when (zero? (mod tries RETRIES_FOR_RECONNECTION))
-      (prepare-storage-service! test)) ; reconnection
-    (let [coordinator (Coordinator. (deref (:storage test)))
-          committed (read-coordinator coordinator id)]
-      (if-not (nil? committed)
-        committed
-        (if (pos? tries)
-          (recur (dec tries))
-          (throw (ex-info "Failed to read a transaction state"
-                          {:cause "Failed to read a transaction state"})))))))
-
-(defn check-coordinator
-  "Return the number of COMMITTED states by checking the coordinator"
+(defn check-transaction-states
+  "Return the number of COMMITTED states by checking the coordinator. Return nil if it fails."
   [test ids]
-  (if (empty? ids)
-    0
-    (let [coordinator (Coordinator. (deref (:storage test)))]
-      (->> ids
-           (map #(read-coordinator-with-retry test %))
-           (filter true?)
-           count))))
-
-(defn close-all!
-  [test]
-  (let [storage (:storage test)
-        transaction (:transaction test)]
-    (when-not (nil? @storage)
-      (.close @storage)
-      (compare-and-set! storage @storage nil))
-    (when-not (nil? @transaction)
-      (.close @transaction)
-      (compare-and-set! transaction @transaction nil))))
+  (loop [tries RETRIES]
+    (if-not (pos? tries)
+      nil
+      (do
+        (when (< tries RETRIES)
+          (exponential-backoff (- RETRIES tries)))
+        (when (zero? (mod tries RETRIES_FOR_RECONNECTION))
+          (prepare-storage-service! test)) ; reconnection
+        (let [coordinator (Coordinator. (deref (:storage test)))
+              committed   (map (partial is-committed-state? coordinator) ids)]
+          (if-not (some nil? committed)
+            (->> committed (filter true?) count)
+            (recur (dec tries))))))))
 
 (defn scalardb-test
   [name opts]
   (merge tests/noop-test
          {:name    (str "scalardb-" name)
-          :os      debian/os
           :storage (atom nil)
           :transaction (atom nil)}
          opts))
