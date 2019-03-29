@@ -6,7 +6,7 @@ import com.scalar.database.io.IntValue;
 import com.scalar.database.io.TextValue;
 import com.scalar.database.io.Value;
 
-/** */
+/** A utility class for constructing {@code Value}s to be used as {@code Attributes} */
 public final class Attribute {
   public static final String ID = "tx_id";
   public static final String STATE = "tx_state";
@@ -22,50 +22,130 @@ public final class Attribute {
   public static final String BEFORE_PREPARED_AT = BEFORE_PREFIX + PREPARED_AT;
   public static final String BEFORE_COMMITTED_AT = BEFORE_PREFIX + COMMITTED_AT;
 
+  /**
+   * Return a {@link TextValue} with name {@code Attribute.ID} and the specified value
+   *
+   * @param transactionId a String representing a transaction id
+   * @return a {@link TextValue} with name {@code Attribute.ID} and the specified value
+   */
   public static Value toIdValue(String transactionId) {
     return new TextValue(Attribute.ID, transactionId);
   }
 
+  /**
+   * Return an {@link IntValue} with name {@code Attribute.STATE} and value the int representation
+   * of the specified {@link TransactionState}
+   *
+   * @param state a {@link TransactionState}
+   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of
+   *     the specified {@link TransactionState}
+   */
   public static Value toStateValue(TransactionState state) {
     return new IntValue(Attribute.STATE, state.get());
   }
 
+  /**
+   * Return an {@link IntValue} with name {@code Attribute.VERSION} and the specified value
+   *
+   * @param version an int representing a version
+   * @return an {@link IntValue} with name {@code Attribute.VERSION} and the specified value
+   */
   public static Value toVersionValue(int version) {
     return new IntValue(Attribute.VERSION, version);
   }
 
+  /**
+   * Return a {@link BigIntValue} with name {@code Attribute.PREPARED_AT} and the specified value
+   *
+   * @param preparedAt a long representing a prepared at time
+   * @return a {@link BigIntValue} with name {@code Attribute.PREPARED_AT} and the specified value
+   */
   public static Value toPreparedAtValue(long preparedAt) {
     return new BigIntValue(Attribute.PREPARED_AT, preparedAt);
   }
 
+  /**
+   * Return a {@link BigIntValue} with name {@code Attribute.COMMITTED_AT} and the specified value
+   *
+   * @param committedAt a long representing a committed at time
+   * @return a {@link BigIntValue} with name {@code Attribute.COMMITTED_AT} and the specified value
+   */
   public static Value toCommittedAtValue(long committedAt) {
     return new BigIntValue(Attribute.COMMITTED_AT, committedAt);
   }
 
+  /**
+   * Return a {@link BigIntValue} with name {@code Attribute.CREATED_AT} and the specified value
+   *
+   * @param createdAt a long representing a created at time
+   * @return a {@link BigIntValue} with name {@code Attribute.CREATED_AT} and the specified value
+   */
   public static Value toCreatedAtValue(long createdAt) {
     return new BigIntValue(Attribute.CREATED_AT, createdAt);
   }
 
+  /**
+   * Return a {@link TextValue} with name {@code Attribute.METADATA} and the specified value
+   *
+   * @param metadata a String representing metadata
+   * @return a {@link TextValue} with name {@code Attribute.METADATA} and the specified value
+   */
   public static Value toMetadataValue(String metadata) {
     return new TextValue(Attribute.METADATA, metadata);
   }
 
+  /**
+   * Return a {@link TextValue} with name {@code Attribute.BEFORE_ID} and the specified value
+   *
+   * @param transactionId a String representing a transaction id
+   * @return a {@link TextValue} with name {@code Attribute.BEFORE_ID} and the specified value
+   */
   public static Value toBeforeIdValue(String transactionId) {
     return new TextValue(Attribute.BEFORE_ID, transactionId);
   }
 
+  /**
+   * Return an {@link IntValue} with name {@code Attribute.BEFORE_STATE} and value the int
+   * representation of the specified {@link TransactionState}
+   *
+   * @param state a {@link TransactionState}
+   * @return an {@link IntValue} with name {@code Attribute.ID} and value the int representation of
+   *     the specified {@link TransactionState}
+   */
   public static Value toBeforeStateValue(TransactionState state) {
     return new IntValue(Attribute.BEFORE_STATE, state.get());
   }
 
+  /**
+   * Return an {@link IntValue} with name {@code Attribute.BEFORE_VERSION} and the specified value
+   *
+   * @param version an int representing a version
+   * @return an {@link IntValue} with name {@code Attribute.BEFORE_VERSION} and the specified value
+   */
   public static Value toBeforeVersionValue(int version) {
     return new IntValue(Attribute.BEFORE_VERSION, version);
   }
 
+  /**
+   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
+   * value
+   *
+   * @param preparedAt a long representing a prepared at time
+   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
+   *     value
+   */
   public static Value toBeforePreparedAtValue(long preparedAt) {
     return new BigIntValue(Attribute.BEFORE_PREPARED_AT, preparedAt);
   }
 
+  /**
+   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
+   * value
+   *
+   * @param committedAt a long representing a committed at time
+   * @return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
+   *     value
+   */
   public static Value toBeforeCommittedAtValue(long committedAt) {
     return new BigIntValue(Attribute.BEFORE_COMMITTED_AT, committedAt);
   }

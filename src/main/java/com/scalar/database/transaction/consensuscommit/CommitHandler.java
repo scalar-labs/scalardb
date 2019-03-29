@@ -18,7 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
+/** Commit snapshots to {@link DistributedStorage} */
 @ThreadSafe
 public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
@@ -26,6 +26,14 @@ public class CommitHandler {
   private final Coordinator coordinator;
   private final RecoveryHandler recovery;
 
+  /**
+   * Constructs a {@code CommitHandler} with specified {@link DistributedStorage}, {@link
+   * Coordinator}, and {@link RecoveryHandler}
+   *
+   * @param storage a {@link DistributedStorage}
+   * @param coordinator a {@link Coordinator}
+   * @param recovery a {@link RecoveryHandler}
+   */
   public CommitHandler(
       DistributedStorage storage, Coordinator coordinator, RecoveryHandler recovery) {
     this.storage = checkNotNull(storage);
@@ -33,6 +41,13 @@ public class CommitHandler {
     this.recovery = checkNotNull(recovery);
   }
 
+  /**
+   * Commit the specified {@link Snapshot} to {@link DistributedStorage}
+   *
+   * @param snapshot a {@link Snapshot} to be committed
+   * @throws CommitException
+   * @throws UnknownTransactionStatusException
+   */
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
     String id = snapshot.getId();
 
