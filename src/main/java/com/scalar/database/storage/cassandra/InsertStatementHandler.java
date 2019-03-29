@@ -14,7 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A handler class for insert statement
+ * A handler class for insert statements
  *
  * @author Hiroyuki Yamada
  */
@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public class InsertStatementHandler extends MutateStatementHandler {
 
   /**
-   * Constructs {@code InsertStatementHandler} with the specified {@code Session}
+   * Constructs an {@code InsertStatementHandler} with the specified {@code Session}
    *
    * @param session session to be used with this statement
    */

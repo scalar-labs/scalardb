@@ -17,12 +17,19 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** A handler class for statements */
 @ThreadSafe
 public abstract class StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
   protected final Session session;
   protected StatementCache cache;
 
+  /**
+   * Constructs a {@code StatementHandler} with the specified {@link Session} and a new {@link
+   * StatementCache}
+   *
+   * @param session {@code Session}
+   */
   protected StatementHandler(Session session) {
     this.session = checkNotNull(session);
     cache = new StatementCache();
@@ -31,8 +38,8 @@ public abstract class StatementHandler {
   /**
    * Executes the specified {@code Operation}
    *
-   * @param operation {@code Operation} to execute
-   * @return {@code ResultSet}
+   * @param operation an {@code Operation} to execute
+   * @return a {@code ResultSet}
    * @throws ExecutionException if the execution failed
    */
   @Nonnull
@@ -49,6 +56,12 @@ public abstract class StatementHandler {
     }
   }
 
+  /**
+   * Executes the specified {@code Operation}
+   *
+   * @param operation an {@code Operation} to execute
+   * @return a {@code ResultSet}
+   */
   @Nonnull
   protected ResultSet handleInternal(Operation operation) {
     PreparedStatement prepared = prepare(operation);
@@ -57,6 +70,12 @@ public abstract class StatementHandler {
     return execute(bound, operation);
   }
 
+  /**
+   * Returns a {@link PreparedStatement} based on the given query string
+   *
+   * @param queryString
+   * @return a {@code PreparedStatement}
+   */
   @Nonnull
   protected PreparedStatement prepare(String queryString) {
     LOGGER.debug("query to prepare : [" + queryString + "].");
@@ -70,6 +89,12 @@ public abstract class StatementHandler {
     return prepared;
   }
 
+  /**
+   * Sets the consistency level for the specified {@link BoundStatement} and {@link Operation}
+   *
+   * @param bound a {@code BoundStatement}
+   * @param operation an {@code Operation}
+   */
   protected void setConsistency(BoundStatement bound, Operation operation) {
     bound.setConsistencyLevel(StatementHandler.convert(operation, operation.getConsistency()));
     // set preferable consistency for the operation
@@ -84,6 +109,14 @@ public abstract class StatementHandler {
 
   protected abstract void overwriteConsistency(BoundStatement bound, Operation operation);
 
+  /**
+   * Returns a {@link ConsistencyLevel} based on the specified {@link Operation} and {@link
+   * Consistency}
+   *
+   * @param operation an {@code Operation}
+   * @param consistency a {@code Consistency}
+   * @return a {@code ConsistencyLevel}
+   */
   public static ConsistencyLevel convert(Operation operation, Consistency consistency) {
     switch (consistency) {
       case SEQUENTIAL:
