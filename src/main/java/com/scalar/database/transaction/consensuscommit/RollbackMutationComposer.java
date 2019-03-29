@@ -31,6 +31,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Prepare mutations from a given {@link Snapshot} in order to rollback {@link DistributedStorage}.
+ */
 @NotThreadSafe
 public class RollbackMutationComposer extends AbstractMutationComposer {
   private static final Logger LOGGER = LoggerFactory.getLogger(RollbackMutationComposer.class);

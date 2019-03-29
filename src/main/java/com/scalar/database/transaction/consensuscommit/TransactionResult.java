@@ -17,12 +17,17 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
+/** A result retrieved from storage. */
 @Immutable
 public class TransactionResult implements Result {
   private final Result result;
   private final Map<String, Value> values;
 
+  /**
+   * Constructs a {@code TransactionResult} from the specified {@link Result}
+   *
+   * @param result
+   */
   public TransactionResult(Result result) {
     // assume that all the values are projected to the result
     this.result = checkNotNull(result);
