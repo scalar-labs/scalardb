@@ -1,6 +1,6 @@
 package com.scalar.database.api;
 
-/** The state of a transaction */
+/** */
 public enum TransactionState {
   PREPARED(1),
   DELETED(2),

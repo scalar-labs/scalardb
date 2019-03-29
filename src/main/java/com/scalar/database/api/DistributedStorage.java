@@ -6,12 +6,12 @@ import java.util.Optional;
 
 /**
  * A storage abstraction for interacting with distributed storage implementations. The user can
- * execute CRUD operations on the storage by passing {@link Operation} commands such as {@link Get},
+ * execute CRUD operations to the storage by passing {@link Operation} commands such as {@link Get},
  * {@link Scan}, {@link Put} and {@link Delete}, which specify the location of storage entries and
  * optional information.
  *
- * <p>The data model behind this abstraction is a multi-dimensional map based on the key-value data
- * model. A logical record (or entry) is composed of a partition key, a clustering key and a set of
+ * <p>The data model behind this abstraction is a multi-dimensional map based on key-value data
+ * model. A logical record (or entry) is composed of partition key, clustering key and a set of
  * values. The value is uniquely mapped by a primary key composed of partition key, clustering key
  * and value name as described in the following scheme.
  *
@@ -21,9 +21,9 @@ import java.util.Optional;
  * hash partitioning. Entries are assumed to be hash-partitioned by partition key (even though an
  * underlining implementation supports range partitioning). Records with the same partition key,
  * which we call a partition, are sorted by clustering key. Thus, each entry in the storage can be
- * located with the partition key and the clustering key, which we call a primary key. Both a
- * partition key and a clustering key also comprise a list of values. Having a clustering key is
- * optional, and if there is none, the primary key is composed of only the partition key.
+ * located with the partition key and the clustering key, which we call it primary key. Both a
+ * partition key and a clustering key also comprise a list of values. Having clustering key is
+ * optional, so in that case, primary key is composed of only partition key.
  *
  * <h3>Usage Examples</h3>
  *
@@ -31,16 +31,14 @@ import java.util.Optional;
  * readability.)
  *
  * <pre>{@code
- * Properties props = new Properties();
- * props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
- * props.setProperty(DatabaseConfig.USERNAME, USERNAME);
- * props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
+ * Config config = ConfigLoader.load(YAML_CONFIG);
+ * Credential credential = new Credential(USERNAME, PASSWORD);
  *
  * // In case of Cassandra storage implementation.
- * DistributedStorage storage = new Cassandra(new DatabaseConfig(props));
+ * DistributedStorage storage = new Cassandra(config, credential);
  *
- * // Uses KEYSPACE and TABLE by default in this storage instance.
- * storage.with(KEYSPACE, TABLE);
+ * // Uses NAMESPACE and TABLE by default in this storage instance.
+ * storage.with(NAMESPACE, TABLE);
  *
  * // Inserts a new entry which has the primary key value 0 to the storage.
  * // Assumes that the primary key is composed of a integer value named COL_NAME.
