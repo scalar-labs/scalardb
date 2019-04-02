@@ -302,7 +302,5 @@
                                             (gen/clients (gen/once check-tx))
                                             (gen/clients (gen/once get-all)))
                                 :checker (checker/compose
-                                           {:perf    (checker/perf)
-                                            :timeline (timeline/html)
-                                            :details (consistency-checker)})})
+                                           {:details (consistency-checker)})})
          opts))
