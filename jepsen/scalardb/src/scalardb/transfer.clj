@@ -36,7 +36,7 @@
 (def ^:const ACCOUNT_ID "account_id")
 (def ^:const BALANCE "balance")
 
-(def ^:const INITIAL_BALANCE 1000)
+(def ^:const INITIAL_BALANCE 10000)
 (def ^:const NUM_ACCOUNTS 10)
 (def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
@@ -223,7 +223,7 @@
      :f :transfer
      :value {:from (rand-int n)
              :to (rand-int n)
-             :amount (+ 1 (rand-int 5))}}))
+             :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
   (gen/filter (fn [op] (not= (-> op :value :from)
