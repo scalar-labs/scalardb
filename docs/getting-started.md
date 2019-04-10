@@ -259,6 +259,6 @@ $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to mercha
 ## Further documentation
 
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
-* [Design Document](/docs/design.md)
+* [Design Document](design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
-* [Database schema in Scalar DB](/tools/schema/README.md)
+* [Database schema in Scalar DB](schema.md)
