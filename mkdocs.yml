@@ -7,6 +7,7 @@ nav:
     - Database schema: schema.md
     - Schema loader: schema-loader.md
 - Design: design.md
+- Jepsen: jepsen.md
   #- Release notes:
   #- Overview: release_notes/index.md
   #- "Version 0.9.10": release_notes/0_9_10.md
