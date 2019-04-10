@@ -1,8 +1,0 @@
-REPLICATION FACTOR 1;
-
-CREATE NAMESPACE emoney;
-
-CREATE TRANSACTION TABLE emoney.account (
-    id TEXT PARTITIONKEY,
-    balance INT,
-);
