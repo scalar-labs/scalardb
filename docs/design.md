@@ -21,7 +21,7 @@ Distributed storage abstraction has storage implementation specific adapters suc
 Another storage implementation can be added by creating an adapter which follows the abstraction interface.
 
 <p align="center">
-<img src="./images/software_stack.png" width="440" />
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/software_stack.png" width="440" />
 </p>
 
 ## Data Model
@@ -32,7 +32,7 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 
 
 <p align="center">
-<img src="./images/data_model.png" width="480" />
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/data_model.png" width="480" />
 </p>
 
 ### Physical Data Model
