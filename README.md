@@ -4,6 +4,15 @@
 
 A library that makes non-ACID distributed databases/storages ACID-compliant. It not only supports strongly-consistent ACID transactions, but also scales linearly and achieves high availability when it is deployed with distributed databases/storages such as Cassandra.
 
+## Install
+The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). You can install it in your application using your build tool such as Gradle. For example in Gradle, you can add the following dependency to your build.gradle.
+
+```
+dependencies {
+    compile group: 'com.scalar-labs', name: 'scalardb', version: '1.0.0'
+}
+```
+
 ## Docs
 * [Getting started](docs/getting-started.md)
 * [Design document](docs/design.md)
