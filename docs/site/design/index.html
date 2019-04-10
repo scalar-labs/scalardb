@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Design - Scalar DB Docs</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Design";
+    var mkdocs_page_input_path = "design.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> Scalar DB Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">How to use</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../getting-started/">Getting started</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../schema/">Database schema</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../schema-loader/">Schema loader</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href="./">Design</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#scalar-db-v1-design-document">Scalar DB v1 design document</a></li>
+    
+
+    <li class="toctree-l2"><a href="#introduction">Introduction</a></li>
+    
+
+    <li class="toctree-l2"><a href="#background-and-objectives">Background and Objectives</a></li>
+    
+
+    <li class="toctree-l2"><a href="#design-goals">Design Goals</a></li>
+    
+
+    <li class="toctree-l2"><a href="#high-level-architecture">High-level Architecture</a></li>
+    
+
+    <li class="toctree-l2"><a href="#data-model">Data Model</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l3" href="#physical-data-model">Physical Data Model</a></li>
+        
+            <li><a class="toctree-l3" href="#limitation-of-the-data-model">Limitation of the data model</a></li>
+        
+        </ul>
+    
+
+    <li class="toctree-l2"><a href="#implementation">Implementation</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l3" href="#storage">Storage</a></li>
+        
+            <li><a class="toctree-l3" href="#transaction">Transaction</a></li>
+        
+        </ul>
+    
+
+    <li class="toctree-l2"><a href="#future-work">Future Work</a></li>
+    
+
+    <li class="toctree-l2"><a href="#references">References</a></li>
+    
+
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../jepsen/">Jepsen</a>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">Scalar DB Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Design</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/scalar-labs/scalardb/edit/master/docs/design.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="scalar-db-v1-design-document">Scalar DB v1 design document</h2>
+<h2 id="introduction">Introduction</h2>
+<p>Scalar DB v1 is a distributed storage abstraction and client-coordinated distributed transaction manager on top of the storage. This design document briefly explains its background, design and implementation.</p>
+<h2 id="background-and-objectives">Background and Objectives</h2>
+<p>Distributed storage is widely adopted in real-world applications and recent open-source distributed storages such as Cassandra and HBase have accelerated the trend. They are particularly used by large and sometimes mission-critical applications because of their high performance, high availability and high scalability. However, they often lack transaction capability, which is particularly important in mission-critical applications. Transaction capability can be added to HBase via third-party libraries, but they tend to sacrifice some availability property due to the master-slave architecture. Some companies have ended up creating yet another distributed transactional databases from scratch (such as CockroachDB and TiDB) to overcome such problem.</p>
+<p>Scalar DB v1 is a simple and practical solution to solve the above mentioned problem in a different way. It provides a simple storage abstraction layer on the existing storage implementations and a storage-independent scalable distributed transaction layer on top of the storage abstraction. So, it can fully utilize, not only battle-tested existing implementations, operational/management tools and good properties of storages, but also the eco-system, the best practices and the community which have grown for a long time.</p>
+<h2 id="design-goals">Design Goals</h2>
+<p>The primary design goals of Scalar DB are high availability, horizontal scalability and strong consistency for distributed storage and transaction operations. It aims to tolerate disk, machine, rack, and even data-center failures, with minimal performance degradation. It achieves these goals with an unbundled transaction layer [1] with easy and unified API so that the underlining storage implementations can be replaced with others without application code change. The performance of the Scalar DB is highly dependent on the underlying storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.</p>
+<h2 id="high-level-architecture">High-level Architecture</h2>
+<p>Scalar DB is composed of distributed storage abstraction layer and client-coordinated distributed transaction manager.
+Distributed storage abstraction has storage implementation specific adapters such as Cassandra adapter.
+Another storage implementation can be added by creating an adapter which follows the abstraction interface.</p>
+<p align="center">
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/software_stack.png" width="440" />
+</p>
+
+<h2 id="data-model">Data Model</h2>
+<p>The data model of Scalar DB is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of values. The value is uniquely mapped by a primary key composed of partition-key, clustering-key and value-name as described in the following scheme.</p>
+<p>(partition-key, clustering-key, value-name) -&gt; value-content</p>
+<p align="center">
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/data_model.png" width="480" />
+</p>
+
+<h3 id="physical-data-model">Physical Data Model</h3>
+<p>Scalar DB is a multi-dimensional map distributed to multiple nodes by key-based hash partitioning.
+Records are assumed to be hash-partitioned by partition-key (even though an underlining implementation may support range partitioning).
+Records with the same partition-key define a partition. A partition is clustered (sorted) by the clustering-key.
+It is similar to Google BigTable [2] but it differs in clustering-key structure and partitioning scheme.</p>
+<h3 id="limitation-of-the-data-model">Limitation of the data model</h3>
+<p>Since records in Scalar DB are assumed to be hash-partitioned, global range scan is not supported.
+Range scan is only supported for clustering-key access within the same partition.</p>
+<h2 id="implementation">Implementation</h2>
+<h3 id="storage">Storage</h3>
+<p>As of writing this, Scalar DB supports only Cassandra storage as a storage implementation. More correctly, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB and Azure Cosmos DB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:</p>
+<ul>
+<li>Atomic CRUD operations (each single-record operation needs to be atomic)</li>
+<li>Sequential consistency support</li>
+<li>Atomic/Linearizable conditional mutation (Create/Update/Delete)</li>
+<li>Ability to include user-defined meta-data for each record</li>
+</ul>
+<p>Please see the javadoc for more details and usage.</p>
+<h3 id="transaction">Transaction</h3>
+<p>Scalar DB executes transactions in a fully client-coordinated way so that it can do master-less transactions, which achieves almost linear scalability and high availability (especially when it is integrated with master-less Cassandra).
+It basically follows the Cherry Garcia protocol propsed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
+It also has some similarity to paxos-commit [4].</p>
+<p>Please see the javadoc for more details and usage.</p>
+<h2 id="future-work">Future Work</h2>
+<ul>
+<li>Support Hbase for another storage implementation for more performance.</li>
+<li>Utilize deterministic nature of <a href="https://github.com/scalar-labs/scalardl">Scalar DL</a> (ledger middleware used for storing ledger information with Scalar DB) to avoid heavy-weight global consensus for linearizability and serializability.</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>[1] D. B. Lomet, A. Fekete, G. Weikum, and M. J. Zwilling.  Unbundling Transaction Services in the Cloud. In CIDR, Jan. 2009.</li>
+<li>[2] Fay Chang , Jeffrey Dean , Sanjay Ghemawat , Wilson C. Hsieh , Deborah A. Wallach , Mike Burrows , Tushar Chandra , Andrew Fikes , Robert E. Gruber, Bigtable: A Distributed Storage System for Structured Data, ACM Transactions on Computer Systems (TOCS), v.26 n.2, p.1-26, June 2008.</li>
+<li>[3] A. Dey, A. Fekete, U. Röhm, "Scalable Distributed Transactions across Heterogeneous Stores", IEEE 31th International Conference on Data Engineering (ICDE), 2015.</li>
+<li>[4] Jim Gray , Leslie Lamport, Consensus on transaction commit, ACM Transactions on Database Systems (TODS), v.31 n.1, p.133-160, March 2006.</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../jepsen/" class="btn btn-neutral float-right" title="Jepsen">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../schema-loader/" class="btn btn-neutral" title="Schema loader"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/scalar-labs/scalardb/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../schema-loader/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../jepsen/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+
+</body>
+</html>
