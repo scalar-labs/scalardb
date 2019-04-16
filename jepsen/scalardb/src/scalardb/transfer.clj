@@ -135,6 +135,8 @@
 (defn read-all-with-retry
   "Read records from 0 .. (n - 1) and retry if needed"
   [test n]
+  (when (nil? (:transaction test))
+    (scalar/prepare-transaction-service! test))
   (loop [tries scalar/RETRIES]
     (when (< tries scalar/RETRIES)
       (scalar/exponential-backoff (- scalar/RETRIES tries)))
@@ -299,6 +301,7 @@
                                 :generator (gen/phases
                                             (->> [diff-transfer]
                                                  (conductors/std-gen opts))
+                                            (conductors/terminate-nemesis opts)
                                             (gen/clients (gen/once check-tx))
                                             (gen/clients (gen/once get-all)))
                                 :checker (checker/compose
