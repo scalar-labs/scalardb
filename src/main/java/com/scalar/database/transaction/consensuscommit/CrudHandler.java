@@ -103,7 +103,7 @@ public class CrudHandler {
   }
 
   /**
-   * Perform a {@link Put} operation on the {@link Snapshot}
+   * Performs a {@link Put} operation on the {@link Snapshot}
    *
    * @param put the {@code Put} to be performed
    */
@@ -112,7 +112,7 @@ public class CrudHandler {
   }
 
   /**
-   * Perform a {@link Delete} operation on the {@link Snapshot}
+   * Performs a {@link Delete} operation on the {@link Snapshot}
    *
    * @param delete the {@code Delete} to be performed
    */
