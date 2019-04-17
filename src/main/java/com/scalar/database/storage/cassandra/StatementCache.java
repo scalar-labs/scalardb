@@ -22,7 +22,7 @@ public class StatementCache {
   }
 
   /**
-   * Construcs a cache with the specified max size
+   * Constructs a cache with the specified max size
    *
    * @param maxSize
    */
@@ -41,7 +41,7 @@ public class StatementCache {
   }
 
   /**
-   * Associate a {@link PreparedStatement} with a cacheKey in the cache
+   * Associates a {@link PreparedStatement} with a cacheKey in the cache
    *
    * @param cacheKey
    * @param statement a {@code PreparedStatement}
