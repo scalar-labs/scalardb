@@ -81,7 +81,7 @@ public class Snapshot {
   }
 
   /**
-   * Associate the specified {@link Key} with the {@link TransactionResult} in the {@code Snapshot}
+   * Associates the specified {@link Key} with the {@link TransactionResult} in the {@code Snapshot}
    *
    * @param key a {@link Key}
    * @param result a {@link TransactionResult}
@@ -91,7 +91,7 @@ public class Snapshot {
   }
 
   /**
-   * Associate the specified {@link Key} with the {@link Put} in the {@code Snapshot}
+   * Associates the specified {@link Key} with the {@link Put} in the {@code Snapshot}
    *
    * @param key a {@link Key}
    * @param put a {@link Put}
@@ -101,7 +101,7 @@ public class Snapshot {
   }
 
   /**
-   * Associate the specified {@link Key} with the {@link Delete} in the {@code Snapshot}
+   * Associates the specified {@link Key} with the {@link Delete} in the {@code Snapshot}
    *
    * @param key a {@link Key}
    * @param delete a {@link Delete}
@@ -127,7 +127,7 @@ public class Snapshot {
   }
 
   /**
-   * Add all the {@link com.scalar.database.api.Mutation}s from the {@link Snapshot} into the given
+   * Adds all the {@link com.scalar.database.api.Mutation}s from the {@link Snapshot} into the given
    * {@link MutationComposer}
    *
    * @param composer a {@link MutationComposer}
