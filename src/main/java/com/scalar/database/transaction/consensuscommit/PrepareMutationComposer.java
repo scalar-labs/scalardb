@@ -25,7 +25,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
-  /** Construct a {@code PrepareMutationComposer} with the given id */
+  /** Constructs a {@code PrepareMutationComposer} with the given id */
   public PrepareMutationComposer(String id) {
     super(id);
   }
