@@ -68,7 +68,7 @@ public class RecoveryHandler {
   }
 
   /**
-   * Rollback records on {@link DistributedStorage} to the specified {@link Snapshot}
+   * Rollbacks records on {@link DistributedStorage} to the specified {@link Snapshot}
    *
    * @param snapshot
    */
