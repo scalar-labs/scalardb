@@ -23,7 +23,7 @@ public final class Attribute {
   public static final String BEFORE_COMMITTED_AT = BEFORE_PREFIX + COMMITTED_AT;
 
   /**
-   * Return a {@link TextValue} with name {@code Attribute.ID} and the specified value
+   * Returns a {@link TextValue} with name {@code Attribute.ID} and the specified value
    *
    * @param transactionId a String representing a transaction id
    * @return a {@link TextValue} with name {@code Attribute.ID} and the specified value
@@ -33,7 +33,7 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.STATE} and value the int representation
+   * Returns an {@link IntValue} with name {@code Attribute.STATE} and value the int representation
    * of the specified {@link TransactionState}
    *
    * @param state a {@link TransactionState}
@@ -45,7 +45,7 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.VERSION} and the specified value
+   * Returns an {@link IntValue} with name {@code Attribute.VERSION} and the specified value
    *
    * @param version an int representing a version
    * @return an {@link IntValue} with name {@code Attribute.VERSION} and the specified value
@@ -55,7 +55,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.PREPARED_AT} and the specified value
+   * Returns a {@link BigIntValue} with name {@code Attribute.PREPARED_AT} and the specified value
    *
    * @param preparedAt a long representing a prepared at time
    * @return a {@link BigIntValue} with name {@code Attribute.PREPARED_AT} and the specified value
@@ -65,7 +65,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.COMMITTED_AT} and the specified value
+   * Returns a {@link BigIntValue} with name {@code Attribute.COMMITTED_AT} and the specified value
    *
    * @param committedAt a long representing a committed at time
    * @return a {@link BigIntValue} with name {@code Attribute.COMMITTED_AT} and the specified value
@@ -75,7 +75,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.CREATED_AT} and the specified value
+   * Returns a {@link BigIntValue} with name {@code Attribute.CREATED_AT} and the specified value
    *
    * @param createdAt a long representing a created at time
    * @return a {@link BigIntValue} with name {@code Attribute.CREATED_AT} and the specified value
@@ -85,7 +85,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link TextValue} with name {@code Attribute.METADATA} and the specified value
+   * Returns a {@link TextValue} with name {@code Attribute.METADATA} and the specified value
    *
    * @param metadata a String representing metadata
    * @return a {@link TextValue} with name {@code Attribute.METADATA} and the specified value
@@ -95,7 +95,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link TextValue} with name {@code Attribute.BEFORE_ID} and the specified value
+   * Returns a {@link TextValue} with name {@code Attribute.BEFORE_ID} and the specified value
    *
    * @param transactionId a String representing a transaction id
    * @return a {@link TextValue} with name {@code Attribute.BEFORE_ID} and the specified value
@@ -105,7 +105,7 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.BEFORE_STATE} and value the int
+   * Returns an {@link IntValue} with name {@code Attribute.BEFORE_STATE} and value the int
    * representation of the specified {@link TransactionState}
    *
    * @param state a {@link TransactionState}
@@ -117,7 +117,7 @@ public final class Attribute {
   }
 
   /**
-   * Return an {@link IntValue} with name {@code Attribute.BEFORE_VERSION} and the specified value
+   * Returns an {@link IntValue} with name {@code Attribute.BEFORE_VERSION} and the specified value
    *
    * @param version an int representing a version
    * @return an {@link IntValue} with name {@code Attribute.BEFORE_VERSION} and the specified value
@@ -127,7 +127,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
+   * Returns a {@link BigIntValue} with name {@code Attribute.BEFORE_PREPARED_AT} and the specified
    * value
    *
    * @param preparedAt a long representing a prepared at time
@@ -139,7 +139,7 @@ public final class Attribute {
   }
 
   /**
-   * Return a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
+   * Returns a {@link BigIntValue} with name {@code Attribute.BEFORE_COMMITTED_AT} and the specified
    * value
    *
    * @param committedAt a long representing a committed at time
