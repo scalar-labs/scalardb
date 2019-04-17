@@ -42,7 +42,7 @@ public class CommitHandler {
   }
 
   /**
-   * Commit the specified {@link Snapshot} to {@link DistributedStorage}
+   * Commits the specified {@link Snapshot} to {@link DistributedStorage}
    *
    * @param snapshot a {@link Snapshot} to be committed
    * @throws CommitException
