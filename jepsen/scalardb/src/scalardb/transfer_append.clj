@@ -299,7 +299,7 @@
                           (into [])
                           count
                           (+ checked-committed))
-            expected-version (-> 10)       ; (-> total-ok (* 2) (+ (-> test :model :num)))
+            expected-version (-> NUM_ACCOUNTS)
             bad-version (if-not (= actual-version expected-version)
                           {:type     :wrong-version
                            :expected expected-version
