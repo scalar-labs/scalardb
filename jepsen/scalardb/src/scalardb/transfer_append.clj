@@ -2,10 +2,7 @@
   (:require [jepsen
              [client :as client]
              [checker :as checker]
-             [generator :as gen]
-             [nemesis :as nemesis]
-             [tests :as tests]]
-            [jepsen.checker.timeline :as timeline]
+             [generator :as gen]]
             [cassandra
              [core :as c]
              [conductors :as conductors]]
@@ -18,22 +15,15 @@
             [clojure.core.reducers :as r]
             [knossos.op :as op]
             [scalardb.core :as scalar])
-  (:import (java.util ArrayList)
-           (com.scalar.database.api Consistency
-                                    Get
-                                    Isolation
-                                    Put
+  (:import (com.scalar.database.api Put
                                     Scan
                                     Scan$Ordering
                                     Scan$Ordering$Order
                                     Result)
            (com.scalar.database.io IntValue
                                    Key)
-           (com.scalar.database.exception.transaction CommitException
-                                                      CrudException
-                                                      UnknownTransactionStatusException UncommittedRecordException)
-           (com.scalar.database.transaction.consensuscommit ConsensusCommit)
-           (com.scalar.database.exception.storage NoMutationException)))
+           (com.scalar.database.exception.transaction CrudException
+                                                      UnknownTransactionStatusException UncommittedRecordException)))
 
 (def ^:const KEYSPACE "jepsen")
 (def ^:const TABLE "transfer")
@@ -80,29 +70,24 @@
       (Scan.)
       (.forNamespace KEYSPACE)
       (.forTable TABLE)
-      (.withConsistency Consistency/LINEARIZABLE)
-      (.withOrdering (Scan$Ordering. "age" Scan$Ordering$Order/DESC))
-      (.withLimit 1)))
+      (.withOrdering (Scan$Ordering. "age" Scan$Ordering$Order/DESC))))
 
-(defn scan-and-return-result
+(defn prepare-scan-with-limit
+  [id limit]
+  (-> id
+      (prepare-scan)
+      (.withLimit limit)))
+
+(defn scan-and-return-first-result
   [tx scan]
-  (.get (.scan tx scan) 0))
-
-(defn prepare-get-with-age
-  [id age]
-  (-> ((Key. [(IntValue. ACCOUNT_ID id)]) (Key. [(IntValue. AGE age)]))
-      (Get.)
-      (.forNamespace KEYSPACE)
-      (.forTable TABLE)
-      (.withConsistency Consistency/LINEARIZABLE)))
+  (first (.scan tx scan)))
 
 (defn prepare-put
   [id age balance]
   (-> (Put. (Key. [(IntValue. ACCOUNT_ID id)]) (Key. [(IntValue. AGE age)]))
       (.forNamespace KEYSPACE)
       (.forTable TABLE)
-      (.withValue (IntValue. BALANCE balance))
-      (.withConsistency Consistency/LINEARIZABLE)))
+      (.withValue (IntValue. BALANCE balance))))
 
 (defn populate-accounts
   "Insert initial records with transaction.
@@ -130,8 +115,8 @@
 
 (defn tx-transfer
   [tx from to amount]
-  (let [^Result fromResult (scan-and-return-result tx (prepare-scan from))
-        ^Result toResult (scan-and-return-result tx (prepare-scan to))]
+  (let [^Result fromResult (scan-and-return-first-result tx (prepare-scan-with-limit from 1))
+        ^Result toResult (scan-and-return-first-result tx (prepare-scan-with-limit to 1))]
     (->> (prepare-put from (calc-new-age fromResult) (calc-new-balance fromResult (- amount)))
          (.put tx))
     (->> (prepare-put to (calc-new-age toResult) (calc-new-balance toResult amount))
@@ -142,7 +127,7 @@
   "Read a record with a transaction. If read fails, this function returns nil."
   [tx id]
   (try
-    (first (.scan tx (prepare-scan id)))
+    (scan-and-return-first-result tx (prepare-scan-with-limit id 1))
     (catch CrudException _ nil)))
 
 (defn read-all-records
@@ -167,21 +152,29 @@
           (throw (ex-info "Failed to read all records"
                           {:cause "Failed to read all records"})))))))
 
-(defn get-balance
+(defn get-balance-from-result
   "Get the balance from a result"
   [^Result result]
   (-> result (.getValue BALANCE) .get .get))
 
-(defn get-version
+(defn get-age-from-result
+  "Get the age from a result"
+  [^Result result]
+  (-> result (.getValue AGE) .get .get))
+
+(defn get-version-from-result
   "Get the version from a result"
   [^Result result]
   (-> result (.getValue scalar/VERSION) .get .get))
 
-(defn get-balances-and-versions
-  "Read all records with a transaction. Return only balances and versions."
+(defn get-balances-and-ages-and-versions
+  "Read all records with a transaction. Return the balances and ages."
   [test n]
   (let [results (read-all-with-retry test n)]
-    (map #(assoc {} :balance (get-balance %) :version (get-version %)) results)))
+    (map #(assoc {} :balance (get-balance-from-result %)
+                    :age (get-age-from-result %)
+                    :version (get-version-from-result %))
+         results)))
 
 (defn- try-reconnection!
   [test]
@@ -213,26 +206,24 @@
                     (assoc op :type :ok)
                     (catch UnknownTransactionStatusException e
                       (swap! (:unknown-tx test) conj (.getId tx))
-                      (assoc op :type :fail :error {:unknown-tx-status (.getId tx)}))
+                      (assoc op :type :fail, :error {:unknown-tx-status (.getId tx)}))
                     (catch UncommittedRecordException e
-                      (assoc op :type :fail :error (:uncommitted-record (.getMessage e))))
-                    (catch NoMutationException e
-                      (assoc op :type :fail :error (:no-mutation (.getMessage e))))
+                      (assoc op :type :fail, :error (:uncommitted-record (.getMessage e))))
                     (catch Exception e
                       (try-reconnection! test)
-                      (assoc op :type :fail :error (.getMessage e))))
+                      (assoc op :type :fail, :error (.getMessage e))))
                   (do
                     (try-reconnection! test)
-                    (assoc op :type :fail :error "Skipped due to no connection")))
-      :get-all  (if-let [results (get-balances-and-versions test (:num op))]
+                    (assoc op :type :fail, :error "Skipped due to no connection")))
+      :get-all  (if-let [results (get-balances-and-ages-and-versions test (:num op))]
                   (assoc op :type :ok :value results)
-                  (assoc op :type :fail :error "Failed to get balances"))
+                  (assoc op :type :fail, :error "Failed to get balances and ages"))
       :check-tx (let [unknown (:unknown-tx test)]
                   (if-let [num-committed (if (empty? @unknown)
                                            0
                                            (scalar/check-transaction-states test @unknown))]
-                    (assoc op :type :ok :value num-committed)
-                    (assoc op :type :fail :error "Failed to check status")))))
+                    (assoc op :type :ok, :value num-committed)
+                    (assoc op :type :fail, :error "Failed to check status")))))
 
   (close! [_ _])
 
@@ -246,7 +237,7 @@
      :f :transfer
      :value {:from (rand-int n)
              :to (rand-int n)
-             :amount (+ 1 (rand-int 5))}}))
+             :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
   (gen/filter (fn [op] (not= (-> op :value :from)
@@ -267,11 +258,10 @@
 (defn consistency-checker
   []
   (reify checker/Checker
-    (check [this test model history opts]
+    (check [this test history opts]
       (let [read-result (->> history
                              (r/filter op/ok?)
                              (r/filter #(= :get-all (:f %)))
-                             (r/filter identity)
                              (into [])
                              last
                              :value)
@@ -282,47 +272,55 @@
                           {:type     :wrong-balance
                            :expected total-balance
                            :actual   actual-balance})
+            actual-age (->> read-result
+                            (map :age)
+                            (reduce +))
+            ; every ok transfer will increase both parties ages by 1
+            expected-age (->> history
+                              (r/filter op/ok?)
+                              (r/filter #(= :transfer (:f %)))
+                              (into [])
+                              count
+                              (* 2))
+            bad-age (if-not (= actual-age expected-age)
+                      {:type :wrong-age
+                       :expected expected-age
+                       :actual actual-age})
             actual-version (->> read-result
                                 (map :version)
                                 (reduce +))
-            checked-committed (->> history
-                                   (r/filter #(= :check-tx (:f %)))
-                                   (r/filter identity)
-                                   (into [])
-                                   last
-                                   ((fn [x]
-                                      (if (= (:type x) :ok) (:value x) 0))))
-            total-ok (->> history
-                          (r/filter op/ok?)
-                          (r/filter #(= :transfer (:f %)))
-                          (r/filter identity)
-                          (into [])
-                          count
-                          (+ checked-committed))
             expected-version (-> NUM_ACCOUNTS)
             bad-version (if-not (= actual-version expected-version)
                           {:type     :wrong-version
                            :expected expected-version
-                           :actual   actual-version})]
-        {:valid? (and (empty? bad-balance) (empty? bad-version))
+                           :actual   actual-version})
+            checked-committed (->> history
+                                   (r/filter #(= :check-tx (:f %)))
+                                   (into [])
+                                   last
+                                   ((fn [x]
+                                      (if (= (:type x) :ok) (:value x) 0))))]
+        {:valid? (and (empty? bad-balance) (empty? bad-age) (empty? bad-version))
+         :total-balance actual-balance
+         :total-age actual-age
          :total-version actual-version
          :committed-unknown-tx checked-committed
          :bad-balance bad-balance
+         :bad-age bad-age
          :bad-version bad-version}))))
 
 (defn transfer-append-test
   [opts]
-  (merge (scalar/scalardb-test (str "transfer-" (:suffix opts))
-                               {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
-                                :model  {:num NUM_ACCOUNTS}
+  (merge (scalar/scalardb-test (str "transfer-append-" (:suffix opts))
+                               {:client     (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
+                                :model      {:num NUM_ACCOUNTS}
                                 :unknown-tx (atom #{})
-                                :failures (atom 0)
-                                :generator (gen/phases
-                                             (->> [diff-transfer]
-                                                  (conductors/std-gen opts))
-                                             (conductors/terminate-nemesis opts)
-                                             (gen/clients (gen/once check-tx))
-                                             (gen/clients (gen/once get-all)))
-                                :checker (checker/compose
-                                           {:details (consistency-checker)})})
+                                :failures   (atom 0)
+                                :generator  (gen/phases
+                                              (->> [diff-transfer]
+                                                   (conductors/std-gen opts))
+                                              (conductors/terminate-nemesis opts)
+                                              (gen/clients (gen/once check-tx))
+                                              (gen/clients (gen/once get-all)))
+                                :checker    (consistency-checker)})
          opts))
