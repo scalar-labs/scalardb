@@ -23,7 +23,7 @@
            (com.scalar.database.io IntValue
                                    Key)
            (com.scalar.database.exception.transaction CrudException
-                                                      UnknownTransactionStatusException UncommittedRecordException)))
+                                                      UnknownTransactionStatusException)))
 
 (def ^:const KEYSPACE "jepsen")
 (def ^:const TABLE "transfer")
@@ -162,18 +162,12 @@
   [^Result result]
   (-> result (.getValue AGE) .get .get))
 
-(defn get-version-from-result
-  "Get the version from a result"
-  [^Result result]
-  (-> result (.getValue scalar/VERSION) .get .get))
-
-(defn get-balances-and-ages-and-versions
+(defn get-balances-and-ages
   "Read all records with a transaction. Return the balances and ages."
   [test n]
   (let [results (read-all-with-retry test n)]
     (map #(assoc {} :balance (get-balance-from-result %)
-                    :age (get-age-from-result %)
-                    :version (get-version-from-result %))
+                    :age (get-age-from-result %))
          results)))
 
 (defn- try-reconnection!
@@ -207,17 +201,23 @@
                     (catch UnknownTransactionStatusException e
                       (swap! (:unknown-tx test) conj (.getId tx))
                       (assoc op :type :fail, :error {:unknown-tx-status (.getId tx)}))
-                    (catch UncommittedRecordException e
-                      (assoc op :type :fail, :error (:uncommitted-record (.getMessage e))))
                     (catch Exception e
                       (try-reconnection! test)
                       (assoc op :type :fail, :error (.getMessage e))))
                   (do
                     (try-reconnection! test)
                     (assoc op :type :fail, :error "Skipped due to no connection")))
-      :get-all  (if-let [results (get-balances-and-ages-and-versions test (:num op))]
-                  (assoc op :type :ok :value results)
-                  (assoc op :type :fail, :error "Failed to get balances and ages"))
+      :get-all  (if-let [result (get-balances-and-ages test (:num op))]
+                  (assoc op :type, :ok :value result)
+                  (assoc op :type, :fail, :error "Failed to get balances and ages"))
+      :get-num-records (if-let [result (let [tx (scalar/start-transaction test)]
+                                         (->> (range (:num op))
+                                              (map prepare-scan)
+                                              (map #(.scan tx %))
+                                              (map count)
+                                              (reduce +)))]
+                          (assoc op :type :ok, :value result)
+                          (assoc op :type :fail, :error "Failed to get number of records"))
       :check-tx (let [unknown (:unknown-tx test)]
                   (if-let [num-committed (if (empty? @unknown)
                                            0
@@ -250,6 +250,12 @@
    :f :get-all
    :num (-> test :model :num)})
 
+(defn get-num-records
+  [test _]
+  {:type :invoke
+   :f :get-num-records
+   :num (-> test :model :num)})
+
 (defn check-tx
   [test _]
   {:type :invoke
@@ -275,39 +281,28 @@
             actual-age (->> read-result
                             (map :age)
                             (reduce +))
-            ; every ok transfer will increase both parties ages by 1
-            expected-age (->> history
-                              (r/filter op/ok?)
-                              (r/filter #(= :transfer (:f %)))
-                              (into [])
-                              count
-                              (* 2))
+            expected-age (let [num-records (->> history
+                                                (r/filter #(= :get-num-records (:f %)))
+                                                (into [])
+                                                last
+                                                :value)]
+                           (- num-records (:num (:model test)))) ; age starts at 0 so should be num-records minus num-accounts
             bad-age (if-not (= actual-age expected-age)
                       {:type :wrong-age
                        :expected expected-age
                        :actual actual-age})
-            actual-version (->> read-result
-                                (map :version)
-                                (reduce +))
-            expected-version (-> NUM_ACCOUNTS)
-            bad-version (if-not (= actual-version expected-version)
-                          {:type     :wrong-version
-                           :expected expected-version
-                           :actual   actual-version})
             checked-committed (->> history
                                    (r/filter #(= :check-tx (:f %)))
                                    (into [])
                                    last
                                    ((fn [x]
                                       (if (= (:type x) :ok) (:value x) 0))))]
-        {:valid? (and (empty? bad-balance) (empty? bad-age) (empty? bad-version))
+        {:valid? (and (empty? bad-balance) (empty? bad-age))
          :total-balance actual-balance
          :total-age actual-age
-         :total-version actual-version
          :committed-unknown-tx checked-committed
          :bad-balance bad-balance
-         :bad-age bad-age
-         :bad-version bad-version}))))
+         :bad-age bad-age}))))
 
 (defn transfer-append-test
   [opts]
@@ -321,6 +316,7 @@
                                                    (conductors/std-gen opts))
                                               (conductors/terminate-nemesis opts)
                                               (gen/clients (gen/once check-tx))
-                                              (gen/clients (gen/once get-all)))
+                                              (gen/clients (gen/once get-all))
+                                              (gen/clients (gen/once get-num-records)))
                                 :checker    (consistency-checker)})
          opts))
