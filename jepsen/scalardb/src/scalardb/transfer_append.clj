@@ -30,11 +30,9 @@
 (def ^:const ACCOUNT_ID "account_id")
 (def ^:const BALANCE "balance")
 (def ^:const AGE "age")
-
 (def ^:const INITIAL_BALANCE 10000)
 (def ^:const NUM_ACCOUNTS 10)
 (def ^:const total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
-
 (def ^:const NUM_FAILURES_FOR_RECONNECTION 1000)
 
 (defn- create-transfer-table!
@@ -97,7 +95,7 @@
     (try
       (dotimes [i n]
         (->>
-          (prepare-put i 0 balance)
+          (prepare-put i 1 balance)
           (.put tx)))
       (.commit tx)
       (catch Exception e
@@ -281,12 +279,11 @@
             actual-age (->> read-result
                             (map :age)
                             (reduce +))
-            expected-age (let [num-records (->> history
-                                                (r/filter #(= :get-num-records (:f %)))
-                                                (into [])
-                                                last
-                                                :value)]
-                           (- num-records (:num (:model test)))) ; age starts at 0 so should be num-records minus num-accounts
+            expected-age (->> history
+                              (r/filter #(= :get-num-records (:f %)))
+                              (into [])
+                              last
+                              :value)
             bad-age (if-not (= actual-age expected-age)
                       {:type :wrong-age
                        :expected expected-age
@@ -297,12 +294,12 @@
                                    last
                                    ((fn [x]
                                       (if (= (:type x) :ok) (:value x) 0))))]
-        {:valid? (and (empty? bad-balance) (empty? bad-age))
-         :total-balance actual-balance
-         :total-age actual-age
+        {:valid?               (and (empty? bad-balance) (empty? bad-age))
+         :total-balance        actual-balance
+         :total-age            actual-age
          :committed-unknown-tx checked-committed
-         :bad-balance bad-balance
-         :bad-age bad-age}))))
+         :bad-balance          bad-balance
+         :bad-age              bad-age}))))
 
 (defn transfer-append-test
   [opts]
