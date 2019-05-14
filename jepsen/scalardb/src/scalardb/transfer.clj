@@ -246,7 +246,7 @@
 (defn consistency-checker
   []
   (reify checker/Checker
-    (check [this test model history opts]
+    (check [this test history opts]
       (let [read-result (->> history
                              (r/filter op/ok?)
                              (r/filter #(= :get-all (:f %)))
