@@ -36,7 +36,7 @@ public class Snapshot {
   /**
    * Constructs a {@code Snapshot} with the specified id
    *
-   * @param id
+   * @param id the {@code Snapshot} id
    */
   public Snapshot(String id) {
     this(id, Isolation.SNAPSHOT);
@@ -45,8 +45,8 @@ public class Snapshot {
   /**
    * Constructs a {@code Snapshot} with the specified id and {@link Isolation} level
    *
-   * @param id
-   * @param isolation an {@link Isolation}
+   * @param id the {@code Snapshot} id
+   * @param isolation an {@link Isolation} level
    */
   public Snapshot(String id, Isolation isolation) {
     this.id = id;

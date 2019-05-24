@@ -18,9 +18,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A recovery handler for transactions on {@link DistributedStorage}. Used to rollback records on
- * {@link DistributedStorage} to a given {@link Snapshot} or to recover a given {@link
- * TransactionResult}.
+ * Recovery handler for records that may have resulted from incomplete transactions.
+ *
+ * <p>If a transaction was unable to complete its commit phase for some reason or another there may be records that need to be recovered. If the record is in the COMMITTED state, recovery is not necessary.
+ * However, if the record is in the PREPARED state then it will need to be either rolled forward or rolled back depending on the transaction status. If the transaction itself is in the COMMITTED state
+ * then we roll forward, and otherwise we roll back.</p>
  */
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
@@ -34,12 +36,7 @@ public class RecoveryHandler {
   }
 
   /**
-   * This method rolls back or rolls forward a record according to the state of the corresponding
-   * transaction.
-   *
-   * <p>Given a specified {@link Selection} and {@link TransactionResult} will first check the
-   * {@link TransactionState} of the result. If the state of the transaction is committed then the
-   * selection will be rolled forward and if not then rolled back.
+   * This method will roll back or roll forward a record depending on the state of the transaction that produced it. If the transaction reached the COMMITTED state then the record will be rolled forward, otherwise it will be rolled back.
    *
    * <p>Used for lazy recovery in the read phase.
    *
@@ -68,9 +65,9 @@ public class RecoveryHandler {
   }
 
   /**
-   * Rollbacks records on {@link DistributedStorage} to the specified {@link Snapshot}
+   * Rolls back a records to its previous value before the transaction occurred. The value of the record is retrieved from the given {@code Snapshot}.
    *
-   * @param snapshot
+   * @param snapshot a {@code Snapshot}
    */
   public void rollback(Snapshot snapshot) {
     LOGGER.info("rollback from snapshot for " + snapshot.getId());
@@ -97,6 +94,9 @@ public class RecoveryHandler {
     mutate(composer.get());
   }
 
+  /**
+   * Rolls forward a records to the value it would have attained assuming the transaction completed its commit phase.
+   */
   @VisibleForTesting
   void rollforward(Selection selection, TransactionResult result) {
     LOGGER.info(
