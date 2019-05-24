@@ -7,11 +7,13 @@
              [core    :as cassandra]
              [runner  :as car]
              [nemesis :as can]]
-            [scalardb.transfer :as transfer]))
+            [scalardb.transfer]
+            [scalardb.transfer_append]))
 
 (def tests
   "A map of test names to test constructors."
-  {"transfer"   transfer/transfer-test})
+  {"transfer"        scalardb.transfer/transfer-test
+   "transfer_append" scalardb.transfer_append/transfer-append-test})
 
 (def opt-spec
   [(jc/repeated-opt nil "--test NAME" "Test(s) to run" [] tests)
@@ -33,7 +35,7 @@
     :parse-fn #(Long/parseLong %)
     :validate [pos? "Must be positive"]]
 
-   (jc/tarball-opt "http://www.us.apache.org/dist/cassandra/3.11.3/apache-cassandra-3.11.3-bin.tar.gz")])
+   (jc/tarball-opt "https://archive.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz")])
 
 (defn test-cmd
    []

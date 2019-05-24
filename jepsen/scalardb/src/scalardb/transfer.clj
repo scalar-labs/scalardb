@@ -31,16 +31,18 @@
                                                       CrudException
                                                       UnknownTransactionStatusException)))
 
-(def KEYSPACE "jepsen")
-(def TABLE "transfer")
-(def ACCOUNT_ID "account_id")
-(def BALANCE "balance")
+(def ^:const KEYSPACE "jepsen")
+(def ^:const TABLE "transfer")
+(def ^:const ACCOUNT_ID "account_id")
+(def ^:const BALANCE "balance")
 
-(def INITIAL_BALANCE 1000)
-(def NUM_ACCOUNTS 10)
+(def ^:const INITIAL_BALANCE 10000)
+(def ^:const NUM_ACCOUNTS 10)
 (def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
-(defn create-transfer-table
+(def ^:const NUM_FAILURES_FOR_RECONNECTION 1000)
+
+(defn- create-transfer-table!
   [session test]
   (cql/create-keyspace session KEYSPACE
                        (if-not-exists)
@@ -89,7 +91,7 @@
   "Insert initial records with transaction.
   This method assumes that n is small (< 100)"
   [test n balance]
-  (let [tx (scalar/start-transaction (scalar/get-properties test))]
+  (let [tx (scalar/start-transaction test)]
     (try
       (dotimes [i n]
         (->>
@@ -127,15 +129,19 @@
 (defn read-all-records
   "Read records from 0 .. (n - 1)"
   [test n]
-  (let [tx (scalar/start-transaction (scalar/get-properties test))]
+  (let [tx (scalar/start-transaction test)]
     (map #(read-record tx %) (range n))))
 
 (defn read-all-with-retry
   "Read records from 0 .. (n - 1) and retry if needed"
   [test n]
+  (when (nil? (:transaction test))
+    (scalar/prepare-transaction-service! test))
   (loop [tries scalar/RETRIES]
     (when (< tries scalar/RETRIES)
       (scalar/exponential-backoff (- scalar/RETRIES tries)))
+    (when (zero? (mod tries scalar/RETRIES_FOR_RECONNECTION))
+      (scalar/prepare-transaction-service! test))
     (let [results (read-all-records test n)]
       (if (empty? (filter nil? results))
         results
@@ -160,6 +166,12 @@
   (let [results (read-all-with-retry test n)]
     (map #(assoc {} :balance (get-balance %) :version (get-version %)) results)))
 
+(defn- try-reconnection!
+  [test]
+  (when (= (swap! (:failures test) inc) NUM_FAILURES_FOR_RECONNECTION)
+    (scalar/prepare-transaction-service! test)
+    (reset! (:failures test) 0)))
+
 (defrecord TransferClient [initialized? n initial-balance]
   client/Client
   (open! [_ _ _]
@@ -169,14 +181,16 @@
     (locking initialized?
       (when (compare-and-set! initialized? false true)
         (let [session (drv/connect (->> test :nodes (map name)))]
-          (create-transfer-table session test)
-          (scalar/create-coordinator-table session test)
+          (create-transfer-table! session test)
+          (scalar/create-coordinator-table! session test)
           (drv/disconnect! session))
+        (scalar/prepare-storage-service! test)
+        (scalar/prepare-transaction-service! test)
         (populate-accounts test n initial-balance))))
 
   (invoke! [_ test op]
     (case (:f op)
-      :transfer (let [tx (scalar/start-transaction (scalar/get-properties test))]
+      :transfer (if-let [tx (scalar/start-transaction test)]
                   (try
                     (tx-transfer tx (-> op :value :from) (-> op :value :to) (-> op :value :amount))
                     (assoc op :type :ok)
@@ -184,18 +198,25 @@
                       (swap! (:unknown-tx test) conj (.getId tx))
                       (assoc op :type :fail :error {:unknown-tx-status (.getId tx)}))
                     (catch Exception e
-                      (assoc op :type :fail :error (.getMessage e)))))
+                      (try-reconnection! test)
+                      (assoc op :type :fail :error (.getMessage e))))
+                  (do
+                    (try-reconnection! test)
+                    (assoc op :type :fail :error "Skipped due to no connection")))
       :get-all  (if-let [results (get-balances-and-versions test (:num op))]
                   (assoc op :type :ok :value results)
                   (assoc op :type :fail :error "Failed to get balances"))
       :check-tx (let [unknown (:unknown-tx test)]
-                  (if-let [num-committed (scalar/check-coordinator (scalar/get-properties test) @unknown)]
+                  (if-let [num-committed (if (empty? @unknown)
+                                           0
+                                           (scalar/check-transaction-states test @unknown))]
                     (assoc op :type :ok :value num-committed)
-                    (assoc op :type :fail :value 0 :error "Failed to check status")))))
+                    (assoc op :type :fail :error "Failed to check status")))))
 
   (close! [_ _])
 
-  (teardown! [_ _]))
+  (teardown! [_ test]
+    (scalar/close-all! test)))
 
 (defn transfer
   [test _]
@@ -204,7 +225,7 @@
      :f :transfer
      :value {:from (rand-int n)
              :to (rand-int n)
-             :amount (+ 1 (rand-int 5))}}))
+             :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
   (gen/filter (fn [op] (not= (-> op :value :from)
@@ -225,7 +246,7 @@
 (defn consistency-checker
   []
   (reify checker/Checker
-    (check [this test model history opts]
+    (check [this test history opts]
       (let [read-result (->> history
                              (r/filter op/ok?)
                              (r/filter #(= :get-all (:f %)))
@@ -248,7 +269,8 @@
                                    (r/filter identity)
                                    (into [])
                                    last
-                                   :value)
+                                   ((fn [x]
+                                      (if (= (:type x) :ok) (:value x) 0))))
             total-ok (->> history
                           (r/filter op/ok?)
                           (r/filter #(= :transfer (:f %)))
@@ -275,13 +297,13 @@
                                {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
                                 :model  {:num NUM_ACCOUNTS}
                                 :unknown-tx (atom #{})
+                                :failures (atom 0)
                                 :generator (gen/phases
                                             (->> [diff-transfer]
                                                  (conductors/std-gen opts))
+                                            (conductors/terminate-nemesis opts)
                                             (gen/clients (gen/once check-tx))
                                             (gen/clients (gen/once get-all)))
                                 :checker (checker/compose
-                                           {:perf    (checker/perf)
-                                            :timeline (timeline/html)
-                                            :details (consistency-checker)})})
+                                           {:details (consistency-checker)})})
          opts))
