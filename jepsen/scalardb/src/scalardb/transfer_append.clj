@@ -1,66 +1,62 @@
 (ns scalardb.transfer_append
-  (:require [jepsen
+  (:require [cassandra.conductors :as conductors]
+            [clojure.tools.logging :refer [debug info warn]]
+            [clojure.core.reducers :as r]
+            [jepsen
              [client :as client]
              [checker :as checker]
              [generator :as gen]]
-            [cassandra
-             [core :as c]
-             [conductors :as conductors]]
-            [clojurewerkz.cassaforte
-             [client :as drv]
-             [cql :as cql]
-             [policies :refer :all]
-             [query :refer :all]]
-            [clojure.tools.logging :refer [debug info warn]]
-            [clojure.core.reducers :as r]
             [knossos.op :as op]
+            [qbits.alia :as alia]
+            [qbits.hayt.dsl.clause :refer :all]
+            [qbits.hayt.dsl.statement :refer :all]
             [scalardb.core :as scalar])
   (:import (com.scalar.database.api Put
                                     Scan
                                     Scan$Ordering
                                     Scan$Ordering$Order
                                     Result)
-           (com.scalar.database.io IntValue
-                                   Key)
            (com.scalar.database.exception.transaction CrudException
-                                                      UnknownTransactionStatusException)))
+                                                      UnknownTransactionStatusException)
+           (com.scalar.database.io IntValue
+                                   Key)))
 
-(def ^:const KEYSPACE "jepsen")
+(def ^:const KEYSPACE "jepsen_keyspace")
 (def ^:const TABLE "transfer")
 (def ^:const ACCOUNT_ID "account_id")
 (def ^:const BALANCE "balance")
 (def ^:const AGE "age")
 (def ^:const INITIAL_BALANCE 10000)
 (def ^:const NUM_ACCOUNTS 10)
-(def ^:const total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 (def ^:const NUM_FAILURES_FOR_RECONNECTION 1000)
+(def ^:const total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
 (defn- create-transfer-table!
   [session test]
-  (cql/create-keyspace session KEYSPACE
-                       (if-not-exists)
-                       (with {:replication {"class" "SimpleStrategy"
-                                            "replication_factor" (:rf test)}}))
-  (cql/use-keyspace session KEYSPACE)
-  (cql/create-table session TABLE
-                    (if-not-exists)
-                    (column-definitions {:account_id             :int
-                                         :age                    :int
-                                         :balance                :int
-                                         :tx_id                  :text
-                                         :tx_prepared_at         :bigint
-                                         :tx_committed_at        :bigint
-                                         :tx_state               :int
-                                         :tx_version             :int
-                                         :before_balance         :int
-                                         :before_tx_committed_at :bigint
-                                         :before_tx_id           :text
-                                         :before_tx_prepared_at  :bigint
-                                         :before_tx_state        :int
-                                         :before_tx_version      :int
-                                         :primary-key            [:account_id :age]}))
-  (cql/alter-table session TABLE
-                   (with {:compaction-options (c/compaction-strategy)})))
+  (alia/execute session (create-keyspace KEYSPACE
+                                         (if-exists false)
+                                         (with {:replication {"class"              "SimpleStrategy"
+                                                              "replication_factor" (:rf test)}})))
+  (alia/execute session (use-keyspace KEYSPACE))
+  (alia/execute session (create-table TABLE
+                                      (if-exists false)
+                                      (column-definitions {:account_id             :int
+                                                           :age                    :int
+                                                           :balance                :int
+                                                           :tx_id                  :text
+                                                           :tx_prepared_at         :bigint
+                                                           :tx_committed_at        :bigint
+                                                           :tx_state               :int
+                                                           :tx_version             :int
+                                                           :before_balance         :int
+                                                           :before_tx_committed_at :bigint
+                                                           :before_tx_id           :text
+                                                           :before_tx_prepared_at  :bigint
+                                                           :before_tx_state        :int
+                                                           :before_tx_version      :int
+                                                           :primary-key            [:account_id :age]})))
+  (alia/execute session (alter-table TABLE
+                                     (with {:compaction {:class :SizeTieredCompactionStrategy}}))))
 
 (defn prepare-scan
   [id]
@@ -182,10 +178,11 @@
   (setup! [_ test]
     (locking initialized?
       (when (compare-and-set! initialized? false true)
-        (let [session (drv/connect (->> test :nodes (map name)))]
+        (let [session (alia/connect
+                        (alia/cluster {:contact-points (->> test :nodes (map name))}))]
           (create-transfer-table! session test)
           (scalar/create-coordinator-table! session test)
-          (drv/disconnect! session))
+          (alia/shutdown session))
         (scalar/prepare-storage-service! test)
         (scalar/prepare-transaction-service! test)
         (populate-accounts test n initial-balance))))
@@ -205,17 +202,17 @@
                   (do
                     (try-reconnection! test)
                     (assoc op :type :fail, :error "Skipped due to no connection")))
-      :get-all  (if-let [result (get-balances-and-ages test (:num op))]
-                  (assoc op :type, :ok :value result)
-                  (assoc op :type, :fail, :error "Failed to get balances and ages"))
+      :get-all (if-let [result (get-balances-and-ages test (:num op))]
+                 (assoc op :type, :ok :value result)
+                 (assoc op :type, :fail, :error "Failed to get balances and ages"))
       :get-num-records (if-let [result (let [tx (scalar/start-transaction test)]
                                          (->> (range (:num op))
                                               (map prepare-scan)
                                               (map #(.scan tx %))
                                               (map count)
                                               (reduce +)))]
-                          (assoc op :type :ok, :value result)
-                          (assoc op :type :fail, :error "Failed to get number of records"))
+                         (assoc op :type :ok, :value result)
+                         (assoc op :type :fail, :error "Failed to get number of records"))
       :check-tx (let [unknown (:unknown-tx test)]
                   (if-let [num-committed (if (empty? @unknown)
                                            0
@@ -231,10 +228,10 @@
 (defn transfer
   [test _]
   (let [n (-> test :model :num)]
-    {:type :invoke
-     :f :transfer
-     :value {:from (rand-int n)
-             :to (rand-int n)
+    {:type  :invoke
+     :f     :transfer
+     :value {:from   (rand-int n)
+             :to     (rand-int n)
              :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
@@ -245,19 +242,19 @@
 (defn get-all
   [test _]
   {:type :invoke
-   :f :get-all
-   :num (-> test :model :num)})
+   :f    :get-all
+   :num  (-> test :model :num)})
 
 (defn get-num-records
   [test _]
   {:type :invoke
-   :f :get-num-records
-   :num (-> test :model :num)})
+   :f    :get-num-records
+   :num  (-> test :model :num)})
 
 (defn check-tx
   [test _]
   {:type :invoke
-   :f :check-tx})
+   :f    :check-tx})
 
 (defn consistency-checker
   []
@@ -285,9 +282,9 @@
                               last
                               :value)
             bad-age (if-not (= actual-age expected-age)
-                      {:type :wrong-age
+                      {:type     :wrong-age
                        :expected expected-age
-                       :actual actual-age})
+                       :actual   actual-age})
             checked-committed (->> history
                                    (r/filter #(= :check-tx (:f %)))
                                    (into [])
