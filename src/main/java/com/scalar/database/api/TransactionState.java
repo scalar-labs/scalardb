@@ -1,6 +1,6 @@
 package com.scalar.database.api;
 
-/** Flag to represent the state of a record in a transaction. */
+/** Flag used to represent either the state of a record in a transaction or a transaction itself. */
 public enum TransactionState {
   PREPARED(1),
   DELETED(2),
