@@ -21,7 +21,7 @@ Distributed storage abstraction has storage implementation specific adapters suc
 Another storage implementation can be added by creating an adapter which follows the abstraction interface.
 
 <p align="center">
-<img src="./images/software_stack.png" width="440" />
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/software_stack.png" width="440" />
 </p>
 
 ## Data Model
@@ -32,7 +32,7 @@ The data model of Scalar DB is a multi-dimensional map based on the key-value da
 
 
 <p align="center">
-<img src="./images/data_model.png" width="480" />
+<img src="https://github.com/scalar-labs/scalardb/raw/master/docs/images/data_model.png" width="480" />
 </p>
 
 ### Physical Data Model
@@ -52,6 +52,7 @@ Range scan is only supported for clustering-key access within the same partition
 ### Storage
 
 As of writing this, Scalar DB supports only Cassandra storage as a storage implementation. More correctly, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB and Azure Cosmos DB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
+
 - Atomic CRUD operations (each single-record operation needs to be atomic)
 - Sequential consistency support
 - Atomic/Linearizable conditional mutation (Create/Update/Delete)

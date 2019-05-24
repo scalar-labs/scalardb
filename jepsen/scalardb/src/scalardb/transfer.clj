@@ -36,7 +36,7 @@
 (def ^:const ACCOUNT_ID "account_id")
 (def ^:const BALANCE "balance")
 
-(def ^:const INITIAL_BALANCE 1000)
+(def ^:const INITIAL_BALANCE 10000)
 (def ^:const NUM_ACCOUNTS 10)
 (def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
@@ -135,6 +135,8 @@
 (defn read-all-with-retry
   "Read records from 0 .. (n - 1) and retry if needed"
   [test n]
+  (when (nil? (:transaction test))
+    (scalar/prepare-transaction-service! test))
   (loop [tries scalar/RETRIES]
     (when (< tries scalar/RETRIES)
       (scalar/exponential-backoff (- scalar/RETRIES tries)))
@@ -223,7 +225,7 @@
      :f :transfer
      :value {:from (rand-int n)
              :to (rand-int n)
-             :amount (+ 1 (rand-int 5))}}))
+             :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
   (gen/filter (fn [op] (not= (-> op :value :from)
@@ -244,7 +246,7 @@
 (defn consistency-checker
   []
   (reify checker/Checker
-    (check [this test model history opts]
+    (check [this test history opts]
       (let [read-result (->> history
                              (r/filter op/ok?)
                              (r/filter #(= :get-all (:f %)))
@@ -299,10 +301,9 @@
                                 :generator (gen/phases
                                             (->> [diff-transfer]
                                                  (conductors/std-gen opts))
+                                            (conductors/terminate-nemesis opts)
                                             (gen/clients (gen/once check-tx))
                                             (gen/clients (gen/once get-all)))
                                 :checker (checker/compose
-                                           {:perf    (checker/perf)
-                                            :timeline (timeline/html)
-                                            :details (consistency-checker)})})
+                                           {:details (consistency-checker)})})
          opts))

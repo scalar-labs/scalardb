@@ -1,0 +1,14 @@
+site_name: Scalar DB Docs
+repo_url: https://github.com/scalar-labs/scalardb
+nav:
+- Home: index.md
+- How to use:
+    - Getting started: getting-started.md
+    - Database schema: schema.md
+    - Schema loader: schema-loader.md
+- Design: design.md
+- Jepsen: jepsen.md
+  #- Release notes:
+  #- Overview: release_notes/index.md
+  #- "Version 0.9.10": release_notes/0_9_10.md
+theme: readthedocs
