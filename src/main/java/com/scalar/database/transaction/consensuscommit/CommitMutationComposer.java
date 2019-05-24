@@ -19,10 +19,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Keep track of mutations that need to be committed to {@link
- * com.scalar.database.api.DistributedStorage}
- */
+/** Composer to change the state of records from PREPARED to COMMITTED. */
 @NotThreadSafe
 public class CommitMutationComposer extends AbstractMutationComposer {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitMutationComposer.class);

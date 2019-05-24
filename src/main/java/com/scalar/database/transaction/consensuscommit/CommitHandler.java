@@ -18,7 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Commit snapshots to {@link DistributedStorage} */
+/** Handler for the commit phase of a transaction. */
 @ThreadSafe
 public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
@@ -42,7 +42,12 @@ public class CommitHandler {
   }
 
   /**
-   * Commits the specified {@link Snapshot} to {@link DistributedStorage}
+   * Implements the commit phase of a transaction. That is, all the records that have been changed
+   * by the transaction (dirty objects) will be written to persistent storage.
+   *
+   * <p>The commit phase is performed in two stages: the prepare stage and the commit stage. If the
+   * commit stage finishes successfully then we have know that all the writes have been written
+   * successfully to persistent storage.
    *
    * @param snapshot a {@link Snapshot} to be committed
    * @throws CommitException
