@@ -1,6 +1,6 @@
 package com.scalar.database.api;
 
-/** The state of a transaction */
+/** Flag to represent the state of a record in a transaction. */
 public enum TransactionState {
   PREPARED(1),
   DELETED(2),
@@ -13,10 +13,21 @@ public enum TransactionState {
     this.id = id;
   }
 
+  /**
+   * Returns the id of a {@code TransactionState}.
+   *
+   * @return an integer representing a {@code TransactionState}
+   */
   public int get() {
     return id;
   }
 
+  /**
+   * Returns the {@code TransactionState} represented by the given integer.
+   *
+   * @param id the integer representation of a {@code TransactionState}
+   * @return the {@code TransactionState} represented by the given integer
+   */
   public static TransactionState getInstance(int id) {
     for (TransactionState state : TransactionState.values()) {
       if (state.get() == id) {
