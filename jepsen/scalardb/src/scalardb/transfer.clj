@@ -135,7 +135,7 @@
 (defn read-all-with-retry
   "Read records from 0 .. (n - 1) and retry if needed"
   [test n]
-  (when (nil? (:transaction test))
+  (when (nil? (deref (:transaction test)))
     (scalar/prepare-transaction-service! test))
   (loop [tries scalar/RETRIES]
     (when (< tries scalar/RETRIES)
