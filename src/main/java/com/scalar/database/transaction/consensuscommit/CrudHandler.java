@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Perform CRUD operations on {@link DistributedStorage} */
+/** Handler for CRUD operations with snapshot isolation level. */
 @ThreadSafe
 public class CrudHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CrudHandler.class);
@@ -35,10 +35,11 @@ public class CrudHandler {
   }
 
   /**
-   * Returns a {@link Result} as the result of performing a {@link Get}
+   * Gets (read) a record from the snapshot (if it exists) or persistent storage. Ensures that only
+   * committed records are returned.
    *
-   * @param get the {@code Get} to be performed
-   * @return a {@link Result} as the result of performing a {@link Get}
+   * @param get a {@code Get} to be performed
+   * @return a {@link Result} as the result of performing the {@link Get}
    * @throws CrudException
    */
   public Optional<Result> get(Get get) throws CrudException {
@@ -63,9 +64,11 @@ public class CrudHandler {
   }
 
   /**
-   * Returns a list of {@link Result}s as the result of performing a {@link Scan}
+   * Scans (read) a number of records from persistent storage. Ensures that only committed records
+   * are returned and that is not scanning data that has previously been written in the same
+   * snapshot. Each of the records return from the scan will be added to or updated in the snapshot.
    *
-   * @param scan the {@code Scan} to be performed
+   * @param scan a {@code Scan} to be performed
    * @return a list of {@link Result}s as the result of performing a {@link Scan}
    * @throws CrudException
    */
@@ -103,18 +106,20 @@ public class CrudHandler {
   }
 
   /**
-   * Performs a {@link Put} operation on the {@link Snapshot}
+   * Puts (creates or updates) a record in the snapshot. That is, the record will be added to the
+   * snapshot's write set.
    *
-   * @param put the {@code Put} to be performed
+   * @param put a {@code Put} to be performed
    */
   public void put(Put put) {
     snapshot.put(new Snapshot.Key(put), put);
   }
 
   /**
-   * Performs a {@link Delete} operation on the {@link Snapshot}
+   * Marks a record for deletion in the snapshot. That is, the deletion will be added to the
+   * snapshot's write set.
    *
-   * @param delete the {@code Delete} to be performed
+   * @param delete a {@code Delete} to be marked for deletion
    */
   public void delete(Delete delete) {
     snapshot.put(new Snapshot.Key(delete), delete);

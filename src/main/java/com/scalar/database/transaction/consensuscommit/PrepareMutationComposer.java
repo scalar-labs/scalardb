@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
 
-/** Prepare mutations in order to commit to {@link com.scalar.database.api.DistributedStorage}. */
+/** Compose mutations to prepare records for a transaction. */
 @NotThreadSafe
 public class PrepareMutationComposer extends AbstractMutationComposer {
 
