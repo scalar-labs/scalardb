@@ -31,5 +31,5 @@ func main() {
 	}
 	err := schemaGenerator.WriteFile(schema, *outputFile)
 	kingpin.FatalIfError(err, "")
-	fmt.Printf("The %s schema file %s has been sucessfully generated \n", *database, *outputFile)
+	fmt.Printf("The %s schema file %s has been successfully generated \n", *database, *outputFile)
 }
