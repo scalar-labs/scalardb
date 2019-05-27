@@ -7,20 +7,15 @@ This document briefly explains how you can get started with Scalar DB with a sim
 ## Install prerequisites
 
 Scalar DB v1 is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
+
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
     * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
     * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
-```yaml:cassandra.yaml
-commitlog_sync: batch
-commitlog_sync_batch_window_in_ms: 2
-
-# commitlog_sync: periodic
-# commitlog_sync_period_in_ms: 10000
-```
 * Other libraries used from the above are automatically installed through gradle
 
 In addition to the above, the following software is needed to use schema tools.
+
 * make
 * [Golang](https://golang.org/)
 
@@ -56,7 +51,7 @@ $ cd docs/getting-started
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
-```sql:emoney-storage.sdbql
+```sql
 REPLICATION FACTOR 1;
 
 CREATE NAMESPACE emoney;
@@ -78,7 +73,7 @@ $ $SCALARDB_HOME/tools/schema/loader emoney-storage.sdbql
 is a simple electronic money application with storage service.
 (Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
 
-```java:ElectronicMoneyWithStorage.java
+```java
 public class ElectronicMoneyWithStorage extends ElectronicMoney {
   private final StorageService service;
 
@@ -153,7 +148,7 @@ For example, money transfer (pay) from `A's balance` to `B's balance` is not don
 With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
 Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
 
-```sql:emoney-transaction.sdbql
+```sql
 REPLICATION FACTOR 1;
 
 CREATE NAMESPACE emoney;
@@ -172,7 +167,7 @@ $ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql
 ```
 
 Now we can update the code as follows to make it transactional.
-```java:ElectronicMoneyWithTransaction.java
+```java
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   private final TransactionService service;
 
@@ -259,6 +254,7 @@ $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to mercha
 ## Further documentation
 
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
-* [Design Document](/docs/design.md)
+
+* [Design Document](design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
-* [Database schema in Scalar DB](/tools/schema/README.md)
+* [Database schema in Scalar DB](schema.md)

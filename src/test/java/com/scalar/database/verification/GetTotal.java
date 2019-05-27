@@ -33,7 +33,14 @@ public class GetTotal {
     TransferContext context = new TransferContext(numAccounts, 0, 0, 0);
     AccountBalanceTransferHandler handler = new AccountBalanceTransferHandler(config, context);
 
-    List<Result> results = handler.readRecordsWithRetry();
+    List<Result> results = null;
+    try {
+      results = handler.readRecordsWithRetry();
+    } catch (Exception e) {
+      System.out.println(e.getMessage());
+      System.exit(1);
+    }
+
     int totalVersion = results.stream().mapToInt(r -> ((TransactionResult) r).getVersion()).sum();
     int totalBalance = handler.calcTotalBalance(results);
 
