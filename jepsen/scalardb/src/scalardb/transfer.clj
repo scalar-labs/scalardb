@@ -1,22 +1,17 @@
 (ns scalardb.transfer
-  (:require [jepsen
-             [client :as client]
-             [checker :as checker]
-             [generator :as gen]
-             [nemesis :as nemesis]
-             [tests  :as tests]]
-            [jepsen.checker.timeline :as timeline]
-            [cassandra
+  (:require [cassandra
              [core :as c]
              [conductors :as conductors]]
-            [clojurewerkz.cassaforte
-             [client :as drv]
-             [cql :as cql]
-             [policies :refer :all]
-             [query :refer :all]]
             [clojure.tools.logging :refer [debug info warn]]
             [clojure.core.reducers :as r]
+            [jepsen
+             [client :as client]
+             [checker :as checker]
+             [generator :as gen]]
             [knossos.op :as op]
+            [qbits.alia :as alia]
+            [qbits.hayt.dsl.clause :refer :all]
+            [qbits.hayt.dsl.statement :refer :all]
             [scalardb.core :as scalar])
   (:import (com.scalar.database.api Consistency
                                     DistributedStorage
@@ -38,37 +33,36 @@
 
 (def ^:const INITIAL_BALANCE 10000)
 (def ^:const NUM_ACCOUNTS 10)
-(def total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
+(def ^:const total-balance (* NUM_ACCOUNTS INITIAL_BALANCE))
 
 (def ^:const NUM_FAILURES_FOR_RECONNECTION 1000)
 
 (defn- create-transfer-table!
   [session test]
-  (cql/create-keyspace session KEYSPACE
-                       (if-not-exists)
-                       (with {:replication
-                              {"class" "SimpleStrategy"
-                               "replication_factor" (:rf test)}}))
-  (cql/use-keyspace session KEYSPACE)
-  (cql/create-table session TABLE
-                    (if-not-exists)
-                    (column-definitions {:account_id :int
-                                         :balance :int
-                                         :tx_id :text
-                                         :tx_version :int
-                                         :tx_state :int
-                                         :tx_prepared_at :bigint
-                                         :tx_committed_at :bigint
-                                         :before_account_id :int
-                                         :before_balance :int
-                                         :before_tx_id :text
-                                         :before_tx_version :int
-                                         :before_tx_state :int
-                                         :before_tx_prepared_at :bigint
-                                         :before_tx_committed_at :bigint
-                                         :primary-key [:account_id]}))
-  (cql/alter-table session TABLE
-                   (with {:compaction-options (c/compaction-strategy)})))
+  (alia/execute session (create-keyspace KEYSPACE
+                                         (if-exists false)
+                                         (with {:replication {"class"              "SimpleStrategy"
+                                                              "replication_factor" (:rf test)}})))
+  (alia/execute session (use-keyspace KEYSPACE))
+  (alia/execute session (create-table TABLE
+                                      (if-not-exists)
+                                      (column-definitions {:account_id             :int
+                                                           :balance                :int
+                                                           :tx_id                  :text
+                                                           :tx_version             :int
+                                                           :tx_state               :int
+                                                           :tx_prepared_at         :bigint
+                                                           :tx_committed_at        :bigint
+                                                           :before_account_id      :int
+                                                           :before_balance         :int
+                                                           :before_tx_id           :text
+                                                           :before_tx_version      :int
+                                                           :before_tx_state        :int
+                                                           :before_tx_prepared_at  :bigint
+                                                           :before_tx_committed_at :bigint
+                                                           :primary-key            [:account_id]})))
+  (alia/execute session (alter-table TABLE
+                                     (with {:compaction {:class :SizeTieredCompactionStrategy}}))))
 
 (defn prepare-get
   [id]
@@ -180,10 +174,11 @@
   (setup! [_ test]
     (locking initialized?
       (when (compare-and-set! initialized? false true)
-        (let [session (drv/connect (->> test :nodes (map name)))]
+        (let [session (alia/connect
+                        (alia/cluster {:contact-points (->> test :nodes (map name))}))]
           (create-transfer-table! session test)
           (scalar/create-coordinator-table! session test)
-          (drv/disconnect! session))
+          (alia/shutdown session))
         (scalar/prepare-storage-service! test)
         (scalar/prepare-transaction-service! test)
         (populate-accounts test n initial-balance))))
@@ -203,9 +198,9 @@
                   (do
                     (try-reconnection! test)
                     (assoc op :type :fail :error "Skipped due to no connection")))
-      :get-all  (if-let [results (get-balances-and-versions test (:num op))]
-                  (assoc op :type :ok :value results)
-                  (assoc op :type :fail :error "Failed to get balances"))
+      :get-all (if-let [results (get-balances-and-versions test (:num op))]
+                 (assoc op :type :ok :value results)
+                 (assoc op :type :fail :error "Failed to get balances"))
       :check-tx (let [unknown (:unknown-tx test)]
                   (if-let [num-committed (if (empty? @unknown)
                                            0
@@ -221,10 +216,10 @@
 (defn transfer
   [test _]
   (let [n (-> test :model :num)]
-    {:type :invoke
-     :f :transfer
-     :value {:from (rand-int n)
-             :to (rand-int n)
+    {:type  :invoke
+     :f     :transfer
+     :value {:from   (rand-int n)
+             :to     (rand-int n)
              :amount (+ 1 (rand-int 1000))}}))
 
 (def diff-transfer
@@ -235,13 +230,13 @@
 (defn get-all
   [test _]
   {:type :invoke
-   :f :get-all
-   :num (-> test :model :num)})
+   :f    :get-all
+   :num  (-> test :model :num)})
 
 (defn check-tx
   [test _]
   {:type :invoke
-   :f :check-tx})
+   :f    :check-tx})
 
 (defn consistency-checker
   []
@@ -258,9 +253,9 @@
                                 (map :balance)
                                 (reduce +))
             bad-balance (if-not (= actual-balance total-balance)
-                          {:type :wrong-balance
+                          {:type     :wrong-balance
                            :expected total-balance
-                           :actual actual-balance})
+                           :actual   actual-balance})
             actual-version (->> read-result
                                 (map :version)
                                 (reduce +))
@@ -282,28 +277,28 @@
                                  (* 2)                       ; update 2 records per a transfer
                                  (+ (-> test :model :num)))  ; initial insertions
             bad-version (if-not (= actual-version expected-version)
-                          {:type :wrong-version
+                          {:type     :wrong-version
                            :expected expected-version
-                           :actual actual-version})]
-        {:valid? (and (empty? bad-balance) (empty? bad-version))
-         :total-version actual-version
+                           :actual   actual-version})]
+        {:valid?               (and (empty? bad-balance) (empty? bad-version))
+         :total-version        actual-version
          :committed-unknown-tx checked-committed
-         :bad-balance bad-balance
-         :bad-version bad-version}))))
+         :bad-balance          bad-balance
+         :bad-version          bad-version}))))
 
 (defn transfer-test
   [opts]
   (merge (scalar/scalardb-test (str "transfer-" (:suffix opts))
-                               {:client (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
-                                :model  {:num NUM_ACCOUNTS}
+                               {:client     (TransferClient. (atom false) NUM_ACCOUNTS INITIAL_BALANCE)
+                                :model      {:num NUM_ACCOUNTS}
                                 :unknown-tx (atom #{})
-                                :failures (atom 0)
-                                :generator (gen/phases
-                                            (->> [diff-transfer]
-                                                 (conductors/std-gen opts))
-                                            (conductors/terminate-nemesis opts)
-                                            (gen/clients (gen/once check-tx))
-                                            (gen/clients (gen/once get-all)))
-                                :checker (checker/compose
-                                           {:details (consistency-checker)})})
+                                :failures   (atom 0)
+                                :generator  (gen/phases
+                                              (->> [diff-transfer]
+                                                   (conductors/std-gen opts))
+                                              (conductors/terminate-nemesis opts)
+                                              (gen/clients (gen/once check-tx))
+                                              (gen/clients (gen/once get-all)))
+                                :checker    (checker/compose
+                                              {:details (consistency-checker)})})
          opts))
