@@ -1,12 +1,10 @@
 (ns scalardb.core
-  (:require [jepsen.tests :as tests]
-            [cassandra.core :as c]
-            [clojurewerkz.cassaforte
-             [client :as drv]
-             [cql :as cql]
-             [policies :refer :all]
-             [query :refer :all]]
-            [clojure.tools.logging :refer [debug info warn]])
+  (:require [cassandra.core :as c]
+            [clojure.tools.logging :refer [debug info warn]]
+            [jepsen.tests :as tests]
+            [qbits.alia :as alia]
+            [qbits.hayt.dsl.clause :refer :all]
+            [qbits.hayt.dsl.statement :refer :all])
   (:import (com.scalar.database.api TransactionState)
            (com.scalar.database.config DatabaseConfig)
            (com.scalar.database.storage.cassandra Cassandra)
@@ -31,18 +29,17 @@
 
 (defn create-coordinator-table!
   [session test]
-  (cql/create-keyspace session COORDINATOR
-                       (if-not-exists)
-                       (with {:replication
-                              {"class" "SimpleStrategy"
-                               "replication_factor" (:rf test)}}))
-  (cql/use-keyspace session COORDINATOR)
-  (cql/create-table session STATE_TABLE
-                    (if-not-exists)
-                    (column-definitions {:tx_id :text
-                                         :tx_state :int
-                                         :tx_created_at :bigint
-                                         :primary-key [:tx_id]})))
+  (alia/execute session (create-keyspace COORDINATOR
+                                         (if-exists false)
+                                         (with {:replication {"class"              "SimpleStrategy"
+                                                              "replication_factor" (:rf test)}})))
+  (alia/execute session (use-keyspace COORDINATOR))
+  (alia/execute session (create-table STATE_TABLE
+                                      (if-exists false)
+                                      (column-definitions {:tx_id         :text
+                                                           :tx_state      :int
+                                                           :tx_created_at :bigint
+                                                           :primary-key   [:tx_id]}))))
 
 (defn- create-properties
   [nodes]
@@ -134,7 +131,7 @@
   (some-> test :transaction deref .start))
 
 (defn- is-committed-state?
-  "Return true if the status is COMMITTED. Retrun nil if the read fails."
+  "Return true if the status is COMMITTED. Return nil if the read fails."
   [coordinator id]
   (try
       (let [state (.getState coordinator id)]
@@ -162,7 +159,7 @@
 (defn scalardb-test
   [name opts]
   (merge tests/noop-test
-         {:name    (str "scalardb-" name)
-          :storage (atom nil)
+         {:name        (str "scalardb-" name)
+          :storage     (atom nil)
           :transaction (atom nil)}
          opts))
