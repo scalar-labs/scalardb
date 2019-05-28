@@ -9,13 +9,13 @@ import (
 
 type Schema struct {
 	Replication int64          ` "REPLICATION" "FACTOR" @Int ";" `
-	Declaration []*Declaration `{ @@ }`
+	Declaration []*Declaration `{ "CREATE" @@ }`
 }
 
 type Declaration struct {
-	Namespace        *Namespace ` "CREATE" "NAMESPACE" @@ ";"`
-	Table            *Table     `| "CREATE" "TABLE" @@ `
-	TransactionTable *Table     `| "CREATE" "TRANSACTION" "TABLE" @@ `
+	Namespace        *Namespace `  "NAMESPACE" @@ ";"`
+	Table            *Table     `| "TABLE" @@ `
+	TransactionTable *Table     `| "TRANSACTION" "TABLE" @@ `
 }
 
 type Replication struct {
