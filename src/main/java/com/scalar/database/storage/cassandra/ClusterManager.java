@@ -33,7 +33,7 @@ public class ClusterManager {
   private Session session;
 
   /**
-   * Constructs {@code ClusterManager} with the specified {@code Config} and {@code Credential}
+   * Constructs a {@code ClusterManager} with the specified {@code Config}
    *
    * @param config database configuration needed to create a cluster
    */

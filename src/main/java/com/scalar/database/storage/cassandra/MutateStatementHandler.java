@@ -18,6 +18,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** An abstraction for handler classes for mutate statements */
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
@@ -27,7 +28,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   /**
-   * Executes the specified operation
+   * Executes the specified {@link Mutation} {@link Operation}
    *
    * @param operation {@link Mutation} operation
    * @return a {@code ResultSet}
