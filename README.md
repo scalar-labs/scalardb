@@ -17,7 +17,7 @@ dependencies {
 * [Getting started](docs/getting-started.md)
 * [Design document](docs/design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
-* [Jepsen tests](jepsen/scalardb)
+* [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * Sample applications by contributors/collaborators
   * [Q&A application (From Indetail Engineering team)](https://github.com/indetail-blockchain/getting-started-with-scalardb)
 

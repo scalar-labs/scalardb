@@ -1,1 +1,0 @@
-../jepsen/scalardb/README.md
