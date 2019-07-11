@@ -6,7 +6,11 @@ public interface DistributedTransactionManager {
 
   DistributedTransaction start();
 
+  DistributedTransaction start(String txId);
+
   DistributedTransaction start(Isolation isolation);
+
+  DistributedTransaction start(String txId, Isolation isolation);
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as

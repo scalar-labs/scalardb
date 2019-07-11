@@ -29,8 +29,18 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public DistributedTransaction start(String txId) {
+    return manager.start(txId);
+  }
+
+  @Override
   public DistributedTransaction start(Isolation isolation) {
     return manager.start(isolation);
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, Isolation isolation) {
+    return manager.start(txId, isolation);
   }
 
   @Override
