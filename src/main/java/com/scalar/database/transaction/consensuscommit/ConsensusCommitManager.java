@@ -52,8 +52,18 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   }
 
   @Override
+  public ConsensusCommit start(String txId) {
+    return start(txId, Isolation.SNAPSHOT);
+  }
+
+  @Override
   public synchronized ConsensusCommit start(Isolation isolation) {
     String txId = UUID.randomUUID().toString();
+    return start(txId, isolation);
+  }
+
+  @Override
+  public synchronized ConsensusCommit start(String txId, Isolation isolation) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkArgument(isolation != null);
     Snapshot snapshot = new Snapshot(txId, isolation);
