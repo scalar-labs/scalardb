@@ -16,7 +16,7 @@ public interface DistributedTransactionManager {
    * guarantee uniqueness of the ID so it is not recommended to use this method unless you know
    * exactly what you are doing.
    *
-   * @param txId
+   * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
    */
   DistributedTransaction start(String txId);
@@ -24,7 +24,7 @@ public interface DistributedTransactionManager {
   /**
    * Starts a new transaction with the specified {@link Isolation} level.
    *
-   * @param isolation
+   * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    */
   DistributedTransaction start(Isolation isolation);
@@ -34,7 +34,8 @@ public interface DistributedTransactionManager {
    * users' responsibility to guarantee uniqueness of the ID so it is not recommended to use this
    * method unless you know exactly what you are doing.
    *
-   * @param isolation
+   * @param txId an user-provided unique transaction ID
+   * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    */
   DistributedTransaction start(String txId, Isolation isolation);
