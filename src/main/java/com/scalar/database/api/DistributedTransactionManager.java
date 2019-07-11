@@ -12,7 +12,7 @@ public interface DistributedTransactionManager {
   DistributedTransaction start();
 
   /**
-   * Starts a new transaction with the specified transaction ID. It is a users' responsibility to
+   * Starts a new transaction with the specified transaction ID. It is users' responsibility to
    * guarantee uniqueness of the ID so it is not recommended to use this method unless you know
    * exactly what you are doing.
    *
@@ -30,7 +30,7 @@ public interface DistributedTransactionManager {
   DistributedTransaction start(Isolation isolation);
 
   /**
-   * Starts a new transaction with the specified transaction ID and {@link Isolation} level. It is a
+   * Starts a new transaction with the specified transaction ID and {@link Isolation} level. It is
    * users' responsibility to guarantee uniqueness of the ID so it is not recommended to use this
    * method unless you know exactly what you are doing.
    *
