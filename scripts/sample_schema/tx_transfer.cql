@@ -1,8 +1,8 @@
 DROP KEYSPACE IF EXISTS transfer;
-CREATE KEYSPACE transfer WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
-CREATE KEYSPACE coordinator WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
+CREATE KEYSPACE IF NOT EXISTS transfer WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
+CREATE KEYSPACE IF NOT EXISTS coordinator WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1 };
 
-CREATE TABLE transfer.tx_transfer (
+CREATE TABLE IF NOT EXISTS transfer.tx_transfer (
     account_id int,
     account_type int,
     balance int,
