@@ -125,6 +125,7 @@ public class AccountBalanceTransferHandler {
       try {
         return readRecords();
       } catch (Exception e) {
+        System.err.println(e.getMessage());
         ++i;
         TransactionUtility.exponentialBackoff(i);
       }
