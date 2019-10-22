@@ -4,7 +4,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.database.io.Key;
 import com.scalar.database.io.Value;
-import com.scalar.database.storage.cassandra.OperationVisitor;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.scalar.database.io.Key;
-import com.scalar.database.storage.cassandra.OperationVisitor;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
