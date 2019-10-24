@@ -45,4 +45,8 @@ public final class ScannerImpl implements Scanner {
   public Iterator<Result> iterator() {
     return new ScannerIterator(resultSet, metadata);
   }
+
+  @Override
+  public void close() {
+  }
 }
