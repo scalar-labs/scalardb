@@ -9,6 +9,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.database.api.Delete;
 import com.scalar.database.api.Get;
 import com.scalar.database.api.Operation;
+import com.scalar.database.api.OperationVisitor;
 import com.scalar.database.api.Put;
 import com.scalar.database.api.Scan;
 import javax.annotation.concurrent.NotThreadSafe;
