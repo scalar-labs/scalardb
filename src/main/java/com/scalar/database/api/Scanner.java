@@ -1,5 +1,7 @@
 package com.scalar.database.api;
 
+import com.scalar.database.exception.storage.ExecutionException;
+import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,19 +10,19 @@ import java.util.Optional;
  *
  * @author Hiroyuki Yamada
  */
-public interface Scanner extends Iterable<Result> {
+public interface Scanner extends Closeable, Iterable<Result> {
 
   /**
    * Returns the first result in the results.
    *
    * @return the first result in the results
    */
-  Optional<Result> one();
+  Optional<Result> one() throws ExecutionException;
 
   /**
    * Returns all the results.
    *
    * @return the list of {@code Result}s
    */
-  List<Result> all();
+  List<Result> all() throws ExecutionException;
 }
