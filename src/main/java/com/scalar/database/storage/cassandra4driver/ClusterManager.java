@@ -52,7 +52,6 @@ public class ClusterManager {
       if (builder == null) {
         builder = getBuilder();
       }
-      // TODO: set Credentials
       session = builder.build();
       LOGGER.info("session to the cluster is created.");
       return session;
@@ -94,9 +93,15 @@ public class ClusterManager {
         .forEach(contactPoint -> contactPoints.add(new InetSocketAddress(contactPoint, port)));
     System.out.println(contactPoints);
 
-    // TODO: set LoadBalancePolicy and RetryPolicy
-    return CqlSession.builder()
-        .addContactPoints(contactPoints)
-        .withLocalDatacenter("datacenter1"); // for SimpleSnitch
+    CqlSessionBuilder builder =
+        CqlSession.builder()
+            .addContactPoints(contactPoints)
+            .withLocalDatacenter("datacenter1"); // for SimpleSnitch
+
+    if (config.getUsername() != null && config.getPassword() != null) {
+      builder.withAuthCredentials(config.getUsername(), config.getPassword());
+    }
+
+    return builder;
   }
 }
