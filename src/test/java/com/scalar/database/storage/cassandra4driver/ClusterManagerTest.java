@@ -110,7 +110,7 @@ public class ClusterManagerTest {
   }
 
   @Test
-  public void getSession_CalledAfterBuilt_ShouldNotBuild() {
+  public void getSession_CalledAfterClosed_ShouldBuildAgain() {
     // Arrange
     manager.getSession();
     manager.close();
@@ -123,7 +123,7 @@ public class ClusterManagerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(manager, times(1)).getBuilder();
+    verify(manager, times(2)).getBuilder();
     verify(builder, times(2)).build();
   }
 
@@ -171,22 +171,6 @@ public class ClusterManagerTest {
     // Assert
     assertThat(actual).isEqualTo(tableMetadata);
   }
-
-  // @Test
-  // public void getMetadata_NoNodeAvailable_ShouldThrowConnectionException() {
-  //  // Arrange
-  //  manager.getSession();
-  //  NoNodeAvailableException toThrow = mock(NoNodeAvailableException.class);
-  //  when(session.getMetadata()).thenThrow(toThrow);
-
-  //  // Act Assert
-  //  assertThatThrownBy(
-  //          () -> {
-  //            manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
-  //          })
-  //      .isInstanceOf(ConnectionException.class)
-  //      .hasCause(toThrow);
-  // }
 
   @Test
   public void getMetadata_KeyspaceNotExists_ShouldThrowStorageRuntimeException() {
