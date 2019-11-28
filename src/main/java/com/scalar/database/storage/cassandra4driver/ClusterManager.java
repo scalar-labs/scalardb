@@ -91,7 +91,6 @@ public class ClusterManager {
     config
         .getContactPoints()
         .forEach(contactPoint -> contactPoints.add(new InetSocketAddress(contactPoint, port)));
-    System.out.println(contactPoints);
 
     CqlSessionBuilder builder =
         CqlSession.builder()
