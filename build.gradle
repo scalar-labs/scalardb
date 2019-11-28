@@ -26,6 +26,8 @@ configurations {
 
 dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    compile group: 'com.datastax.oss', name: 'java-driver-core', version: '4.3.0'
+    compile group: 'com.datastax.oss', name: 'java-driver-query-builder', version: '4.3.0'
     compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.0'
     compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25'
