@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A cluster manager
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class ClusterManager {
@@ -42,7 +42,7 @@ public class ClusterManager {
   /**
    * Returns a session. It will create a session if it is not created yet.
    *
-   * @return a {@code Session}
+   * @return a {@code CqlSession}
    */
   public synchronized CqlSession getSession() {
     if (session != null) {
@@ -78,10 +78,11 @@ public class ClusterManager {
         .orElseThrow(() -> new StorageRuntimeException("no table information found"));
   }
 
-  /** Closes the session. */
+  /** Closes the session and builder. */
   public void close() {
     session.close();
     session = null;
+    builder = null;
   }
 
   @VisibleForTesting
