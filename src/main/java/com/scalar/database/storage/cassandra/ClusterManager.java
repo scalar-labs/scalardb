@@ -94,6 +94,12 @@ public class ClusterManager {
   void build() {
     builder =
         Cluster.builder()
+            /*
+             * For upgrading Cassandra driver,
+             * add withoutJMXReporting() temporarily to pass the integration tests
+             * https://docs.datastax.com/en/developer/java-driver/3.5/manual/metrics/#metrics-4-compatibility
+             */
+            .withoutJMXReporting()
             .withClusterName("Scalar Cluster")
             .addContactPoints(config.getContactPoints().toArray(new String[0]))
             .withPort(
