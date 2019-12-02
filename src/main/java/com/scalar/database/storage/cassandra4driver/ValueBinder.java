@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A visitor class to bind {@code Value}s to a {@link BoundStatementBuilder}
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @NotThreadSafe
 public final class ValueBinder implements ValueVisitor {
