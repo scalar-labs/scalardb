@@ -20,7 +20,7 @@ public class TableMetadata {
                 .getPartitionKey()
                 .stream()
                 .map(ColumnMetadata::getName)
-                .map(CqlIdentifier::toString)
+                .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
     this.clusteringColumnNames =
         ImmutableSet.copyOf(
@@ -29,7 +29,7 @@ public class TableMetadata {
                 .keySet()
                 .stream()
                 .map(ColumnMetadata::getName)
-                .map(CqlIdentifier::toString)
+                .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
   }
 
