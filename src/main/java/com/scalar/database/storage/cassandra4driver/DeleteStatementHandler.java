@@ -20,7 +20,7 @@ import javax.annotation.concurrent.ThreadSafe;
 /**
  * A handler class for delete statements
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class DeleteStatementHandler extends MutateStatementHandler {
