@@ -91,7 +91,14 @@ public class ClusterManager {
     int port = config.getContactPort() == 0 ? DEFAULT_CASSANDRA_PORT : config.getContactPort();
     config
         .getContactPoints()
-        .forEach(contactPoint -> contactPoints.add(new InetSocketAddress(contactPoint, port)));
+        .forEach(
+            contactPoint -> {
+              InetSocketAddress addr = new InetSocketAddress(contactPoint, port);
+              if (addr.isUnresolved()) {
+                throw new ConnectionException("the address is unresolved.");
+              }
+              contactPoints.add(addr);
+            });
 
     CqlSessionBuilder builder =
         CqlSession.builder()
