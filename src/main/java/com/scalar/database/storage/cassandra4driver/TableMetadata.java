@@ -16,18 +16,13 @@ public class TableMetadata {
       com.datastax.oss.driver.api.core.metadata.schema.TableMetadata tableMetadata) {
     this.partitionKeyNames =
         ImmutableSet.copyOf(
-            tableMetadata
-                .getPartitionKey()
-                .stream()
+            tableMetadata.getPartitionKey().stream()
                 .map(ColumnMetadata::getName)
                 .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
     this.clusteringColumnNames =
         ImmutableSet.copyOf(
-            tableMetadata
-                .getClusteringColumns()
-                .keySet()
-                .stream()
+            tableMetadata.getClusteringColumns().keySet().stream()
                 .map(ColumnMetadata::getName)
                 .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
