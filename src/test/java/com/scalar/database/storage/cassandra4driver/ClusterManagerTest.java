@@ -31,6 +31,7 @@ import org.mockito.MockitoAnnotations;
 /** */
 public class ClusterManagerTest {
   private static final String VALID_ADDRESS = "127.0.0.1";
+  private static final String INVALID_ADDRESS = "1024.0.0.1";
   private static final String INVALID_PORT = Integer.toString(Integer.MAX_VALUE);
   private static final String ANY_USERNAME = "username";
   private static final String ANY_PASSWORD = "password";
@@ -69,6 +70,24 @@ public class ClusterManagerTest {
     // Assert
     verify(manager).getBuilder();
     verify(builder).build();
+  }
+
+  @Test
+  public void getSession_ConfigWithInvalidEndpointGiven_ShouldThrowExceptionProperly() {
+    // Arrange
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, INVALID_ADDRESS);
+    config = new DatabaseConfig(props);
+    manager = Mockito.spy(new ClusterManager(config));
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              manager.getSession();
+            })
+        .isInstanceOf(ConnectionException.class);
+
+    // Assert
+    verify(builder, never()).build();
   }
 
   @Test
