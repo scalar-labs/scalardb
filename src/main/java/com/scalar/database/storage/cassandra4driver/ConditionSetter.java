@@ -22,7 +22,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 /**
  * A visitor class to configure condition-specific statement
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @NotThreadSafe
 public class ConditionSetter implements MutationConditionVisitor {

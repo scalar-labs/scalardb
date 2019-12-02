@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 /**
  * A handler class for update statement
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class UpdateStatementHandler extends MutateStatementHandler {
