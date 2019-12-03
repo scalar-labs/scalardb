@@ -111,7 +111,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Select getSelect(Selection sel) {
     SelectFrom selectFrom = selectFrom(sel.forNamespace().get(), sel.forTable().get());
-
     return setProjections(selectFrom, sel.getProjections());
   }
 
@@ -130,7 +129,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Select createStatement(Select select, Scan scan) {
     Select selectWithPartitionKeys = setKey(select, Optional.of(scan.getPartitionKey()));
-
     Select selectWithStart = setStart(selectWithPartitionKeys, scan);
     return setEnd(selectWithStart, scan);
   }
@@ -175,6 +173,7 @@ public class SelectStatementHandler extends StatementHandler {
                         }
                       });
             });
+
     return select.where(relations);
   }
 
@@ -207,6 +206,7 @@ public class SelectStatementHandler extends StatementHandler {
                         }
                       });
             });
+
     return select.where(relations);
   }
 
@@ -245,6 +245,7 @@ public class SelectStatementHandler extends StatementHandler {
         o -> {
           orderings.put(o.getName(), getOrdering(o));
         });
+
     return orderings;
   }
 }

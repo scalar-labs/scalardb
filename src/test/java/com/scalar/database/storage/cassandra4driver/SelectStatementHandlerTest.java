@@ -442,7 +442,7 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_DriverExceptionThrown_ShouldThrowProperExecutionException()
+  public void handle_DriverExceptionThrown_ShouldThrowExecutionException()
       throws ExecutionException {
     // Arrange
     get = prepareGetWithClusteringKey();
