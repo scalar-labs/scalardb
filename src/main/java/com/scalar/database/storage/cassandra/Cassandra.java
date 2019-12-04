@@ -2,7 +2,7 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.google.inject.Inject;
 import com.scalar.database.api.Delete;
 import com.scalar.database.api.DistributedStorage;
@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A storage implementation with Cassandra for {@link DistributedStorage}.
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class Cassandra implements DistributedStorage {
@@ -46,7 +46,7 @@ public class Cassandra implements DistributedStorage {
   @Inject
   public Cassandra(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
-    Session session = clusterManager.getSession();
+    CqlSession session = clusterManager.getSession();
 
     handlers =
         StatementHandlerManager.builder()
@@ -78,7 +78,7 @@ public class Cassandra implements DistributedStorage {
     addProjectionsForKeys(get);
     TableMetadata metadata = getTableMetadata(get.forNamespace().get(), get.forTable().get());
 
-    List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
+    List<com.datastax.oss.driver.api.core.cql.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
       throw new InvalidUsageException("please use scan() for non-exact match selection");
     }
@@ -96,7 +96,7 @@ public class Cassandra implements DistributedStorage {
     addProjectionsForKeys(scan);
     TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
 
-    com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
+    com.datastax.oss.driver.api.core.cql.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
   }
 

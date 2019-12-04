@@ -1,33 +1,38 @@
 package com.scalar.database.storage.cassandra;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.update;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Update;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.querybuilder.relation.Relation;
+import com.datastax.oss.driver.api.querybuilder.update.Assignment;
+import com.datastax.oss.driver.api.querybuilder.update.Update;
+import com.datastax.oss.driver.api.querybuilder.update.UpdateStart;
 import com.scalar.database.api.Operation;
 import com.scalar.database.api.Put;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A handler class for update statement
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class UpdateStatementHandler extends MutateStatementHandler {
 
   /**
-   * Constructs an {@code UpdateStatementHandler} with the specified {@code Session}
+   * Constructs an {@code UpdateStatementHandler} with the specified {@code CqlSession}
    *
    * @param session session to be used with this statement
    */
-  public UpdateStatementHandler(Session session) {
+  public UpdateStatementHandler(CqlSession session) {
     super(session);
   }
 
@@ -38,20 +43,19 @@ public class UpdateStatementHandler extends MutateStatementHandler {
 
     Put put = (Put) operation;
     Update update = prepare(put);
-    String query = update.getQueryString();
 
-    return prepare(query);
+    return prepare(update.asCql());
   }
 
   @Override
   @Nonnull
-  protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
+  protected BoundStatementBuilder bind(PreparedStatement prepared, Operation operation) {
     checkArgument(operation, Put.class);
 
-    BoundStatement bound = prepared.bind();
-    bound = bind(bound, (Put) operation);
+    BoundStatementBuilder builder = prepared.boundStatementBuilder();
+    bind(builder, (Put) operation);
 
-    return bound;
+    return builder;
   }
 
   @Override
@@ -61,25 +65,26 @@ public class UpdateStatementHandler extends MutateStatementHandler {
   }
 
   private Update prepare(Put put) {
-    Update update = QueryBuilder.update(put.forNamespace().get(), put.forTable().get());
+    UpdateStart update = update(put.forNamespace().get(), put.forTable().get());
 
-    Update.Assignments assignments = update.with();
-    put.getValues().forEach((k, v) -> assignments.and(set(k, bindMarker())));
-    Update.Where where = update.where();
-    put.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+    List<Assignment> assignments = new ArrayList<>();
+    put.getValues().forEach((k, v) -> assignments.add(Assignment.setColumn(k, bindMarker())));
+
+    List<Relation> relations = new ArrayList<>();
+    put.getPartitionKey()
+        .forEach(v -> relations.add(Relation.column(v.getName()).isEqualTo(bindMarker())));
+
     put.getClusteringKey()
         .ifPresent(
             k -> {
-              k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+              k.forEach(v -> relations.add(Relation.column(v.getName()).isEqualTo(bindMarker())));
             });
 
-    setCondition(where, put);
-
-    return update;
+    return (Update) setCondition(update.set(assignments).where(relations), put);
   }
 
-  private BoundStatement bind(BoundStatement bound, Put put) {
-    ValueBinder binder = new ValueBinder(bound);
+  private void bind(BoundStatementBuilder builder, Put put) {
+    ValueBinder binder = new ValueBinder(builder);
 
     // bind from the front in the statement
     put.getValues().forEach((k, v) -> v.accept(binder));
@@ -87,7 +92,5 @@ public class UpdateStatementHandler extends MutateStatementHandler {
     put.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
 
     bindCondition(binder, put);
-
-    return bound;
   }
 }

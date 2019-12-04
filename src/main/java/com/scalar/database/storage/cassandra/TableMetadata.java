@@ -1,6 +1,7 @@
 package com.scalar.database.storage.cassandra;
 
-import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -11,20 +12,19 @@ public class TableMetadata {
   private final Set<String> partitionKeyNames;
   private final Set<String> clusteringColumnNames;
 
-  public TableMetadata(com.datastax.driver.core.TableMetadata tableMetadata) {
+  public TableMetadata(
+      com.datastax.oss.driver.api.core.metadata.schema.TableMetadata tableMetadata) {
     this.partitionKeyNames =
         ImmutableSet.copyOf(
-            tableMetadata
-                .getPartitionKey()
-                .stream()
+            tableMetadata.getPartitionKey().stream()
                 .map(ColumnMetadata::getName)
+                .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
     this.clusteringColumnNames =
         ImmutableSet.copyOf(
-            tableMetadata
-                .getClusteringColumns()
-                .stream()
+            tableMetadata.getClusteringColumns().keySet().stream()
                 .map(ColumnMetadata::getName)
+                .map(CqlIdentifier::asInternal)
                 .collect(Collectors.toSet()));
   }
 

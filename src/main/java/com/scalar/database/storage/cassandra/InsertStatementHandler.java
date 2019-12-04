@@ -1,32 +1,37 @@
 package com.scalar.database.storage.cassandra;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.insertInto;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.querybuilder.Insert;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.querybuilder.insert.Insert;
+import com.datastax.oss.driver.api.querybuilder.insert.OngoingValues;
+import com.datastax.oss.driver.api.querybuilder.term.Term;
 import com.scalar.database.api.Operation;
 import com.scalar.database.api.Put;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A handler class for insert statements
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class InsertStatementHandler extends MutateStatementHandler {
 
   /**
-   * Constructs an {@code InsertStatementHandler} with the specified {@code Session}
+   * Constructs an {@code InsertStatementHandler} with the specified {@code CqlSession}
    *
    * @param session session to be used with this statement
    */
-  public InsertStatementHandler(Session session) {
+  public InsertStatementHandler(CqlSession session) {
     super(session);
   }
 
@@ -37,20 +42,19 @@ public class InsertStatementHandler extends MutateStatementHandler {
 
     Put put = (Put) operation;
     Insert insert = prepare(put);
-    String query = insert.getQueryString();
 
-    return prepare(query);
+    return prepare(insert.asCql());
   }
 
   @Override
   @Nonnull
-  protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
+  protected BoundStatementBuilder bind(PreparedStatement prepared, Operation operation) {
     checkArgument(operation, Put.class);
 
-    BoundStatement bound = prepared.bind();
-    bound = bind(bound, (Put) operation);
+    BoundStatementBuilder builder = prepared.boundStatementBuilder();
+    bind(builder, (Put) operation);
 
-    return bound;
+    return builder;
   }
 
   @Override
@@ -60,23 +64,22 @@ public class InsertStatementHandler extends MutateStatementHandler {
   }
 
   private Insert prepare(Put put) {
-    Insert insert = insertInto(put.forNamespace().get(), put.forTable().get());
+    OngoingValues insert = insertInto(put.forNamespace().get(), put.forTable().get());
+    Map<String, Term> values = new LinkedHashMap<>();
 
-    put.getPartitionKey().forEach(v -> insert.value(v.getName(), bindMarker()));
+    put.getPartitionKey().forEach(v -> values.put(v.getName(), bindMarker()));
     put.getClusteringKey()
         .ifPresent(
             k -> {
-              k.forEach(v -> insert.value(v.getName(), bindMarker()));
+              k.forEach(v -> values.put(v.getName(), bindMarker()));
             });
-    put.getValues().forEach((k, v) -> insert.value(v.getName(), bindMarker()));
+    put.getValues().forEach((k, v) -> values.put(v.getName(), bindMarker()));
 
-    setCondition(insert, put);
-
-    return insert;
+    return (Insert) setCondition(insert.values(values), put);
   }
 
-  private BoundStatement bind(BoundStatement bound, Put put) {
-    ValueBinder binder = new ValueBinder(bound);
+  private void bind(BoundStatementBuilder builder, Put put) {
+    ValueBinder binder = new ValueBinder(builder);
 
     // bind in the prepared order
     put.getPartitionKey().forEach(v -> v.accept(binder));
@@ -85,7 +88,5 @@ public class InsertStatementHandler extends MutateStatementHandler {
 
     // it calls for consistency, but actually nothing to bind here
     bindCondition(binder, put);
-
-    return bound;
   }
 }

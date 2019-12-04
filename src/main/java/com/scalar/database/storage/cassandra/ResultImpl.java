@@ -2,9 +2,9 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.datastax.driver.core.ColumnDefinitions.Definition;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.type.DataType;
+import com.datastax.oss.driver.api.core.type.DataTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.scalar.database.api.Result;
@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
@@ -110,23 +109,16 @@ public class ResultImpl implements Result {
     getColumnDefinitions(row)
         .forEach(
             (name, type) -> {
-              Value value = convert(row, name, type.getName());
+              Value value = convert(row, name, type);
               values.put(name, value);
             });
   }
 
   @VisibleForTesting
   Map<String, DataType> getColumnDefinitions(Row row) {
-    return row.getColumnDefinitions()
-        .asList()
-        .stream()
-        .collect(
-            Collectors.toMap(
-                Definition::getName,
-                Definition::getType,
-                (d1, d2) -> {
-                  return d1;
-                }));
+    Map<String, DataType> definitions = new HashMap<>();
+    row.getColumnDefinitions().forEach(c -> definitions.put(c.getName().toString(), c.getType()));
+    return definitions;
   }
 
   private Optional<Key> getKey(Set<String> names) {
@@ -142,27 +134,26 @@ public class ResultImpl implements Result {
     return Optional.of(new Key(list));
   }
 
-  private static Value convert(Row row, String name, DataType.Name type)
+  private static Value convert(Row row, String name, DataType type)
       throws UnsupportedTypeException {
-    switch (type) {
-      case BOOLEAN:
-        return new BooleanValue(name, row.getBool(name));
-      case INT:
-        return new IntValue(name, row.getInt(name));
-      case BIGINT:
-        return new BigIntValue(name, row.getLong(name));
-      case FLOAT:
-        return new FloatValue(name, row.getFloat(name));
-      case DOUBLE:
-        return new DoubleValue(name, row.getDouble(name));
-      case TEXT: // for backwards compatibility
-      case VARCHAR:
-        return new TextValue(name, row.getString(name));
-      case BLOB:
-        ByteBuffer buffer = row.getBytes(name);
-        return new BlobValue(name, buffer == null ? null : buffer.array());
-      default:
-        throw new UnsupportedTypeException(type.toString());
+    int typeCode = type.getProtocolCode();
+    if (typeCode == DataTypes.BOOLEAN.getProtocolCode()) {
+      return new BooleanValue(name, row.getBoolean(name));
+    } else if (typeCode == DataTypes.INT.getProtocolCode()) {
+      return new IntValue(name, row.getInt(name));
+    } else if (typeCode == DataTypes.BIGINT.getProtocolCode()) {
+      return new BigIntValue(name, row.getLong(name));
+    } else if (typeCode == DataTypes.FLOAT.getProtocolCode()) {
+      return new FloatValue(name, row.getFloat(name));
+    } else if (typeCode == DataTypes.DOUBLE.getProtocolCode()) {
+      return new DoubleValue(name, row.getDouble(name));
+    } else if (typeCode == DataTypes.TEXT.getProtocolCode()) {
+      return new TextValue(name, row.getString(name));
+    } else if (typeCode == DataTypes.BLOB.getProtocolCode()) {
+      ByteBuffer buffer = row.getByteBuffer(name);
+      return new BlobValue(name, buffer == null ? null : buffer.array());
+    } else {
+      throw new UnsupportedTypeException(type.toString());
     }
   }
 }

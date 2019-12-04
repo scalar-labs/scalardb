@@ -7,9 +7,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+import com.datastax.oss.driver.api.core.type.DataType;
+import com.datastax.oss.driver.api.core.type.DataTypes;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.database.io.IntValue;
 import com.scalar.database.io.Key;
@@ -49,22 +50,22 @@ public class ResultImplTest {
   public void setUp() throws Exception {
     definitions =
         new Definitions()
-            .add(ANY_COLUMN_NAME_1, DataType.cboolean())
-            .add(ANY_COLUMN_NAME_2, DataType.cint())
-            .add(ANY_COLUMN_NAME_3, DataType.bigint())
-            .add(ANY_COLUMN_NAME_4, DataType.cfloat())
-            .add(ANY_COLUMN_NAME_5, DataType.cdouble())
-            .add(ANY_COLUMN_NAME_6, DataType.text())
-            .add(ANY_COLUMN_NAME_7, DataType.blob());
+            .add(ANY_COLUMN_NAME_1, DataTypes.BOOLEAN)
+            .add(ANY_COLUMN_NAME_2, DataTypes.INT)
+            .add(ANY_COLUMN_NAME_3, DataTypes.BIGINT)
+            .add(ANY_COLUMN_NAME_4, DataTypes.FLOAT)
+            .add(ANY_COLUMN_NAME_5, DataTypes.DOUBLE)
+            .add(ANY_COLUMN_NAME_6, DataTypes.TEXT)
+            .add(ANY_COLUMN_NAME_7, DataTypes.BLOB);
 
     MockitoAnnotations.initMocks(this);
-    when(row.getBool(ANY_COLUMN_NAME_1)).thenReturn(true);
+    when(row.getBoolean(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(row.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
     when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(Long.MAX_VALUE);
     when(row.getFloat(ANY_COLUMN_NAME_4)).thenReturn(Float.MAX_VALUE);
     when(row.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(row.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
-    when(row.getBytes(ANY_COLUMN_NAME_7))
+    when(row.getByteBuffer(ANY_COLUMN_NAME_7))
         .thenReturn((ByteBuffer) ByteBuffer.allocate(64).put("string".getBytes()).flip());
   }
 
@@ -77,7 +78,7 @@ public class ResultImplTest {
     // Arrange
     String expectedText = ANY_NAME;
     int expectedInt = ANY_INT;
-    definitions.add(expectedText, DataType.cint());
+    definitions.add(expectedText, DataTypes.INT);
     when(row.getInt(expectedText)).thenReturn(expectedInt);
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), null));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
@@ -95,7 +96,7 @@ public class ResultImplTest {
     // Arrange
     String expectedText = ANY_NAME;
     int expectedInt = ANY_INT;
-    definitions.add(expectedText, DataType.cint()).get();
+    definitions.add(expectedText, DataTypes.INT).get();
     when(row.getInt(expectedText)).thenReturn(expectedInt);
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), null));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);

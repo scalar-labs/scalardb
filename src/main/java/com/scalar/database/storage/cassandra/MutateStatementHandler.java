@@ -1,12 +1,13 @@
 package com.scalar.database.storage.cassandra;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.WriteType;
-import com.datastax.driver.core.exceptions.WriteTimeoutException;
-import com.datastax.driver.core.querybuilder.BuiltStatement;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.servererrors.WriteType;
+import com.datastax.oss.driver.api.querybuilder.BuildableQuery;
 import com.scalar.database.api.Mutation;
 import com.scalar.database.api.Operation;
 import com.scalar.database.exception.storage.ExecutionException;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
 
-  public MutateStatementHandler(Session session) {
+  public MutateStatementHandler(CqlSession session) {
     super(session);
   }
 
@@ -43,7 +44,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
       ResultSet results = handleInternal(operation);
 
       Mutation mutation = (Mutation) operation;
-      if (mutation.getCondition().isPresent() && !results.one().getBool(0)) {
+      if (mutation.getCondition().isPresent() && !results.one().getBoolean(0)) {
         throw new NoMutationException("no mutation was applied.");
       }
       return results;
@@ -72,23 +73,23 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   @Override
-  protected void overwriteConsistency(BoundStatement bound, Operation operation) {
+  protected void overwriteConsistency(BoundStatementBuilder builder, Operation operation) {
     ((Mutation) operation)
         .getCondition()
         .ifPresent(
             c -> {
-              bound.setConsistencyLevel(ConsistencyLevel.QUORUM); // for learn phase
-              bound.setSerialConsistencyLevel(ConsistencyLevel.SERIAL); // for paxos phase
+              builder.setConsistencyLevel(ConsistencyLevel.QUORUM); // for learn phase
+              builder.setSerialConsistencyLevel(ConsistencyLevel.SERIAL); // for paxos phase
             });
   }
 
-  protected void setCondition(BuiltStatement statement, Mutation mutation) {
-    mutation
-        .getCondition()
-        .ifPresent(
-            c -> {
-              c.accept(new ConditionSetter(statement));
-            });
+  protected BuildableQuery setCondition(BuildableQuery query, Mutation mutation) {
+    if (mutation.getCondition().isPresent()) {
+      ConditionSetter setter = new ConditionSetter(query);
+      mutation.getCondition().get().accept(setter);
+      return setter.getQuery();
+    }
+    return query;
   }
 
   protected void bindCondition(ValueBinder binder, Mutation mutation) {

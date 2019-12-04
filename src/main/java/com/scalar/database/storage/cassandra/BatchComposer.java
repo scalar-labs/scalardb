@@ -2,9 +2,9 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.database.api.Delete;
 import com.scalar.database.api.Get;
@@ -17,22 +17,22 @@ import javax.annotation.concurrent.NotThreadSafe;
 /**
  * A batch statement composer
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @NotThreadSafe
 public class BatchComposer implements OperationVisitor {
-  private final BatchStatement batch;
+  private final BatchStatementBuilder builder;
   private final StatementHandlerManager handlers;
 
   /**
-   * Constructs a {@code BatchComposer} with the specified {@link BatchStatement} and {@link
+   * Constructs a {@code BatchComposer} with the specified {@link BatchStatementBuilder} and {@link
    * StatementHandlerManager}
    *
-   * @param batch {@code BatchStatement} for multiple statements
+   * @param builder {@code BatchStatementBuilder} for multiple statements
    * @param handlers {@code StatementHandlerManager}
    */
-  public BatchComposer(BatchStatement batch, StatementHandlerManager handlers) {
-    this.batch = checkNotNull(batch);
+  public BatchComposer(BatchStatementBuilder builder, StatementHandlerManager handlers) {
+    this.builder = checkNotNull(builder);
     this.handlers = checkNotNull(handlers);
   }
 
@@ -80,7 +80,7 @@ public class BatchComposer implements OperationVisitor {
   @VisibleForTesting
   void composeWith(StatementHandler handler, Operation operation) {
     PreparedStatement prepared = handler.prepare(operation);
-    BoundStatement bound = handler.bind(prepared, operation);
-    batch.add(bound);
+    BoundStatementBuilder boundBuilder = handler.bind(prepared, operation);
+    builder.addStatement(boundBuilder.build());
   }
 }

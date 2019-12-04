@@ -10,10 +10,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.google.common.base.Joiner;
 import com.scalar.database.api.ConditionalExpression;
 import com.scalar.database.api.Consistency;
@@ -32,8 +32,8 @@ import org.mockito.MockitoAnnotations;
 
 /** */
 public class DeleteStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "ks";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -45,9 +45,9 @@ public class DeleteStatementHandlerTest {
   private static final int ANY_INT_2 = 2;
   private DeleteStatementHandler handler;
   private Delete del;
-  @Mock private Session session;
+  @Mock private CqlSession session;
   @Mock private PreparedStatement prepared;
-  @Mock private BoundStatement bound;
+  @Mock private BoundStatementBuilder builder;
 
   @Before
   public void setUp() throws Exception {
@@ -75,10 +75,10 @@ public class DeleteStatementHandlerTest {
   private void configureBehavior(String expected) {
     when(session.prepare(expected == null ? anyString() : expected)).thenReturn(prepared);
 
-    when(prepared.bind()).thenReturn(bound);
-    when(bound.setString(anyInt(), anyString())).thenReturn(bound);
-    when(bound.setInt(anyInt(), anyInt())).thenReturn(bound);
-    when(bound.setConsistencyLevel(any(ConsistencyLevel.class))).thenReturn(bound);
+    when(prepared.boundStatementBuilder()).thenReturn(builder);
+    when(builder.setString(anyInt(), anyString())).thenReturn(builder);
+    when(builder.setInt(anyInt(), anyInt())).thenReturn(builder);
+    when(builder.setConsistencyLevel(any(ConsistencyLevel.class))).thenReturn(builder);
   }
 
   @Test
@@ -93,37 +93,12 @@ public class DeleteStatementHandlerTest {
                   "FROM",
                   ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
-                  ANY_NAME_1 + "=?;"
+                  ANY_NAME_1 + "=?"
                 });
     configureBehavior(expected);
     del = prepareDelete();
 
     // Act
-    handler.prepare(del);
-
-    // Assert
-    verify(session).prepare(expected);
-  }
-
-  @Test
-  public void prepare_SameQueryGivenTwice_SecondTimeShouldUseStatementCache() {
-    // Arrange
-    String expected =
-        Joiner.on(" ")
-            .skipNulls()
-            .join(
-                new String[] {
-                  "DELETE",
-                  "FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
-                  "WHERE",
-                  ANY_NAME_1 + "=?;"
-                });
-    configureBehavior(expected);
-    del = prepareDelete();
-
-    // Act
-    handler.prepare(del);
     handler.prepare(del);
 
     // Assert
@@ -144,7 +119,7 @@ public class DeleteStatementHandlerTest {
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
-                  ANY_NAME_2 + "=?;"
+                  ANY_NAME_2 + "=?"
                 });
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
@@ -171,7 +146,7 @@ public class DeleteStatementHandlerTest {
                   ANY_NAME_1 + "=?",
                   "AND",
                   ANY_NAME_2 + "=?",
-                  "IF EXISTS;"
+                  "IF EXISTS"
                 });
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
@@ -202,7 +177,7 @@ public class DeleteStatementHandlerTest {
                   "IF",
                   ANY_NAME_3 + "=?",
                   "AND",
-                  ANY_NAME_4 + "=?;"
+                  ANY_NAME_4 + "=?"
                 });
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
@@ -261,8 +236,8 @@ public class DeleteStatementHandlerTest {
     handler.bind(prepared, del);
 
     // Assert
-    verify(bound).setString(0, ANY_TEXT_1);
-    verify(bound).setString(1, ANY_TEXT_2);
+    verify(builder).setString(0, ANY_TEXT_1);
+    verify(builder).setString(1, ANY_TEXT_2);
   }
 
   @Test
@@ -279,10 +254,10 @@ public class DeleteStatementHandlerTest {
     handler.bind(prepared, del);
 
     // Assert
-    verify(bound).setString(0, ANY_TEXT_1);
-    verify(bound).setString(1, ANY_TEXT_2);
-    verify(bound).setInt(2, ANY_INT_1);
-    verify(bound).setString(3, ANY_TEXT_3);
+    verify(builder).setString(0, ANY_TEXT_1);
+    verify(builder).setString(1, ANY_TEXT_2);
+    verify(builder).setInt(2, ANY_INT_1);
+    verify(builder).setString(3, ANY_TEXT_3);
   }
 
   @Test
@@ -293,10 +268,10 @@ public class DeleteStatementHandlerTest {
     del.withConsistency(Consistency.SEQUENTIAL);
 
     // Act
-    handler.setConsistency(bound, del);
+    handler.setConsistency(builder, del);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -307,10 +282,10 @@ public class DeleteStatementHandlerTest {
     del.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, del);
+    handler.setConsistency(builder, del);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.ONE);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.ONE);
   }
 
   @Test
@@ -322,10 +297,10 @@ public class DeleteStatementHandlerTest {
     del.withConsistency(Consistency.LINEARIZABLE);
 
     // Act
-    handler.setConsistency(bound, del);
+    handler.setConsistency(builder, del);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -336,11 +311,11 @@ public class DeleteStatementHandlerTest {
     del.withCondition(new DeleteIfExists()).withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, del);
+    handler.setConsistency(builder, del);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
-    verify(bound).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
   @Test
@@ -355,11 +330,11 @@ public class DeleteStatementHandlerTest {
         .withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, del);
+    handler.setConsistency(builder, del);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
-    verify(bound).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
   /** Unit testing for handle() method is covered in InsertStatementHandlerTest */
