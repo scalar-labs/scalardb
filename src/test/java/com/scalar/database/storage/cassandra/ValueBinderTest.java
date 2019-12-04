@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.datastax.driver.core.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
 import com.scalar.database.io.BigIntValue;
 import com.scalar.database.io.BlobValue;
 import com.scalar.database.io.BooleanValue;
@@ -31,7 +31,7 @@ public class ValueBinderTest {
   private static final double ANY_DOUBLE = 1.0;
   private static final String ANY_STRING = "1";
 
-  @Mock private BoundStatement bound;
+  @Mock private BoundStatementBuilder builder;
 
   @Before
   public void setUp() throws Exception {
@@ -39,95 +39,95 @@ public class ValueBinderTest {
   }
 
   @Test
-  public void visit_BooleanValueAcceptCalled_ShouldCallSetBool() {
+  public void visit_BooleanValueAcceptCalled_ShouldCallSetBoolean() {
     // Arrange
     BooleanValue value = new BooleanValue(ANY_NAME, ANY_BOOL);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setBool(0, ANY_BOOL);
+    verify(builder).setBoolean(0, ANY_BOOL);
   }
 
   @Test
   public void visit_IntValueAcceptCalled_ShouldCallSetInt() {
     // Arrange
     IntValue value = new IntValue(ANY_NAME, ANY_INT);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setInt(0, ANY_INT);
+    verify(builder).setInt(0, ANY_INT);
   }
 
   @Test
   public void visit_BigIntValueAcceptCalled_ShouldCallSetLong() {
     // Arrange
     BigIntValue value = new BigIntValue(ANY_NAME, ANY_LONG);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setLong(0, ANY_LONG);
+    verify(builder).setLong(0, ANY_LONG);
   }
 
   @Test
   public void visit_FloatValueAcceptCalled_ShouldCallSetFloat() {
     // Arrange
     FloatValue value = new FloatValue(ANY_NAME, ANY_FLOAT);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setFloat(0, ANY_FLOAT);
+    verify(builder).setFloat(0, ANY_FLOAT);
   }
 
   @Test
   public void visit_DoubleValueAcceptCalled_ShouldCallSetDouble() {
     // Arrange
     DoubleValue value = new DoubleValue(ANY_NAME, ANY_DOUBLE);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setDouble(0, ANY_DOUBLE);
+    verify(builder).setDouble(0, ANY_DOUBLE);
   }
 
   @Test
   public void visit_TextValueAcceptCalled_ShouldCallSetString() {
     // Arrange
     TextValue value = new TextValue(ANY_NAME, ANY_STRING);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound).setString(0, ANY_STRING);
+    verify(builder).setString(0, ANY_STRING);
   }
 
   @Test
   public void visit_BlobValueAcceptCalled_ShouldCallSetString() {
     // Arrange
     BlobValue value = new BlobValue(ANY_NAME, ANY_STRING.getBytes());
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value.accept(binder);
 
     // Assert
-    verify(bound)
-        .setBytes(
+    verify(builder)
+        .setByteBuffer(
             0,
             (ByteBuffer)
                 ByteBuffer.allocate(ANY_STRING.length()).put(ANY_STRING.getBytes()).flip());
@@ -138,15 +138,15 @@ public class ValueBinderTest {
     // Arrange
     TextValue value1 = new TextValue(ANY_NAME, ANY_STRING);
     IntValue value2 = new IntValue(ANY_NAME, ANY_INT);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value1.accept(binder);
     value2.accept(binder);
 
     // Assert
-    verify(bound).setString(0, ANY_STRING);
-    verify(bound).setInt(1, ANY_INT);
+    verify(builder).setString(0, ANY_STRING);
+    verify(builder).setInt(1, ANY_INT);
   }
 
   @Test
@@ -156,7 +156,7 @@ public class ValueBinderTest {
     BlobValue value2 = new BlobValue(ANY_NAME, null);
     TextValue value3 = new TextValue(ANY_NAME, (byte[]) null);
     IntValue value4 = new IntValue(ANY_NAME, ANY_INT);
-    ValueBinder binder = new ValueBinder(bound);
+    ValueBinder binder = new ValueBinder(builder);
 
     // Act
     value1.accept(binder);
@@ -165,10 +165,10 @@ public class ValueBinderTest {
     value4.accept(binder);
 
     // Assert
-    verify(bound).setInt(0, ANY_INT);
-    verify(bound, never()).setBytes(anyInt(), any(ByteBuffer.class));
-    verify(bound, never()).setString(anyInt(), anyString());
-    verify(bound).setInt(3, ANY_INT);
+    verify(builder).setInt(0, ANY_INT);
+    verify(builder, never()).setByteBuffer(anyInt(), any(ByteBuffer.class));
+    verify(builder, never()).setString(anyInt(), anyString());
+    verify(builder).setInt(3, ANY_INT);
   }
 
   @Test

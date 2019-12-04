@@ -11,15 +11,16 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.WriteType;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.exceptions.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DriverException;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.servererrors.WriteType;
 import com.google.common.base.Joiner;
 import com.scalar.database.api.Consistency;
 import com.scalar.database.api.Get;
@@ -40,8 +41,8 @@ import org.mockito.MockitoAnnotations;
 
 /** */
 public class InsertStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "ks";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -52,9 +53,10 @@ public class InsertStatementHandlerTest {
   private InsertStatementHandler handler;
   private Put put;
   private InsertStatementHandler spy;
-  @Mock private Session session;
+  @Mock private CqlSession session;
   @Mock private PreparedStatement prepared;
   @Mock private BoundStatement bound;
+  @Mock private BoundStatementBuilder builder;
   @Mock private ResultSet results;
 
   @Before
@@ -89,17 +91,17 @@ public class InsertStatementHandlerTest {
   private InsertStatementHandler prepareSpiedInsertStatementHandler() {
     InsertStatementHandler spy = spy(new InsertStatementHandler(session));
     doReturn(prepared).when(spy).prepare(put);
-    doReturn(bound).when(spy).bind(prepared, put);
+    doReturn(builder).when(spy).bind(prepared, put);
     return spy;
   }
 
   private void configureBehavior(String expected) {
     when(session.prepare(expected == null ? anyString() : expected)).thenReturn(prepared);
 
-    when(prepared.bind()).thenReturn(bound);
-    when(bound.setString(anyInt(), anyString())).thenReturn(bound);
-    when(bound.setInt(anyInt(), anyInt())).thenReturn(bound);
-    when(bound.setConsistencyLevel(any(ConsistencyLevel.class))).thenReturn(bound);
+    when(prepared.boundStatementBuilder()).thenReturn(builder);
+    when(builder.setString(anyInt(), anyString())).thenReturn(builder);
+    when(builder.setInt(anyInt(), anyInt())).thenReturn(builder);
+    when(builder.setConsistencyLevel(any(ConsistencyLevel.class))).thenReturn(builder);
   }
 
   @Test
@@ -114,37 +116,12 @@ public class InsertStatementHandlerTest {
                   ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
-                  "(?,?,?);",
+                  "(?,?,?)",
                 });
     configureBehavior(expected);
     put = preparePut();
 
     // Act
-    handler.prepare(put);
-
-    // Assert
-    verify(session).prepare(expected);
-  }
-
-  @Test
-  public void prepare_SameQueryGivenTwice_SecondTimeShouldUseStatementCache() {
-    // Arrange
-    String expected =
-        Joiner.on(" ")
-            .skipNulls()
-            .join(
-                new String[] {
-                  "INSERT INTO",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
-                  "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
-                  "VALUES",
-                  "(?,?,?);",
-                });
-    configureBehavior(expected);
-    put = preparePut();
-
-    // Act
-    handler.prepare(put);
     handler.prepare(put);
 
     // Assert
@@ -163,7 +140,7 @@ public class InsertStatementHandlerTest {
                   ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
-                  "(?,?,?);",
+                  "(?,?,?)",
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
@@ -188,7 +165,7 @@ public class InsertStatementHandlerTest {
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
                   "(?,?,?)",
-                  "IF NOT EXISTS;"
+                  "IF NOT EXISTS"
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
@@ -226,9 +203,9 @@ public class InsertStatementHandlerTest {
     handler.bind(prepared, put);
 
     // Assert
-    verify(bound).setString(0, ANY_TEXT_1);
-    verify(bound).setString(1, ANY_TEXT_2);
-    verify(bound).setInt(2, ANY_INT_1);
+    verify(builder).setString(0, ANY_TEXT_1);
+    verify(builder).setString(1, ANY_TEXT_2);
+    verify(builder).setInt(2, ANY_INT_1);
   }
 
   @Test
@@ -239,10 +216,10 @@ public class InsertStatementHandlerTest {
     put.withConsistency(Consistency.SEQUENTIAL);
 
     // Act
-    handler.setConsistency(bound, put);
+    handler.setConsistency(builder, put);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -253,10 +230,10 @@ public class InsertStatementHandlerTest {
     put.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, put);
+    handler.setConsistency(builder, put);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.ONE);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.ONE);
   }
 
   @Test
@@ -268,10 +245,10 @@ public class InsertStatementHandlerTest {
     put.withConsistency(Consistency.LINEARIZABLE);
 
     // Act
-    handler.setConsistency(bound, put);
+    handler.setConsistency(builder, put);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -282,11 +259,11 @@ public class InsertStatementHandlerTest {
     put.withCondition(new PutIfNotExists()).withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, put);
+    handler.setConsistency(builder, put);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
-    verify(bound).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
   @Test
@@ -383,7 +360,8 @@ public class InsertStatementHandlerTest {
     ResultSet results = mock(ResultSet.class);
     Row row = mock(Row.class);
     when(results.one()).thenReturn(row);
-    when(row.getBool(0)).thenReturn(false);
+    when(row.getBoolean(0)).thenReturn(false);
+    when(builder.build()).thenReturn(bound);
     doReturn(results).when(spy).execute(bound, put);
 
     // Act Assert
@@ -405,7 +383,8 @@ public class InsertStatementHandlerTest {
     ResultSet results = mock(ResultSet.class);
     Row row = mock(Row.class);
     when(results.one()).thenReturn(row);
-    when(row.getBool(0)).thenReturn(false);
+    when(row.getBoolean(0)).thenReturn(false);
+    when(builder.build()).thenReturn(bound);
     doReturn(results).when(spy).execute(bound, put);
 
     // Act Assert

@@ -1,7 +1,6 @@
 package com.scalar.database.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -11,11 +10,11 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DriverException;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.google.common.base.Joiner;
 import com.scalar.database.api.Consistency;
 import com.scalar.database.api.Get;
@@ -33,8 +32,8 @@ import org.mockito.MockitoAnnotations;
 
 /** */
 public class SelectStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "ks";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -48,9 +47,9 @@ public class SelectStatementHandlerTest {
   private SelectStatementHandler handler;
   private Get get;
   private Scan scan;
-  @Mock private Session session;
+  @Mock private CqlSession session;
   @Mock private PreparedStatement prepared;
-  @Mock private BoundStatement bound;
+  @Mock private BoundStatementBuilder builder;
 
   @Before
   public void setUp() throws Exception {
@@ -79,10 +78,9 @@ public class SelectStatementHandlerTest {
 
   private void configureBehavior(String expected) {
     when(session.prepare(expected == null ? anyString() : expected)).thenReturn(prepared);
-    when(prepared.setConsistencyLevel(any(ConsistencyLevel.class))).thenReturn(prepared);
 
-    when(prepared.bind()).thenReturn(bound);
-    when(bound.setString(anyInt(), anyString())).thenReturn(bound);
+    when(prepared.boundStatementBuilder()).thenReturn(builder);
+    when(builder.setString(anyInt(), anyString())).thenReturn(builder);
   }
 
   @Test
@@ -96,36 +94,12 @@ public class SelectStatementHandlerTest {
                   "SELECT * FROM",
                   ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
-                  ANY_NAME_1 + "=?;",
+                  ANY_NAME_1 + "=?",
                 });
     configureBehavior(expected);
     get = prepareGet();
 
     // Act
-    handler.prepare(get);
-
-    // Assert
-    verify(session).prepare(expected);
-  }
-
-  @Test
-  public void prepare_SameQueryGivenTwice_SecondTimeShouldUseStatementCache() {
-    // Arrange
-    String expected =
-        Joiner.on(" ")
-            .skipNulls()
-            .join(
-                new String[] {
-                  "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
-                  "WHERE",
-                  ANY_NAME_1 + "=?;",
-                });
-    configureBehavior(expected);
-    get = prepareGet();
-
-    // Act
-    handler.prepare(get);
     handler.prepare(get);
 
     // Assert
@@ -145,7 +119,7 @@ public class SelectStatementHandlerTest {
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
-                  ANY_NAME_2 + "=?;",
+                  ANY_NAME_2 + "=?",
                 });
     configureBehavior(expected);
     get = prepareGetWithClusteringKey();
@@ -172,7 +146,7 @@ public class SelectStatementHandlerTest {
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
-                  ANY_NAME_2 + "=?;",
+                  ANY_NAME_2 + "=?",
                 });
     configureBehavior(expected);
     get = prepareGetWithClusteringKey();
@@ -200,7 +174,7 @@ public class SelectStatementHandlerTest {
                   "AND",
                   ANY_NAME_2 + ">=?",
                   "AND",
-                  ANY_NAME_2 + "<=?;",
+                  ANY_NAME_2 + "<=?",
                 });
     configureBehavior(expected);
     scan = prepareScan();
@@ -233,7 +207,7 @@ public class SelectStatementHandlerTest {
                   "AND",
                   ANY_NAME_2 + "=?",
                   "AND",
-                  ANY_NAME_3 + "<=?;",
+                  ANY_NAME_3 + "<=?",
                 });
     configureBehavior(expected);
     scan = prepareScan();
@@ -264,7 +238,7 @@ public class SelectStatementHandlerTest {
                   "AND",
                   ANY_NAME_2 + ">?",
                   "AND",
-                  ANY_NAME_2 + "<?;",
+                  ANY_NAME_2 + "<?",
                 });
     configureBehavior(expected);
     scan = prepareScan();
@@ -296,7 +270,7 @@ public class SelectStatementHandlerTest {
                   ANY_NAME_2,
                   ASC_ORDER.toString(),
                   "LIMIT",
-                  Integer.toString(ANY_LIMIT) + ";",
+                  Integer.toString(ANY_LIMIT),
                 });
     configureBehavior(expected);
     scan = prepareScan();
@@ -330,7 +304,7 @@ public class SelectStatementHandlerTest {
                   ASC_ORDER.toString() + "," + ANY_NAME_3,
                   DESC_ORDER.toString(),
                   "LIMIT",
-                  Integer.toString(ANY_LIMIT) + ";",
+                  Integer.toString(ANY_LIMIT),
                 });
     configureBehavior(expected);
     scan = prepareScan();
@@ -356,8 +330,8 @@ public class SelectStatementHandlerTest {
     handler.bind(prepared, get);
 
     // Assert
-    verify(bound).setString(0, ANY_TEXT_1);
-    verify(bound).setString(1, ANY_TEXT_2);
+    verify(builder).setString(0, ANY_TEXT_1);
+    verify(builder).setString(1, ANY_TEXT_2);
   }
 
   @Test
@@ -374,11 +348,11 @@ public class SelectStatementHandlerTest {
     handler.bind(prepared, scan);
 
     // Assert
-    verify(bound).setString(0, ANY_TEXT_1);
-    verify(bound).setString(1, ANY_TEXT_2);
-    verify(bound).setString(2, ANY_TEXT_3);
-    verify(bound).setString(3, ANY_TEXT_2);
-    verify(bound).setString(4, ANY_TEXT_4);
+    verify(builder).setString(0, ANY_TEXT_1);
+    verify(builder).setString(1, ANY_TEXT_2);
+    verify(builder).setString(2, ANY_TEXT_3);
+    verify(builder).setString(3, ANY_TEXT_2);
+    verify(builder).setString(4, ANY_TEXT_4);
   }
 
   @Test
@@ -389,10 +363,10 @@ public class SelectStatementHandlerTest {
     get.withConsistency(Consistency.SEQUENTIAL);
 
     // Act
-    handler.setConsistency(bound, get);
+    handler.setConsistency(builder, get);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -403,10 +377,10 @@ public class SelectStatementHandlerTest {
     get.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, get);
+    handler.setConsistency(builder, get);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.ONE);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.ONE);
   }
 
   @Test
@@ -418,10 +392,10 @@ public class SelectStatementHandlerTest {
     get.withConsistency(Consistency.LINEARIZABLE);
 
     // Act
-    handler.setConsistency(bound, get);
+    handler.setConsistency(builder, get);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.SERIAL);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
   @Test
@@ -432,10 +406,10 @@ public class SelectStatementHandlerTest {
     scan.withConsistency(Consistency.SEQUENTIAL);
 
     // Act
-    handler.setConsistency(bound, scan);
+    handler.setConsistency(builder, scan);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.QUORUM);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.QUORUM);
   }
 
   @Test
@@ -446,10 +420,10 @@ public class SelectStatementHandlerTest {
     scan.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    handler.setConsistency(bound, scan);
+    handler.setConsistency(builder, scan);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.ONE);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.ONE);
   }
 
   @Test
@@ -461,20 +435,20 @@ public class SelectStatementHandlerTest {
     scan.withConsistency(Consistency.LINEARIZABLE);
 
     // Act
-    handler.setConsistency(bound, scan);
+    handler.setConsistency(builder, scan);
 
     // Assert
-    verify(bound).setConsistencyLevel(ConsistencyLevel.SERIAL);
+    verify(builder).setConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
   @Test
-  public void handle_DriverExceptionThrown_ShouldThrowProperExecutionException()
+  public void handle_DriverExceptionThrown_ShouldThrowExecutionException()
       throws ExecutionException {
     // Arrange
     get = prepareGetWithClusteringKey();
     SelectStatementHandler spy = Mockito.spy(new SelectStatementHandler(session));
     doReturn(prepared).when(spy).prepare(get);
-    doReturn(bound).when(spy).bind(prepared, get);
+    doReturn(builder).when(spy).bind(prepared, get);
 
     DriverException toThrow = mock(DriverException.class);
     doThrow(toThrow).when(spy).handleInternal(get);

@@ -1,20 +1,17 @@
 package com.scalar.database.storage.cassandra;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.oss.driver.api.querybuilder.QueryBuilder.selectFrom;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.querybuilder.Ordering;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.metadata.schema.ClusteringOrder;
+import com.datastax.oss.driver.api.querybuilder.relation.Relation;
+import com.datastax.oss.driver.api.querybuilder.select.Select;
+import com.datastax.oss.driver.api.querybuilder.select.SelectFrom;
 import com.scalar.database.api.Get;
 import com.scalar.database.api.Operation;
 import com.scalar.database.api.Scan;
@@ -22,7 +19,9 @@ import com.scalar.database.api.Selection;
 import com.scalar.database.io.Key;
 import com.scalar.database.io.Value;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
@@ -33,18 +32,18 @@ import org.slf4j.LoggerFactory;
 /**
  * A handler class for select statement
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(SelectStatementHandler.class);
 
   /**
-   * Constructs {@code SelectStatementHandler} with the specified {@code Session}
+   * Constructs {@code SelectStatementHandler} with the specified {@code CqlSession}
    *
    * @param session session to be used with this statement
    */
-  public SelectStatementHandler(Session session) {
+  public SelectStatementHandler(CqlSession session) {
     super(session);
   }
 
@@ -60,22 +59,22 @@ public class SelectStatementHandler extends StatementHandler {
       select = prepare((Scan) operation);
     }
 
-    return prepare(select.getQueryString());
+    return prepare(select.asCql());
   }
 
   @Override
   @Nonnull
-  protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
+  protected BoundStatementBuilder bind(PreparedStatement prepared, Operation operation) {
     checkArgument(operation, Get.class, Scan.class);
-    BoundStatement bound = prepared.bind();
+    BoundStatementBuilder builder = prepared.boundStatementBuilder();
 
     if (operation instanceof Get) {
-      bound = bind(bound, (Get) operation);
+      bind(builder, (Get) operation);
     } else {
-      bound = bind(bound, (Scan) operation);
+      bind(builder, (Scan) operation);
     }
 
-    return bound;
+    return builder;
   }
 
   @Override
@@ -85,69 +84,70 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   @Override
-  protected void overwriteConsistency(BoundStatement bound, Operation operation) {
+  protected void overwriteConsistency(BoundStatementBuilder builder, Operation operation) {
     // nothing to overwrite
   }
 
   private Select prepare(Get get) {
     Select select = getSelect(get);
-    setPredicates(select.where(), get);
-
-    return select;
+    return setPredicates(select, get);
   }
 
   private Select prepare(Scan scan) {
     Select select = getSelect(scan);
-    createStatement(select.where(), scan);
+    select = createStatement(select, scan);
 
-    List<Ordering> orderings = getOrderings(scan.getOrderings());
+    Map<String, ClusteringOrder> orderings = getOrderings(scan.getOrderings());
     if (!orderings.isEmpty()) {
-      select.orderBy(orderings.toArray(new Ordering[orderings.size()]));
+      select = select.orderBy(orderings);
     }
 
     if (scan.getLimit() > 0) {
-      select.limit(scan.getLimit());
+      select = select.limit(scan.getLimit());
     }
 
     return select;
   }
 
   private Select getSelect(Selection sel) {
-    Select.Selection selection = select();
-
-    setProjections(selection, sel.getProjections());
-    return selection.from(sel.forNamespace().get(), sel.forTable().get());
+    SelectFrom selectFrom = selectFrom(sel.forNamespace().get(), sel.forTable().get());
+    return setProjections(selectFrom, sel.getProjections());
   }
 
-  private void setProjections(Select.Selection selection, List<String> projections) {
+  private Select setProjections(SelectFrom selectFrom, List<String> projections) {
     if (projections.isEmpty()) {
-      selection.all();
+      return selectFrom.all();
     } else {
-      projections.forEach(p -> selection.column(p));
+      return selectFrom.columns(projections);
     }
   }
 
-  private void setPredicates(Select.Where statement, Get get) {
-    setKey(statement, Optional.of(get.getPartitionKey()));
-    setKey(statement, get.getClusteringKey());
+  private Select setPredicates(Select select, Get get) {
+    Select selectWithPartitionKeys = setKey(select, Optional.of(get.getPartitionKey()));
+    return setKey(selectWithPartitionKeys, get.getClusteringKey());
   }
 
-  private void createStatement(Select.Where statement, Scan scan) {
-    setKey(statement, Optional.of(scan.getPartitionKey()));
-    setStart(statement, scan);
-    setEnd(statement, scan);
+  private Select createStatement(Select select, Scan scan) {
+    Select selectWithPartitionKeys = setKey(select, Optional.of(scan.getPartitionKey()));
+    Select selectWithStart = setStart(selectWithPartitionKeys, scan);
+    return setEnd(selectWithStart, scan);
   }
 
-  private void setKey(Select.Where statement, Optional<Key> key) {
+  private Select setKey(Select select, Optional<Key> key) {
+    List<Relation> relations = new ArrayList<>();
     key.ifPresent(
         k -> {
-          k.forEach(v -> statement.and(eq(v.getName(), bindMarker())));
+          k.forEach(v -> relations.add(Relation.column(v.getName()).isEqualTo(bindMarker())));
         });
+
+    return select.where(relations);
   }
 
-  private void setStart(Select.Where statement, Scan scan) {
+  private Select setStart(Select select, Scan scan) {
+    List<Relation> relations = new ArrayList<>();
+
     if (!scan.getStartClusteringKey().isPresent()) {
-      return;
+      return select;
     }
 
     scan.getStartClusteringKey()
@@ -159,20 +159,29 @@ public class SelectStatementHandler extends StatementHandler {
                       i -> {
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
-                            statement.and(gte(start.get(i).getName(), bindMarker()));
+                            relations.add(
+                                Relation.column(start.get(i).getName())
+                                    .isGreaterThanOrEqualTo(bindMarker()));
                           } else {
-                            statement.and(gt(start.get(i).getName(), bindMarker()));
+                            relations.add(
+                                Relation.column(start.get(i).getName())
+                                    .isGreaterThan(bindMarker()));
                           }
                         } else {
-                          statement.and(eq(start.get(i).getName(), bindMarker()));
+                          relations.add(
+                              Relation.column(start.get(i).getName()).isEqualTo(bindMarker()));
                         }
                       });
             });
+
+    return select.where(relations);
   }
 
-  private void setEnd(Select.Where statement, Scan scan) {
+  private Select setEnd(Select select, Scan scan) {
+    List<Relation> relations = new ArrayList<Relation>();
+
     if (!scan.getEndClusteringKey().isPresent()) {
-      return;
+      return select;
     }
 
     scan.getEndClusteringKey()
@@ -184,56 +193,59 @@ public class SelectStatementHandler extends StatementHandler {
                       i -> {
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
-                            statement.and(lte(end.get(i).getName(), bindMarker()));
+                            relations.add(
+                                Relation.column(end.get(i).getName())
+                                    .isLessThanOrEqualTo(bindMarker()));
                           } else {
-                            statement.and(lt(end.get(i).getName(), bindMarker()));
+                            relations.add(
+                                Relation.column(end.get(i).getName()).isLessThan(bindMarker()));
                           }
                         } else {
-                          statement.and(eq(end.get(i).getName(), bindMarker()));
+                          relations.add(
+                              Relation.column(end.get(i).getName()).isEqualTo(bindMarker()));
                         }
                       });
             });
+
+    return select.where(relations);
   }
 
-  private BoundStatement bind(BoundStatement bound, Get get) {
-    ValueBinder binder = new ValueBinder(bound);
+  private void bind(BoundStatementBuilder builder, Get get) {
+    ValueBinder binder = new ValueBinder(builder);
 
     // bind in the prepared order
     get.getPartitionKey().forEach(v -> v.accept(binder));
     get.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
-
-    return bound;
   }
 
-  private BoundStatement bind(BoundStatement bound, Scan scan) {
-    ValueBinder binder = new ValueBinder(bound);
+  private void bind(BoundStatementBuilder builder, Scan scan) {
+    ValueBinder binder = new ValueBinder(builder);
 
     // bind in the prepared order
     scan.getPartitionKey().forEach(v -> v.accept(binder));
     scan.getStartClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
     scan.getEndClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
-
-    return bound;
   }
 
-  private Ordering getOrdering(Scan.Ordering ordering) {
+  private ClusteringOrder getOrdering(Scan.Ordering ordering) {
     switch (ordering.getOrder()) {
       case ASC:
-        return QueryBuilder.asc(ordering.getName());
+        return ClusteringOrder.ASC;
       case DESC:
-        return QueryBuilder.desc(ordering.getName());
+        return ClusteringOrder.DESC;
       default:
         LOGGER.warn("Unsupported ordering specified. Using Order.ASC.");
-        return QueryBuilder.asc(ordering.getName());
+        return ClusteringOrder.ASC;
     }
   }
 
-  private List<Ordering> getOrderings(List<Scan.Ordering> scanOrderings) {
-    List<Ordering> orderings = new ArrayList<>(scanOrderings.size());
+  private Map<String, ClusteringOrder> getOrderings(List<Scan.Ordering> scanOrderings) {
+    Map<String, ClusteringOrder> orderings = new LinkedHashMap<>(scanOrderings.size());
     scanOrderings.forEach(
         o -> {
-          orderings.add(getOrdering(o));
+          orderings.put(o.getName(), getOrdering(o));
         });
+
     return orderings;
   }
 }

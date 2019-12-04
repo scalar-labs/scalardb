@@ -7,7 +7,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.BatchStatement;
+import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
 import com.scalar.database.api.Delete;
 import com.scalar.database.api.Get;
 import com.scalar.database.api.Operation;
@@ -22,7 +22,7 @@ import org.mockito.MockitoAnnotations;
 /** */
 public class BatchComposerTest {
   private BatchComposer spy;
-  @Mock private BatchStatement batch;
+  @Mock private BatchStatementBuilder builder;
   @Mock private StatementHandlerManager handlers;
   @Mock private SelectStatementHandler select;
   @Mock private InsertStatementHandler insert;
@@ -37,7 +37,7 @@ public class BatchComposerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    spy = Mockito.spy(new BatchComposer(batch, handlers));
+    spy = Mockito.spy(new BatchComposer(builder, handlers));
     doNothing().when(spy).composeWith(any(StatementHandler.class), any(Operation.class));
   }
 

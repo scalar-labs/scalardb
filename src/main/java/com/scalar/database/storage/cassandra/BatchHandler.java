@@ -2,12 +2,13 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.WriteType;
-import com.datastax.driver.core.exceptions.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.BatchType;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.servererrors.WriteType;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.database.api.Mutation;
 import com.scalar.database.exception.storage.MultiPartitionException;
@@ -21,22 +22,22 @@ import org.slf4j.LoggerFactory;
 /**
  * An executor for a batch statement
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class BatchHandler {
   static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
-  private final Session session;
+  private final CqlSession session;
   private final StatementHandlerManager handlers;
 
   /**
-   * Constructs a {@code BatchHandler} with the specified {@link Session} and {@link
+   * Constructs a {@code BatchHandler} with the specified {@link CqlSession} and {@link
    * StatementHandlerManager}
    *
-   * @param session {@code Session} to create a statement with
+   * @param session {@code CqlSession} to create a statement with
    * @param handlers {@code StatementHandlerManager}
    */
-  public BatchHandler(Session session, StatementHandlerManager handlers) {
+  public BatchHandler(CqlSession session, StatementHandlerManager handlers) {
     this.session = checkNotNull(session);
     this.handlers = checkNotNull(handlers);
   }
@@ -81,8 +82,8 @@ public class BatchHandler {
   }
 
   private ResultSet execute(List<? extends Mutation> mutations) {
-    BatchStatement batch = new BatchStatement();
-    BatchComposer composer = new BatchComposer(batch, handlers);
+    BatchStatementBuilder builder = new BatchStatementBuilder(BatchType.LOGGED);
+    BatchComposer composer = new BatchComposer(builder, handlers);
 
     boolean conditional = false;
     Mutation first = mutations.get(0);
@@ -101,14 +102,14 @@ public class BatchHandler {
     }
 
     if (conditional) {
-      setConsistencyForConditionalMutation(batch);
+      setConsistencyForConditionalMutation(builder);
     }
-    return session.execute(batch);
+    return session.execute(builder.build());
   }
 
   @VisibleForTesting
-  void setConsistencyForConditionalMutation(BatchStatement statement) {
-    statement.setConsistencyLevel(ConsistencyLevel.QUORUM); // for learn phase
-    statement.setSerialConsistencyLevel(ConsistencyLevel.SERIAL); // for paxos phase
+  void setConsistencyForConditionalMutation(BatchStatementBuilder builder) {
+    builder.setConsistencyLevel(ConsistencyLevel.QUORUM); // for learn phase
+    builder.setSerialConsistencyLevel(ConsistencyLevel.SERIAL); // for paxos phase
   }
 }

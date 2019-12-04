@@ -2,8 +2,8 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.scalar.database.api.Result;
 import com.scalar.database.api.Scanner;
 import java.util.ArrayList;

@@ -2,17 +2,16 @@ package com.scalar.database.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.TableMetadata;
-import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
-import com.datastax.driver.core.policies.DefaultRetryPolicy;
-import com.datastax.driver.core.policies.TokenAwarePolicy;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.database.config.DatabaseConfig;
 import com.scalar.database.exception.storage.ConnectionException;
 import com.scalar.database.exception.storage.StorageRuntimeException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -21,16 +20,15 @@ import org.slf4j.LoggerFactory;
 /**
  * A cluster manager
  *
- * @author Hiroyuki Yamada
+ * @author Hiroyuki Yamada, Yuji Ito
  */
 @ThreadSafe
 public class ClusterManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ClusterManager.class);
   private static final int DEFAULT_CASSANDRA_PORT = 9042;
   private final DatabaseConfig config;
-  private Cluster.Builder builder;
-  private Cluster cluster;
-  private Session session;
+  private CqlSessionBuilder builder;
+  private CqlSession session;
 
   /**
    * Constructs a {@code ClusterManager} with the specified {@code Config}
@@ -44,18 +42,17 @@ public class ClusterManager {
   /**
    * Returns a session. It will create a session if it is not created yet.
    *
-   * @return a {@code Session}
+   * @return a {@code CqlSession}
    */
-  public synchronized Session getSession() {
+  public synchronized CqlSession getSession() {
     if (session != null) {
       return session;
     }
     try {
       if (builder == null) {
-        build();
+        builder = getBuilder();
       }
-      cluster = getCluster(config);
-      session = cluster.connect();
+      session = builder.build();
       LOGGER.info("session to the cluster is created.");
       return session;
     } catch (RuntimeException e) {
@@ -73,49 +70,45 @@ public class ClusterManager {
    */
   @Nonnull
   public TableMetadata getMetadata(String keyspace, String table) {
-    KeyspaceMetadata metadata;
-    try {
-      metadata = cluster.getMetadata().getKeyspace(keyspace);
-    } catch (RuntimeException e) {
-      throw new ConnectionException("can't get metadata from the cluster", e);
-    }
-    if (metadata == null || metadata.getTable(table) == null) {
-      throw new StorageRuntimeException("no table information found");
-    }
-    return metadata.getTable(table);
+    return session
+        .getMetadata()
+        .getKeyspace(keyspace)
+        .orElseThrow(() -> new StorageRuntimeException("no keyspace information found"))
+        .getTable(table)
+        .orElseThrow(() -> new StorageRuntimeException("no table information found"));
   }
 
-  /** Closes the cluster. */
+  /** Closes the session and builder. */
   public void close() {
-    cluster.close();
+    session.close();
+    session = null;
+    builder = null;
   }
 
   @VisibleForTesting
-  void build() {
-    builder =
-        Cluster.builder()
-            /*
-             * For upgrading Cassandra driver,
-             * add withoutJMXReporting() temporarily to pass the integration tests
-             * https://docs.datastax.com/en/developer/java-driver/3.5/manual/metrics/#metrics-4-compatibility
-             */
-            .withoutJMXReporting()
-            .withClusterName("Scalar Cluster")
-            .addContactPoints(config.getContactPoints().toArray(new String[0]))
-            .withPort(
-                config.getContactPort() == 0 ? DEFAULT_CASSANDRA_PORT : config.getContactPort())
-            // .withCompression ?
-            // .withPoolingOptions ?
-            .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
-            .withLoadBalancingPolicy(
-                new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build()));
-  }
+  CqlSessionBuilder getBuilder() {
+    List<InetSocketAddress> contactPoints = new ArrayList<InetSocketAddress>();
+    int port = config.getContactPort() == 0 ? DEFAULT_CASSANDRA_PORT : config.getContactPort();
+    config
+        .getContactPoints()
+        .forEach(
+            contactPoint -> {
+              InetSocketAddress addr = new InetSocketAddress(contactPoint, port);
+              if (addr.isUnresolved()) {
+                throw new ConnectionException("the address is unresolved.");
+              }
+              contactPoints.add(addr);
+            });
 
-  @VisibleForTesting
-  Cluster getCluster(DatabaseConfig config) {
+    CqlSessionBuilder builder =
+        CqlSession.builder()
+            .addContactPoints(contactPoints)
+            .withLocalDatacenter("datacenter1"); // for SimpleSnitch
+
     if (config.getUsername() != null && config.getPassword() != null) {
-      builder.withCredentials(config.getUsername(), config.getPassword());
+      builder.withAuthCredentials(config.getUsername(), config.getPassword());
     }
-    return builder.build();
+
+    return builder;
   }
 }

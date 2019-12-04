@@ -7,15 +7,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.WriteType;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.exceptions.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DriverException;
+import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.BoundStatementBuilder;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Statement;
+import com.datastax.oss.driver.api.core.servererrors.WriteTimeoutException;
+import com.datastax.oss.driver.api.core.servererrors.WriteType;
 import com.scalar.database.api.Mutation;
 import com.scalar.database.api.Put;
 import com.scalar.database.api.PutIfExists;
@@ -38,8 +39,8 @@ import org.mockito.MockitoAnnotations;
 
 /** */
 public class BatchHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "ks";
+  private static final String ANY_TABLE_NAME = "tbl";
   private static final String ANOTHER_TABLE_NAME = "another_table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -54,13 +55,14 @@ public class BatchHandlerTest {
   private StatementHandlerManager handlers;
   private List<Mutation> mutations;
 
-  @Mock private Session session;
+  @Mock private CqlSession session;
   @Mock private SelectStatementHandler select;
   @Mock private InsertStatementHandler insert;
   @Mock private UpdateStatementHandler update;
   @Mock private DeleteStatementHandler delete;
   @Mock private PreparedStatement prepared;
   @Mock private BoundStatement bound;
+  @Mock private BoundStatementBuilder builder;
   @Mock private ResultSet results;
 
   @Before
@@ -79,11 +81,12 @@ public class BatchHandlerTest {
 
   private void configureBehavior() {
     when(insert.prepare(any(Mutation.class))).thenReturn(prepared);
-    when(insert.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(bound);
+    when(insert.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(builder);
     when(update.prepare(any(Mutation.class))).thenReturn(prepared);
-    when(update.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(bound);
+    when(update.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(builder);
     when(delete.prepare(any(Mutation.class))).thenReturn(prepared);
-    when(delete.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(bound);
+    when(delete.bind(any(PreparedStatement.class), any(Mutation.class))).thenReturn(builder);
+    when(builder.build()).thenReturn(bound);
   }
 
   private List<Mutation> prepareNonConditionalPuts() {
@@ -218,7 +221,7 @@ public class BatchHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(spy).setConsistencyForConditionalMutation(any(BatchStatement.class));
+    verify(spy).setConsistencyForConditionalMutation(any(BatchStatementBuilder.class));
   }
 
   @Test

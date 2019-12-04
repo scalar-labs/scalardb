@@ -14,7 +14,7 @@ import javax.annotation.concurrent.Immutable;
 /**
  * A manager for all the statements
  *
- * @author Hiroyui Yamada
+ * @author Hiroyui Yamada, Yuji Ito
  */
 @Immutable
 public class StatementHandlerManager {
