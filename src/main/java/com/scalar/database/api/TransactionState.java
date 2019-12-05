@@ -5,7 +5,8 @@ public enum TransactionState {
   PREPARED(1),
   DELETED(2),
   COMMITTED(3),
-  ABORTED(4);
+  ABORTED(4),
+  UNKNOWN(5);
 
   private final int id;
 

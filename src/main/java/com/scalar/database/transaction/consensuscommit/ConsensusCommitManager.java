@@ -8,6 +8,10 @@ import com.google.inject.Inject;
 import com.scalar.database.api.DistributedStorage;
 import com.scalar.database.api.DistributedTransactionManager;
 import com.scalar.database.api.Isolation;
+import com.scalar.database.api.TransactionState;
+import com.scalar.database.exception.transaction.CoordinatorException;
+import com.scalar.database.transaction.consensuscommit.Coordinator.State;
+import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -71,6 +75,21 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     consensus.with(namespace, tableName);
     return consensus;
+  }
+
+  @Override
+  public TransactionState check(String txId) {
+    checkArgument(!Strings.isNullOrEmpty(txId));
+    try {
+      Optional<State> state = coordinator.getState(txId);
+      if (state.isPresent()) {
+        return state.get().getState();
+      }
+    } catch (CoordinatorException e) {
+      // ignore
+    }
+    // Either no state exists or the exception is thrown
+    return TransactionState.UNKNOWN;
   }
 
   @Override
