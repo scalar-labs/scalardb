@@ -95,7 +95,7 @@ public class ConsensusCommitManagerTest {
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.of(new State(ANY_TX_ID, expected)));
 
     // Act
-    TransactionState actual = manager.check(ANY_TX_ID);
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(expected);
@@ -107,7 +107,7 @@ public class ConsensusCommitManagerTest {
     when(coordinator.getState(ANY_TX_ID)).thenReturn(Optional.empty());
 
     // Act
-    TransactionState actual = manager.check(ANY_TX_ID);
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
@@ -120,7 +120,7 @@ public class ConsensusCommitManagerTest {
     when(coordinator.getState(ANY_TX_ID)).thenThrow(toThrow);
 
     // Act
-    TransactionState actual = manager.check(ANY_TX_ID);
+    TransactionState actual = manager.getState(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
