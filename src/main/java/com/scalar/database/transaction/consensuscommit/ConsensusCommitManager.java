@@ -78,7 +78,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   }
 
   @Override
-  public TransactionState check(String txId) {
+  public TransactionState getState(String txId) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     try {
       Optional<State> state = coordinator.getState(txId);

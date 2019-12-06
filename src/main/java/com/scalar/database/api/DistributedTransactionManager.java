@@ -41,12 +41,12 @@ public interface DistributedTransactionManager {
   DistributedTransaction start(String txId, Isolation isolation);
 
   /**
-   * Checks the state of a given transaction.
+   * Returns the state of a given transaction.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
    */
-  TransactionState check(String txId);
+  TransactionState getState(String txId);
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as

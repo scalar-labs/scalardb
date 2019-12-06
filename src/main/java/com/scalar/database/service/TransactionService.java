@@ -45,8 +45,8 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
-  public TransactionState check(String txId) {
-    return manager.check(txId);
+  public TransactionState getState(String txId) {
+    return manager.getState(txId);
   }
 
   @Override
