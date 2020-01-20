@@ -1,0 +1,88 @@
+package com.scalar.db.storage.cassandra;
+
+import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
+
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Operation;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+
+/**
+ * A handler class for delete statements
+ *
+ * @author Hiroyuki Yamada
+ */
+@ThreadSafe
+public class DeleteStatementHandler extends MutateStatementHandler {
+
+  /**
+   * Constructs a {@code DeleteStatementHandler} with the specified {@code Session}
+   *
+   * @param session session to be used with this statement
+   */
+  public DeleteStatementHandler(Session session) {
+    super(session);
+  }
+
+  @Override
+  @Nonnull
+  protected PreparedStatement prepare(Operation operation) {
+    checkArgument(operation, Delete.class);
+
+    Delete del = (Delete) operation;
+    com.datastax.driver.core.querybuilder.Delete delete = prepare(del);
+
+    return prepare(delete.getQueryString());
+  }
+
+  @Override
+  @Nonnull
+  protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
+    checkArgument(operation, Delete.class);
+
+    BoundStatement bound = prepared.bind();
+    bound = bind(bound, (Delete) operation);
+
+    return bound;
+  }
+
+  @Override
+  @Nonnull
+  protected ResultSet execute(BoundStatement bound, Operation operation) {
+    return session.execute(bound);
+  }
+
+  private com.datastax.driver.core.querybuilder.Delete prepare(Delete del) {
+    com.datastax.driver.core.querybuilder.Delete delete =
+        QueryBuilder.delete().from(del.forNamespace().get(), del.forTable().get());
+    com.datastax.driver.core.querybuilder.Delete.Where where = delete.where();
+
+    del.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+    del.getClusteringKey()
+        .ifPresent(
+            k -> {
+              k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+            });
+
+    setCondition(where, del);
+
+    return delete;
+  }
+
+  private BoundStatement bind(BoundStatement bound, Delete del) {
+    ValueBinder binder = new ValueBinder(bound);
+
+    // bind in the prepared order
+    del.getPartitionKey().forEach(v -> v.accept(binder));
+    del.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
+
+    bindCondition(binder, del);
+
+    return bound;
+  }
+}

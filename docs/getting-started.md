@@ -34,10 +34,10 @@ $ make
 $ cd -
 ```
 Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
-For example in Gradle, you can add the following dependency to your build.gradle.
+For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
 ```
 dependencies {
-    compile group: 'com.scalar-labs', name: 'scalardb', version: '1.0.0-rc1'
+    compile group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
 }
 ```
 
