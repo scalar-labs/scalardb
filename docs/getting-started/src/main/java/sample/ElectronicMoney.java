@@ -11,9 +11,9 @@ public abstract class ElectronicMoney {
 
   public ElectronicMoney() {
     props = new Properties();
-    props.setProperty("scalar.database.contact_points", "localhost");
-    props.setProperty("scalar.database.username", "cassandra");
-    props.setProperty("scalar.database.password", "cassandra");
+    props.setProperty("scalar.db.contact_points", "localhost");
+    props.setProperty("scalar.db.username", "cassandra");
+    props.setProperty("scalar.db.password", "cassandra");
   }
 
   abstract void charge(String id, int amount) throws Exception;
