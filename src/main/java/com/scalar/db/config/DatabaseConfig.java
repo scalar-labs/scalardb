@@ -19,7 +19,7 @@ public class DatabaseConfig {
   private int contactPort;
   private String username;
   private String password;
-  public static final String PREFIX = "scalar.database.";
+  public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
   public static final String USERNAME = PREFIX + "username";

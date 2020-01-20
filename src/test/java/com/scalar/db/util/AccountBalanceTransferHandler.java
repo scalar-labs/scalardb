@@ -49,9 +49,9 @@ public class AccountBalanceTransferHandler {
   public AccountBalanceTransferHandler(DatabaseConfig config, TransferContext context) {
     if (config == null) {
       Properties props = new Properties();
-      props.setProperty("scalar.database.contact_points", "localhost");
-      props.setProperty("scalar.database.username", "cassandra");
-      props.setProperty("scalar.database.password", "cassandra");
+      props.setProperty("scalar.db.contact_points", "localhost");
+      props.setProperty("scalar.db.username", "cassandra");
+      props.setProperty("scalar.db.password", "cassandra");
       config = new DatabaseConfig(props);
     }
     this.context = checkNotNull(context);

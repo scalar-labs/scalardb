@@ -2,16 +2,16 @@ package sample;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.scalar.database.api.Get;
-import com.scalar.database.api.Put;
-import com.scalar.database.api.Result;
-import com.scalar.database.config.DatabaseConfig;
-import com.scalar.database.exception.storage.ExecutionException;
-import com.scalar.database.io.IntValue;
-import com.scalar.database.io.Key;
-import com.scalar.database.io.TextValue;
-import com.scalar.database.service.StorageModule;
-import com.scalar.database.service.StorageService;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
+import com.scalar.db.service.StorageModule;
+import com.scalar.db.service.StorageService;
 
 import java.util.Optional;
 

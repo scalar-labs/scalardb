@@ -2,19 +2,19 @@ package sample;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.scalar.database.api.DistributedTransaction;
-import com.scalar.database.api.Get;
-import com.scalar.database.api.Put;
-import com.scalar.database.api.Result;
-import com.scalar.database.config.DatabaseConfig;
-import com.scalar.database.exception.transaction.CommitException;
-import com.scalar.database.exception.transaction.CrudException;
-import com.scalar.database.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.database.io.IntValue;
-import com.scalar.database.io.Key;
-import com.scalar.database.io.TextValue;
-import com.scalar.database.service.TransactionModule;
-import com.scalar.database.service.TransactionService;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
+import com.scalar.db.service.TransactionModule;
+import com.scalar.db.service.TransactionService;
 
 import java.util.Optional;
 
