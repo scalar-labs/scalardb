@@ -71,15 +71,15 @@
 <h1 class="title">Hierarchy For All Packages</h1>
 <span class="packageHierarchyLabel">Package Hierarchies:</span>
 <ul class="horizontal">
-<li><a href="com/scalar/database/package-tree.html">com.scalar.database</a>, </li>
-<li><a href="com/scalar/database/api/package-tree.html">com.scalar.database.api</a>, </li>
-<li><a href="com/scalar/database/config/package-tree.html">com.scalar.database.config</a>, </li>
-<li><a href="com/scalar/database/exception/storage/package-tree.html">com.scalar.database.exception.storage</a>, </li>
-<li><a href="com/scalar/database/exception/transaction/package-tree.html">com.scalar.database.exception.transaction</a>, </li>
-<li><a href="com/scalar/database/io/package-tree.html">com.scalar.database.io</a>, </li>
-<li><a href="com/scalar/database/service/package-tree.html">com.scalar.database.service</a>, </li>
-<li><a href="com/scalar/database/storage/cassandra/package-tree.html">com.scalar.database.storage.cassandra</a>, </li>
-<li><a href="com/scalar/database/transaction/consensuscommit/package-tree.html">com.scalar.database.transaction.consensuscommit</a></li>
+<li><a href="com/scalar/db/package-tree.html">com.scalar.db</a>, </li>
+<li><a href="com/scalar/db/api/package-tree.html">com.scalar.db.api</a>, </li>
+<li><a href="com/scalar/db/config/package-tree.html">com.scalar.db.config</a>, </li>
+<li><a href="com/scalar/db/exception/storage/package-tree.html">com.scalar.db.exception.storage</a>, </li>
+<li><a href="com/scalar/db/exception/transaction/package-tree.html">com.scalar.db.exception.transaction</a>, </li>
+<li><a href="com/scalar/db/io/package-tree.html">com.scalar.db.io</a>, </li>
+<li><a href="com/scalar/db/service/package-tree.html">com.scalar.db.service</a>, </li>
+<li><a href="com/scalar/db/storage/cassandra/package-tree.html">com.scalar.db.storage.cassandra</a>, </li>
+<li><a href="com/scalar/db/transaction/consensuscommit/package-tree.html">com.scalar.db.transaction.consensuscommit</a></li>
 </ul>
 </div>
 <div class="contentContainer">
@@ -89,161 +89,171 @@
 <ul>
 <li type="circle">com.google.inject.AbstractModule (implements com.google.inject.Module)
 <ul>
-<li type="circle">com.scalar.database.service.<a href="com/scalar/database/service/StorageModule.html" title="class in com.scalar.database.service"><span class="typeNameLink">StorageModule</span></a></li>
-<li type="circle">com.scalar.database.service.<a href="com/scalar/database/service/TransactionModule.html" title="class in com.scalar.database.service"><span class="typeNameLink">TransactionModule</span></a></li>
+<li type="circle">com.scalar.db.service.<a href="com/scalar/db/service/StorageModule.html" title="class in com.scalar.db.service"><span class="typeNameLink">StorageModule</span></a></li>
+<li type="circle">com.scalar.db.service.<a href="com/scalar/db/service/TransactionModule.html" title="class in com.scalar.db.service"><span class="typeNameLink">TransactionModule</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/AbstractMutationComposer.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">AbstractMutationComposer</span></a> (implements com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.database.transaction.consensuscommit">MutationComposer</a>)
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/AbstractMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">AbstractMutationComposer</span></a> (implements com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.db.transaction.consensuscommit">MutationComposer</a>)
 <ul>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/CommitMutationComposer.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">CommitMutationComposer</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/PrepareMutationComposer.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">PrepareMutationComposer</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/RollbackMutationComposer.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">RollbackMutationComposer</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/CommitMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">CommitMutationComposer</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/PrepareMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">PrepareMutationComposer</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/RollbackMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">RollbackMutationComposer</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/Attribute.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">Attribute</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/BatchComposer.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">BatchComposer</span></a> (implements com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/OperationVisitor.html" title="interface in com.scalar.database.storage.cassandra">OperationVisitor</a>)</li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/BatchHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">BatchHandler</span></a></li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/BigIntValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">BigIntValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/BlobValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">BlobValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/BooleanValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">BooleanValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/Cassandra.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">Cassandra</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/DistributedStorage.html" title="interface in com.scalar.database.api">DistributedStorage</a>)</li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ClusterManager.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ClusterManager</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/CommitHandler.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">CommitHandler</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/ConditionalExpression.html" title="class in com.scalar.database.api"><span class="typeNameLink">ConditionalExpression</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ConditionSetter.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ConditionSetter</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationConditionVisitor.html" title="interface in com.scalar.database.api">MutationConditionVisitor</a>)</li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/ConsensusCommit.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">ConsensusCommit</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/DistributedTransaction.html" title="interface in com.scalar.database.api">DistributedTransaction</a>)</li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">ConsensusCommitManager</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/DistributedTransactionManager.html" title="interface in com.scalar.database.api">DistributedTransactionManager</a>)</li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/Coordinator.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">Coordinator</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/Coordinator.State.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">Coordinator.State</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/CrudHandler.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">CrudHandler</span></a></li>
-<li type="circle">com.scalar.database.config.<a href="com/scalar/database/config/DatabaseConfig.html" title="class in com.scalar.database.config"><span class="typeNameLink">DatabaseConfig</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/DeleteIf.html" title="class in com.scalar.database.api"><span class="typeNameLink">DeleteIf</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api">MutationCondition</a>)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/DeleteIfExists.html" title="class in com.scalar.database.api"><span class="typeNameLink">DeleteIfExists</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api">MutationCondition</a>)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/DoubleValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">DoubleValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/FloatValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">FloatValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/IntValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">IntValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/Key.html" title="class in com.scalar.database.io"><span class="typeNameLink">Key</span></a> (implements java.lang.Comparable&lt;T&gt;, java.lang.Iterable&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Operation.html" title="class in com.scalar.database.api"><span class="typeNameLink">Operation</span></a>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Attribute.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Attribute</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/BatchComposer.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">BatchComposer</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/OperationVisitor.html" title="interface in com.scalar.db.api">OperationVisitor</a>)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/BatchHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">BatchHandler</span></a></li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/BigIntValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">BigIntValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/BlobValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">BlobValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/BooleanValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">BooleanValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/Cassandra.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">Cassandra</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/DistributedStorage.html" title="interface in com.scalar.db.api">DistributedStorage</a>)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ClusterManager.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ClusterManager</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/CommitHandler.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">CommitHandler</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/ConditionalExpression.html" title="class in com.scalar.db.api"><span class="typeNameLink">ConditionalExpression</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ConditionSetter.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ConditionSetter</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationConditionVisitor.html" title="interface in com.scalar.db.api">MutationConditionVisitor</a>)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommit.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">ConsensusCommit</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a>)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">ConsensusCommitManager</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a>)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Coordinator.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Coordinator</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Coordinator.State.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Coordinator.State</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/CrudHandler.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">CrudHandler</span></a></li>
+<li type="circle">com.scalar.db.config.<a href="com/scalar/db/config/DatabaseConfig.html" title="class in com.scalar.db.config"><span class="typeNameLink">DatabaseConfig</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/DeleteIf.html" title="class in com.scalar.db.api"><span class="typeNameLink">DeleteIf</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api">MutationCondition</a>)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/DeleteIfExists.html" title="class in com.scalar.db.api"><span class="typeNameLink">DeleteIfExists</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api">MutationCondition</a>)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/DoubleValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">DoubleValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/FloatValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">FloatValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/IntValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">IntValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/Key.html" title="class in com.scalar.db.io"><span class="typeNameLink">Key</span></a> (implements java.lang.Comparable&lt;T&gt;, java.lang.Iterable&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Operation.html" title="class in com.scalar.db.api"><span class="typeNameLink">Operation</span></a>
 <ul>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Mutation.html" title="class in com.scalar.database.api"><span class="typeNameLink">Mutation</span></a>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Mutation.html" title="class in com.scalar.db.api"><span class="typeNameLink">Mutation</span></a>
 <ul>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Delete.html" title="class in com.scalar.database.api"><span class="typeNameLink">Delete</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Put.html" title="class in com.scalar.database.api"><span class="typeNameLink">Put</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Delete.html" title="class in com.scalar.db.api"><span class="typeNameLink">Delete</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Put.html" title="class in com.scalar.db.api"><span class="typeNameLink">Put</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Selection.html" title="class in com.scalar.database.api"><span class="typeNameLink">Selection</span></a>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Selection.html" title="class in com.scalar.db.api"><span class="typeNameLink">Selection</span></a>
 <ul>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Get.html" title="class in com.scalar.database.api"><span class="typeNameLink">Get</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Scan.html" title="class in com.scalar.database.api"><span class="typeNameLink">Scan</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Get.html" title="class in com.scalar.db.api"><span class="typeNameLink">Get</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Scan.html" title="class in com.scalar.db.api"><span class="typeNameLink">Scan</span></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/PartitionedMutations.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">PartitionedMutations</span></a></li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/PartitionedMutations.Key.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">PartitionedMutations.Key</span></a> (implements java.lang.Comparable&lt;T&gt;)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/PutIf.html" title="class in com.scalar.database.api"><span class="typeNameLink">PutIf</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api">MutationCondition</a>)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/PutIfExists.html" title="class in com.scalar.database.api"><span class="typeNameLink">PutIfExists</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api">MutationCondition</a>)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/PutIfNotExists.html" title="class in com.scalar.database.api"><span class="typeNameLink">PutIfNotExists</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api">MutationCondition</a>)</li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/RecoveryHandler.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">RecoveryHandler</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ResultImpl.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ResultImpl</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/Result.html" title="interface in com.scalar.database.api">Result</a>)</li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Scan.Ordering.html" title="class in com.scalar.database.api"><span class="typeNameLink">Scan.Ordering</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ScannerImpl.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ScannerImpl</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/Scanner.html" title="interface in com.scalar.database.api">Scanner</a>)</li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ScannerIterator.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ScannerIterator</span></a> (implements java.util.Iterator&lt;E&gt;)</li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">Snapshot</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/StatementCache.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">StatementCache</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/StatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">StatementHandler</span></a>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/PartitionedMutations.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">PartitionedMutations</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/PartitionedMutations.Key.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">PartitionedMutations.Key</span></a> (implements java.lang.Comparable&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/PutIf.html" title="class in com.scalar.db.api"><span class="typeNameLink">PutIf</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api">MutationCondition</a>)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/PutIfExists.html" title="class in com.scalar.db.api"><span class="typeNameLink">PutIfExists</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api">MutationCondition</a>)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/PutIfNotExists.html" title="class in com.scalar.db.api"><span class="typeNameLink">PutIfNotExists</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api">MutationCondition</a>)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/RecoveryHandler.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">RecoveryHandler</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ResultImpl.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ResultImpl</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/Result.html" title="interface in com.scalar.db.api">Result</a>)</li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Scan.Ordering.html" title="class in com.scalar.db.api"><span class="typeNameLink">Scan.Ordering</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ScannerImpl.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ScannerImpl</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/Scanner.html" title="interface in com.scalar.db.api">Scanner</a>)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ScannerIterator.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ScannerIterator</span></a> (implements java.util.Iterator&lt;E&gt;)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Snapshot</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/StatementCache.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">StatementCache</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/StatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">StatementHandler</span></a>
 <ul>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/MutateStatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">MutateStatementHandler</span></a>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/MutateStatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">MutateStatementHandler</span></a>
 <ul>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/DeleteStatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">DeleteStatementHandler</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/InsertStatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">InsertStatementHandler</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/UpdateStatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">UpdateStatementHandler</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/DeleteStatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">DeleteStatementHandler</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/InsertStatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">InsertStatementHandler</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/UpdateStatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">UpdateStatementHandler</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/SelectStatementHandler.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">SelectStatementHandler</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/SelectStatementHandler.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">SelectStatementHandler</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/StatementHandlerManager.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">StatementHandlerManager</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/StatementHandlerManager.Builder.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">StatementHandlerManager.Builder</span></a></li>
-<li type="circle">com.scalar.database.service.<a href="com/scalar/database/service/StorageService.html" title="class in com.scalar.database.service"><span class="typeNameLink">StorageService</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/DistributedStorage.html" title="interface in com.scalar.database.api">DistributedStorage</a>)</li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/TextValue.html" title="class in com.scalar.database.io"><span class="typeNameLink">TextValue</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io">Value</a>&lt;T&gt;)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/StatementHandlerManager.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">StatementHandlerManager</span></a></li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/StatementHandlerManager.Builder.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">StatementHandlerManager.Builder</span></a></li>
+<li type="circle">com.scalar.db.service.<a href="com/scalar/db/service/StorageService.html" title="class in com.scalar.db.service"><span class="typeNameLink">StorageService</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/DistributedStorage.html" title="interface in com.scalar.db.api">DistributedStorage</a>)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/TableMetadata.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">TableMetadata</span></a></li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/TextValue.html" title="class in com.scalar.db.io"><span class="typeNameLink">TextValue</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io">Value</a>&lt;T&gt;)</li>
 <li type="circle">java.lang.Throwable (implements java.io.Serializable)
 <ul>
 <li type="circle">java.lang.Exception
 <ul>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/ExecutionException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">ExecutionException</span></a>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/ExecutionException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">ExecutionException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/NoMutationException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">NoMutationException</span></a></li>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/ReadRepairableExecutionException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">ReadRepairableExecutionException</span></a></li>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/RetriableExecutionException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">RetriableExecutionException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/NoMutationException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">NoMutationException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/ReadRepairableExecutionException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">ReadRepairableExecutionException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/RetriableExecutionException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">RetriableExecutionException</span></a></li>
 </ul>
 </li>
 <li type="circle">java.lang.RuntimeException
 <ul>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/ConnectionException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">ConnectionException</span></a></li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/InvalidUsageException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">InvalidUsageException</span></a></li>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/InvalidUsageException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">InvalidUsageException</span></a>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/ConnectionException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">ConnectionException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/InvalidUsageException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">InvalidUsageException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/InvalidUsageException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">InvalidUsageException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/MultiPartitionException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">MultiPartitionException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/MultiPartitionException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">MultiPartitionException</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/StorageRuntimeException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">StorageRuntimeException</span></a></li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/TransactionRuntimeException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">TransactionRuntimeException</span></a>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/StorageRuntimeException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">StorageRuntimeException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/TransactionRuntimeException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">TransactionRuntimeException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/CrudRuntimeException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">CrudRuntimeException</span></a></li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/RequiredValueMissingException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">RequiredValueMissingException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CrudRuntimeException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CrudRuntimeException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/RequiredValueMissingException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">RequiredValueMissingException</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.exception.storage.<a href="com/scalar/database/exception/storage/UnsupportedTypeException.html" title="class in com.scalar.database.exception.storage"><span class="typeNameLink">UnsupportedTypeException</span></a></li>
+<li type="circle">com.scalar.db.exception.storage.<a href="com/scalar/db/exception/storage/UnsupportedTypeException.html" title="class in com.scalar.db.exception.storage"><span class="typeNameLink">UnsupportedTypeException</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/TransactionException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">TransactionException</span></a>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/TransactionException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">TransactionException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/CommitException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">CommitException</span></a>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CommitException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CommitException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/CommitConflictException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">CommitConflictException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CommitConflictException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CommitConflictException</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/CoordinatorException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">CoordinatorException</span></a></li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/CrudException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">CrudException</span></a>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CoordinatorException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CoordinatorException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CrudException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CrudException</span></a>
 <ul>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/UncommittedRecordException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">UncommittedRecordException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/UncommittedRecordException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">UncommittedRecordException</span></a></li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.exception.transaction.<a href="com/scalar/database/exception/transaction/UnknownTransactionStatusException.html" title="class in com.scalar.database.exception.transaction"><span class="typeNameLink">UnknownTransactionStatusException</span></a></li>
+<li type="circle">com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/UnknownTransactionStatusException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">UnknownTransactionStatusException</span></a></li>
 </ul>
 </li>
 </ul>
 </li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">TransactionResult</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/Result.html" title="interface in com.scalar.database.api">Result</a>)</li>
-<li type="circle">com.scalar.database.service.<a href="com/scalar/database/service/TransactionService.html" title="class in com.scalar.database.service"><span class="typeNameLink">TransactionService</span></a> (implements com.scalar.database.api.<a href="com/scalar/database/api/DistributedTransactionManager.html" title="interface in com.scalar.database.api">DistributedTransactionManager</a>)</li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/ValueBinder.html" title="class in com.scalar.database.storage.cassandra"><span class="typeNameLink">ValueBinder</span></a> (implements com.scalar.database.io.<a href="com/scalar/database/io/ValueVisitor.html" title="interface in com.scalar.database.io">ValueVisitor</a>)</li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">TransactionResult</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/Result.html" title="interface in com.scalar.db.api">Result</a>)</li>
+<li type="circle">com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service"><span class="typeNameLink">TransactionService</span></a> (implements com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a>)</li>
+<li type="circle">com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/ValueBinder.html" title="class in com.scalar.db.storage.cassandra"><span class="typeNameLink">ValueBinder</span></a> (implements com.scalar.db.io.<a href="com/scalar/db/io/ValueVisitor.html" title="interface in com.scalar.db.io">ValueVisitor</a>)</li>
 </ul>
 </li>
 </ul>
 <h2 title="Interface Hierarchy">Interface Hierarchy</h2>
 <ul>
+<li type="circle">java.lang.AutoCloseable
+<ul>
+<li type="circle">java.io.Closeable
+<ul>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Scanner.html" title="interface in com.scalar.db.api"><span class="typeNameLink">Scanner</span></a> (also extends java.lang.Iterable&lt;T&gt;)</li>
+</ul>
+</li>
+</ul>
+</li>
 <li type="circle">java.lang.Comparable&lt;T&gt;
 <ul>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/Value.html" title="interface in com.scalar.database.io"><span class="typeNameLink">Value</span></a>&lt;T&gt;</li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/Value.html" title="interface in com.scalar.db.io"><span class="typeNameLink">Value</span></a>&lt;T&gt;</li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/DistributedStorage.html" title="interface in com.scalar.database.api"><span class="typeNameLink">DistributedStorage</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/DistributedTransaction.html" title="interface in com.scalar.database.api"><span class="typeNameLink">DistributedTransaction</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/DistributedTransactionManager.html" title="interface in com.scalar.database.api"><span class="typeNameLink">DistributedTransactionManager</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/DistributedStorage.html" title="interface in com.scalar.db.api"><span class="typeNameLink">DistributedStorage</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><span class="typeNameLink">DistributedTransaction</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api"><span class="typeNameLink">DistributedTransactionManager</span></a></li>
 <li type="circle">java.lang.Iterable&lt;T&gt;
 <ul>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Scanner.html" title="interface in com.scalar.database.api"><span class="typeNameLink">Scanner</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Scanner.html" title="interface in com.scalar.db.api"><span class="typeNameLink">Scanner</span></a> (also extends java.io.Closeable)</li>
 </ul>
 </li>
-<li type="circle">com.scalar.database.transaction.consensuscommit.<a href="com/scalar/database/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.database.transaction.consensuscommit"><span class="typeNameLink">MutationComposer</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/MutationCondition.html" title="interface in com.scalar.database.api"><span class="typeNameLink">MutationCondition</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/MutationConditionVisitor.html" title="interface in com.scalar.database.api"><span class="typeNameLink">MutationConditionVisitor</span></a></li>
-<li type="circle">com.scalar.database.storage.cassandra.<a href="com/scalar/database/storage/cassandra/OperationVisitor.html" title="interface in com.scalar.database.storage.cassandra"><span class="typeNameLink">OperationVisitor</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Result.html" title="interface in com.scalar.database.api"><span class="typeNameLink">Result</span></a></li>
-<li type="circle">com.scalar.database.io.<a href="com/scalar/database/io/ValueVisitor.html" title="interface in com.scalar.database.io"><span class="typeNameLink">ValueVisitor</span></a></li>
+<li type="circle">com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">MutationComposer</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/MutationCondition.html" title="interface in com.scalar.db.api"><span class="typeNameLink">MutationCondition</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/MutationConditionVisitor.html" title="interface in com.scalar.db.api"><span class="typeNameLink">MutationConditionVisitor</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/OperationVisitor.html" title="interface in com.scalar.db.api"><span class="typeNameLink">OperationVisitor</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Result.html" title="interface in com.scalar.db.api"><span class="typeNameLink">Result</span></a></li>
+<li type="circle">com.scalar.db.io.<a href="com/scalar/db/io/ValueVisitor.html" title="interface in com.scalar.db.io"><span class="typeNameLink">ValueVisitor</span></a></li>
 </ul>
 <h2 title="Enum Hierarchy">Enum Hierarchy</h2>
 <ul>
@@ -251,11 +261,11 @@
 <ul>
 <li type="circle">java.lang.Enum&lt;E&gt; (implements java.lang.Comparable&lt;T&gt;, java.io.Serializable)
 <ul>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Scan.Ordering.Order.html" title="enum in com.scalar.database.api"><span class="typeNameLink">Scan.Ordering.Order</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Isolation.html" title="enum in com.scalar.database.api"><span class="typeNameLink">Isolation</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/TransactionState.html" title="enum in com.scalar.database.api"><span class="typeNameLink">TransactionState</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/ConditionalExpression.Operator.html" title="enum in com.scalar.database.api"><span class="typeNameLink">ConditionalExpression.Operator</span></a></li>
-<li type="circle">com.scalar.database.api.<a href="com/scalar/database/api/Consistency.html" title="enum in com.scalar.database.api"><span class="typeNameLink">Consistency</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Scan.Ordering.Order.html" title="enum in com.scalar.db.api"><span class="typeNameLink">Scan.Ordering.Order</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><span class="typeNameLink">Isolation</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/TransactionState.html" title="enum in com.scalar.db.api"><span class="typeNameLink">TransactionState</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/ConditionalExpression.Operator.html" title="enum in com.scalar.db.api"><span class="typeNameLink">ConditionalExpression.Operator</span></a></li>
+<li type="circle">com.scalar.db.api.<a href="com/scalar/db/api/Consistency.html" title="enum in com.scalar.db.api"><span class="typeNameLink">Consistency</span></a></li>
 </ul>
 </li>
 </ul>

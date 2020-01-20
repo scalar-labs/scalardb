@@ -40,7 +40,7 @@ test {
 }
 
 javadoc {
-    options.addStringOption("notimestamp", "com.scalar.database")
+    options.addStringOption("notimestamp", "com.scalar.db")
 }
 
 task sourcesJar(type: Jar) {
