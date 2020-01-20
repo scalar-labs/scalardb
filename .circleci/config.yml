@@ -75,7 +75,7 @@ jobs:
             gradle testJar
             cqlsh -f scripts/sample_schema/tx_transfer.cql
             # run with 2 requesters for 30 seconds
-            java -cp "build/test-libs/*:build/libs/*" com.scalar.database.verification.TransactionVerification -c 2 -t 30
+            java -cp "build/test-libs/*:build/libs/*" com.scalar.db.verification.TransactionVerification -c 2 -t 30
 
       - run:
           name: Save Gradle test reports
