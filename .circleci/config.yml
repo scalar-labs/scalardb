@@ -52,12 +52,6 @@ jobs:
             sudo pip install cqlsh
             sudo sed -i "s/^DEFAULT_CQLVER = .*/DEFAULT_CQLVER = '3.4.4'/" /usr/local/bin/cqlsh
 
-      - run:
-          name: Create log directories
-          command: |
-            sudo mkdir -m 777 /var/log/scalar
-            sudo mkdir -m 777 /var/log/scalar/db
-
       # https://support.circleci.com/hc/en-us/articles/360006773953-Race-Conditions-Wait-For-Database
       - run:
           name: Wait for Cassandra
