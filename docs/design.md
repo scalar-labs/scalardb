@@ -63,7 +63,7 @@ Please see the javadoc for more details and usage.
 ### Transaction
 
 Scalar DB executes transactions in a fully client-coordinated way so that it can do master-less transactions, which achieves almost linear scalability and high availability (especially when it is integrated with master-less Cassandra).
-It basically follows the Cherry Garcia protocol propsed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
+It basically follows the Cherry Garcia protocol proposed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
 It also has some similarity to paxos-commit [4].
 
 Please see the javadoc for more details and usage.
