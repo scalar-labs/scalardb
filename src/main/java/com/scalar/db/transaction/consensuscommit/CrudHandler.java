@@ -45,11 +45,12 @@ public class CrudHandler {
 
     result = getFromStorage(get);
     if (!result.isPresent()) {
+      snapshot.put(key, result);
       return Optional.empty();
     }
 
     if (result.get().isCommitted()) {
-      snapshot.put(key, result.get());
+      snapshot.put(key, result);
       return Optional.of(result.get());
     }
     throw new UncommittedRecordException(result.get(), "this record needs recovery");
@@ -82,7 +83,7 @@ public class CrudHandler {
           if (snapshot.get(key).isPresent()) {
             LOGGER.warn("scanned records are already in snapshot. overwriting snapshot...");
           }
-          snapshot.put(key, (TransactionResult) r);
+          snapshot.put(key, Optional.of((TransactionResult) r));
         });
 
     return results;

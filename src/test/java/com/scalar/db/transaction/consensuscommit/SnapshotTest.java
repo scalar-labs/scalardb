@@ -39,7 +39,7 @@ public class SnapshotTest {
   private static final String ANY_TEXT_5 = "text5";
   private static final String ANY_TEXT_6 = "text6";
   private Snapshot snapshot;
-  private Map<Snapshot.Key, TransactionResult> readSet;
+  private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
@@ -119,10 +119,10 @@ public class SnapshotTest {
     Snapshot.Key key = new Snapshot.Key(prepareGet());
 
     // Act
-    snapshot.put(key, result);
+    snapshot.put(key, Optional.of(result));
 
     // Assert
-    assertThat(readSet.get(key)).isEqualTo(result);
+    assertThat(readSet.get(key)).isEqualTo(Optional.of(result));
   }
 
   @Test
@@ -159,7 +159,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Snapshot.Key key = new Snapshot.Key(prepareGet());
-    snapshot.put(key, result);
+    snapshot.put(key, Optional.of(result));
     snapshot.put(key, put);
 
     // Act Assert
@@ -175,7 +175,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
-    snapshot.put(key, result);
+    snapshot.put(key, Optional.of(result));
 
     // Act
     Optional<TransactionResult> actual = snapshot.get(key);
@@ -203,7 +203,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -223,8 +223,8 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
-    snapshot.put(new Snapshot.Key(prepareAnotherGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -245,7 +245,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
 
@@ -263,7 +263,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -283,7 +283,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -303,7 +303,7 @@ public class SnapshotTest {
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
     Put put = preparePut();
     Delete delete = prepareDelete();
-    snapshot.put(new Snapshot.Key(prepareGet()), result);
+    snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
