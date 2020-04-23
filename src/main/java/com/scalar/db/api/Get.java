@@ -90,6 +90,11 @@ public class Get extends Selection {
   }
 
   @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+
+  @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("namespace", forNamespace())

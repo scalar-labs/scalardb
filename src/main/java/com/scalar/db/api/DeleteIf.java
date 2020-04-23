@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
@@ -44,6 +45,11 @@ public class DeleteIf implements MutationCondition {
   @Override
   public void accept(MutationConditionVisitor visitor) {
     visitor.visit(this);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(expressions);
   }
 
   /**

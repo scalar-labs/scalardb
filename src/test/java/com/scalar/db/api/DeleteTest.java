@@ -101,13 +101,14 @@ public class DeleteTest {
   @Test
   public void equals_SameDeleteGiven_ShouldReturnTrue() {
     // Arrange
-    Delete put = prepareDelete();
+    Delete delete = prepareDelete();
     Delete another = prepareDelete();
 
     // Act
-    boolean ret = put.equals(another);
+    boolean ret = delete.equals(another);
 
     // Assert
     assertThat(ret).isTrue();
+    assertThat(delete.hashCode()).isEqualTo(another.hashCode());
   }
 }

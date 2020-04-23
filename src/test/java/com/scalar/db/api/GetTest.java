@@ -170,6 +170,7 @@ public class GetTest {
 
     // Assert
     assertThat(ret).isTrue();
+    assertThat(get.hashCode()).isEqualTo(another.hashCode());
   }
 
   @Test

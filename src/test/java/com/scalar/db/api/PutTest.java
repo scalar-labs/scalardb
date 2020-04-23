@@ -162,6 +162,7 @@ public class PutTest {
 
     // Assert
     assertThat(ret).isTrue();
+    assertThat(put.hashCode()).isEqualTo(another.hashCode());
   }
 
   @Test

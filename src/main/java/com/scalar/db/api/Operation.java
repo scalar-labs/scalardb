@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import com.scalar.db.io.Key;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -151,6 +152,11 @@ public abstract class Operation {
             .compare(consistency, other.consistency)
             .result()
         == 0;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency);
   }
 
   /**
