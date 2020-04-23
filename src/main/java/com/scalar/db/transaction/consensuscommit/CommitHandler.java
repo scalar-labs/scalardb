@@ -38,7 +38,7 @@ public class CommitHandler {
 
     try {
       prepareRecords(snapshot);
-    } catch (ExecutionException e) {
+    } catch (Exception e) {
       LOGGER.warn("preparing records failed", e);
       abort(id);
       recovery.rollback(snapshot);

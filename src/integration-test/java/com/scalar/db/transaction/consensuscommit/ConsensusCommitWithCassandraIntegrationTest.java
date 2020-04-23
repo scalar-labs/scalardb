@@ -327,6 +327,26 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth();
   }
 
+  @Test
+  public void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult()
+      throws Exception {
+    test.commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult();
+  }
+
+  @Test
+  public void
+      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+          throws Exception {
+    test
+        .commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException();
+  }
+
+  @Test
+  public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+      throws Exception {
+    test.commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
