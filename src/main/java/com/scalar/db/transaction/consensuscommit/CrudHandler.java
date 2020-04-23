@@ -62,7 +62,7 @@ public class CrudHandler {
 
     keys = snapshot.get(scan);
     if (!keys.isEmpty()) {
-      keys.forEach(key -> results.add(snapshot.get(key).get()));
+      keys.forEach(key -> snapshot.get(key).ifPresent(r -> results.add(r)));
       return results;
     }
 
