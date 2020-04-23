@@ -57,34 +57,35 @@ public class CrudHandler {
   }
 
   public List<Result> scan(Scan scan) throws CrudException {
-    // NOTICE : scan needs to always look at storage first since no primary key is specified
     List<Result> results = new ArrayList<>();
-    List<TransactionResult> uncommitted = new ArrayList<>();
+    List<Snapshot.Key> keys;
 
+    keys = snapshot.get(scan);
+    if (!keys.isEmpty()) {
+      keys.forEach(key -> results.add(snapshot.get(key).get()));
+      return results;
+    }
+
+    keys = new ArrayList<>();
     for (Result r : getFromStorage(scan)) {
       TransactionResult result = new TransactionResult(r);
       if (!result.isCommitted()) {
-        uncommitted.add(result);
-        continue;
+        throw new UncommittedRecordException(result, "the record needs recovery");
       }
+
+      Snapshot.Key key =
+          getSnapshotKey(r, scan)
+              .orElseThrow(() -> new CrudRuntimeException("can't get a snapshot key"));
+
+      if (snapshot.get(key).isPresent()) {
+        LOGGER.warn("scanned records are already in snapshot. overwriting snapshot...");
+      }
+
+      snapshot.put(key, Optional.of(result));
+      keys.add(key);
       results.add(result);
     }
-    if (uncommitted.size() > 0) {
-      throw new UncommittedRecordException(uncommitted, "these record needs recovery");
-    }
-
-    // update snapshots
-    results.forEach(
-        r -> {
-          Snapshot.Key key =
-              getSnapshotKey(r, scan)
-                  .orElseThrow(() -> new CrudRuntimeException("can' get a snapshot key"));
-
-          if (snapshot.get(key).isPresent()) {
-            LOGGER.warn("scanned records are already in snapshot. overwriting snapshot...");
-          }
-          snapshot.put(key, Optional.of((TransactionResult) r));
-        });
+    snapshot.put(scan, keys);
 
     return results;
   }

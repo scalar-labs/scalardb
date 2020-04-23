@@ -10,9 +10,12 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +43,7 @@ public class SnapshotTest {
   private static final String ANY_TEXT_6 = "text6";
   private Snapshot snapshot;
   private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
+  private Map<Scan, List<Snapshot.Key>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
@@ -55,10 +59,11 @@ public class SnapshotTest {
 
   private Snapshot prepareSnapshot(Isolation isolation) {
     readSet = new ConcurrentHashMap<>();
+    scanSet = new ConcurrentHashMap<>();
     writeSet = new ConcurrentHashMap<>();
     deleteSet = new ConcurrentHashMap<>();
 
-    return new Snapshot(ANY_ID, isolation, readSet, writeSet, deleteSet);
+    return new Snapshot(ANY_ID, isolation, readSet, scanSet, writeSet, deleteSet);
   }
 
   private Get prepareGet() {
@@ -73,6 +78,15 @@ public class SnapshotTest {
     Key partitionKey = new Key(new TextValue(ANY_NAME_5, ANY_TEXT_5));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_6, ANY_TEXT_6));
     return new Get(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareScan() {
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    return new Scan(partitionKey)
+        .withStart(clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -154,6 +168,26 @@ public class SnapshotTest {
   }
 
   @Test
+  public void put_ScanGiven_ShouldHoldWhatsGivenInScanSet() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Scan scan = prepareScan();
+    Snapshot.Key key =
+        new Snapshot.Key(
+            scan.forNamespace().get(),
+            scan.forTable().get(),
+            scan.getPartitionKey(),
+            scan.getStartClusteringKey().get());
+    List<Snapshot.Key> expected = Arrays.asList(key);
+
+    // Act
+    snapshot.put(scan, expected);
+
+    // Assert
+    assertThat(scanSet.get(scan)).isEqualTo(expected);
+  }
+
+  @Test
   public void get_KeyGivenContainedInWriteSet_ShouldReturnFromWriteSet() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
@@ -195,6 +229,19 @@ public class SnapshotTest {
 
     // Assert
     assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void get_ScanNotContainedInSnapshotGiven_ShouldReturnEmptyList() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Scan scan = prepareScan();
+
+    // Act
+    List<Snapshot.Key> keys = snapshot.get(scan);
+
+    // Assert
+    assertThat(keys).isEmpty();
   }
 
   @Test
