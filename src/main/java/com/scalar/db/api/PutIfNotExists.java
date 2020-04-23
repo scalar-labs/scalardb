@@ -54,4 +54,9 @@ public class PutIfNotExists implements MutationCondition {
     }
     return true;
   }
+
+  @Override
+  public int hashCode() {
+    return PutIfNotExists.class.hashCode();
+  }
 }

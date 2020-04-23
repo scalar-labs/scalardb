@@ -54,4 +54,9 @@ public class DeleteIfExists implements MutationCondition {
     }
     return true;
   }
+
+  @Override
+  public int hashCode() {
+    return DeleteIfExists.class.hashCode();
+  }
 }

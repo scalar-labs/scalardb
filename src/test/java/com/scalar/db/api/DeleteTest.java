@@ -111,4 +111,18 @@ public class DeleteTest {
     assertThat(ret).isTrue();
     assertThat(delete.hashCode()).isEqualTo(another.hashCode());
   }
+
+  @Test
+  public void equals_SameDeleteWithDeleteIfExistsGiven_ShouldReturnTrue() {
+    // Arrange
+    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Delete another = prepareDelete().withCondition(new DeleteIfExists());
+
+    // Act
+    boolean ret = delete.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(delete.hashCode()).isEqualTo(another.hashCode());
+  }
 }
