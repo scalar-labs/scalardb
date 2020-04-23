@@ -315,7 +315,7 @@ public class CrudHandlerTest {
   }
 
   @Test
-  public void scan_GetCalledAfter_ShouldReturnFromSnapshot()
+  public void scan_GetCalledAfterScan_ShouldReturnFromSnapshot()
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
