@@ -118,7 +118,7 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.COMMITTED));
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(TransactionResult.class));
+    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
     when(storage.get(get)).thenReturn(expected);
 
     // Act
@@ -127,7 +127,7 @@ public class CrudHandlerTest {
     // Assert
     assertThat(result).isEqualTo(expected);
     verify(storage).get(get);
-    verify(snapshot).put(new Snapshot.Key(get), (TransactionResult) expected.get());
+    verify(snapshot).put(new Snapshot.Key(get), Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -188,7 +188,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
     when(snapshot.get(any(Snapshot.Key.class))).thenReturn(Optional.empty());
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(TransactionResult.class));
+    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
     when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
     // doCallRealMethod().when(scanner).forEach(any(Consumer.class));
     when(storage.scan(scan)).thenReturn(scanner);
@@ -204,7 +204,7 @@ public class CrudHandlerTest {
             scan.getPartitionKey(),
             result.getClusteringKey().get());
     TransactionResult expected = new TransactionResult(result);
-    verify(snapshot).put(key, expected);
+    verify(snapshot).put(key, Optional.of(expected));
     assertThat(results.size()).isEqualTo(1);
     assertThat(results.get(0)).isEqualTo(expected);
   }
@@ -227,7 +227,7 @@ public class CrudHandlerTest {
         .isInstanceOf(UncommittedRecordException.class);
 
     // Assert
-    verify(snapshot, never()).put(any(Snapshot.Key.class), any(TransactionResult.class));
+    verify(snapshot, never()).put(any(Snapshot.Key.class), any(Optional.class));
   }
 
   @Test

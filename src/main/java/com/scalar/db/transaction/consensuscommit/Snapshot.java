@@ -8,6 +8,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.exception.transaction.CommitRuntimeException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import java.util.Map;
 import java.util.Objects;
@@ -25,7 +26,7 @@ public class Snapshot {
   private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
   private final Isolation isolation;
-  private final Map<Key, TransactionResult> readSet;
+  private final Map<Key, Optional<TransactionResult>> readSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
@@ -45,7 +46,7 @@ public class Snapshot {
   Snapshot(
       String id,
       Isolation isolation,
-      Map<Key, TransactionResult> readSet,
+      Map<Key, Optional<TransactionResult>> readSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
@@ -65,7 +66,7 @@ public class Snapshot {
     return isolation;
   }
 
-  public void put(Snapshot.Key key, TransactionResult result) {
+  public void put(Snapshot.Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
 
@@ -81,7 +82,7 @@ public class Snapshot {
     if (writeSet.containsKey(key)) {
       throw new CrudRuntimeException("reading already written data is not allowed");
     } else if (readSet.containsKey(key)) {
-      return Optional.of(readSet.get(key));
+      return readSet.get(key);
     }
     return Optional.empty();
   }
@@ -95,13 +96,17 @@ public class Snapshot {
         .entrySet()
         .forEach(
             e -> {
-              composer.add(e.getValue(), readSet.get(e.getKey()));
+              TransactionResult result =
+                  readSet.get(e.getKey()) == null ? null : readSet.get(e.getKey()).orElse(null);
+              composer.add(e.getValue(), result);
             });
     deleteSet
         .entrySet()
         .forEach(
             e -> {
-              composer.add(e.getValue(), readSet.get(e.getKey()));
+              TransactionResult result =
+                  readSet.get(e.getKey()) == null ? null : readSet.get(e.getKey()).orElse(null);
+              composer.add(e.getValue(), result);
             });
   }
 
@@ -117,11 +122,16 @@ public class Snapshot {
                 return;
               }
 
+              if (!e.getValue().isPresent()) {
+                throw new CommitRuntimeException(
+                    "reading empty records might cause write skew anomaly "
+                        + "so aborting the transaction for safety.");
+              }
+
               Put put =
                   new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
                       .forNamespace(key.getNamespace())
                       .forTable(key.getTable());
-              // .withValues(readSet.get(key).getValues().values());
               writeSet.put(e.getKey(), put);
             });
   }

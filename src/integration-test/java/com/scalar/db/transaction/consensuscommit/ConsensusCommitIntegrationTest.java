@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -13,12 +14,14 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -29,6 +32,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -1082,7 +1086,8 @@ public class ConsensusCommitIntegrationTest {
             () -> {
               transaction.commit();
             })
-        .isInstanceOf(InvalidUsageException.class);
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(InvalidUsageException.class);
   }
 
   public void commit_DeleteGivenForNonExisting_ShouldThrowInvalidUsageException()
@@ -1099,7 +1104,8 @@ public class ConsensusCommitIntegrationTest {
             () -> {
               transaction.commit();
             })
-        .isInstanceOf(InvalidUsageException.class);
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(InvalidUsageException.class);
   }
 
   public void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord()
@@ -1187,6 +1193,124 @@ public class ConsensusCommitIntegrationTest {
     assertThat(another.get(gets.get(account2)).isPresent()).isFalse();
     assertThat(another.get(gets.get(account3)).isPresent()).isFalse();
     assertThat(another.get(gets.get(account4)).isPresent()).isFalse();
+  }
+
+  public void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    List<Put> puts =
+        Arrays.asList(
+            preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)),
+            preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    DistributedTransaction transaction = manager.start();
+    transaction.put(puts);
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    DistributedTransaction transaction2 = manager.start();
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    transaction1.get(get1_2);
+    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    Get get2_1 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction2.get(get2_1);
+    Get get2_2 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    transaction2.get(get2_2);
+    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current2 + 1));
+    transaction2.put(put2);
+    transaction1.commit();
+    transaction2.commit();
+
+    // Assert
+    transaction = manager.start();
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get2_1);
+    // the results can not be produced by executing the transactions serially
+    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+  }
+
+  public void
+      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+          throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    List<Put> puts =
+        Arrays.asList(
+            preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)),
+            preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    DistributedTransaction transaction = manager.start(Isolation.SERIALIZABLE);
+    transaction.put(puts);
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    transaction1.get(get1_2);
+    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    Get get2_1 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction2.get(get2_1);
+    Get get2_2 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    transaction2.get(get2_2);
+    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current2 + 1));
+    transaction2.put(put2);
+    transaction1.commit();
+    Throwable thrown = catchThrowable(transaction2::commit);
+
+    // Assert
+    transaction = manager.start(Isolation.SERIALIZABLE);
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get2_1);
+    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
+  }
+
+  public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+      throws CrudException {
+    // Arrange
+    // no records
+
+    // Act
+    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    transaction1.get(get1_2);
+    int current1 = 0;
+    Get get2_1 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction2.get(get2_1);
+    Get get2_2 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    transaction2.get(get2_2);
+    int current2 = 0;
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current2 + 1));
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isFalse();
+    transaction = manager.start(Isolation.SERIALIZABLE);
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get2_1);
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isFalse();
+    assertThat(thrown1).isInstanceOf(CommitException.class);
+    assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
   private ConsensusCommit prepareTransfer(int fromId, int toId, int amount) throws CrudException {
