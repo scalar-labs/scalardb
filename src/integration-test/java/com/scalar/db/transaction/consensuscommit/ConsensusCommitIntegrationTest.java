@@ -1338,6 +1338,39 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
+  public void
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+          throws CrudException {
+    // Arrange
+    // no records
+
+    // Act
+    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count1 = results1.size();
+    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count2 = results2.size();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    assertThat(results1).isEmpty();
+    assertThat(results2).isEmpty();
+    transaction = manager.start(Isolation.SERIALIZABLE);
+    Optional<Result> result1 = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    Optional<Result> result2 = transaction.get(prepareGet(0, 1, NAMESPACE, TABLE_1));
+    // the result is not serializable
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isFalse();
+    assertThat(thrown1).isInstanceOf(CommitException.class);
+    assertThat(thrown2).isInstanceOf(CommitException.class);
+  }
+
   private ConsensusCommit prepareTransfer(int fromId, int toId, int amount) throws CrudException {
     ConsensusCommit transaction = manager.start();
     List<Get> gets = prepareGets(NAMESPACE, TABLE_1);

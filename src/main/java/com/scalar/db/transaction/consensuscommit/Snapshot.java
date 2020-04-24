@@ -129,7 +129,6 @@ public class Snapshot {
 
   @VisibleForTesting
   void toSerializable() {
-    // TODO: scan might cause anomalies since it might cause phantoms ?
     readSet
         .entrySet()
         .forEach(
@@ -150,6 +149,18 @@ public class Snapshot {
                       .forNamespace(key.getNamespace())
                       .forTable(key.getTable());
               writeSet.put(e.getKey(), put);
+            });
+
+    scanSet
+        .entrySet()
+        .forEach(
+            e -> {
+              // if there is a scan on empty records and a write in a transaction
+              if (e.getValue().isPresent() && e.getValue().get().isEmpty() && !writeSet.isEmpty()) {
+                throw new CommitRuntimeException(
+                    "reading empty records might cause write skew anomaly "
+                        + "so aborting the transaction for safety.");
+              }
             });
   }
 
