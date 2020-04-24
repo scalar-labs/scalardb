@@ -8,8 +8,10 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.CommitRuntimeException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,6 +29,7 @@ public class Snapshot {
   private final String id;
   private final Isolation isolation;
   private final Map<Key, Optional<TransactionResult>> readSet;
+  private final Map<Scan, Optional<List<Key>>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
@@ -38,6 +41,7 @@ public class Snapshot {
     this.id = id;
     this.isolation = isolation;
     this.readSet = new ConcurrentHashMap<>();
+    this.scanSet = new ConcurrentHashMap<>();
     this.writeSet = new ConcurrentHashMap<>();
     this.deleteSet = new ConcurrentHashMap<>();
   }
@@ -47,11 +51,13 @@ public class Snapshot {
       String id,
       Isolation isolation,
       Map<Key, Optional<TransactionResult>> readSet,
+      Map<Scan, Optional<List<Key>>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
     this.isolation = isolation;
     this.readSet = readSet;
+    this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
   }
@@ -70,6 +76,10 @@ public class Snapshot {
     readSet.put(key, result);
   }
 
+  public void put(Scan scan, Optional<List<Key>> keys) {
+    scanSet.put(scan, keys);
+  }
+
   public void put(Snapshot.Key key, Put put) {
     writeSet.put(key, put);
   }
@@ -83,6 +93,13 @@ public class Snapshot {
       throw new CrudRuntimeException("reading already written data is not allowed");
     } else if (readSet.containsKey(key)) {
       return readSet.get(key);
+    }
+    return Optional.empty();
+  }
+
+  public Optional<List<Key>> get(Scan scan) {
+    if (scanSet.containsKey(scan)) {
+      return scanSet.get(scan);
     }
     return Optional.empty();
   }

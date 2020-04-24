@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
@@ -24,6 +25,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
@@ -42,6 +44,7 @@ public class CrudHandlerTest {
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
+  private static final String ANY_TX_ID = "tx_id";
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
@@ -247,5 +250,123 @@ public class CrudHandlerTest {
               handler.scan(scan);
             })
         .isInstanceOf(CrudRuntimeException.class);
+  }
+
+  @Test
+  public void scan_CalledTwice_SecondTimeShouldReturnTheSameFromSnapshot()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(true, TransactionState.COMMITTED);
+    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
+    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            scan.forNamespace().get(),
+            scan.forTable().get(),
+            scan.getPartitionKey(),
+            result.getClusteringKey().get());
+    when(snapshot.get(scan))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(Arrays.asList(key)));
+    when(snapshot.get(key))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of((TransactionResult) result));
+
+    // Act
+    List<Result> results1 = handler.scan(scan);
+    List<Result> results2 = handler.scan(scan);
+
+    // Assert
+    TransactionResult expected = new TransactionResult(result);
+    verify(snapshot).put(key, Optional.of(expected));
+    assertThat(results1.size()).isEqualTo(1);
+    assertThat(results1.get(0)).isEqualTo(expected);
+    assertThat(results1).isEqualTo(results2);
+  }
+
+  @Test
+  public void scan_CalledTwiceUnderRealSnapshot_SecondTimeShouldReturnTheSameFromSnapshot()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(true, TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(
+            ANY_TX_ID,
+            Isolation.SNAPSHOT,
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>());
+    handler = new CrudHandler(storage, snapshot);
+    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act
+    List<Result> results1 = handler.scan(scan);
+    List<Result> results2 = handler.scan(scan);
+
+    // Assert
+    TransactionResult expected = new TransactionResult(result);
+    assertThat(results1.size()).isEqualTo(1);
+    assertThat(results1.get(0)).isEqualTo(expected);
+    assertThat(results1).isEqualTo(results2);
+  }
+
+  @Test
+  public void scan_GetCalledAfterScan_ShouldReturnFromSnapshot()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(true, TransactionState.COMMITTED);
+    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
+    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+    Snapshot.Key key =
+        new Snapshot.Key(
+            scan.forNamespace().get(),
+            scan.forTable().get(),
+            scan.getPartitionKey(),
+            result.getClusteringKey().get());
+    when(snapshot.get(scan)).thenReturn(Optional.empty());
+    when(snapshot.get(key))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of((TransactionResult) result));
+
+    // Act
+    List<Result> results = handler.scan(scan);
+    Optional<Result> result = handler.get(prepareGet());
+
+    // Assert
+    verify(storage, never()).get(any(Get.class));
+    assertThat(results.get(0)).isEqualTo(result.get());
+  }
+
+  @Test
+  public void scan_GetCalledAfterScanUnderRealSnapshot_ShouldReturnFromSnapshot()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(true, TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(
+            ANY_TX_ID,
+            Isolation.SNAPSHOT,
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>());
+    handler = new CrudHandler(storage, snapshot);
+    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act
+    List<Result> results = handler.scan(scan);
+    Optional<Result> result = handler.get(prepareGet());
+
+    // Assert
+    assertThat(results.get(0)).isEqualTo(result.get());
   }
 }
