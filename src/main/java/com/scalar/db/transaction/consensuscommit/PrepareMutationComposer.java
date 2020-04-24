@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -64,7 +67,9 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
 
       // check if the record is not interrupted by other conflicting transactions
       put.withCondition(
-          new PutIf(new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ)));
+          new PutIf(
+              new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
+              new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
     } else { // initial record
       values.add(Attribute.toVersionValue(1));
 
@@ -98,7 +103,9 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
 
     // check if the record is not interrupted by other conflicting transactions
     put.withCondition(
-        new PutIf(new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ)));
+        new PutIf(
+            new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
+            new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
 
     put.withValues(values);
     mutations.add(put);

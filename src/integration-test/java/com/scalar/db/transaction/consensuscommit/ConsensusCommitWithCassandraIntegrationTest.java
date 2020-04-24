@@ -347,6 +347,12 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
   }
 
+  @Test
+  public void commit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+      throws Exception {
+    test.commit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
