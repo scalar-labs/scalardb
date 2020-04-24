@@ -1,4 +1,4 @@
-## Scalar DB v1 design document
+## Scalar DB design document
 
 ## Introduction
 
@@ -65,6 +65,9 @@ Please see the javadoc for more details and usage.
 Scalar DB executes transactions in a fully client-coordinated way so that it can do master-less transactions, which achieves almost linear scalability and high availability (especially when it is integrated with master-less Cassandra).
 It basically follows the Cherry Garcia protocol proposed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
 It also has some similarity to paxos-commit [4].
+
+The isolation levels it suports are Snapshot Isolation (SI) and Serializable.
+SI in Scalar DB is a variant of SI defined in ANSI and similar to RCSI (Read Committed Snapshot Isolation) used in SQL Server. It doesn't create a global snapshot so Read Skew could happen in certain cases in addition to the usual SI anomalies such as Write Skew anomaly and Read-Only Transaction anomaly. Serializable is achieved basically by converting reads into writes to remove anti-dependencies, which is the root cause of the anomalies in SI.
 
 Please see the javadoc for more details and usage.
 
