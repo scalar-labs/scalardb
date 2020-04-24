@@ -78,7 +78,7 @@ public class CrudHandler {
               .orElseThrow(() -> new CrudRuntimeException("can't get a snapshot key"));
 
       if (snapshot.get(key).isPresent()) {
-        LOGGER.warn("scanned records are already in snapshot. overwriting snapshot...");
+        result = snapshot.get(key).get();
       }
 
       snapshot.put(key, Optional.of(result));
