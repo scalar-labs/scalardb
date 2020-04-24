@@ -784,6 +784,31 @@ public class ConsensusCommitIntegrationTest {
         scan);
   }
 
+  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
+      throws CrudException, CommitException, UnknownTransactionStatusException,
+          InterruptedException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.commit();
+
+    DistributedTransaction transaction1 = manager.start();
+    Optional<Result> result1 = transaction1.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+
+    DistributedTransaction transaction2 = manager.start();
+    transaction2.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    transaction2.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction2.commit();
+
+    // Act
+    Result result2 = transaction1.scan(prepareScan(0, 0, 0, NAMESPACE, TABLE_1)).get(0);
+    Optional<Result> result3 = transaction1.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+
+    // Assert
+    assertThat(result1.get()).isEqualTo(result2);
+    assertThat(result1).isEqualTo(result3);
+  }
+
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
