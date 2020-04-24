@@ -58,15 +58,14 @@ public class CrudHandler {
 
   public List<Result> scan(Scan scan) throws CrudException {
     List<Result> results = new ArrayList<>();
-    List<Snapshot.Key> keys;
 
-    keys = snapshot.get(scan);
-    if (!keys.isEmpty()) {
-      keys.forEach(key -> snapshot.get(key).ifPresent(r -> results.add(r)));
+    Optional<List<Snapshot.Key>> keysInSnapshot = snapshot.get(scan);
+    if (keysInSnapshot.isPresent()) {
+      keysInSnapshot.get().forEach(key -> snapshot.get(key).ifPresent(r -> results.add(r)));
       return results;
     }
 
-    keys = new ArrayList<>();
+    List<Snapshot.Key> keys = new ArrayList<>();
     for (Result r : getFromStorage(scan)) {
       TransactionResult result = new TransactionResult(r);
       if (!result.isCommitted()) {
@@ -85,7 +84,7 @@ public class CrudHandler {
       keys.add(key);
       results.add(result);
     }
-    snapshot.put(scan, keys);
+    snapshot.put(scan, Optional.of(keys));
 
     return results;
   }

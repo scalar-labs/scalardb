@@ -25,7 +25,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -268,7 +267,9 @@ public class CrudHandlerTest {
             scan.forTable().get(),
             scan.getPartitionKey(),
             result.getClusteringKey().get());
-    when(snapshot.get(scan)).thenReturn(Collections.emptyList()).thenReturn(Arrays.asList(key));
+    when(snapshot.get(scan))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(Arrays.asList(key)));
     when(snapshot.get(key))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of((TransactionResult) result));
@@ -329,7 +330,7 @@ public class CrudHandlerTest {
             scan.forTable().get(),
             scan.getPartitionKey(),
             result.getClusteringKey().get());
-    when(snapshot.get(scan)).thenReturn(Collections.emptyList());
+    when(snapshot.get(scan)).thenReturn(Optional.empty());
     when(snapshot.get(key))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of((TransactionResult) result));

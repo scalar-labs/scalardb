@@ -43,7 +43,7 @@ public class SnapshotTest {
   private static final String ANY_TEXT_6 = "text6";
   private Snapshot snapshot;
   private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private Map<Scan, List<Snapshot.Key>> scanSet;
+  private Map<Scan, Optional<List<Snapshot.Key>>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
@@ -181,10 +181,10 @@ public class SnapshotTest {
     List<Snapshot.Key> expected = Arrays.asList(key);
 
     // Act
-    snapshot.put(scan, expected);
+    snapshot.put(scan, Optional.of(expected));
 
     // Assert
-    assertThat(scanSet.get(scan)).isEqualTo(expected);
+    assertThat(scanSet.get(scan).get()).isEqualTo(expected);
   }
 
   @Test
@@ -238,10 +238,10 @@ public class SnapshotTest {
     Scan scan = prepareScan();
 
     // Act
-    List<Snapshot.Key> keys = snapshot.get(scan);
+    Optional<List<Snapshot.Key>> keys = snapshot.get(scan);
 
     // Assert
-    assertThat(keys).isEmpty();
+    assertThat(keys.isPresent()).isFalse();
   }
 
   @Test
