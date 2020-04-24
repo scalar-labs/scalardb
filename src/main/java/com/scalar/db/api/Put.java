@@ -7,6 +7,7 @@ import com.scalar.db.io.Value;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -121,6 +122,11 @@ public class Put extends Mutation {
     }
     Put other = (Put) o;
     return values.equals(other.values);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), values);
   }
 
   @Override

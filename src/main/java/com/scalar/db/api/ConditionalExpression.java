@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.io.Value;
+import java.util.Objects;
 
 /**
  * A conditional expression used in {@link MutationCondition}.
@@ -78,6 +79,11 @@ public class ConditionalExpression {
     }
     ConditionalExpression other = (ConditionalExpression) o;
     return name.equals(other.name) && value.equals(other.value) && operator.equals(other.operator);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name, value, operator);
   }
 
   private void checkOperator(Operator op) {

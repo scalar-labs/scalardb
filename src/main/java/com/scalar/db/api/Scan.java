@@ -5,6 +5,7 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -231,6 +232,18 @@ public class Scan extends Selection {
   }
 
   @Override
+  public int hashCode() {
+    return Objects.hash(
+        super.hashCode(),
+        startClusteringKey,
+        startInclusive,
+        endClusteringKey,
+        endInclusive,
+        orderings,
+        limit);
+  }
+
+  @Override
   public String toString() {
     return super.toString()
         + MoreObjects.toStringHelper(this)
@@ -301,6 +314,11 @@ public class Scan extends Selection {
       }
       Ordering other = (Ordering) o;
       return (name.equals(other.name) && order.equals(other.order));
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(name, order);
     }
 
     @Override

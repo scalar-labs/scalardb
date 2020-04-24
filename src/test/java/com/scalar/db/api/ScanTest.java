@@ -108,6 +108,7 @@ public class ScanTest {
 
     // Assert
     assertThat(ret).isTrue();
+    assertThat(scan.hashCode()).isEqualTo(another.hashCode());
   }
 
   @Test

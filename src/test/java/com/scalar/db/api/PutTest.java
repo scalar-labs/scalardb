@@ -162,6 +162,35 @@ public class PutTest {
 
     // Assert
     assertThat(ret).isTrue();
+    assertThat(put.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_SamePutWithPutIfExistsGiven_ShouldReturnTrue() {
+    // Arrange
+    Put put = preparePut().withCondition(new PutIfExists());
+    Put another = preparePut().withCondition(new PutIfExists());
+
+    // Act
+    boolean ret = put.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(put.hashCode()).isEqualTo(another.hashCode());
+  }
+
+  @Test
+  public void equals_SamePutWithPutIfNotExistsGiven_ShouldReturnTrue() {
+    // Arrange
+    Put put = preparePut().withCondition(new PutIfNotExists());
+    Put another = preparePut().withCondition(new PutIfNotExists());
+
+    // Act
+    boolean ret = put.equals(another);
+
+    // Assert
+    assertThat(ret).isTrue();
+    assertThat(put.hashCode()).isEqualTo(another.hashCode());
   }
 
   @Test

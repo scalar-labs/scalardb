@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -67,6 +68,11 @@ public abstract class Mutation extends Operation {
     }
     Mutation other = (Mutation) o;
     return condition.equals(other.condition);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), condition);
   }
 
   @Override
