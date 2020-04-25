@@ -348,9 +348,15 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   }
 
   @Test
-  public void commit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+  public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws Exception {
-    test.commit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+    test.putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+  }
+
+  @Test
+  public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+      throws Exception {
+    test.deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
   }
 
   @BeforeClass

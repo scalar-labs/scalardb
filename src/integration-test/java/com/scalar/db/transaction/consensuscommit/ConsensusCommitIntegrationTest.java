@@ -1314,7 +1314,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
-  public void commit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+  public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     DistributedTransaction transaction = manager.start();
@@ -1330,6 +1330,49 @@ public class ConsensusCommitIntegrationTest {
     }
     transaction1.put(
         preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, balance1 + 1)));
+
+    DistributedTransaction transaction2 = manager.start();
+    transaction2.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    transaction2.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
+    transaction2.commit();
+
+    // the same transaction processing as transaction1
+    DistributedTransaction transaction3 = manager.start();
+    Optional<Result> result3 = transaction3.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    int balance3 = 0;
+    if (result3.isPresent()) {
+      balance3 = ((IntValue) result3.get().getValue(BALANCE).get()).get();
+    }
+    transaction3.put(
+        preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
+    transaction3.commit();
+
+    Throwable thrown = catchThrowable(() -> transaction1.commit());
+
+    // Assert
+    assertThat(thrown)
+        .isInstanceOf(CommitConflictException.class)
+        .hasCauseInstanceOf(NoMutationException.class);
+    transaction = manager.start();
+    Optional<Result> result = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+  }
+
+  public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+      throws CrudException, CommitException, UnknownTransactionStatusException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    Optional<Result> result1 = transaction1.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    int balance1 = 0;
+    if (result1.isPresent()) {
+      balance1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    }
+    transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
 
     DistributedTransaction transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
