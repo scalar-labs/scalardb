@@ -155,8 +155,8 @@ public class Snapshot {
         .entrySet()
         .forEach(
             e -> {
-              // if there is a scan on empty records and a write in a transaction
-              if (e.getValue().isPresent() && e.getValue().get().isEmpty() && !writeSet.isEmpty()) {
+              // if there is a scan and a write in a transaction
+              if (e.getValue().isPresent() && !writeSet.isEmpty()) {
                 throw new CommitRuntimeException(
                     "reading empty records might cause write skew anomaly "
                         + "so aborting the transaction for safety.");
