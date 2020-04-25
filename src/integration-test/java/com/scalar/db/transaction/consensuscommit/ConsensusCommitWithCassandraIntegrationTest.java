@@ -249,6 +249,11 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   }
 
   @Test
+  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably() throws Exception {
+    test.getAndScan_CommitHappenedInBetween_ShouldReadRepeatably();
+  }
+
+  @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws Exception {
     test.putAndCommit_PutGivenForNonExisting_ShouldCreateRecord();
   }
