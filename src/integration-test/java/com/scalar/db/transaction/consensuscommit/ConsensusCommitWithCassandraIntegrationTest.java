@@ -352,6 +352,13 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
   }
 
+  @Test
+  public void
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+          throws Exception {
+    test.commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
