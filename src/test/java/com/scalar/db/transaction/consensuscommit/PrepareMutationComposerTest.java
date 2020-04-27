@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -120,7 +123,9 @@ public class PrepareMutationComposerTest {
     Put actual = (Put) mutations.get(0);
     put.withConsistency(Consistency.LINEARIZABLE);
     put.withCondition(
-        new PutIf(new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+        new PutIf(
+            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ),
+            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ)));
     put.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
     put.withValue(Attribute.toIdValue(ANY_ID_3));
     put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
@@ -170,7 +175,9 @@ public class PrepareMutationComposerTest {
             .forTable(delete.forTable().get());
     expected.withConsistency(Consistency.LINEARIZABLE);
     expected.withCondition(
-        new PutIf(new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ)));
+        new PutIf(
+            new ConditionalExpression(VERSION, toVersionValue(2), Operator.EQ),
+            new ConditionalExpression(ID, toIdValue(ANY_ID_2), Operator.EQ)));
     expected.withValue(Attribute.toPreparedAtValue(ANY_TIME_5));
     expected.withValue(Attribute.toIdValue(ANY_ID_3));
     expected.withValue(Attribute.toStateValue(TransactionState.DELETED));

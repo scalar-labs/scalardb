@@ -359,6 +359,18 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
   }
 
+  @Test
+  public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+      throws Exception {
+    test.putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+  }
+
+  @Test
+  public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
+      throws Exception {
+    test.deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
