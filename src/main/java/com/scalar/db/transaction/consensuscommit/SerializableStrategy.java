@@ -2,7 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 /**
  * A Serializable strategy used in Consensus Commit algorithm. Both strategies basically make
- * transactions avoid anti-dependencies that is the root cause of the anomalies in Snapshot
+ * transactions avoid an anti-dependency that is the root cause of the anomalies in Snapshot
  * Isolation.
  *
  * <p>Extra-write strategy converts all read set into write set when preparing records to remove
