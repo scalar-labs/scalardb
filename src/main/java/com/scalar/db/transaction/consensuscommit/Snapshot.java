@@ -178,6 +178,7 @@ public class Snapshot {
             });
   }
 
+  @VisibleForTesting
   void toSerializableWithExtraRead(DistributedStorage storage)
       throws ExecutionException, CommitConflictException {
     if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_READ) {
@@ -198,7 +199,7 @@ public class Snapshot {
       }
 
       for (Key key : entry.getValue().get()) {
-        if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
+        if (writeSet.containsKey(key)) {
           continue;
         }
         // Check if read records are not changed
