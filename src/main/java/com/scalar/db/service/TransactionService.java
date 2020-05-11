@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
+import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
@@ -42,6 +43,27 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public DistributedTransaction start(String txId, Isolation isolation) {
     return manager.start(txId, isolation);
+  }
+
+  @Override
+  public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy) {
+    return manager.start(isolation, strategy);
+  }
+
+  @Override
+  public DistributedTransaction start(SerializableStrategy strategy) {
+    return manager.start(strategy);
+  }
+
+  @Override
+  public DistributedTransaction start(String txId, SerializableStrategy strategy) {
+    return manager.start(txId, strategy);
+  }
+
+  @Override
+  public DistributedTransaction start(
+      String txId, Isolation isolation, SerializableStrategy strategy) {
+    return null;
   }
 
   @Override

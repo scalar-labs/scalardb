@@ -3,18 +3,25 @@ package com.scalar.db.transaction.consensuscommit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitRuntimeException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -28,18 +35,20 @@ public class Snapshot {
   private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);
   private final String id;
   private final Isolation isolation;
+  private final SerializableStrategy strategy;
   private final Map<Key, Optional<TransactionResult>> readSet;
   private final Map<Scan, Optional<List<Key>>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
   public Snapshot(String id) {
-    this(id, Isolation.SNAPSHOT);
+    this(id, Isolation.SNAPSHOT, SerializableStrategy.EXTRA_WRITE);
   }
 
-  public Snapshot(String id, Isolation isolation) {
+  public Snapshot(String id, Isolation isolation, SerializableStrategy strategy) {
     this.id = id;
     this.isolation = isolation;
+    this.strategy = strategy;
     this.readSet = new ConcurrentHashMap<>();
     this.scanSet = new ConcurrentHashMap<>();
     this.writeSet = new ConcurrentHashMap<>();
@@ -50,12 +59,14 @@ public class Snapshot {
   Snapshot(
       String id,
       Isolation isolation,
+      SerializableStrategy strategy,
       Map<Key, Optional<TransactionResult>> readSet,
       Map<Scan, Optional<List<Key>>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
     this.isolation = isolation;
+    this.strategy = strategy;
     this.readSet = readSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
@@ -105,7 +116,9 @@ public class Snapshot {
   }
 
   public void to(MutationComposer composer) {
-    if ((composer instanceof PrepareMutationComposer) && isolation == Isolation.SERIALIZABLE) {
+    if ((composer instanceof PrepareMutationComposer)
+        && isolation == Isolation.SERIALIZABLE
+        && strategy == SerializableStrategy.EXTRA_WRITE) {
       toSerializable();
     }
 
@@ -146,6 +159,7 @@ public class Snapshot {
 
               Put put =
                   new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+                      .withConsistency(Consistency.LINEARIZABLE)
                       .forNamespace(key.getNamespace())
                       .forTable(key.getTable());
               writeSet.put(e.getKey(), put);
@@ -162,6 +176,71 @@ public class Snapshot {
                         + "so aborting the transaction for safety.");
               }
             });
+  }
+
+  @VisibleForTesting
+  void toSerializableWithExtraRead(DistributedStorage storage)
+      throws ExecutionException, CommitConflictException {
+    if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_READ) {
+      return;
+    }
+
+    // Read set by scan is re-validated to check if there is no anti-dependency
+    Set<Key> validatedReadSetByScan = new HashSet<>();
+    for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
+      Set<TransactionResult> currentReadSetByScan = new HashSet<>();
+      for (Result result : storage.scan(entry.getKey())) {
+        TransactionResult transactionResult = new TransactionResult(result);
+        // Ignore records that this transaction has prepared (and that are in the write set)
+        if (transactionResult.getId().equals(id)) {
+          continue;
+        }
+        currentReadSetByScan.add(transactionResult);
+      }
+
+      for (Key key : entry.getValue().get()) {
+        if (writeSet.containsKey(key)) {
+          continue;
+        }
+        // Check if read records are not changed
+        if (!currentReadSetByScan.contains(readSet.get(key).get())) {
+          throwExceptionDueToAntiDependency();
+        }
+        validatedReadSetByScan.add(key);
+      }
+
+      // Check if the size of a read set by scan is not changed
+      if (currentReadSetByScan.size() != validatedReadSetByScan.size()) {
+        throwExceptionDueToAntiDependency();
+      }
+    }
+
+    // Read set by get is re-validated to check if there is no anti-dependency
+    for (Map.Entry<Key, Optional<TransactionResult>> entry : readSet.entrySet()) {
+      Key key = entry.getKey();
+      if (writeSet.containsKey(key)
+          || deleteSet.containsKey(key)
+          || validatedReadSetByScan.contains(key)) {
+        continue;
+      }
+
+      Get get =
+          new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(key.getNamespace())
+              .forTable(key.getTable());
+
+      Optional<TransactionResult> result = storage.get(get).map(r -> new TransactionResult(r));
+      // Check if a read record is not changed
+      if (!result.equals(entry.getValue())) {
+        throwExceptionDueToAntiDependency();
+      }
+    }
+  }
+
+  private void throwExceptionDueToAntiDependency() throws CommitConflictException {
+    LOGGER.warn("Anti-dependency found. Aborting the transaction.");
+    throw new CommitConflictException("Anti-dependency found. Aborting the transaction.");
   }
 
   @Immutable

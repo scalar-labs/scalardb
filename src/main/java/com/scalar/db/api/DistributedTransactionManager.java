@@ -41,6 +41,51 @@ public interface DistributedTransactionManager {
   DistributedTransaction start(String txId, Isolation isolation);
 
   /**
+   * Starts a new transaction with the specified {@link Isolation} level and {@link
+   * SerializableStrategy}. If the isolation is not SERIALIZABLE, the serializable strategy is
+   * ignored.
+   *
+   * @param isolation an isolation level
+   * @param strategy a serializable strategy
+   * @return {@link DistributedTransaction}
+   */
+  DistributedTransaction start(Isolation isolation, SerializableStrategy strategy);
+
+  /**
+   * Starts a new transaction with Serializable isolation level and the specified {@link
+   * SerializableStrategy}.
+   *
+   * @param strategy a serializable strategy
+   * @return {@link DistributedTransaction}
+   */
+  DistributedTransaction start(SerializableStrategy strategy);
+
+  /**
+   * Starts a new transaction with the specified transaction ID, Serializable isolation level and
+   * the specified {@link SerializableStrategy}. It is users' responsibility to guarantee uniqueness
+   * of the ID so it is not recommended to use this method unless you know exactly what you are
+   * doing.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param strategy a serializable strategy
+   * @return {@link DistributedTransaction}
+   */
+  DistributedTransaction start(String txId, SerializableStrategy strategy);
+
+  /**
+   * Starts a new transaction with the specified transaction ID, {@link Isolation} level and {@link
+   * SerializableStrategy}. It is users' responsibility to guarantee uniqueness of the ID so it is
+   * not recommended to use this method unless you know exactly what you are doing. If the isolation
+   * is not SERIALIZABLE, the serializable strategy is ignored.
+   *
+   * @param txId an user-provided unique transaction ID
+   * @param isolation an isolation level
+   * @param strategy a serializable strategy
+   * @return {@link DistributedTransaction}
+   */
+  DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy);
+
+  /**
    * Returns the state of a given transaction.
    *
    * @param txId a transaction ID
