@@ -48,6 +48,16 @@ public class CommitHandler {
       throw new CommitException("preparing records failed", e);
     }
 
+    // pre-commit validation is executed when SERIALIZABLE with EXTRA_READ strategy is chosen.
+    try {
+      snapshot.toSerializableWithExtraRead(storage);
+    } catch (Exception e) {
+      LOGGER.warn("pre-commit validation failed", e);
+      abort(id);
+      recovery.rollback(snapshot);
+      throw new CommitConflictException("pre-commit validation failed", e);
+    }
+
     try {
       commitState(snapshot.getId());
     } catch (CoordinatorException e) {

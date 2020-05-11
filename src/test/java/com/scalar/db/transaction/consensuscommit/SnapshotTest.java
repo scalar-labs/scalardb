@@ -1,20 +1,31 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,18 +69,23 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot(Isolation isolation) {
+    return prepareSnapshot(isolation, SerializableStrategy.EXTRA_WRITE);
+  }
+
+  private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
     readSet = new ConcurrentHashMap<>();
     scanSet = new ConcurrentHashMap<>();
     writeSet = new ConcurrentHashMap<>();
     deleteSet = new ConcurrentHashMap<>();
 
-    return new Snapshot(ANY_ID, isolation, readSet, scanSet, writeSet, deleteSet);
+    return new Snapshot(ANY_ID, isolation, strategy, readSet, scanSet, writeSet, deleteSet);
   }
 
   private Get prepareGet() {
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     return new Get(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -78,6 +94,7 @@ public class SnapshotTest {
     Key partitionKey = new Key(new TextValue(ANY_NAME_5, ANY_TEXT_5));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_6, ANY_TEXT_6));
     return new Get(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -87,6 +104,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     return new Scan(partitionKey)
         .withStart(clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -95,6 +113,7 @@ public class SnapshotTest {
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     return new Put(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
         .withValue(new TextValue(ANY_NAME_3, ANY_TEXT_3))
@@ -105,6 +124,7 @@ public class SnapshotTest {
     Key partitionKey = new Key(new TextValue(ANY_NAME_5, ANY_TEXT_5));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_6, ANY_TEXT_6));
     return new Put(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -113,6 +133,7 @@ public class SnapshotTest {
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     return new Delete(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
@@ -362,5 +383,156 @@ public class SnapshotTest {
     // no effect on RollbackMutationComposer
     verify(rollbackComposer).add(put, result);
     verify(rollbackComposer).add(delete, result);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ReadSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get = prepareAnotherGet();
+    Put put = preparePut();
+    when(result.getValues()).thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID)));
+    TransactionResult txResult = new TransactionResult(result);
+    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    when(storage.get(get)).thenReturn(Optional.of(txResult));
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).get(get);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ReadSetUpdated_ShouldThrowCommitConflictException()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get = prepareAnotherGet();
+    Put put = preparePut();
+    when(result.getValues())
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID)))
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID + "x")));
+    TransactionResult txResult = new TransactionResult(result);
+    snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult changedTxResult = new TransactionResult(result);
+    when(storage.get(get)).thenReturn(Optional.of(changedTxResult));
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              snapshot.toSerializableWithExtraRead(storage);
+            })
+        .isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    verify(storage).get(get);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ReadSetExtended_ShouldThrowCommitConflictException()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get = prepareAnotherGet();
+    Put put = preparePut();
+    snapshot.put(new Snapshot.Key(get), Optional.empty());
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    when(result.getValues()).thenReturn(ImmutableMap.of());
+    TransactionResult txResult = new TransactionResult(result);
+    when(storage.get(get)).thenReturn(Optional.of(txResult));
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+        .isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    verify(storage).get(get);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ScanSetNotChanged_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Scan scan = prepareScan();
+    Get get = prepareGet();
+    Put put = preparePut();
+    when(result.getValues()).thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID)));
+    TransactionResult txResult = new TransactionResult(result);
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.put(key, Optional.of(txResult));
+    snapshot.put(scan, Optional.of(Arrays.asList(key)));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.iterator()).thenReturn(Arrays.asList((Result) txResult).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+
+    // Assert
+    verify(storage).scan(scan);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ScanSetUpdated_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Scan scan = prepareScan();
+    Get get = prepareGet();
+    Put put = preparePut();
+    when(result.getValues())
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID)))
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID + "x")));
+    TransactionResult txResult = new TransactionResult(result);
+    Snapshot.Key key = new Snapshot.Key(get);
+    snapshot.put(key, Optional.of(txResult));
+    snapshot.put(scan, Optional.of(Arrays.asList(key)));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult changedTxResult = new TransactionResult(result);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.iterator()).thenReturn(Arrays.asList((Result) changedTxResult).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+        .isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    verify(storage).scan(scan);
+  }
+
+  @Test
+  public void toSerializableWithExtraRead_ScanSetExtended_ShouldProcessWithoutExceptions()
+      throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Scan scan = prepareScan();
+    Put put = preparePut();
+    when(result.getValues()).thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID + "x")));
+    snapshot.put(scan, Optional.of(Collections.emptyList()));
+    snapshot.put(new Snapshot.Key(put), put);
+    DistributedStorage storage = mock(DistributedStorage.class);
+    TransactionResult txResult = new TransactionResult(result);
+    Scanner scanner = mock(Scanner.class);
+    when(scanner.iterator()).thenReturn(Arrays.asList((Result) txResult).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act Assert
+    assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
+        .isInstanceOf(CommitConflictException.class);
+
+    // Assert
+    verify(storage).scan(scan);
   }
 }

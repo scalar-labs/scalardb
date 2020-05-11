@@ -347,6 +347,14 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   }
 
   @Test
+  public void
+      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+          throws Exception {
+    test
+        .commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException();
+  }
+
+  @Test
   public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
       throws Exception {
     test.commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
@@ -354,9 +362,33 @@ public class ConsensusCommitWithCassandraIntegrationTest {
 
   @Test
   public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
+          throws Exception {
+    test
+        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException();
+  }
+
+  @Test
+  public void
       commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
           throws Exception {
     test.commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
+  }
+
+  @Test
+  public void
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+          throws Exception {
+    test
+        .commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException();
+  }
+
+  @Test
+  public void
+      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+          throws Exception {
+    test
+        .commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException();
   }
 
   @Test

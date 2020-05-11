@@ -1302,6 +1302,50 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
   }
 
+  public void
+      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+          throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    List<Put> puts =
+        Arrays.asList(
+            preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)),
+            preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    DistributedTransaction transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction.put(puts);
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    transaction1.get(get1_2);
+    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    Get get2_1 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction2.get(get2_1);
+    Get get2_2 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    transaction2.get(get2_2);
+    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current2 + 1));
+    transaction2.put(put2);
+    transaction1.commit();
+    Throwable thrown = catchThrowable(transaction2::commit);
+
+    // Assert
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get2_1);
+    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(thrown).isInstanceOf(CommitConflictException.class);
+  }
+
   public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
       throws CrudException {
     // Arrange
@@ -1340,6 +1384,49 @@ public class ConsensusCommitIntegrationTest {
   }
 
   public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
+          throws CrudException {
+    // Arrange
+    // no records
+
+    // Act
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    transaction1.get(get1_2);
+    int current1 = 0;
+    Get get2_1 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction2.get(get2_1);
+    Get get2_2 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    transaction2.get(get2_2);
+    int current2 = 0;
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current2 + 1));
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isFalse();
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get2_1);
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isTrue();
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2)
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(CommitConflictException.class);
+  }
+
+  public void
       commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
           throws CrudException {
     // Arrange
@@ -1365,11 +1452,90 @@ public class ConsensusCommitIntegrationTest {
     transaction = manager.start(Isolation.SERIALIZABLE);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, NAMESPACE, TABLE_1));
-    // the result is not serializable
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).isInstanceOf(CommitException.class);
     assertThat(thrown2).isInstanceOf(CommitException.class);
+  }
+
+  public void
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+          throws CrudException {
+    // Arrange
+    // no records
+
+    // Act
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count1 = results1.size();
+    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count2 = results2.size();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    assertThat(results1).isEmpty();
+    assertThat(results2).isEmpty();
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Optional<Result> result1 = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    Optional<Result> result2 = transaction.get(prepareGet(0, 1, NAMESPACE, TABLE_1));
+    /*
+    assertThat(result1.isPresent()).isTrue();
+    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(result2.isPresent()).isFalse();
+    */
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2)
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(CommitConflictException.class);
+  }
+
+  public void
+      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+          throws CrudException, CommitException, UnknownTransactionStatusException {
+    // Arrange
+    List<Put> puts =
+        Arrays.asList(
+            preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)),
+            preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    DistributedTransaction transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction.put(puts);
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count1 = results1.size();
+    List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
+    int count2 = results2.size();
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    transaction1.put(put1);
+    Put put2 = preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    transaction2.put(put2);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+    Throwable thrown2 = catchThrowable(transaction2::commit);
+
+    // Assert
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    Optional<Result> result1 = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
+    Optional<Result> result2 = transaction.get(prepareGet(0, 1, NAMESPACE, TABLE_1));
+    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 3));
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2)
+        .isInstanceOf(CommitException.class)
+        .hasCauseInstanceOf(CommitConflictException.class);
   }
 
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()

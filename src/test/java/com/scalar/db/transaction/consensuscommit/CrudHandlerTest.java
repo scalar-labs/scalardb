@@ -296,6 +296,7 @@ public class CrudHandlerTest {
         new Snapshot(
             ANY_TX_ID,
             Isolation.SNAPSHOT,
+            null,
             new HashMap<>(),
             new HashMap<>(),
             new HashMap<>(),
@@ -354,6 +355,7 @@ public class CrudHandlerTest {
         new Snapshot(
             ANY_TX_ID,
             Isolation.SNAPSHOT,
+            null,
             new HashMap<>(),
             new HashMap<>(),
             new HashMap<>(),

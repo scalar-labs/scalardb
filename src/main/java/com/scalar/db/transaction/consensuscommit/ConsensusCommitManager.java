@@ -62,15 +62,39 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
 
   @Override
   public synchronized ConsensusCommit start(Isolation isolation) {
-    String txId = UUID.randomUUID().toString();
-    return start(txId, isolation);
+    return start(isolation, SerializableStrategy.EXTRA_WRITE);
   }
 
   @Override
   public synchronized ConsensusCommit start(String txId, Isolation isolation) {
+    return start(txId, isolation, SerializableStrategy.EXTRA_WRITE);
+  }
+
+  @Override
+  public synchronized ConsensusCommit start(
+      Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
+    String txId = UUID.randomUUID().toString();
+    return start(txId, isolation, strategy);
+  }
+
+  @Override
+  public synchronized ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
+    String txId = UUID.randomUUID().toString();
+    return start(txId, Isolation.SERIALIZABLE, strategy);
+  }
+
+  @Override
+  public synchronized ConsensusCommit start(
+      String txId, com.scalar.db.api.SerializableStrategy strategy) {
+    return start(txId, Isolation.SERIALIZABLE, strategy);
+  }
+
+  @Override
+  public synchronized ConsensusCommit start(
+      String txId, Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkArgument(isolation != null);
-    Snapshot snapshot = new Snapshot(txId, isolation);
+    Snapshot snapshot = new Snapshot(txId, isolation, (SerializableStrategy) strategy);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     consensus.with(namespace, tableName);
