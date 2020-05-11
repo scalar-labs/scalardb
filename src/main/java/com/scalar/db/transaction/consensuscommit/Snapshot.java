@@ -178,7 +178,6 @@ public class Snapshot {
             });
   }
 
-  @VisibleForTesting
   void toSerializableWithExtraRead(DistributedStorage storage)
       throws ExecutionException, CommitConflictException {
     if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_READ) {
