@@ -98,7 +98,8 @@ public class CommitHandler {
     }
   }
 
-  private void prepareRecords(Snapshot snapshot) throws ExecutionException {
+  private void prepareRecords(Snapshot snapshot)
+      throws ExecutionException, CommitConflictException {
     PrepareMutationComposer composer = new PrepareMutationComposer(snapshot.getId());
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
@@ -113,7 +114,7 @@ public class CommitHandler {
     coordinator.putState(state);
   }
 
-  private void commitRecords(Snapshot snapshot) throws ExecutionException {
+  private void commitRecords(Snapshot snapshot) throws ExecutionException, CommitConflictException {
     CommitMutationComposer composer = new CommitMutationComposer(snapshot.getId());
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());

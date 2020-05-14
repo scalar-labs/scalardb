@@ -935,7 +935,7 @@ public class ConsensusCommitIntegrationTest {
   }
 
   public void commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
-      throws CrudException {
+      throws CrudException, CommitConflictException {
     // Arrange
     Value expected = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts = preparePuts(NAMESPACE, TABLE_1);
