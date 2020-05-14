@@ -14,7 +14,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.exception.transaction.CommitRuntimeException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import java.util.HashSet;
 import java.util.List;
@@ -115,11 +114,9 @@ public class Snapshot {
     return Optional.empty();
   }
 
-  public void to(MutationComposer composer) {
-    if ((composer instanceof PrepareMutationComposer)
-        && isolation == Isolation.SERIALIZABLE
-        && strategy == SerializableStrategy.EXTRA_WRITE) {
-      toSerializable();
+  public void to(MutationComposer composer) throws CommitConflictException {
+    if (PrepareMutationComposer.class.isInstance(composer)) {
+      toSerializableWithExtraWrite();
     }
 
     writeSet
@@ -141,41 +138,35 @@ public class Snapshot {
   }
 
   @VisibleForTesting
-  void toSerializable() {
-    readSet
-        .entrySet()
-        .forEach(
-            e -> {
-              Key key = e.getKey();
-              if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
-                return;
-              }
+  void toSerializableWithExtraWrite() throws CommitConflictException {
+    if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_WRITE) {
+      return;
+    }
 
-              if (!e.getValue().isPresent()) {
-                throw new CommitRuntimeException(
-                    "reading empty records might cause write skew anomaly "
-                        + "so aborting the transaction for safety.");
-              }
+    for (Map.Entry<Key, Optional<TransactionResult>> entry : readSet.entrySet()) {
+      Key key = entry.getKey();
+      if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
+        continue;
+      }
 
-              Put put =
-                  new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-                      .withConsistency(Consistency.LINEARIZABLE)
-                      .forNamespace(key.getNamespace())
-                      .forTable(key.getTable());
-              writeSet.put(e.getKey(), put);
-            });
+      if (!entry.getValue().isPresent()) {
+        throwExceptionDueToPotentialAntiDependency();
+      }
 
-    scanSet
-        .entrySet()
-        .forEach(
-            e -> {
-              // if there is a scan and a write in a transaction
-              if (e.getValue().isPresent() && !writeSet.isEmpty()) {
-                throw new CommitRuntimeException(
-                    "reading empty records might cause write skew anomaly "
-                        + "so aborting the transaction for safety.");
-              }
-            });
+      Put put =
+          new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+              .withConsistency(Consistency.LINEARIZABLE)
+              .forNamespace(key.getNamespace())
+              .forTable(key.getTable());
+      writeSet.put(entry.getKey(), put);
+    }
+
+    for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
+      // if there is a scan and a write in a transaction
+      if (entry.getValue().isPresent() && !writeSet.isEmpty()) {
+        throwExceptionDueToPotentialAntiDependency();
+      }
+    }
   }
 
   void toSerializableWithExtraRead(DistributedStorage storage)
@@ -235,6 +226,13 @@ public class Snapshot {
         throwExceptionDueToAntiDependency();
       }
     }
+  }
+
+  private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
+    LOGGER.warn(
+        "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
+    throw new CommitConflictException(
+        "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
   }
 
   private void throwExceptionDueToAntiDependency() throws CommitConflictException {

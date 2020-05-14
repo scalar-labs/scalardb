@@ -10,6 +10,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.io.Key;
 import java.util.List;
@@ -51,7 +52,7 @@ public class RecoveryHandler {
     }
   }
 
-  public void rollback(Snapshot snapshot) {
+  public void rollback(Snapshot snapshot) throws CommitConflictException {
     LOGGER.info("rollback from snapshot for " + snapshot.getId());
     RollbackMutationComposer composer = new RollbackMutationComposer(snapshot.getId(), storage);
     snapshot.to(composer);

@@ -142,7 +142,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_NoMutationExceptionThrownInPrepareRecords_ShouldThrowCCException()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(NoMutationException.class);
@@ -167,7 +167,7 @@ public class CommitHandlerTest {
 
   @Test
   public void commit_ExceptionThrownInPrepareRecords_ShouldAbortAndRollback()
-      throws ExecutionException, CoordinatorException {
+      throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(ExecutionException.class);
@@ -193,7 +193,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenAbortedReturnedInGetState_ShouldRollback()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
@@ -226,7 +226,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
@@ -256,7 +256,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInPrepareRecordsAndFailedInCoordinatorAbortThenExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
@@ -286,7 +286,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInCoordinatorCommitAndSucceededInCoordinatorAbort_ShouldRollback()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
@@ -346,7 +346,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInCoordinatorCommitAndAbortAndAbortedReturnedInGetState_ShouldRollback()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
@@ -381,7 +381,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInCoordinatorCommitAndAbortAndNothingReturnedInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
@@ -413,7 +413,7 @@ public class CommitHandlerTest {
   @Test
   public void
       commit_ExceptionThrownInCoordinatorCommitAndAbortAndExceptionThrownInGetState_ShouldThrowUnknown()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CommitConflictException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
