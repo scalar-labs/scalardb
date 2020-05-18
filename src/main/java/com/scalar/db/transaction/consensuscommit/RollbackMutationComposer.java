@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -117,7 +120,8 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   }
 
   private Delete composeDelete(Operation base, TransactionResult result) {
-    if (!result.getState().equals(TransactionState.PREPARED)) {
+    if (!result.getState().equals(TransactionState.PREPARED)
+        && !result.getState().equals(TransactionState.DELETED)) {
       throw new TransactionRuntimeException("rollback is toward non-prepared record");
     }
     return new Delete(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
@@ -126,7 +130,6 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         .withCondition(
             new DeleteIf(
                 new ConditionalExpression(ID, toIdValue(id), Operator.EQ),
-                // the state should be PREPARED
                 new ConditionalExpression(STATE, toStateValue(result.getState()), Operator.EQ)))
         .withConsistency(Consistency.LINEARIZABLE);
   }

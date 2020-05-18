@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.ConditionalExpression;
@@ -41,7 +44,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
       // for usual commit
       add((Delete) base, result);
     } else { // Selection
-      // for rollforward in recovery
+      // for rollforward
       add((Selection) base, result);
     }
   }
@@ -54,9 +57,12 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     mutations.add(composeDelete(base, result));
   }
 
-  // for rollforward in recovery
+  // for rollforward
   private void add(Selection base, TransactionResult result) {
-    if (result.getState().equals(TransactionState.PREPARED)) {
+    if (result == null) {
+      // delete non-existing record that was prepared with DELETED for Serializable with Extra-write
+      mutations.add(composeDelete(base, null));
+    } else if (result.getState().equals(TransactionState.PREPARED)) {
       mutations.add(composePut(base, result));
     } else if (result.getState().equals(TransactionState.DELETED)) {
       mutations.add(composeDelete(base, result));

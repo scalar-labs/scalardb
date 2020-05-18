@@ -355,9 +355,19 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   }
 
   @Test
-  public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
-      throws Exception {
-    test.commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
+  public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
+          throws Exception {
+    test
+        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException();
+  }
+
+  @Test
+  public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
+          throws Exception {
+    test
+        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly();
   }
 
   @Test
