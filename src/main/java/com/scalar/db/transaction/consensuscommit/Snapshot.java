@@ -115,9 +115,7 @@ public class Snapshot {
   }
 
   public void to(MutationComposer composer) throws CommitConflictException {
-    if (PrepareMutationComposer.class.isInstance(composer)) {
-      toSerializableWithExtraWrite();
-    }
+    toSerializableWithExtraWrite(composer);
 
     writeSet
         .entrySet()
@@ -138,7 +136,7 @@ public class Snapshot {
   }
 
   @VisibleForTesting
-  void toSerializableWithExtraWrite() throws CommitConflictException {
+  void toSerializableWithExtraWrite(MutationComposer composer) throws CommitConflictException {
     if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_WRITE) {
       return;
     }
@@ -149,16 +147,28 @@ public class Snapshot {
         continue;
       }
 
-      if (!entry.getValue().isPresent()) {
-        throwExceptionDueToPotentialAntiDependency();
+      if (entry.getValue().isPresent() && PrepareMutationComposer.class.isInstance(composer)) {
+        // For existing records, convert a read set into a write set for Serializable. This needs to
+        // be done in only prepare phase because the records are treated as written afterwards.
+        Put put =
+            new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+                .withConsistency(Consistency.LINEARIZABLE)
+                .forNamespace(key.getNamespace())
+                .forTable(key.getTable());
+        writeSet.put(entry.getKey(), put);
+      } else {
+        // For non-existing records, special care is needed to guarantee Serializable. The records
+        // are treated as not existed explicitly by preparing DELETED records so that conflicts can
+        // be properly detected and handled. The records will be deleted in commit time by
+        // rollforwad since the records are marked as DELETED or in recovery time by rollback since
+        // the previous records are empty.
+        Get get =
+            new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+                .withConsistency(Consistency.LINEARIZABLE)
+                .forNamespace(key.getNamespace())
+                .forTable(key.getTable());
+        composer.add(get, null);
       }
-
-      Put put =
-          new Put(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(key.getNamespace())
-              .forTable(key.getTable());
-      writeSet.put(entry.getKey(), put);
     }
 
     for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {

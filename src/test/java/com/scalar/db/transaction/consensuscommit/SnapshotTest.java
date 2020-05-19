@@ -294,7 +294,7 @@ public class SnapshotTest {
       to_PrepareMutationComposerGivenAndSerializableIsolationSet_ShouldCallComposerProperly()
           throws CommitConflictException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SERIALIZABLE);
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
     Delete delete = prepareDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
@@ -311,7 +311,7 @@ public class SnapshotTest {
     verify(prepareComposer).add(put, result);
     verify(prepareComposer).add(putFromGet, result);
     verify(prepareComposer).add(delete, result);
-    verify(snapshot).toSerializableWithExtraWrite();
+    verify(snapshot).toSerializableWithExtraWrite(prepareComposer);
   }
 
   @Test
@@ -352,7 +352,7 @@ public class SnapshotTest {
     // no effect on CommitMutationComposer
     verify(commitComposer).add(put, result);
     verify(commitComposer).add(delete, result);
-    verify(snapshot, never()).toSerializableWithExtraWrite();
+    verify(snapshot).toSerializableWithExtraWrite(commitComposer);
   }
 
   @Test
@@ -394,7 +394,7 @@ public class SnapshotTest {
     // no effect on RollbackMutationComposer
     verify(rollbackComposer).add(put, result);
     verify(rollbackComposer).add(delete, result);
-    verify(snapshot, never()).toSerializableWithExtraWrite();
+    verify(snapshot).toSerializableWithExtraWrite(rollbackComposer);
   }
 
   @Test
@@ -410,7 +410,8 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
-    assertThatCode(() -> snapshot.toSerializableWithExtraWrite()).doesNotThrowAnyException();
+    assertThatCode(() -> snapshot.toSerializableWithExtraWrite(prepareComposer))
+        .doesNotThrowAnyException();
 
     // Assert
     Put expected =
@@ -420,6 +421,7 @@ public class SnapshotTest {
             .forTable(get.forTable().get());
     assertThat(writeSet).contains(entry(new Snapshot.Key(get), expected));
     assertThat(writeSet.size()).isEqualTo(2);
+    verify(prepareComposer, never()).add(any(), any());
   }
 
   @Test
@@ -433,10 +435,16 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite());
+    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
 
     // Assert
-    assertThat(thrown).isInstanceOf(CommitConflictException.class);
+    assertThat(thrown).doesNotThrowAnyException();
+    Get expected =
+        new Get(get.getPartitionKey(), get.getClusteringKey().get())
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(get.forNamespace().get())
+            .forTable(get.forTable().get());
+    verify(prepareComposer).add(expected, null);
   }
 
   @Test
@@ -456,7 +464,7 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
-    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite());
+    Throwable thrown = catchThrowable(() -> snapshot.toSerializableWithExtraWrite(prepareComposer));
 
     // Assert
     assertThat(thrown).isInstanceOf(CommitConflictException.class);

@@ -32,6 +32,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -1346,14 +1347,17 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
   }
 
-  public void commit_WriteSkewOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
-      throws CrudException {
+  public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
+          throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
@@ -1374,13 +1378,43 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    transaction = manager.start(Isolation.SERIALIZABLE);
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
     assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(thrown1).doesNotThrowAnyException();
+    assertThat(thrown2).isInstanceOf(CommitException.class);
+  }
+
+  public void
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
+          throws CrudException, CoordinatorException {
+    // Arrange
+    Coordinator.State state = new State(ANY_ID_1, TransactionState.ABORTED);
+    coordinator.putState(state);
+
+    // Act
+    DistributedTransaction transaction1 =
+        manager.start(ANY_ID_1, Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
+    Optional<Result> result1 = transaction1.get(get1_1);
+    Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> result2 = transaction1.get(get1_2);
+    int current1 = 0;
+    Put put1 = preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, current1 + 1));
+    transaction1.put(put1);
+    Throwable thrown1 = catchThrowable(transaction1::commit);
+
+    // Assert
+    assertThat(result1.isPresent()).isFalse();
+    assertThat(result2.isPresent()).isFalse();
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    result1 = transaction.get(get1_1);
+    result2 = transaction.get(get1_2);
+    assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).isInstanceOf(CommitException.class);
-    assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
   public void
