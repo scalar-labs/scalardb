@@ -308,6 +308,12 @@
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/CommitMutationComposer.html#CommitMutationComposer-java.lang.String-">CommitMutationComposer(String)</a></span> - Constructor for class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/CommitMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit">CommitMutationComposer</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="com/scalar/db/exception/transaction/CommitRuntimeException.html" title="class in com.scalar.db.exception.transaction"><span class="typeNameLink">CommitRuntimeException</span></a> - Exception in <a href="com/scalar/db/exception/transaction/package-summary.html">com.scalar.db.exception.transaction</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/exception/transaction/CommitRuntimeException.html#CommitRuntimeException-java.lang.String-">CommitRuntimeException(String)</a></span> - Constructor for exception com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CommitRuntimeException.html" title="class in com.scalar.db.exception.transaction">CommitRuntimeException</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/exception/transaction/CommitRuntimeException.html#CommitRuntimeException-java.lang.String-java.lang.Throwable-">CommitRuntimeException(String, Throwable)</a></span> - Constructor for exception com.scalar.db.exception.transaction.<a href="com/scalar/db/exception/transaction/CommitRuntimeException.html" title="class in com.scalar.db.exception.transaction">CommitRuntimeException</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Attribute.html#COMMITTED_AT">COMMITTED_AT</a></span> - Static variable in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Attribute.html" title="class in com.scalar.db.transaction.consensuscommit">Attribute</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/io/BigIntValue.html#compareTo-com.scalar.db.io.BigIntValue-">compareTo(BigIntValue)</a></span> - Method in class com.scalar.db.io.<a href="com/scalar/db/io/BigIntValue.html" title="class in com.scalar.db.io">BigIntValue</a></dt>
@@ -771,6 +777,8 @@
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#get-com.scalar.db.transaction.consensuscommit.Snapshot.Key-">get(Snapshot.Key)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#get-com.scalar.db.api.Scan-">get(Scan)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/io/TextValue.html#getBytes--">getBytes()</a></span> - Method in class com.scalar.db.io.<a href="com/scalar/db/io/TextValue.html" title="class in com.scalar.db.io">TextValue</a></dt>
 <dd>
 <div class="block">Returns the content of this <code>Value</code></div>
@@ -1009,6 +1017,34 @@
 <dd>
 <div class="block">Executes the specified <code>Operation</code></div>
 </dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/ConditionalExpression.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/ConditionalExpression.html" title="class in com.scalar.db.api">ConditionalExpression</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Delete.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Delete.html" title="class in com.scalar.db.api">Delete</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DeleteIf.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/DeleteIf.html" title="class in com.scalar.db.api">DeleteIf</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DeleteIfExists.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/DeleteIfExists.html" title="class in com.scalar.db.api">DeleteIfExists</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Get.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Get.html" title="class in com.scalar.db.api">Get</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Mutation.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Mutation.html" title="class in com.scalar.db.api">Mutation</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Operation.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Operation.html" title="class in com.scalar.db.api">Operation</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Put.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Put.html" title="class in com.scalar.db.api">Put</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/PutIf.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/PutIf.html" title="class in com.scalar.db.api">PutIf</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/PutIfExists.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/PutIfExists.html" title="class in com.scalar.db.api">PutIfExists</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/PutIfNotExists.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/PutIfNotExists.html" title="class in com.scalar.db.api">PutIfNotExists</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Scan.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Scan.html" title="class in com.scalar.db.api">Scan</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Scan.Ordering.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Scan.Ordering.html" title="class in com.scalar.db.api">Scan.Ordering</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/Selection.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.api.<a href="com/scalar/db/api/Selection.html" title="class in com.scalar.db.api">Selection</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/io/BigIntValue.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.io.<a href="com/scalar/db/io/BigIntValue.html" title="class in com.scalar.db.io">BigIntValue</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/io/BlobValue.html#hashCode--">hashCode()</a></span> - Method in class com.scalar.db.io.<a href="com/scalar/db/io/BlobValue.html" title="class in com.scalar.db.io">BlobValue</a></dt>
@@ -1285,7 +1321,9 @@
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/CrudHandler.html#put-com.scalar.db.api.Put-">put(Put)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/CrudHandler.html" title="class in com.scalar.db.transaction.consensuscommit">CrudHandler</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.transaction.consensuscommit.TransactionResult-">put(Snapshot.Key, TransactionResult)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-java.util.Optional-">put(Snapshot.Key, Optional&lt;TransactionResult&gt;)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.api.Scan-java.util.Optional-">put(Scan, Optional&lt;List&lt;Snapshot.Key&gt;&gt;)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.api.Put-">put(Snapshot.Key, Put)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
 <dd>&nbsp;</dd>
@@ -1422,6 +1460,12 @@
 <dd>
 <div class="block">Constructs <code>SelectStatementHandler</code> with the specified <code>Session</code></div>
 </dd>
+<dt><a href="com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><span class="typeNameLink">SerializableStrategy</span></a> - Interface in <a href="com/scalar/db/api/package-summary.html">com.scalar.db.api</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">SerializableStrategy</span></a> - Enum in <a href="com/scalar/db/transaction/consensuscommit/package-summary.html">com.scalar.db.transaction.consensuscommit</a></dt>
+<dd>
+<div class="block">A Serializable strategy used in Consensus Commit algorithm.</div>
+</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/storage/cassandra/StatementHandler.html#session">session</a></span> - Variable in class com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/StatementHandler.html" title="class in com.scalar.db.storage.cassandra">StatementHandler</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/storage/cassandra/MutateStatementHandler.html#setCondition-com.datastax.driver.core.querybuilder.BuiltStatement-com.scalar.db.api.Mutation-">setCondition(BuiltStatement, Mutation)</a></span> - Method in class com.scalar.db.storage.cassandra.<a href="com/scalar/db/storage/cassandra/MutateStatementHandler.html" title="class in com.scalar.db.storage.cassandra">MutateStatementHandler</a></dt>
@@ -1440,7 +1484,7 @@
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-">Snapshot(String)</a></span> - Constructor for class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-com.scalar.db.api.Isolation-">Snapshot(String, Isolation)</a></span> - Constructor for class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.transaction.consensuscommit.SerializableStrategy-">Snapshot(String, Isolation, SerializableStrategy)</a></span> - Constructor for class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Snapshot.html" title="class in com.scalar.db.transaction.consensuscommit">Snapshot</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/api/DistributedTransactionManager.html#start--">start()</a></span> - Method in interface com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></dt>
 <dd>
@@ -1458,6 +1502,23 @@
 <dd>
 <div class="block">Starts a new transaction with the specified transaction ID and <a href="com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level.</div>
 </dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(Isolation, SerializableStrategy)</a></span> - Method in interface com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></dt>
+<dd>
+<div class="block">Starts a new transaction with the specified <a href="com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.SerializableStrategy-">start(SerializableStrategy)</a></span> - Method in interface com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></dt>
+<dd>
+<div class="block">Starts a new transaction with Serializable isolation level and the specified <a href="com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">start(String, SerializableStrategy)</a></span> - Method in interface com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></dt>
+<dd>
+<div class="block">Starts a new transaction with the specified transaction ID, Serializable isolation level and
+ the specified <a href="com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(String, Isolation, SerializableStrategy)</a></span> - Method in interface com.scalar.db.api.<a href="com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></dt>
+<dd>
+<div class="block">Starts a new transaction with the specified transaction ID, <a href="com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start--">start()</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-java.lang.String-">start(String)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
@@ -1466,6 +1527,14 @@
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.Isolation-">start(String, Isolation)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(Isolation, SerializableStrategy)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-com.scalar.db.api.SerializableStrategy-">start(SerializableStrategy)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">start(String, SerializableStrategy)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(String, Isolation, SerializableStrategy)</a></span> - Method in class com.scalar.db.service.<a href="com/scalar/db/service/TransactionService.html" title="class in com.scalar.db.service">TransactionService</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start--">start()</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-java.lang.String-">start(String)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
@@ -1473,6 +1542,14 @@
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-com.scalar.db.api.Isolation-">start(Isolation)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-java.lang.String-com.scalar.db.api.Isolation-">start(String, Isolation)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(Isolation, SerializableStrategy)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-com.scalar.db.api.SerializableStrategy-">start(SerializableStrategy)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">start(String, SerializableStrategy)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start(String, Isolation, SerializableStrategy)</a></span> - Method in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/ConsensusCommitManager.html" title="class in com.scalar.db.transaction.consensuscommit">ConsensusCommitManager</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/Attribute.html#STATE">STATE</a></span> - Static variable in class com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/Attribute.html" title="class in com.scalar.db.transaction.consensuscommit">Attribute</a></dt>
 <dd>&nbsp;</dd>
@@ -1720,6 +1797,10 @@
 <dd>
 <div class="block">Returns the enum constant of this type with the specified name.</div>
 </dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/SerializableStrategy.html#valueOf-java.lang.String-">valueOf(String)</a></span> - Static method in enum com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit">SerializableStrategy</a></dt>
+<dd>
+<div class="block">Returns the enum constant of this type with the specified name.</div>
+</dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/api/ConditionalExpression.Operator.html#values--">values()</a></span> - Static method in enum com.scalar.db.api.<a href="com/scalar/db/api/ConditionalExpression.Operator.html" title="enum in com.scalar.db.api">ConditionalExpression.Operator</a></dt>
 <dd>
 <div class="block">Returns an array containing the constants of this enum type, in
@@ -1741,6 +1822,11 @@ the order they are declared.</div>
 the order they are declared.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/scalar/db/api/TransactionState.html#values--">values()</a></span> - Static method in enum com.scalar.db.api.<a href="com/scalar/db/api/TransactionState.html" title="enum in com.scalar.db.api">TransactionState</a></dt>
+<dd>
+<div class="block">Returns an array containing the constants of this enum type, in
+the order they are declared.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/scalar/db/transaction/consensuscommit/SerializableStrategy.html#values--">values()</a></span> - Static method in enum com.scalar.db.transaction.consensuscommit.<a href="com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit">SerializableStrategy</a></dt>
 <dd>
 <div class="block">Returns an array containing the constants of this enum type, in
 the order they are declared.</div>

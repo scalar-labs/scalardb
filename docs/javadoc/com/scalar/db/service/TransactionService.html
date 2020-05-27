@@ -17,7 +17,7 @@
     catch(err) {
     }
 //-->
-var methods = {"i0":10,"i1":10,"i2":10,"i3":10,"i4":10,"i5":10,"i6":10};
+var methods = {"i0":10,"i1":10,"i2":10,"i3":10,"i4":10,"i5":10,"i6":10,"i7":10,"i8":10,"i9":10,"i10":10};
 var tabs = {65535:["t0","All Methods"],2:["t2","Instance Methods"],8:["t4","Concrete Methods"]};
 var altColor = "altColor";
 var rowColor = "rowColor";
@@ -176,18 +176,47 @@ implements <a href="../../../../com/scalar/db/api/DistributedTransactionManager.
 </tr>
 <tr id="i4" class="altColor">
 <td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start</a></span>(<a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+     <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</code>
+<div class="block">Starts a new transaction with the specified <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</td>
+</tr>
+<tr id="i5" class="rowColor">
+<td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-com.scalar.db.api.SerializableStrategy-">start</a></span>(<a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</code>
+<div class="block">Starts a new transaction with Serializable isolation level and the specified <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</td>
+</tr>
+<tr id="i6" class="altColor">
+<td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-java.lang.String-">start</a></span>(java.lang.String&nbsp;txId)</code>
 <div class="block">Starts a new transaction with the specified transaction ID.</div>
 </td>
 </tr>
-<tr id="i5" class="rowColor">
+<tr id="i7" class="rowColor">
 <td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.Isolation-">start</a></span>(java.lang.String&nbsp;txId,
      <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation)</code>
 <div class="block">Starts a new transaction with the specified transaction ID and <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level.</div>
 </td>
 </tr>
-<tr id="i6" class="altColor">
+<tr id="i8" class="altColor">
+<td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start</a></span>(java.lang.String&nbsp;txId,
+     <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+     <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</code>
+<div class="block">Starts a new transaction with the specified transaction ID, <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</td>
+</tr>
+<tr id="i9" class="rowColor">
+<td class="colFirst"><code><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">start</a></span>(java.lang.String&nbsp;txId,
+     <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</code>
+<div class="block">Starts a new transaction with the specified transaction ID, Serializable isolation level and
+ the specified <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+</td>
+</tr>
+<tr id="i10" class="altColor">
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../com/scalar/db/service/TransactionService.html#with-java.lang.String-java.lang.String-">with</a></span>(java.lang.String&nbsp;namespace,
     java.lang.String&nbsp;tableName)</code>&nbsp;</td>
@@ -321,6 +350,96 @@ public&nbsp;TransactionService(<a href="../../../../com/scalar/db/api/Distribute
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>txId</code> - an user-provided unique transaction ID</dd>
 <dd><code>isolation</code> - an isolation level</dd>
+<dt><span class="returnLabel">Returns:</span></dt>
+<dd><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><code>DistributedTransaction</code></a></dd>
+</dl>
+</li>
+</ul>
+<a name="start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>start</h4>
+<pre>public&nbsp;<a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a>&nbsp;start(<a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+                                    <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</pre>
+<div class="block"><span class="descfrmTypeLabel">Description copied from interface:&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">DistributedTransactionManager</a></code></span></div>
+<div class="block">Starts a new transaction with the specified <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>. If the isolation is not SERIALIZABLE, the serializable strategy is
+ ignored.</div>
+<dl>
+<dt><span class="overrideSpecifyLabel">Specified by:</span></dt>
+<dd><code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></code></dd>
+<dt><span class="paramLabel">Parameters:</span></dt>
+<dd><code>isolation</code> - an isolation level</dd>
+<dd><code>strategy</code> - a serializable strategy</dd>
+<dt><span class="returnLabel">Returns:</span></dt>
+<dd><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><code>DistributedTransaction</code></a></dd>
+</dl>
+</li>
+</ul>
+<a name="start-com.scalar.db.api.SerializableStrategy-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>start</h4>
+<pre>public&nbsp;<a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a>&nbsp;start(<a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</pre>
+<div class="block"><span class="descfrmTypeLabel">Description copied from interface:&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.SerializableStrategy-">DistributedTransactionManager</a></code></span></div>
+<div class="block">Starts a new transaction with Serializable isolation level and the specified <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>.</div>
+<dl>
+<dt><span class="overrideSpecifyLabel">Specified by:</span></dt>
+<dd><code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-com.scalar.db.api.SerializableStrategy-">start</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></code></dd>
+<dt><span class="paramLabel">Parameters:</span></dt>
+<dd><code>strategy</code> - a serializable strategy</dd>
+<dt><span class="returnLabel">Returns:</span></dt>
+<dd><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><code>DistributedTransaction</code></a></dd>
+</dl>
+</li>
+</ul>
+<a name="start-java.lang.String-com.scalar.db.api.SerializableStrategy-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>start</h4>
+<pre>public&nbsp;<a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a>&nbsp;start(java.lang.String&nbsp;txId,
+                                    <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</pre>
+<div class="block"><span class="descfrmTypeLabel">Description copied from interface:&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">DistributedTransactionManager</a></code></span></div>
+<div class="block">Starts a new transaction with the specified transaction ID, Serializable isolation level and
+ the specified <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>. It is users' responsibility to guarantee uniqueness
+ of the ID so it is not recommended to use this method unless you know exactly what you are
+ doing.</div>
+<dl>
+<dt><span class="overrideSpecifyLabel">Specified by:</span></dt>
+<dd><code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.SerializableStrategy-">start</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></code></dd>
+<dt><span class="paramLabel">Parameters:</span></dt>
+<dd><code>txId</code> - an user-provided unique transaction ID</dd>
+<dd><code>strategy</code> - a serializable strategy</dd>
+<dt><span class="returnLabel">Returns:</span></dt>
+<dd><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><code>DistributedTransaction</code></a></dd>
+</dl>
+</li>
+</ul>
+<a name="start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>start</h4>
+<pre>public&nbsp;<a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api">DistributedTransaction</a>&nbsp;start(java.lang.String&nbsp;txId,
+                                    <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+                                    <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api">SerializableStrategy</a>&nbsp;strategy)</pre>
+<div class="block"><span class="descfrmTypeLabel">Description copied from interface:&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">DistributedTransactionManager</a></code></span></div>
+<div class="block">Starts a new transaction with the specified transaction ID, <a href="../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api"><code>Isolation</code></a> level and <a href="../../../../com/scalar/db/api/SerializableStrategy.html" title="interface in com.scalar.db.api"><code>SerializableStrategy</code></a>. It is users' responsibility to guarantee uniqueness of the ID so it is
+ not recommended to use this method unless you know exactly what you are doing. If the isolation
+ is not SERIALIZABLE, the serializable strategy is ignored.</div>
+<dl>
+<dt><span class="overrideSpecifyLabel">Specified by:</span></dt>
+<dd><code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html#start-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.api.SerializableStrategy-">start</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../com/scalar/db/api/DistributedTransactionManager.html" title="interface in com.scalar.db.api">DistributedTransactionManager</a></code></dd>
+<dt><span class="paramLabel">Parameters:</span></dt>
+<dd><code>txId</code> - an user-provided unique transaction ID</dd>
+<dd><code>isolation</code> - an isolation level</dd>
+<dd><code>strategy</code> - a serializable strategy</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
 <dd><a href="../../../../com/scalar/db/api/DistributedTransaction.html" title="interface in com.scalar.db.api"><code>DistributedTransaction</code></a></dd>
 </dl>

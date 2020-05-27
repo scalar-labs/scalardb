@@ -17,7 +17,7 @@
     catch(err) {
     }
 //-->
-var methods = {"i0":10,"i1":10,"i2":10,"i3":10,"i4":10,"i5":10,"i6":10};
+var methods = {"i0":10,"i1":10,"i2":10,"i3":10,"i4":10,"i5":10,"i6":10,"i7":10,"i8":10};
 var tabs = {65535:["t0","All Methods"],2:["t2","Instance Methods"],8:["t4","Concrete Methods"]};
 var altColor = "altColor";
 var rowColor = "rowColor";
@@ -47,7 +47,7 @@ var activeTableTab = "activeTableTab";
 </div>
 <div class="subNav">
 <ul class="navList">
-<li><a href="../../../../../com/scalar/db/transaction/consensuscommit/RollbackMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
+<li><a href="../../../../../com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
 <li><a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
 </ul>
 <ul class="navList">
@@ -131,8 +131,9 @@ extends java.lang.Object</pre>
 <td class="colOne"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-">Snapshot</a></span>(java.lang.String&nbsp;id)</code>&nbsp;</td>
 </tr>
 <tr class="rowColor">
-<td class="colOne"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-com.scalar.db.api.Isolation-">Snapshot</a></span>(java.lang.String&nbsp;id,
-        <a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation)</code>&nbsp;</td>
+<td class="colOne"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#Snapshot-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.transaction.consensuscommit.SerializableStrategy-">Snapshot</a></span>(java.lang.String&nbsp;id,
+        <a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+        <a href="../../../../../com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit">SerializableStrategy</a>&nbsp;strategy)</code>&nbsp;</td>
 </tr>
 </table>
 </li>
@@ -150,33 +151,42 @@ extends java.lang.Object</pre>
 <th class="colLast" scope="col">Method and Description</th>
 </tr>
 <tr id="i0" class="altColor">
+<td class="colFirst"><code>java.util.Optional&lt;java.util.List&lt;com.scalar.db.transaction.consensuscommit.Snapshot.Key&gt;&gt;</code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#get-com.scalar.db.api.Scan-">get</a></span>(<a href="../../../../../com/scalar/db/api/Scan.html" title="class in com.scalar.db.api">Scan</a>&nbsp;scan)</code>&nbsp;</td>
+</tr>
+<tr id="i1" class="rowColor">
 <td class="colFirst"><code>java.util.Optional&lt;<a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&gt;</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#get-com.scalar.db.transaction.consensuscommit.Snapshot.Key-">get</a></span>(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key)</code>&nbsp;</td>
 </tr>
-<tr id="i1" class="rowColor">
+<tr id="i2" class="altColor">
 <td class="colFirst"><code>java.lang.String</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#getId--">getId</a></span>()</code>&nbsp;</td>
 </tr>
-<tr id="i2" class="altColor">
+<tr id="i3" class="rowColor">
 <td class="colFirst"><code><a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a></code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#getIsolation--">getIsolation</a></span>()</code>&nbsp;</td>
 </tr>
-<tr id="i3" class="rowColor">
+<tr id="i4" class="altColor">
+<td class="colFirst"><code>void</code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.api.Scan-java.util.Optional-">put</a></span>(<a href="../../../../../com/scalar/db/api/Scan.html" title="class in com.scalar.db.api">Scan</a>&nbsp;scan,
+   java.util.Optional&lt;java.util.List&lt;com.scalar.db.transaction.consensuscommit.Snapshot.Key&gt;&gt;&nbsp;keys)</code>&nbsp;</td>
+</tr>
+<tr id="i5" class="rowColor">
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.api.Delete-">put</a></span>(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key,
    <a href="../../../../../com/scalar/db/api/Delete.html" title="class in com.scalar.db.api">Delete</a>&nbsp;delete)</code>&nbsp;</td>
 </tr>
-<tr id="i4" class="altColor">
+<tr id="i6" class="altColor">
+<td class="colFirst"><code>void</code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-java.util.Optional-">put</a></span>(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key,
+   java.util.Optional&lt;<a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&gt;&nbsp;result)</code>&nbsp;</td>
+</tr>
+<tr id="i7" class="rowColor">
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.api.Put-">put</a></span>(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key,
    <a href="../../../../../com/scalar/db/api/Put.html" title="class in com.scalar.db.api">Put</a>&nbsp;put)</code>&nbsp;</td>
 </tr>
-<tr id="i5" class="rowColor">
-<td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.transaction.consensuscommit.TransactionResult-">put</a></span>(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key,
-   <a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&nbsp;result)</code>&nbsp;</td>
-</tr>
-<tr id="i6" class="altColor">
+<tr id="i8" class="altColor">
 <td class="colFirst"><code>void</code></td>
 <td class="colLast"><code><span class="memberNameLink"><a href="../../../../../com/scalar/db/transaction/consensuscommit/Snapshot.html#to-com.scalar.db.transaction.consensuscommit.MutationComposer-">to</a></span>(<a href="../../../../../com/scalar/db/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.db.transaction.consensuscommit">MutationComposer</a>&nbsp;composer)</code>&nbsp;</td>
 </tr>
@@ -211,14 +221,15 @@ extends java.lang.Object</pre>
 <pre>public&nbsp;Snapshot(java.lang.String&nbsp;id)</pre>
 </li>
 </ul>
-<a name="Snapshot-java.lang.String-com.scalar.db.api.Isolation-">
+<a name="Snapshot-java.lang.String-com.scalar.db.api.Isolation-com.scalar.db.transaction.consensuscommit.SerializableStrategy-">
 <!--   -->
 </a>
 <ul class="blockListLast">
 <li class="blockList">
 <h4>Snapshot</h4>
 <pre>public&nbsp;Snapshot(java.lang.String&nbsp;id,
-                <a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation)</pre>
+                <a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;isolation,
+                <a href="../../../../../com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit">SerializableStrategy</a>&nbsp;strategy)</pre>
 </li>
 </ul>
 </li>
@@ -249,14 +260,24 @@ public&nbsp;java.lang.String&nbsp;getId()</pre>
 public&nbsp;<a href="../../../../../com/scalar/db/api/Isolation.html" title="enum in com.scalar.db.api">Isolation</a>&nbsp;getIsolation()</pre>
 </li>
 </ul>
-<a name="put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.transaction.consensuscommit.TransactionResult-">
+<a name="put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-java.util.Optional-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>put</h4>
 <pre>public&nbsp;void&nbsp;put(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key,
-                <a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&nbsp;result)</pre>
+                java.util.Optional&lt;<a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&gt;&nbsp;result)</pre>
+</li>
+</ul>
+<a name="put-com.scalar.db.api.Scan-java.util.Optional-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>put</h4>
+<pre>public&nbsp;void&nbsp;put(<a href="../../../../../com/scalar/db/api/Scan.html" title="class in com.scalar.db.api">Scan</a>&nbsp;scan,
+                java.util.Optional&lt;java.util.List&lt;com.scalar.db.transaction.consensuscommit.Snapshot.Key&gt;&gt;&nbsp;keys)</pre>
 </li>
 </ul>
 <a name="put-com.scalar.db.transaction.consensuscommit.Snapshot.Key-com.scalar.db.api.Put-">
@@ -288,13 +309,27 @@ public&nbsp;<a href="../../../../../com/scalar/db/api/Isolation.html" title="enu
 <pre>public&nbsp;java.util.Optional&lt;<a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit">TransactionResult</a>&gt;&nbsp;get(com.scalar.db.transaction.consensuscommit.Snapshot.Key&nbsp;key)</pre>
 </li>
 </ul>
+<a name="get-com.scalar.db.api.Scan-">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>get</h4>
+<pre>public&nbsp;java.util.Optional&lt;java.util.List&lt;com.scalar.db.transaction.consensuscommit.Snapshot.Key&gt;&gt;&nbsp;get(<a href="../../../../../com/scalar/db/api/Scan.html" title="class in com.scalar.db.api">Scan</a>&nbsp;scan)</pre>
+</li>
+</ul>
 <a name="to-com.scalar.db.transaction.consensuscommit.MutationComposer-">
 <!--   -->
 </a>
 <ul class="blockListLast">
 <li class="blockList">
 <h4>to</h4>
-<pre>public&nbsp;void&nbsp;to(<a href="../../../../../com/scalar/db/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.db.transaction.consensuscommit">MutationComposer</a>&nbsp;composer)</pre>
+<pre>public&nbsp;void&nbsp;to(<a href="../../../../../com/scalar/db/transaction/consensuscommit/MutationComposer.html" title="interface in com.scalar.db.transaction.consensuscommit">MutationComposer</a>&nbsp;composer)
+        throws <a href="../../../../../com/scalar/db/exception/transaction/CommitConflictException.html" title="class in com.scalar.db.exception.transaction">CommitConflictException</a></pre>
+<dl>
+<dt><span class="throwsLabel">Throws:</span></dt>
+<dd><code><a href="../../../../../com/scalar/db/exception/transaction/CommitConflictException.html" title="class in com.scalar.db.exception.transaction">CommitConflictException</a></code></dd>
+</dl>
 </li>
 </ul>
 </li>
@@ -324,7 +359,7 @@ public&nbsp;<a href="../../../../../com/scalar/db/api/Isolation.html" title="enu
 </div>
 <div class="subNav">
 <ul class="navList">
-<li><a href="../../../../../com/scalar/db/transaction/consensuscommit/RollbackMutationComposer.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
+<li><a href="../../../../../com/scalar/db/transaction/consensuscommit/SerializableStrategy.html" title="enum in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
 <li><a href="../../../../../com/scalar/db/transaction/consensuscommit/TransactionResult.html" title="class in com.scalar.db.transaction.consensuscommit"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
 </ul>
 <ul class="navList">
