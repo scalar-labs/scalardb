@@ -273,7 +273,7 @@ public class SnapshotTest {
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
       throws CommitConflictException {
     // Arrange
-    snapshot = prepareSnapshot(Isolation.SNAPSHOT, SerializableStrategy.EXTRA_WRITE);
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
     Delete delete = prepareDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
@@ -291,7 +291,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      to_PrepareMutationComposerGivenAndSerializableIsolationSet_ShouldCallComposerProperly()
+      to_PrepareMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
           throws CommitConflictException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
@@ -334,8 +334,9 @@ public class SnapshotTest {
   }
 
   @Test
-  public void to_CommitMutationComposerGivenSerializableIsolationSet_ShouldCallComposerProperly()
-      throws CommitConflictException {
+  public void
+      to_CommitMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
+          throws CommitConflictException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -376,8 +377,9 @@ public class SnapshotTest {
   }
 
   @Test
-  public void to_RollbackMutationComposerGivenSerializableIsolationSet_ShouldCallComposerProperly()
-      throws CommitConflictException {
+  public void
+      to_RollbackMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
+          throws CommitConflictException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
