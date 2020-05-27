@@ -340,10 +340,10 @@ public class ConsensusCommitWithCassandraIntegrationTest {
 
   @Test
   public void
-      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws Exception {
     test
-        .commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException();
+        .commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException();
   }
 
   @Test
@@ -380,9 +380,10 @@ public class ConsensusCommitWithCassandraIntegrationTest {
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException()
           throws Exception {
-    test.commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException();
+    test
+        .commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException();
   }
 
   @Test

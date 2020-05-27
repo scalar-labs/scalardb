@@ -1263,20 +1263,23 @@ public class ConsensusCommitIntegrationTest {
   }
 
   public void
-      commit_WriteSkewOnExistingRecordsWithSerializable_OneShouldCommitTheOtherShouldThrowCommitConflictException()
+      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     List<Put> puts =
         Arrays.asList(
             preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)),
             preparePut(0, 1, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
-    DistributedTransaction transaction = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get1_1 = prepareGet(0, 1, NAMESPACE, TABLE_1);
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, NAMESPACE, TABLE_1);
@@ -1295,7 +1298,7 @@ public class ConsensusCommitIntegrationTest {
     Throwable thrown = catchThrowable(transaction2::commit);
 
     // Assert
-    transaction = manager.start(Isolation.SERIALIZABLE);
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
@@ -1461,14 +1464,16 @@ public class ConsensusCommitIntegrationTest {
   }
 
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializable_ShouldThrowCommitException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException()
           throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 = manager.start(Isolation.SERIALIZABLE);
-    DistributedTransaction transaction2 = manager.start(Isolation.SERIALIZABLE);
+    DistributedTransaction transaction1 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    DistributedTransaction transaction2 =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, NAMESPACE, TABLE_1));
@@ -1483,7 +1488,7 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     assertThat(results1).isEmpty();
     assertThat(results2).isEmpty();
-    transaction = manager.start(Isolation.SERIALIZABLE);
+    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, NAMESPACE, TABLE_1));
     assertThat(result1.isPresent()).isFalse();
