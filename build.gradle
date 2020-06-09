@@ -13,7 +13,8 @@ sourceSets {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/java')
+            //srcDir file('src/integration-test/java')
+            srcDir file('src/integration-test/java/com/scalar/db/storage/cosmos')
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -26,6 +27,7 @@ configurations {
 
 dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    compile group: 'com.azure', name: 'azure-cosmos', version: '4.0.1-beta.3'
     compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.0'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
