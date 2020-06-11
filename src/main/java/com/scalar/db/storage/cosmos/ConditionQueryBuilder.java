@@ -7,16 +7,7 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.ValueVisitor;
-import java.nio.ByteBuffer;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,30 +18,27 @@ import org.slf4j.LoggerFactory;
  * @author Yuji Ito
  */
 @NotThreadSafe
-public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVisitor {
+public class ConditionQueryBuilder implements MutationConditionVisitor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConditionQueryBuilder.class);
   private final StringBuilder builder;
+  private final ValueBinder binder;
 
-  public ConditionQueryBuilder() {
+  public ConditionQueryBuilder(String concatPartitionKey) {
+    // TODO: replace StringBuilder with SQL statement builder
     builder = new StringBuilder();
-    builder.append("SELECT * FROM Record r WHERE ");
+    builder.append("SELECT * FROM Record r WHERE r.concatPartitionKey = " + concatPartitionKey);
+    binder = new ValueBinder(builder);
   }
 
   public String build() {
-    int length = builder.length();
-    return builder.substring(0, length - 5); // remove the last " AND "
-  }
-
-  public void withPartitionKey(String partitionKey) {
-    builder.append("partitionKey = " + partitionKey + " AND ");
+    return new String(builder);
   }
 
   public void withClusteringKey(Key key) {
     key.forEach(
         v -> {
-          builder.append(v.getName() + " = ");
-          v.accept(this);
-          builder.append(" AND ");
+          builder.append(" AND r.clusteringKey." + v.getName() + " = ");
+          v.accept(binder);
         });
   }
 
@@ -65,14 +53,9 @@ public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVis
         .getExpressions()
         .forEach(
             e -> {
-              if (e.getValue() instanceof BlobValue) {
-                builder.append("CONVERT(Record." + e.getName() + " USING utf8) ");
-              } else {
-                builder.append(e.getName() + " ");
-              }
+              builder.append(" AND r." + e.getName());
               appendOperator(e);
-              e.getValue().accept(this);
-              builder.append(" AND ");
+              e.getValue().accept(binder);
             });
   }
 
@@ -83,7 +66,7 @@ public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVis
    */
   @Override
   public void visit(PutIfExists condition) {
-    builder.append(" AND ");
+    // nothing to do
   }
 
   /**
@@ -93,7 +76,7 @@ public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVis
    */
   @Override
   public void visit(PutIfNotExists condition) {
-    builder.append(" AND ");
+    // nothing to do
   }
 
   /**
@@ -107,14 +90,9 @@ public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVis
         .getExpressions()
         .forEach(
             e -> {
-              if (e.getValue() instanceof BlobValue) {
-                builder.append("CONVERT(Record." + e.getName() + " USING utf8) ");
-              } else {
-                builder.append(e.getName() + " ");
-              }
+              builder.append(" AND r." + e.getName());
               appendOperator(e);
-              e.getValue().accept(this);
-              builder.append(" AND ");
+              e.getValue().accept(binder);
             });
   }
 
@@ -125,99 +103,23 @@ public class ConditionQueryBuilder implements MutationConditionVisitor, ValueVis
    */
   @Override
   public void visit(DeleteIfExists condition) {
-    builder.append(" AND ");
-  }
-
-  /**
-   * Sets the specified {@code BooleanValue} to the query
-   *
-   * @param value a {@code BooleanValue} to be set
-   */
-  @Override
-  public void visit(BooleanValue value) {
-    builder.append(value.get());
-  }
-
-  /**
-   * Sets the specified {@code IntValue} to the query
-   *
-   * @param value a {@code IntValue} to be set
-   */
-  @Override
-  public void visit(IntValue value) {
-    builder.append(value.get());
-  }
-
-  /**
-   * Sets the specified {@code BigIntValue} to the query
-   *
-   * @param value a {@code BigIntValue} to be set
-   */
-  @Override
-  public void visit(BigIntValue value) {
-    builder.append(value.get());
-  }
-
-  /**
-   * Sets the specified {@code FloatValue} to the query
-   *
-   * @param value a {@code FloatValue} to be set
-   */
-  @Override
-  public void visit(FloatValue value) {
-    builder.append(value.get());
-  }
-
-  /**
-   * Sets the specified {@code DoubleValue} to the query
-   *
-   * @param value a {@code DoubleValue} to be set
-   */
-  @Override
-  public void visit(DoubleValue value) {
-    builder.append(value.get());
-  }
-
-  /**
-   * Sets the specified {@code TextValue} to the query
-   *
-   * @param value a {@code TextValue} to be set
-   */
-  @Override
-  public void visit(TextValue value) {
-    value.getString().ifPresent(s -> builder.append(s));
-  }
-
-  /**
-   * Sets the specified {@code BlobValue} to the query
-   *
-   * @param value a {@code BlobValue} to be set
-   */
-  @Override
-  public void visit(BlobValue value) {
-    value
-        .get()
-        .ifPresent(
-            b -> {
-              ByteBuffer buffer = (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip();
-              builder.append(new String(buffer.array()));
-            });
+    // nothing to do
   }
 
   private void appendOperator(ConditionalExpression e) {
     switch (e.getOperator()) {
       case EQ:
-        builder.append("= ");
+        builder.append(" = ");
       case NE:
-        builder.append("!= ");
+        builder.append(" != ");
       case GT:
-        builder.append("> ");
+        builder.append(" > ");
       case GTE:
-        builder.append(">= ");
+        builder.append(" >= ");
       case LT:
-        builder.append("< ");
+        builder.append(" < ");
       case LTE:
-        builder.append("<= ");
+        builder.append(" <= ");
       default:
         // never comes here because ConditionalExpression accepts only above operators
         throw new IllegalArgumentException(e.getOperator() + " is not supported");

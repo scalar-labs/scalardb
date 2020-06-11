@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.google.inject.Inject;
@@ -34,7 +33,9 @@ public class Cosmos implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
   private final CosmosClient client;
   private final TableMetadataHandler metadataHandler;
-  private final StatementHandlerManager handlers;
+  private final SelectStatementHandler selectStatementHandler;
+  private final PutStatementHandler putStatementHandler;
+  private final DeleteStatementHandler deleteStatementHandler;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -49,14 +50,9 @@ public class Cosmos implements DistributedStorage {
 
     this.metadataHandler = new TableMetadataHandler(client);
 
-    handlers =
-        StatementHandlerManager.builder()
-            .get(new GetStatementHandler(client, metadataHandler))
-            //        .scan(new ScanStatementHandler(client, metadataHandler))
-            .insert(new InsertStatementHandler(client, metadataHandler))
-            .update(new UpdateStatementHandler(client, metadataHandler))
-            //        .delete(new DeleteStatementHandler(client, metadataHandler))
-            .build();
+    this.selectStatementHandler = new SelectStatementHandler(client, metadataHandler);
+    this.putStatementHandler = new PutStatementHandler(client, metadataHandler);
+    this.deleteStatementHandler = new DeleteStatementHandler(client, metadataHandler);
 
     LOGGER.info("Cosmos DB object is created properly.");
 
@@ -73,33 +69,34 @@ public class Cosmos implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    LOGGER.debug("executing get operation with " + get);
     setTargetToIfNot(get);
-    // TODO: projection
-    // addProjectionsForKeys(get);
 
-    List<Record> results = handlers.get(get).handle(get);
+    List<Record> records = selectStatementHandler.handle(get);
 
-    if (results.isEmpty() || results.get(0) == null) {
+    if (records.isEmpty() || records.get(0) == null) {
       return Optional.empty();
     }
 
     TableMetadata metadata = metadataHandler.getTableMetadata(get);
-    return Optional.of(new ResultImpl(results.get(0), metadata));
+    return Optional.of(new ResultImpl(records.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    return null;
+    setTargetToIfNot(scan);
+
+    List<Record> records = selectStatementHandler.handle(scan);
+
+    TableMetadata metadata = metadataHandler.getTableMetadata(scan);
+    return new ScannerImpl(records, scan, metadata);
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
-    LOGGER.debug("executing put operation with " + put);
     setTargetToIfNot(put);
     checkIfPrimaryKeyExists(put);
 
-    handlers.get(put).handle(put);
+    putStatementHandler.handle(put);
   }
 
   @Override
@@ -108,13 +105,27 @@ public class Cosmos implements DistributedStorage {
   }
 
   @Override
-  public void delete(Delete delete) throws ExecutionException {}
+  public void delete(Delete delete) throws ExecutionException {
+    setTargetToIfNot(delete);
+    deleteStatementHandler.handle(delete);
+  }
 
   @Override
-  public void delete(List<Delete> deletes) throws ExecutionException {}
+  public void delete(List<Delete> deletes) throws ExecutionException {
+    mutate(deletes);
+  }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) throws ExecutionException {}
+  public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
+    // TODO: BatchStatementHandler
+    for (Mutation m : mutations) {
+      if (m instanceof Put) {
+        put((Put) m);
+      } else if (m instanceof Delete) {
+        delete((Delete) m);
+      }
+    }
+  }
 
   @Override
   public void close() {

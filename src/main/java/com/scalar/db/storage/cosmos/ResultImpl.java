@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.InvalidMetadataException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
@@ -34,11 +35,11 @@ public class ResultImpl implements Result {
   private final TableMetadata metadata;
   private final Map<String, Value> values;
 
-  public ResultImpl(Record record, TableMetadata metadata) {
+  public ResultImpl(Record record, Selection selection, TableMetadata metadata) {
     checkNotNull(record);
     this.metadata = checkNotNull(metadata);
     values = new HashMap<>();
-    interpret(record, metadata);
+    interpret(record, selection, metadata);
   }
 
   @Override
@@ -87,11 +88,25 @@ public class ResultImpl implements Result {
     return MoreObjects.toStringHelper(this).add("values", values).toString();
   }
 
-  private void interpret(Record record, TableMetadata metadata) {
+  private void interpret(Record record, Selection selection, TableMetadata metadata) {
     Map<String, Object> recordValues = new HashMap<>();
     recordValues.putAll(record.getPartitionKey());
     recordValues.putAll(record.getClusteringKey());
-    recordValues.putAll(record.getValues());
+
+    // TODO: this isn't actual projection...
+    if (selection.getProjections().size() == 0) {
+      recordValues.putAll(record.getValues());
+    } else {
+      Map<String, Object> onlyValues = record.getValues();
+      selection
+          .getProjections()
+          .forEach(
+              name -> {
+                if (onlyValues.containsKey(name)) {
+                  recordValues.put(name, onlyValues.get(name));
+                }
+              });
+    }
 
     recordValues.forEach(
         (name, value) -> {

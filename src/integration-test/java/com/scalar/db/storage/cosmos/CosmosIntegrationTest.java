@@ -13,6 +13,8 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
@@ -99,6 +101,235 @@ public class CosmosIntegrationTest {
     assertThat(actual.get().getValue(COL_NAME1))
         .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
     assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void get_GetWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+    int cKey = 0;
+
+    // Act
+    Get get = prepareGet(pKey, cKey);
+    get.withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3);
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get().getValue(COL_NAME2))
+        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(COL_NAME3))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
+    assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
+    assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
+  }
+
+  @Test
+  public void scan_ScanWithPartitionKeyGiven_ShouldRetrieveMultipleResults()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    List<Result> actual = new ArrayList<>();
+    storage.scan(scan).forEach(r -> actual.add(r)); // use iterator
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scan_ScanWithPartitionKeyGivenAndResultsIteratedWithOne_ShouldReturnWhatsPut()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scanner scanner = storage.scan(scan);
+
+    // Assert
+    Optional<Result> result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    result = scanner.one();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    result = scanner.one();
+    assertThat(result.isPresent()).isFalse();
+  }
+
+  @Test
+  public void scan_ScanWithPartitionGivenThreeTimes_ShouldRetrieveResultsProperlyEveryTime()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    double t1 = System.currentTimeMillis();
+    List<Result> actual = storage.scan(scan).all();
+    double t2 = System.currentTimeMillis();
+    storage.scan(scan);
+    double t3 = System.currentTimeMillis();
+    storage.scan(scan);
+    double t4 = System.currentTimeMillis();
+
+    // Assert
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    System.err.println("first: " + (t2 - t1) + " (ms)");
+    System.err.println("second: " + (t3 - t2) + " (ms)");
+    System.err.println("third: " + (t4 - t3) + " (ms)");
+  }
+
+  @Test
+  public void scan_ScanWithStartInclusiveRangeGiven_ShouldRetrieveResultsOfGivenRange()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
+            .withStart(new Key(new IntValue(COL_NAME4, 0)), true)
+            .withEnd(new Key(new IntValue(COL_NAME4, 2)), false);
+    List<Result> actual = storage.scan(scan).all();
+
+    // verify
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+  }
+
+  @Test
+  public void scan_ScanWithEndInclusiveRangeGiven_ShouldRetrieveResultsOfGivenRange()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
+            .withStart(new Key(new IntValue(COL_NAME4, 0)), false)
+            .withEnd(new Key(new IntValue(COL_NAME4, 2)), true);
+    List<Result> actual = storage.scan(scan).all();
+
+    // verify
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scan_ScanWithOrderAscGiven_ShouldReturnAscendingOrderedResults()
+      throws ExecutionException {
+    // Arrange
+    List<Put> puts = preparePuts();
+    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
+
+    // Act
+    List<Result> actual = storage.scan(scan).all();
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scan_ScanWithOrderDescGiven_ShouldReturnDescendingOrderedResults()
+      throws ExecutionException {
+    // Arrange
+    List<Put> puts = preparePuts();
+    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
+
+    // Act
+    List<Result> actual = storage.scan(scan).all();
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void scan_ScanWithLimitGiven_ShouldReturnGivenNumberOfResults() throws ExecutionException {
+    // setup
+    List<Put> puts = preparePuts();
+    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC))
+            .withLimit(1);
+
+    // exercise
+    List<Result> actual = storage.scan(scan).all();
+
+    // verify
+    assertThat(actual.size()).isEqualTo(1);
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
   }
 
   @Test

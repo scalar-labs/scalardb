@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSortedSet;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 public class TableMetadata {
   private String id;
@@ -21,15 +21,15 @@ public class TableMetadata {
   }
 
   public void setPartitionKeyNames(Set<String> partitionKeyNames) {
-    this.partitionKeyNames = new TreeSet(partitionKeyNames);
+    this.partitionKeyNames = ImmutableSortedSet.copyOf(partitionKeyNames);
   }
 
   public void setClusteringKeyNames(Set<String> clusteringKeyNames) {
-    this.clusteringKeyNames = new TreeSet(clusteringKeyNames);
+    this.clusteringKeyNames = ImmutableSortedSet.copyOf(clusteringKeyNames);
   }
 
   public void setColumns(Map<String, String> columns) {
-    this.columns = new TreeMap(columns);
+    this.columns = ImmutableSortedMap.copyOf(columns);
   }
 
   public String getId() {
