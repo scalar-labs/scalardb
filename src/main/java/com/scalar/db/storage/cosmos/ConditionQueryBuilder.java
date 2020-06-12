@@ -7,7 +7,6 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.io.Key;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,23 +22,15 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
   private final StringBuilder builder;
   private final ValueBinder binder;
 
-  public ConditionQueryBuilder(String concatPartitionKey) {
+  public ConditionQueryBuilder(String id) {
     // TODO: replace StringBuilder with SQL statement builder
     builder = new StringBuilder();
-    builder.append("SELECT * FROM Record r WHERE r.concatPartitionKey = " + concatPartitionKey);
+    builder.append("SELECT * FROM Record r WHERE r.id = '" + id + "'");
     binder = new ValueBinder(builder);
   }
 
   public String build() {
     return new String(builder);
-  }
-
-  public void withClusteringKey(Key key) {
-    key.forEach(
-        v -> {
-          builder.append(" AND r.clusteringKey." + v.getName() + " = ");
-          v.accept(binder);
-        });
   }
 
   /**
@@ -53,7 +44,7 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
         .getExpressions()
         .forEach(
             e -> {
-              builder.append(" AND r." + e.getName());
+              builder.append(" AND r.values." + e.getName());
               appendOperator(e);
               e.getValue().accept(binder);
             });
@@ -110,16 +101,22 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
     switch (e.getOperator()) {
       case EQ:
         builder.append(" = ");
+        break;
       case NE:
         builder.append(" != ");
+        break;
       case GT:
         builder.append(" > ");
+        break;
       case GTE:
         builder.append(" >= ");
+        break;
       case LT:
         builder.append(" < ");
+        break;
       case LTE:
         builder.append(" <= ");
+        break;
       default:
         // never comes here because ConditionalExpression accepts only above operators
         throw new IllegalArgumentException(e.getOperator() + " is not supported");

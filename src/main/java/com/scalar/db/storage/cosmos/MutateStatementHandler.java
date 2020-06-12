@@ -31,7 +31,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
       throws CosmosClientException {
     Optional<Record> record = makeRecord(mutation);
     String query = makeConditionalQuery(mutation);
-    Object[] args = record.isPresent() ? new Object[] {record, query} : new Object[] {query};
+    Object[] args = record.isPresent() ? new Object[] {record.get(), query} : new Object[] {query};
 
     CosmosStoredProcedureRequestOptions options =
         new CosmosStoredProcedureRequestOptions()
@@ -105,15 +105,8 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   protected String makeConditionalQuery(Mutation mutation) {
-    String concatPartitionKey = getConcatPartitionKey(mutation);
-    ConditionQueryBuilder builder = new ConditionQueryBuilder(concatPartitionKey);
-
-    mutation
-        .getClusteringKey()
-        .ifPresent(
-            k -> {
-              builder.withClusteringKey(k);
-            });
+    String id = getId(mutation);
+    ConditionQueryBuilder builder = new ConditionQueryBuilder(id);
 
     mutation
         .getCondition()

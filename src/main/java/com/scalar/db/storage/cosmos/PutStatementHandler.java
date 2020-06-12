@@ -40,10 +40,9 @@ public class PutStatementHandler extends MutateStatementHandler {
 
   private void executeCreation(Put put) throws CosmosClientException {
     Record record = makeRecord(put).get();
-    PartitionKey partitionKey = new PartitionKey(getConcatPartitionKey(put));
     CosmosItemRequestOptions options =
         new CosmosItemRequestOptions().setConsistencyLevel(convert(put));
 
-    getContainer(put).createItem(record, partitionKey, options);
+    getContainer(put).upsertItem(record, options);
   }
 }

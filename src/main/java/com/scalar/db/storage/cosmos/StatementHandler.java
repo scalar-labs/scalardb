@@ -10,7 +10,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,7 +130,7 @@ public abstract class StatementHandler {
 
     TableMetadata metadata = metadataHandler.getTableMetadata(operation);
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    Set<String> keyNames = new HashSet<>();
+    Set<String> keyNames = new LinkedHashSet<>();
     keyNames.addAll(metadata.getPartitionKeyNames());
     keyNames.addAll(metadata.getClusteringKeyNames());
     keyNames.forEach(
