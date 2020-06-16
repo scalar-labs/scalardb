@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientException;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
-import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.exception.storage.NoMutationException;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
@@ -21,7 +21,7 @@ public class PutStatementHandler extends MutateStatementHandler {
   }
 
   @Override
-  protected List<Record> execute(Operation operation) throws CosmosClientException {
+  protected List<Record> execute(Operation operation) throws CosmosException, NoMutationException {
     checkArgument(operation, Put.class);
     Put put = (Put) operation;
 
@@ -38,10 +38,9 @@ public class PutStatementHandler extends MutateStatementHandler {
     return Collections.emptyList();
   }
 
-  private void executeCreation(Put put) throws CosmosClientException {
+  private void executeCreation(Put put) throws CosmosException {
     Record record = makeRecord(put).get();
-    CosmosItemRequestOptions options =
-        new CosmosItemRequestOptions().setConsistencyLevel(convert(put));
+    CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
     getContainer(put).upsertItem(record, options);
   }

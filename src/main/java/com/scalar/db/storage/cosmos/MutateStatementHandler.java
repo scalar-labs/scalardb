@@ -1,18 +1,23 @@
 package com.scalar.db.storage.cosmos;
 
-import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientException;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosStoredProcedure;
-import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
-import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Operation;
-import com.scalar.db.io.Value;
-import java.util.Optional;
+import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.azure.cosmos.models.PartitionKey;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
+import com.scalar.db.api.Put;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.Value;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,45 +26,45 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
-  private final String DELETE_IF = "deleteIf.js";
 
   public MutateStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
     super(client, metadataHandler);
   }
 
+  @Override
+  @Nonnull
+  public List<Record> handle(Operation operation) throws ExecutionException {
+    try {
+      List<Record> results = execute(operation);
+
+      return results;
+    } catch (NoMutationException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      LOGGER.error(e.getMessage());
+      throw new ExecutionException(e.getMessage(), e);
+    }
+  }
+
   protected void executeStoredProcedure(String storedProcedureName, Mutation mutation)
-      throws CosmosClientException {
+      throws CosmosException, NoMutationException {
     Optional<Record> record = makeRecord(mutation);
     String query = makeConditionalQuery(mutation);
-    Object[] args = record.isPresent() ? new Object[] {record.get(), query} : new Object[] {query};
+    List<Object> args =
+        record.isPresent()
+            ? new ArrayList<>(Arrays.asList(record.get(), query))
+            : new ArrayList<>(Arrays.asList(query));
 
     CosmosStoredProcedureRequestOptions options =
         new CosmosStoredProcedureRequestOptions()
-            .setConsistencyLevel(convert(mutation))
             .setPartitionKey(new PartitionKey(getConcatPartitionKey(mutation)));
 
     CosmosStoredProcedure storedProcedure =
         getContainer(mutation).getScripts().getStoredProcedure(storedProcedureName);
-    storedProcedure.execute(args, options);
-  }
+    CosmosStoredProcedureResponse response = storedProcedure.execute(args, options);
 
-  /**
-   * Returns a {@link CosmosItemRequestOptions} with the consistency level for the specified {@link
-   * Operation}
-   *
-   * @param operation an {@code Operation}
-   */
-  protected ConsistencyLevel convert(Operation operation) {
-    switch (operation.getConsistency()) {
-      case SEQUENTIAL:
-        return ConsistencyLevel.STRONG;
-      case EVENTUAL:
-        return ConsistencyLevel.EVENTUAL;
-      case LINEARIZABLE:
-        return ConsistencyLevel.STRONG;
-      default:
-        LOGGER.warn("Unsupported consistency is specified. SEQUENTIAL is being used instead.");
-        return ConsistencyLevel.STRONG;
+    if (!response.getResponseAsString().equals("true")) {
+      throw new NoMutationException("no mutation was applied.");
     }
   }
 

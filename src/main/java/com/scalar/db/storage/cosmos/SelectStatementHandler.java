@@ -1,7 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.models.FeedOptions;
+import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.Lists;
@@ -64,8 +64,8 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     String query = new String(builder);
-    // TODO: FeedOption will be replaced in the next SDK version
-    FeedOptions options = new FeedOptions().setPartitionKey(new PartitionKey(concatPartitionKey));
+    CosmosQueryRequestOptions options =
+        new CosmosQueryRequestOptions().setPartitionKey(new PartitionKey(concatPartitionKey));
 
     CosmosPagedIterable<Record> iterable =
         getContainer(scan).queryItems(query, options, Record.class);

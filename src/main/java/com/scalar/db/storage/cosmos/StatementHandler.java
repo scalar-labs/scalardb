@@ -3,11 +3,12 @@ package com.scalar.db.storage.cosmos;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientException;
 import com.azure.cosmos.CosmosContainer;
+import com.azure.cosmos.CosmosException;
 import com.google.common.base.Joiner;
 import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -56,7 +57,8 @@ public abstract class StatementHandler {
     }
   }
 
-  protected abstract List<Record> execute(Operation operation) throws CosmosClientException;
+  protected abstract List<Record> execute(Operation operation)
+      throws CosmosException, NoMutationException;
 
   public static void checkArgument(Operation actual, Class<? extends Operation>... expected) {
     for (Class<? extends Operation> e : expected) {

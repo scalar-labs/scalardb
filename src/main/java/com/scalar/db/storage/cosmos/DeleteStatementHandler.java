@@ -1,11 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientException;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
+import com.scalar.db.exception.storage.NoMutationException;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
@@ -19,7 +20,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
   }
 
   @Override
-  protected List<Record> execute(Operation operation) throws CosmosClientException {
+  protected List<Record> execute(Operation operation) throws CosmosException, NoMutationException {
     checkArgument(operation, Delete.class);
     Delete delete = (Delete) operation;
 
@@ -32,11 +33,10 @@ public class DeleteStatementHandler extends MutateStatementHandler {
     return Collections.emptyList();
   }
 
-  private void executeDeletion(Delete delete) throws CosmosClientException {
+  private void executeDeletion(Delete delete) throws CosmosException {
     String id = getId(delete);
     PartitionKey partitionKey = new PartitionKey(getConcatPartitionKey(delete));
-    CosmosItemRequestOptions options =
-        new CosmosItemRequestOptions().setConsistencyLevel(convert(delete));
+    CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
     getContainer(delete).deleteItem(id, partitionKey, options);
   }

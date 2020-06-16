@@ -1,7 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientException;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Operation;
@@ -46,8 +46,7 @@ public class TableMetadataHandler {
       return container
           .readItem(fullName, new PartitionKey(fullName), TableMetadata.class)
           .getItem();
-    } catch (CosmosClientException e) {
-      // TODO: retry?
+    } catch (CosmosException e) {
       throw new StorageRuntimeException("Failed to read the table metadata", e);
     }
   }

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
+import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.google.inject.Inject;
@@ -46,6 +47,7 @@ public class Cosmos implements DistributedStorage {
             .endpoint(config.getContactPoints().get(0))
             .key(config.getPassword())
             .directMode()
+            .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
     this.metadataHandler = new TableMetadataHandler(client);
@@ -117,12 +119,15 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    // TODO: BatchStatementHandler
-    for (Mutation m : mutations) {
-      if (m instanceof Put) {
-        put((Put) m);
-      } else if (m instanceof Delete) {
-        delete((Delete) m);
+    if (mutations.size() > 1) {
+      // TODO: Consider how to batch mutations
+      throw new IllegalArgumentException("Batch of mutations isn't supported for Cosmos DB");
+    } else if (mutations.size() == 1) {
+      Mutation mutation = mutations.get(0);
+      if (mutation instanceof Put) {
+        put((Put) mutation);
+      } else if (mutation instanceof Delete) {
+        delete((Delete) mutation);
       }
     }
   }

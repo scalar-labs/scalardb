@@ -93,7 +93,7 @@ public class ResultImpl implements Result {
     recordValues.putAll(record.getPartitionKey());
     recordValues.putAll(record.getClusteringKey());
 
-    // TODO: this isn't actual projection...
+    // This isn't actual projection...
     if (selection.getProjections().size() == 0) {
       recordValues.putAll(record.getValues());
     } else {
