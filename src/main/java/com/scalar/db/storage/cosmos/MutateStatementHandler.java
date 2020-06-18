@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import org.jooq.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,7 +113,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
   protected String makeConditionalQuery(Mutation mutation) {
     String id = getId(mutation);
     ConditionQueryBuilder builder = new ConditionQueryBuilder(id);
-
     mutation
         .getCondition()
         .ifPresent(
@@ -120,6 +120,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
               c.accept(builder);
             });
 
-    return builder.build();
+    return builder.getQuery();
   }
 }

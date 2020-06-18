@@ -9,11 +9,16 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Value;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
+import org.jooq.Field;
+import org.jooq.OrderField;
+import org.jooq.SQLDialect;
+import org.jooq.SelectSelectStep;
+import org.jooq.conf.ParamType;
+import org.jooq.impl.DSL;
 
 public class SelectStatementHandler extends StatementHandler {
   public SelectStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
@@ -47,23 +52,25 @@ public class SelectStatementHandler extends StatementHandler {
     checkArgument(operation, Scan.class);
     Scan scan = (Scan) operation;
 
-    // TODO: replace StringBuilder with SQL builder
-    StringBuilder builder = new StringBuilder();
-
     String concatPartitionKey = getConcatPartitionKey(scan);
-    String where = "r.concatPartitionKey = '" + concatPartitionKey + "'";
-    builder.append("SELECT * FROM Record r WHERE " + where);
+    SelectSelectStep select =
+        (SelectSelectStep)
+            DSL.using(SQLDialect.DEFAULT)
+                .selectFrom("Record r")
+                .where(DSL.field("r.concatPartitionKey").eq(concatPartitionKey));
 
-    setStart(builder, scan);
-    setEnd(builder, scan);
+    setStart(select, scan);
+    setEnd(select, scan);
 
-    setOrderings(builder, scan.getOrderings());
+    setOrderings(select, scan.getOrderings());
 
+    String query = select.getSQL(ParamType.INLINED);
     if (scan.getLimit() > 0) {
-      builder.append(" OFFSET 0 LIMIT " + scan.getLimit());
+      // Add limit as a string
+      // because JOOQ doesn't support OFFSET LIMIT clause which Cosmos DB requires
+      query += " offset 0 limit " + scan.getLimit();
     }
 
-    String query = new String(builder);
     CosmosQueryRequestOptions options =
         new CosmosQueryRequestOptions().setPartitionKey(new PartitionKey(concatPartitionKey));
 
@@ -73,34 +80,32 @@ public class SelectStatementHandler extends StatementHandler {
     return Lists.newArrayList(iterable);
   }
 
-  private void setStart(StringBuilder builder, Scan scan) {
+  private void setStart(SelectSelectStep select, Scan scan) {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              ValueBinder binder = new ValueBinder(builder);
+              ValueBinder binder = new ValueBinder();
               List<Value> start = k.get();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
                         Value value = start.get(i);
-                        builder.append(" AND r.clusteringKey." + value.getName());
+                        Field field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
-                            builder.append(" >= ");
-                            value.accept(binder);
+                            binder.set(v -> select.where(field.greaterOrEqual(v)));
                           } else {
-                            builder.append(" > ");
-                            value.accept(binder);
+                            binder.set(v -> select.where(field.greaterThan(v)));
                           }
                         } else {
-                          builder.append(" = ");
-                          value.accept(binder);
+                          binder.set(v -> select.where(field.equal(v)));
                         }
+                        value.accept(binder);
                       });
             });
   }
 
-  private void setEnd(StringBuilder builder, Scan scan) {
+  private void setEnd(SelectSelectStep select, Scan scan) {
     if (!scan.getEndClusteringKey().isPresent()) {
       return;
     }
@@ -108,41 +113,38 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              ValueBinder binder = new ValueBinder(builder);
+              ValueBinder binder = new ValueBinder();
               List<Value> end = k.get();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {
                         Value value = end.get(i);
-                        builder.append(" AND r.clusteringKey." + value.getName());
+                        Field field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
-                            builder.append(" <= ");
-                            value.accept(binder);
+                            binder.set(v -> select.where(field.lessOrEqual(v)));
                           } else {
-                            builder.append(" < ");
-                            value.accept(binder);
+                            binder.set(v -> select.where(field.lessThan(v)));
                           }
                         } else {
-                          builder.append(" = ");
-                          value.accept(binder);
+                          binder.set(v -> select.where(field.equal(v)));
                         }
+                        value.accept(binder);
                       });
             });
   }
 
-  private void setOrderings(StringBuilder builder, List<Scan.Ordering> scanOrderings) {
+  private void setOrderings(SelectSelectStep select, List<Scan.Ordering> scanOrderings) {
     if (scanOrderings.isEmpty()) {
       return;
     }
-    builder.append(" ORDER BY");
 
-    List<String> orderings = new ArrayList<>();
     scanOrderings.forEach(
         o -> {
-          String order = (o.getOrder() == Scan.Ordering.Order.ASC) ? "ASC" : "DESC";
-          orderings.add("r.clusteringKey." + o.getName() + " " + order);
+          Field field = DSL.field("r.clusteringKey." + o.getName());
+          OrderField orderField =
+              (o.getOrder() == Scan.Ordering.Order.ASC) ? field.asc() : field.desc();
+          select.orderBy(orderField);
         });
-    builder.append(" " + String.join(",", orderings));
   }
 }

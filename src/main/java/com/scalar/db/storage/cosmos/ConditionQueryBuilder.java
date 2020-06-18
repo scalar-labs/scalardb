@@ -7,7 +7,13 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
+import org.jooq.Field;
+import org.jooq.SQLDialect;
+import org.jooq.SelectSelectStep;
+import org.jooq.conf.ParamType;
+import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,18 +25,18 @@ import org.slf4j.LoggerFactory;
 @NotThreadSafe
 public class ConditionQueryBuilder implements MutationConditionVisitor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConditionQueryBuilder.class);
-  private final StringBuilder builder;
+  private final SelectSelectStep select;
   private final ValueBinder binder;
 
   public ConditionQueryBuilder(String id) {
-    // TODO: replace StringBuilder with SQL statement builder
-    builder = new StringBuilder();
-    builder.append("SELECT * FROM Record r WHERE r.id = '" + id + "'");
-    binder = new ValueBinder(builder);
+    select =
+        (SelectSelectStep)
+            DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+    binder = new ValueBinder();
   }
 
-  public String build() {
-    return new String(builder);
+  public String getQuery() {
+    return select.getSQL(ParamType.INLINED);
   }
 
   /**
@@ -44,8 +50,7 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
         .getExpressions()
         .forEach(
             e -> {
-              builder.append(" AND r.values." + e.getName());
-              appendOperator(e);
+              binder.set(createConditionWith(e));
               e.getValue().accept(binder);
             });
   }
@@ -81,8 +86,7 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
         .getExpressions()
         .forEach(
             e -> {
-              builder.append(" AND r." + e.getName());
-              appendOperator(e);
+              binder.set(createConditionWith(e));
               e.getValue().accept(binder);
             });
   }
@@ -97,26 +101,22 @@ public class ConditionQueryBuilder implements MutationConditionVisitor {
     // nothing to do
   }
 
-  private void appendOperator(ConditionalExpression e) {
+  private <T> Consumer<T> createConditionWith(ConditionalExpression e) {
+    // TODO: for a clustering key?
+    Field field = DSL.field("r.values." + e.getName());
     switch (e.getOperator()) {
       case EQ:
-        builder.append(" = ");
-        break;
+        return v -> select.where(field.equal(v));
       case NE:
-        builder.append(" != ");
-        break;
+        return v -> select.where(field.notEqual(v));
       case GT:
-        builder.append(" > ");
-        break;
+        return v -> select.where(field.greaterThan(v));
       case GTE:
-        builder.append(" >= ");
-        break;
+        return v -> select.where(field.greaterOrEqual(v));
       case LT:
-        builder.append(" < ");
-        break;
+        return v -> select.where(field.lessThan(v));
       case LTE:
-        builder.append(" <= ");
-        break;
+        return v -> select.where(field.lessOrEqual(v));
       default:
         // never comes here because ConditionalExpression accepts only above operators
         throw new IllegalArgumentException(e.getOperator() + " is not supported");
