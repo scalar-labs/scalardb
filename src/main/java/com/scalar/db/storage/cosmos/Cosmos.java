@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A storage implementation with Cosmos DB for {@link DistributedStorage}.
+ * A storage implementation with Cosmos DB for {@link DistributedStorage}
  *
  * @author Yuji Ito
  */

@@ -10,6 +10,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
+/**
+ * A metadata class for a table of Scalar DB to know the type of each column
+ *
+ * @author Hiroyuki Yamada
+ */
 public class TableMetadata {
   private String id;
   private SortedSet<String> partitionKeyNames;

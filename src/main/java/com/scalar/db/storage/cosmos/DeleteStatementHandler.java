@@ -11,6 +11,11 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
 
+/**
+ * A handler class for delete statements
+ *
+ * @author Yuji Ito
+ */
 @ThreadSafe
 public class DeleteStatementHandler extends MutateStatementHandler {
   private final String DELETE_IF = "deleteIf.js";

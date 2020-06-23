@@ -3,6 +3,11 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
+/**
+ * A record class to present a row of Scalar DB as a document on Cosmos DB
+ *
+ * @author Yuji Ito
+ */
 public class Record {
   private String id;
   private String concatenatedPartitionKey;

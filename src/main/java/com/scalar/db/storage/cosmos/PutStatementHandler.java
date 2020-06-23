@@ -11,6 +11,11 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
 
+/**
+ * A handler class for put statements
+ *
+ * @author Yuji Ito
+ */
 @ThreadSafe
 public class PutStatementHandler extends MutateStatementHandler {
   private final String PUT_IF_NOT_EXISTS = "putIfNotExists.js";

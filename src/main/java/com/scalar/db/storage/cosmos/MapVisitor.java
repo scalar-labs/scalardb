@@ -14,7 +14,7 @@ import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * Makes a map to be used to create {@link Record}
+ * A visitor to make a map to be used to create {@link Record}
  *
  * @author Yuji Ito
  */

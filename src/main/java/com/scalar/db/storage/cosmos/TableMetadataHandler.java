@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * Read and cache {@link TableMetadata} to know the type of each column
+ * A handler to read and cache {@link TableMetadata} to know the type of each column
  *
  * @author Yuji Ito
  */

@@ -20,6 +20,11 @@ import org.jooq.SelectSelectStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 
+/**
+ * A handler class for select statements
+ *
+ * @author Yuji Ito
+ */
 public class SelectStatementHandler extends StatementHandler {
   public SelectStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
     super(client, metadataHandler);
