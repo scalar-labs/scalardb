@@ -14,7 +14,7 @@ import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * Makes a concatenated key string for the partition key
+ * A visitor class to make a concatenated key string for the partition key
  *
  * @author Yuji Ito
  */

@@ -32,13 +32,13 @@ public class PutStatementHandler extends MutateStatementHandler {
         executeStoredProcedure(PUT_IF, put);
       }
     } else {
-      executeCreation(put);
+      execute(put);
     }
 
     return Collections.emptyList();
   }
 
-  private void executeCreation(Put put) throws CosmosException {
+  private void execute(Put put) throws CosmosException {
     Record record = makeRecord(put).get();
     CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 

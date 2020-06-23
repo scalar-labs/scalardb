@@ -3,7 +3,6 @@ package com.scalar.db.storage.cosmos;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
 import java.util.Iterator;
-import java.util.List;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -13,8 +12,8 @@ public final class ScannerIterator implements Iterator<Result> {
   private final Selection selection;
   private final TableMetadata metadata;
 
-  public ScannerIterator(List<Record> records, Selection selection, TableMetadata metadata) {
-    iterator = records.iterator();
+  public ScannerIterator(Iterator<Record> iterator, Selection selection, TableMetadata metadata) {
+    this.iterator = iterator;
     this.selection = selection;
     this.metadata = metadata;
   }

@@ -1,8 +1,10 @@
 package com.scalar.db.storage.cosmos;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -13,6 +15,7 @@ public class TableMetadata {
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
   private SortedMap<String, String> columns;
+  private List<String> keyNames;
 
   public TableMetadata() {}
 
@@ -32,19 +35,37 @@ public class TableMetadata {
     this.columns = ImmutableSortedMap.copyOf(columns);
   }
 
+  public void setKeyNames(List<String> keyNames) {
+    this.keyNames = ImmutableList.copyOf(keyNames);
+  }
+
   public String getId() {
     return id;
   }
 
   public Set<String> getPartitionKeyNames() {
-    return Collections.unmodifiableSortedSet(partitionKeyNames);
+    return ImmutableSortedSet.copyOf(partitionKeyNames);
   }
 
   public Set<String> getClusteringKeyNames() {
-    return Collections.unmodifiableSortedSet(clusteringKeyNames);
+    return ImmutableSortedSet.copyOf(clusteringKeyNames);
   }
 
   public Map<String, String> getColumns() {
     return Collections.unmodifiableSortedMap(columns);
+  }
+
+  public List<String> getKeyNames() {
+    if (keyNames != null) {
+      return keyNames;
+    }
+
+    keyNames =
+        new ImmutableList.Builder<String>()
+            .addAll(partitionKeyNames)
+            .addAll(clusteringKeyNames)
+            .build();
+
+    return keyNames;
   }
 }

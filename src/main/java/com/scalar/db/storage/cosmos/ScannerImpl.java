@@ -45,7 +45,7 @@ public final class ScannerImpl implements Scanner {
 
   @Override
   public Iterator<Result> iterator() {
-    return new ScannerIterator(records, selection, metadata);
+    return new ScannerIterator(records.iterator(), selection, metadata);
   }
 
   @Override

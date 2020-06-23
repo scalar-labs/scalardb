@@ -3,6 +3,7 @@ package com.scalar.db.storage.cosmos;
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
+import com.azure.cosmos.CosmosContainer;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -32,6 +33,9 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class Cosmos implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
+  private final String METADATA_DATABASE = "scalardb";
+  private final String METADATA_CONTAINER = "metadata";
+
   private final CosmosClient client;
   private final TableMetadataHandler metadataHandler;
   private final SelectStatementHandler selectStatementHandler;
@@ -50,7 +54,9 @@ public class Cosmos implements DistributedStorage {
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
-    this.metadataHandler = new TableMetadataHandler(client);
+    CosmosContainer container =
+        client.getDatabase(METADATA_DATABASE).getContainer(METADATA_CONTAINER);
+    this.metadataHandler = new TableMetadataHandler(container);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataHandler);
     this.putStatementHandler = new PutStatementHandler(client, metadataHandler);

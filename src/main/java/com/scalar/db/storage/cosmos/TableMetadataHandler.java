@@ -1,8 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
-import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosContainer;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.StorageRuntimeException;
@@ -20,8 +19,8 @@ public class TableMetadataHandler {
   private final CosmosContainer container;
   private final Map<String, TableMetadata> tableMetadataMap;
 
-  public TableMetadataHandler(CosmosClient client) {
-    this.container = client.getDatabase("scalardb").getContainer("metadata");
+  public TableMetadataHandler(CosmosContainer container) {
+    this.container = container;
     this.tableMetadataMap = new ConcurrentHashMap<>();
   }
 

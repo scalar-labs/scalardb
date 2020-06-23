@@ -11,10 +11,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -83,7 +81,7 @@ public abstract class StatementHandler {
   }
 
   @Nonnull
-  protected String getConcatPartitionKey(Operation operation) {
+  protected String getConcatenatedPartitionKey(Operation operation) {
     Map<String, Value> keyMap = new HashMap<>();
     operation
         .getPartitionKey()
@@ -132,9 +130,7 @@ public abstract class StatementHandler {
 
     TableMetadata metadata = metadataHandler.getTableMetadata(operation);
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    Set<String> keyNames = new LinkedHashSet<>();
-    keyNames.addAll(metadata.getPartitionKeyNames());
-    keyNames.addAll(metadata.getClusteringKeyNames());
+    List<String> keyNames = metadata.getKeyNames();
     keyNames.forEach(
         name -> {
           if (keyMap.containsKey(name)) {

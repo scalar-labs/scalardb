@@ -10,7 +10,6 @@ import com.scalar.db.api.PutIfNotExists;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jooq.Field;
-import org.jooq.SQLDialect;
 import org.jooq.SelectSelectStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
@@ -18,20 +17,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Makes a query statement for a stored procedure of Cosmos DB from conditions
+ * A builder to make a query statement for a stored procedure of Cosmos DB from conditions
  *
  * @author Yuji Ito
  */
 @NotThreadSafe
-public class ConditionQueryBuilder implements MutationConditionVisitor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConditionQueryBuilder.class);
+public class ConditionalQueryBuilder implements MutationConditionVisitor {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConditionalQueryBuilder.class);
   private final SelectSelectStep select;
   private final ValueBinder binder;
 
-  public ConditionQueryBuilder(String id) {
-    select =
-        (SelectSelectStep)
-            DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+  public ConditionalQueryBuilder(SelectSelectStep select) {
+    this.select = select;
     binder = new ValueBinder();
   }
 

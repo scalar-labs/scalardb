@@ -27,15 +27,15 @@ public class DeleteStatementHandler extends MutateStatementHandler {
     if (delete.getCondition().isPresent()) {
       executeStoredProcedure(DELETE_IF, delete);
     } else {
-      executeDeletion(delete);
+      execute(delete);
     }
 
     return Collections.emptyList();
   }
 
-  private void executeDeletion(Delete delete) throws CosmosException {
+  private void execute(Delete delete) throws CosmosException {
     String id = getId(delete);
-    PartitionKey partitionKey = new PartitionKey(getConcatPartitionKey(delete));
+    PartitionKey partitionKey = new PartitionKey(getConcatenatedPartitionKey(delete));
     CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
     getContainer(delete).deleteItem(id, partitionKey, options);

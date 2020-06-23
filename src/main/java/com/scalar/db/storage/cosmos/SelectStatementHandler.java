@@ -40,8 +40,8 @@ public class SelectStatementHandler extends StatementHandler {
     Get get = (Get) operation;
 
     String id = getId(get);
-    String concatPartitionKey = getConcatPartitionKey(get);
-    PartitionKey partitionKey = new PartitionKey(concatPartitionKey);
+    String concatenatedPartitionKey = getConcatenatedPartitionKey(get);
+    PartitionKey partitionKey = new PartitionKey(concatenatedPartitionKey);
 
     Record record = getContainer(get).readItem(id, partitionKey, Record.class).getItem();
 
@@ -52,12 +52,12 @@ public class SelectStatementHandler extends StatementHandler {
     checkArgument(operation, Scan.class);
     Scan scan = (Scan) operation;
 
-    String concatPartitionKey = getConcatPartitionKey(scan);
+    String concatenatedPartitionKey = getConcatenatedPartitionKey(scan);
     SelectSelectStep select =
         (SelectSelectStep)
             DSL.using(SQLDialect.DEFAULT)
                 .selectFrom("Record r")
-                .where(DSL.field("r.concatPartitionKey").eq(concatPartitionKey));
+                .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
 
     setStart(select, scan);
     setEnd(select, scan);
@@ -72,7 +72,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     CosmosQueryRequestOptions options =
-        new CosmosQueryRequestOptions().setPartitionKey(new PartitionKey(concatPartitionKey));
+        new CosmosQueryRequestOptions().setPartitionKey(new PartitionKey(concatenatedPartitionKey));
 
     CosmosPagedIterable<Record> iterable =
         getContainer(scan).queryItems(query, options, Record.class);

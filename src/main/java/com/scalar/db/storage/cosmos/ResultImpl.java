@@ -89,13 +89,12 @@ public class ResultImpl implements Result {
   }
 
   private void interpret(Record record, Selection selection, TableMetadata metadata) {
-    Map<String, Object> recordValues = new HashMap<>();
-    recordValues.putAll(record.getPartitionKey());
-    recordValues.putAll(record.getClusteringKey());
+    record.getPartitionKey().forEach((name, value) -> add(name, value));
+    record.getClusteringKey().forEach((name, value) -> add(name, value));
 
     // This isn't actual projection...
-    if (selection.getProjections().size() == 0) {
-      recordValues.putAll(record.getValues());
+    if (selection.getProjections().isEmpty()) {
+      record.getValues().forEach((name, value) -> add(name, value));
     } else {
       Map<String, Object> onlyValues = record.getValues();
       selection
@@ -103,20 +102,18 @@ public class ResultImpl implements Result {
           .forEach(
               name -> {
                 if (onlyValues.containsKey(name)) {
-                  recordValues.put(name, onlyValues.get(name));
+                  add(name, onlyValues.get(name));
                 }
               });
     }
+  }
 
-    recordValues.forEach(
-        (name, value) -> {
-          if (metadata.getColumns().containsKey(name)) {
-            values.put(name, convert(value, name, metadata.getColumns().get(name)));
-          } else {
-            throw new InvalidMetadataException(
-                "metadata doesn't have the specified column: " + name);
-          }
-        });
+  private void add(String name, Object value) {
+    if (metadata.getColumns().containsKey(name)) {
+      values.put(name, convert(value, name, metadata.getColumns().get(name)));
+    } else {
+      throw new InvalidMetadataException("metadata doesn't have the specified column: " + name);
+    }
   }
 
   private Optional<Key> getKey(Set<String> names) {

@@ -13,13 +13,16 @@ import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Value;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import org.jooq.Query;
+import org.jooq.SQLDialect;
+import org.jooq.SelectSelectStep;
+import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,13 +55,11 @@ public abstract class MutateStatementHandler extends StatementHandler {
     Optional<Record> record = makeRecord(mutation);
     String query = makeConditionalQuery(mutation);
     List<Object> args =
-        record.isPresent()
-            ? new ArrayList<>(Arrays.asList(record.get(), query))
-            : new ArrayList<>(Arrays.asList(query));
+        record.isPresent() ? Arrays.asList(record.get(), query) : Arrays.asList(query);
 
     CosmosStoredProcedureRequestOptions options =
         new CosmosStoredProcedureRequestOptions()
-            .setPartitionKey(new PartitionKey(getConcatPartitionKey(mutation)));
+            .setPartitionKey(new PartitionKey(getConcatenatedPartitionKey(mutation)));
 
     CosmosStoredProcedure storedProcedure =
         getContainer(mutation).getScripts().getStoredProcedure(storedProcedureName);
@@ -78,26 +79,21 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
     Record record = new Record();
     record.setId(getId(put));
-    record.setConcatPartitionKey(getConcatPartitionKey(put));
+    record.setConcatenatedPartitionKey(getConcatenatedPartitionKey(put));
 
     MapVisitor partitionKeyVisitor = new MapVisitor();
     for (Value v : put.getPartitionKey()) {
       v.accept(partitionKeyVisitor);
     }
-    record.setPartitionKey(partitionKeyVisitor.get());
+    record.setPartitionKey(toMap(put.getPartitionKey().get()));
 
     put.getClusteringKey()
         .ifPresent(
             k -> {
-              MapVisitor clusteringKeyVisitor = new MapVisitor();
-              k.get()
-                  .forEach(
-                      v -> {
-                        v.accept(clusteringKeyVisitor);
-                      });
-              record.setClusteringKey(clusteringKeyVisitor.get());
+              record.setClusteringKey(toMap(k.get()));
             });
 
+    record.setValues(toMap(put.getValues().values()));
     MapVisitor visitor = new MapVisitor();
     put.getValues()
         .values()
@@ -112,7 +108,11 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
   protected String makeConditionalQuery(Mutation mutation) {
     String id = getId(mutation);
-    ConditionQueryBuilder builder = new ConditionQueryBuilder(id);
+    SelectSelectStep select =
+        (SelectSelectStep)
+            DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+
+    ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
     mutation
         .getCondition()
         .ifPresent(
@@ -121,5 +121,12 @@ public abstract class MutateStatementHandler extends StatementHandler {
             });
 
     return builder.getQuery();
+  }
+
+  private Map<String, Object> toMap(Collection<Value> values) {
+    MapVisitor visitor = new MapVisitor();
+    values.forEach(v -> v.accept(visitor));
+
+    return visitor.get();
   }
 }
