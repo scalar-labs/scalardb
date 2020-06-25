@@ -13,8 +13,8 @@ sourceSets {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
-            //srcDir file('src/integration-test/java')
-            srcDir file('src/integration-test/java/com/scalar/db/storage/cosmos')
+            srcDir file('src/integration-test/java')
+            //srcDir file('src/integration-test/java/com/scalar/db/storage/cosmos')
         }
         resources.srcDir file('src/integration-test/resources')
     }

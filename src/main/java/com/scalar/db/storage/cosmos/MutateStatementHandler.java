@@ -21,7 +21,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.jooq.SQLDialect;
-import org.jooq.SelectSelectStep;
+import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,9 +108,8 @@ public abstract class MutateStatementHandler extends StatementHandler {
 
   protected String makeConditionalQuery(Mutation mutation) {
     String id = getId(mutation);
-    SelectSelectStep select =
-        (SelectSelectStep)
-            DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+    SelectConditionStep<org.jooq.Record> select =
+        DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
 
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
     mutation

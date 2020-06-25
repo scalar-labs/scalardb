@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
 import org.jooq.Field;
 import org.jooq.OrderField;
 import org.jooq.SQLDialect;
-import org.jooq.SelectSelectStep;
+import org.jooq.SelectConditionStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 
@@ -58,11 +58,10 @@ public class SelectStatementHandler extends StatementHandler {
     Scan scan = (Scan) operation;
 
     String concatenatedPartitionKey = getConcatenatedPartitionKey(scan);
-    SelectSelectStep select =
-        (SelectSelectStep)
-            DSL.using(SQLDialect.DEFAULT)
-                .selectFrom("Record r")
-                .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+    SelectConditionStep<org.jooq.Record> select =
+        DSL.using(SQLDialect.DEFAULT)
+            .selectFrom("Record r")
+            .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
 
     setStart(select, scan);
     setEnd(select, scan);
@@ -85,7 +84,7 @@ public class SelectStatementHandler extends StatementHandler {
     return Lists.newArrayList(iterable);
   }
 
-  private void setStart(SelectSelectStep select, Scan scan) {
+  private void setStart(SelectConditionStep<org.jooq.Record> select, Scan scan) {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
@@ -95,22 +94,22 @@ public class SelectStatementHandler extends StatementHandler {
                   .forEach(
                       i -> {
                         Value value = start.get(i);
-                        Field field = DSL.field("r.clusteringKey." + value.getName());
+                        Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
-                            binder.set(v -> select.where(field.greaterOrEqual(v)));
+                            binder.set(v -> select.and(field.greaterOrEqual(v)));
                           } else {
-                            binder.set(v -> select.where(field.greaterThan(v)));
+                            binder.set(v -> select.and(field.greaterThan(v)));
                           }
                         } else {
-                          binder.set(v -> select.where(field.equal(v)));
+                          binder.set(v -> select.and(field.equal(v)));
                         }
                         value.accept(binder);
                       });
             });
   }
 
-  private void setEnd(SelectSelectStep select, Scan scan) {
+  private void setEnd(SelectConditionStep<org.jooq.Record> select, Scan scan) {
     if (!scan.getEndClusteringKey().isPresent()) {
       return;
     }
@@ -127,19 +126,20 @@ public class SelectStatementHandler extends StatementHandler {
                         Field field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
-                            binder.set(v -> select.where(field.lessOrEqual(v)));
+                            binder.set(v -> select.and(field.lessOrEqual(v)));
                           } else {
-                            binder.set(v -> select.where(field.lessThan(v)));
+                            binder.set(v -> select.and(field.lessThan(v)));
                           }
                         } else {
-                          binder.set(v -> select.where(field.equal(v)));
+                          binder.set(v -> select.and(field.equal(v)));
                         }
                         value.accept(binder);
                       });
             });
   }
 
-  private void setOrderings(SelectSelectStep select, List<Scan.Ordering> scanOrderings) {
+  private void setOrderings(
+      SelectConditionStep<org.jooq.Record> select, List<Scan.Ordering> scanOrderings) {
     if (scanOrderings.isEmpty()) {
       return;
     }

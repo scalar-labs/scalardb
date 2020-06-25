@@ -96,13 +96,13 @@ public class ResultImpl implements Result {
     if (selection.getProjections().isEmpty()) {
       record.getValues().forEach((name, value) -> add(name, value));
     } else {
-      Map<String, Object> onlyValues = record.getValues();
+      Map<String, Object> recordValues = record.getValues();
       selection
           .getProjections()
           .forEach(
               name -> {
-                if (onlyValues.containsKey(name)) {
-                  add(name, onlyValues.get(name));
+                if (recordValues.containsKey(name)) {
+                  add(name, recordValues.get(name));
                 }
               });
     }

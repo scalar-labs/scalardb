@@ -10,7 +10,7 @@ import com.scalar.db.api.PutIfNotExists;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jooq.Field;
-import org.jooq.SelectSelectStep;
+import org.jooq.SelectConditionStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 import org.slf4j.Logger;
@@ -24,10 +24,10 @@ import org.slf4j.LoggerFactory;
 @NotThreadSafe
 public class ConditionalQueryBuilder implements MutationConditionVisitor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConditionalQueryBuilder.class);
-  private final SelectSelectStep select;
+  private final SelectConditionStep<org.jooq.Record> select;
   private final ValueBinder binder;
 
-  public ConditionalQueryBuilder(SelectSelectStep select) {
+  public ConditionalQueryBuilder(SelectConditionStep<org.jooq.Record> select) {
     this.select = select;
     binder = new ValueBinder();
   }
@@ -100,20 +100,20 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
 
   private <T> Consumer<T> createConditionWith(ConditionalExpression e) {
     // TODO: for a clustering key?
-    Field field = DSL.field("r.values." + e.getName());
+    Field<Object> field = DSL.field("r.values." + e.getName());
     switch (e.getOperator()) {
       case EQ:
-        return v -> select.where(field.equal(v));
+        return v -> select.and(field.equal(v));
       case NE:
-        return v -> select.where(field.notEqual(v));
+        return v -> select.and(field.notEqual(v));
       case GT:
-        return v -> select.where(field.greaterThan(v));
+        return v -> select.and(field.greaterThan(v));
       case GTE:
-        return v -> select.where(field.greaterOrEqual(v));
+        return v -> select.and(field.greaterOrEqual(v));
       case LT:
-        return v -> select.where(field.lessThan(v));
+        return v -> select.and(field.lessThan(v));
       case LTE:
-        return v -> select.where(field.lessOrEqual(v));
+        return v -> select.and(field.lessOrEqual(v));
       default:
         // never comes here because ConditionalExpression accepts only above operators
         throw new IllegalArgumentException(e.getOperator() + " is not supported");
