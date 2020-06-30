@@ -56,4 +56,33 @@ public class Record {
   public Map<String, Object> getValues() {
     return ImmutableMap.copyOf(values);
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof Record)) {
+      return false;
+    }
+
+    Record other = (Record) o;
+    if (!other.getConcatenatedPartitionKey().equals(concatenatedPartitionKey)) {
+      return false;
+    }
+    if (!other.getId().equals(id)) {
+      return false;
+    }
+    if (!other.getPartitionKey().equals(partitionKey)) {
+      return false;
+    }
+    if (!other.getClusteringKey().equals(clusteringKey)) {
+      return false;
+    }
+    if (!other.getValues().equals(values)) {
+      return false;
+    }
+
+    return true;
+  }
 }

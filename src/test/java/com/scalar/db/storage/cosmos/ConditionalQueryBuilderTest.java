@@ -36,7 +36,7 @@ public class ConditionalQueryBuilderTest {
   }
 
   @Test
-  public void getQuery_NoConditions_ShouldReturnQuery() {
+  public void getQuery_NoConditionsGiven_ShouldReturnQuery() {
     // Arrange
     SelectConditionStep<org.jooq.Record> testSelect =
         DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(ANY_ID));
@@ -51,7 +51,7 @@ public class ConditionalQueryBuilderTest {
   }
 
   @Test
-  public void getQuery_GivenPutIf_ShouldReturnQuery() {
+  public void getQuery_PutIfAcceptCalled_ShouldReturnQuery() {
     // Arrange
     SelectConditionStep<org.jooq.Record> testSelect =
         DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(ANY_ID));

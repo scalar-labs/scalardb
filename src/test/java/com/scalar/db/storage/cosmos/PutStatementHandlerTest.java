@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -21,12 +20,13 @@ import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
-import com.azure.cosmos.models.PartitionKey;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIfExists;
+import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Arrays;
@@ -38,17 +38,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class DeleteStatementHandlerTest {
+public class PutStatementHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
+  private static final int ANY_INT_1 = 1;
+  private static final int ANY_INT_2 = 2;
 
-  private DeleteStatementHandler handler;
-  private String id;
-  private PartitionKey cosmosPartitionKey;
+  private PutStatementHandler handler;
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
@@ -63,7 +65,7 @@ public class DeleteStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    handler = new DeleteStatementHandler(client, metadataHandler);
+    handler = new PutStatementHandler(client, metadataHandler);
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
@@ -73,59 +75,58 @@ public class DeleteStatementHandlerTest {
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
-  private Delete prepareDelete() {
+  private Put preparePut() {
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
-    cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
+    Put put =
+        new Put(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+            .forTable(ANY_TABLE_NAME)
+            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
+            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+
+    return put;
   }
 
   @Test
-  public void handle_DeleteWithoutConditionsGiven_ShouldCallDeleteItem() {
+  public void handle_PutWithoutConditionsGiven_ShouldCallUpsertItem() {
     // Arrange
-    when(container.deleteItem(
-            anyString(), any(PartitionKey.class), any(CosmosItemRequestOptions.class)))
+    when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
         .thenReturn(response);
-    Delete delete = prepareDelete();
+    Put put = preparePut();
 
     // Act Assert
     assertThatCode(
             () -> {
-              handler.handle(delete);
+              handler.handle(put);
             })
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container)
-        .deleteItem(eq(id), eq(cosmosPartitionKey), any(CosmosItemRequestOptions.class));
+    verify(container).upsertItem(any(Record.class), any(CosmosItemRequestOptions.class));
   }
 
   @Test
-  public void handle_DeleteWithoutConditionsCosmosExceptionThrown_ShouldThrowExecutionException() {
+  public void handle_PutWithoutConditionsCosmosExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
+    Put put = preparePut();
+
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(container)
-        .deleteItem(anyString(), any(PartitionKey.class), any(CosmosItemRequestOptions.class));
-
-    Delete delete = prepareDelete();
+        .upsertItem(any(Record.class), any(CosmosItemRequestOptions.class));
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              handler.handle(delete);
+              handler.handle(put);
             })
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
 
   @Test
-  public void handle_DeleteWithConditionsGiven_ShouldCallStoredProcedure() {
+  public void handle_PutIfNotExistsGiven_ShouldCallStoredProcedure() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
@@ -133,26 +134,57 @@ public class DeleteStatementHandlerTest {
         .thenReturn(spResponse);
     when(spResponse.getResponseAsString()).thenReturn("true");
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
-    String query = handler.makeConditionalQuery(delete);
+    Put put = preparePut().withCondition(new PutIfNotExists());
+    Record record = handler.makeRecord(put).get();
+    String query = handler.makeConditionalQuery(put);
 
     // Act Assert
     assertThatCode(
             () -> {
-              handler.handle(delete);
+              handler.handle(put);
             })
         .doesNotThrowAnyException();
 
     // Assert
-    verify(cosmosScripts).getStoredProcedure("deleteIf.js");
+    verify(cosmosScripts).getStoredProcedure("putIfNotExists.js");
     ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
-    assertThat((String) captor.getValue().get(0)).isEqualTo(query);
+    assertThat((Record) captor.getValue().get(0)).isEqualTo(record);
+    assertThat((String) captor.getValue().get(1)).isEqualTo(query);
   }
 
   @Test
-  public void handle_DeleteWithConditionsReturnFalseResponse_ShouldThrowNoMutationException() {
+  public void handle_PutIfExistsGiven_ShouldCallStoredProcedure() {
+    // Arrange
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+        .thenReturn(spResponse);
+    when(spResponse.getResponseAsString()).thenReturn("true");
+
+    Put put = preparePut().withCondition(new PutIfExists());
+    Record record = handler.makeRecord(put).get();
+    String query = handler.makeConditionalQuery(put);
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(put);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(cosmosScripts).getStoredProcedure("putIf.js");
+    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+    verify(storedProcedure)
+        .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
+    assertThat((Record) captor.getValue().get(0)).isEqualTo(record);
+    assertThat((String) captor.getValue().get(1)).isEqualTo(query);
+  }
+
+  @Test
+  public void handle_PutWithConditionsReturnFalseResponse_ShouldThrowNoMutationException() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
@@ -160,18 +192,18 @@ public class DeleteStatementHandlerTest {
         .thenReturn(spResponse);
     when(spResponse.getResponseAsString()).thenReturn("false");
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = preparePut().withCondition(new PutIfExists());
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              handler.handle(delete);
+              handler.handle(put);
             })
         .isInstanceOf(NoMutationException.class);
   }
 
   @Test
-  public void handle_DeleteWithConditionCosmosExceptionThrown_ShouldThrowExecutionException() {
+  public void handle_PutWithConditionCosmosExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
@@ -180,12 +212,12 @@ public class DeleteStatementHandlerTest {
         .when(storedProcedure)
         .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
 
-    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+    Put put = preparePut().withCondition(new PutIfExists());
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              handler.handle(delete);
+              handler.handle(put);
             })
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);

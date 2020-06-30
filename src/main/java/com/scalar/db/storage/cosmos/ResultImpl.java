@@ -2,7 +2,9 @@ package com.scalar.db.storage.cosmos;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.InvalidMetadataException;
@@ -17,7 +19,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class ResultImpl implements Result {
 
   @Override
   public Optional<Key> getPartitionKey() {
-    return getKey(metadata.getClusteringKeyNames());
+    return getKey(metadata.getPartitionKeyNames());
   }
 
   @Override
@@ -60,7 +61,7 @@ public class ResultImpl implements Result {
   @Override
   @Nonnull
   public Map<String, Value> getValues() {
-    return Collections.unmodifiableMap(values);
+    return ImmutableMap.copyOf(values);
   }
 
   @Override
@@ -88,7 +89,8 @@ public class ResultImpl implements Result {
     return MoreObjects.toStringHelper(this).add("values", values).toString();
   }
 
-  private void interpret(Record record, Selection selection, TableMetadata metadata) {
+  @VisibleForTesting
+  void interpret(Record record, Selection selection, TableMetadata metadata) {
     record.getPartitionKey().forEach((name, value) -> add(name, value));
     record.getClusteringKey().forEach((name, value) -> add(name, value));
 

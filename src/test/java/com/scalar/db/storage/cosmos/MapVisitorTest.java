@@ -9,10 +9,11 @@ import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
+import java.nio.ByteBuffer;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ConcatenationVisitorTest {
+public class MapVisitorTest {
   private static final boolean ANY_BOOLEAN = false;
   private static final BooleanValue ANY_BOOLEAN_VALUE =
       new BooleanValue("any_boolean", ANY_BOOLEAN);
@@ -28,97 +29,74 @@ public class ConcatenationVisitorTest {
   private static final TextValue ANY_TEXT_VALUE = new TextValue("any_text", ANY_TEXT);
   private static final byte[] ANY_BLOB = "scalar".getBytes();
   private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
-  private ConcatenationVisitor visitor;
+  private MapVisitor visitor;
 
   @Before
   public void setUp() {
-    visitor = new ConcatenationVisitor();
+    visitor = new MapVisitor();
   }
 
   @Test
-  public void build_AllTypesGiven_ShouldBuildString() {
-    // Act
-    visitor.visit(ANY_BOOLEAN_VALUE);
-    visitor.visit(ANY_INT_VALUE);
-    visitor.visit(ANY_BIGINT_VALUE);
-    visitor.visit(ANY_FLOAT_VALUE);
-    visitor.visit(ANY_DOUBLE_VALUE);
-    visitor.visit(ANY_TEXT_VALUE);
-    visitor.visit(ANY_BLOB_VALUE);
-    String actual = visitor.build();
-
-    // Assert
-    String[] values = actual.split(":");
-    assertThat(values.length).isEqualTo(7);
-    assertThat(values[0]).isEqualTo(String.valueOf(ANY_BOOLEAN));
-    assertThat(values[1]).isEqualTo(String.valueOf(ANY_INT));
-    assertThat(values[2]).isEqualTo(String.valueOf(ANY_BIGINT));
-    assertThat(values[3]).isEqualTo(String.valueOf(ANY_FLOAT));
-    assertThat(values[4]).isEqualTo(String.valueOf(ANY_DOUBLE));
-    assertThat(values[5]).isEqualTo(ANY_TEXT);
-    assertThat(values[6]).isEqualTo(new String(ANY_BLOB));
-  }
-
-  @Test
-  public void visit_BooleanValueAcceptCalled_ShouldBuildBooleanAsString() {
+  public void visit_BooleanValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_BOOLEAN_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_BOOLEAN));
+    assertThat(visitor.get().get(ANY_BOOLEAN_VALUE.getName())).isEqualTo(ANY_BOOLEAN);
   }
 
   @Test
-  public void visit_IntValueAcceptCalled_ShouldBuildIntAsString() {
+  public void visit_IntValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_INT_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_INT));
+    assertThat(visitor.get().get(ANY_INT_VALUE.getName())).isEqualTo(ANY_INT);
   }
 
   @Test
-  public void visit_BigIntValueAcceptCalled_ShouldBuildBigIntAsString() {
+  public void visit_BigIntValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_BIGINT_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_BIGINT));
+    assertThat(visitor.get().get(ANY_BIGINT_VALUE.getName())).isEqualTo(ANY_BIGINT);
   }
 
   @Test
-  public void visit_FloatValueAcceptCalled_ShouldBuildFloatAsString() {
+  public void visit_FloatValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_FLOAT_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_FLOAT));
+    assertThat(visitor.get().get(ANY_FLOAT_VALUE.getName())).isEqualTo(ANY_FLOAT);
   }
 
   @Test
-  public void visit_DoubleValueAcceptCalled_ShouldBuildDoubleAsString() {
+  public void visit_DoubleValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_DOUBLE_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(String.valueOf(ANY_DOUBLE));
+    assertThat(visitor.get().get(ANY_DOUBLE_VALUE.getName())).isEqualTo(ANY_DOUBLE);
   }
 
   @Test
-  public void visit_TextValueAcceptCalled_ShouldBuildText() {
+  public void visit_TextValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_TEXT_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(ANY_TEXT);
+    assertThat(visitor.get().get(ANY_TEXT_VALUE.getName())).isEqualTo(ANY_TEXT);
   }
 
   @Test
-  public void visit_BlobValueAcceptCalled_ShouldBuildBlobAsString() {
+  public void visit_BlobValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_BLOB_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(new String(ANY_BLOB));
+    ByteBuffer any_buffer = (ByteBuffer) ByteBuffer.allocate(ANY_BLOB.length).put(ANY_BLOB).flip();
+    assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(any_buffer);
   }
 }

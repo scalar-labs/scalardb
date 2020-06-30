@@ -82,9 +82,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey(put));
 
     MapVisitor partitionKeyVisitor = new MapVisitor();
-    for (Value v : put.getPartitionKey()) {
-      v.accept(partitionKeyVisitor);
-    }
+    put.getPartitionKey().forEach(v -> v.accept(partitionKeyVisitor));
     record.setPartitionKey(toMap(put.getPartitionKey().get()));
 
     put.getClusteringKey()
