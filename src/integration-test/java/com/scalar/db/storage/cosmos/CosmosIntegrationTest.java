@@ -9,6 +9,7 @@ import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
@@ -49,7 +50,7 @@ public class CosmosIntegrationTest {
   private static final String COL_NAME3 = "c3";
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
-  private static final String PARTITION_KEY = "/concatPartitionKey";
+  private static final String PARTITION_KEY = "/concatenatedPartitionKey";
   private static CosmosClient client;
   private static DistributedStorage storage;
 
@@ -57,7 +58,7 @@ public class CosmosIntegrationTest {
   public void setUp() throws Exception {
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(TABLE, PARTITION_KEY);
-    client.getDatabase(KEYSPACE).createContainerIfNotExists(containerProperties, 400);
+    client.getDatabase(KEYSPACE).createContainerIfNotExists(containerProperties);
 
     storage.with(KEYSPACE, TABLE);
   }
@@ -271,7 +272,9 @@ public class CosmosIntegrationTest {
       throws ExecutionException {
     // Arrange
     List<Put> puts = preparePuts();
-    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+    storage.put(puts.get(0));
+    storage.put(puts.get(1));
+    storage.put(puts.get(2));
     Scan scan =
         new Scan(new Key(new IntValue(COL_NAME1, 0)))
             .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
@@ -294,7 +297,9 @@ public class CosmosIntegrationTest {
       throws ExecutionException {
     // Arrange
     List<Put> puts = preparePuts();
-    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+    storage.put(puts.get(0));
+    storage.put(puts.get(1));
+    storage.put(puts.get(2));
     Scan scan =
         new Scan(new Key(new IntValue(COL_NAME1, 0)))
             .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
@@ -316,7 +321,9 @@ public class CosmosIntegrationTest {
   public void scan_ScanWithLimitGiven_ShouldReturnGivenNumberOfResults() throws ExecutionException {
     // setup
     List<Put> puts = preparePuts();
-    storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
+    storage.put(puts.get(0));
+    storage.put(puts.get(1));
+    storage.put(puts.get(2));
 
     Scan scan =
         new Scan(new Key(new IntValue(COL_NAME1, 0)))
@@ -360,6 +367,95 @@ public class CosmosIntegrationTest {
         .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
   }
 
+  @Test
+  public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+    int cKey = 0;
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+
+    // Act
+    Delete delete = prepareDelete(pKey, cKey);
+    assertThatCode(
+            () -> {
+              storage.delete(delete);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    List<Result> results = storage.scan(new Scan(partitionKey)).all();
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 1)));
+    assertThat(results.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 2)));
+  }
+
+  @Test
+  public void mutate_SinglePutGiven_ShouldStoreProperly() throws Exception {
+    // Arrange
+    int pKey = 0;
+    int cKey = 0;
+    List<Put> puts = preparePuts();
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Get get = new Get(partitionKey, clusteringKey);
+
+    // Act
+    storage.mutate(Arrays.asList(puts.get(pKey * 2 + cKey)));
+
+    // Assert
+    Optional<Result> actual = storage.get(get);
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get().getValue(COL_NAME2))
+        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(COL_NAME3))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
+    assertThat(actual.get().getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
+    assertThat(actual.get().getValue(COL_NAME5))
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
+  }
+
+  @Test
+  public void mutate_SingleDeleteGiven_ShouldDeleteRecordProperly() throws Exception {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+    int cKey = 0;
+
+    // Act
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Delete delete = prepareDelete(pKey, cKey);
+    assertThatCode(
+            () -> {
+              storage.mutate(Arrays.asList(delete));
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    List<Result> results = storage.scan(new Scan(partitionKey)).all();
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 1)));
+    assertThat(results.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 2)));
+  }
+
+  @Test
+  public void mutate_EmptyListGiven_ShouldThrowIllegalArgumentException() throws Exception {
+    // Act
+    assertThatCode(
+            () -> {
+              storage.mutate(new ArrayList<>());
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   private void populateRecords() {
     List<Put> puts = preparePuts();
     puts.forEach(
@@ -370,6 +466,37 @@ public class CosmosIntegrationTest {
                   })
               .doesNotThrowAnyException();
         });
+  }
+
+  @Test
+  public void put_PutWithoutClusteringKeyGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    int pKey = 0;
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Put put = new Put(partitionKey);
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              storage.put(put);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void put_IncorrectPutGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    int pKey = 0;
+    int cKey = 0;
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Put put = new Put(partitionKey).withValue(new IntValue(COL_NAME4, cKey));
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              storage.put(put);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   private Get prepareGet(int pKey, int cKey) {
@@ -402,16 +529,40 @@ public class CosmosIntegrationTest {
     return puts;
   }
 
+  private Delete prepareDelete(int pKey, int cKey) {
+    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    return new Delete(partitionKey, clusteringKey);
+  }
+
+  private List<Delete> prepareDeletes() {
+    List<Delete> deletes = new ArrayList<>();
+
+    IntStream.range(0, 5)
+        .forEach(
+            i -> {
+              IntStream.range(0, 3)
+                  .forEach(
+                      j -> {
+                        Key partitionKey = new Key(new IntValue(COL_NAME1, i));
+                        Key clusteringKey = new Key(new IntValue(COL_NAME4, j));
+                        Delete delete = new Delete(partitionKey, clusteringKey);
+                        deletes.add(delete);
+                      });
+            });
+
+    return deletes;
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     client =
         new CosmosClientBuilder().endpoint(CONTACT_POINT).key(PASSWORD).directMode().buildClient();
 
-    CosmosDatabase database = client.createDatabaseIfNotExists(METADATA_KEYSPACE).getDatabase();
+    client.createDatabaseIfNotExists(METADATA_KEYSPACE);
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(METADATA_TABLE, "/id");
-    CosmosContainer container =
-        database.createContainerIfNotExists(containerProperties, 400).getContainer();
+    client.getDatabase(METADATA_KEYSPACE).createContainerIfNotExists(containerProperties);
     TableMetadata metadata = new TableMetadata();
     metadata.setId(KEYSPACE + "." + TABLE);
     metadata.setPartitionKeyNames(new HashSet<>(Arrays.asList(COL_NAME1)));
@@ -423,9 +574,9 @@ public class CosmosIntegrationTest {
     columns.put(COL_NAME4, "int");
     columns.put(COL_NAME5, "boolean");
     metadata.setColumns(columns);
-    container.createItem(metadata);
+    client.getDatabase(METADATA_KEYSPACE).getContainer(METADATA_TABLE).createItem(metadata);
 
-    client.createDatabaseIfNotExists(KEYSPACE).getDatabase();
+    client.createDatabaseIfNotExists(KEYSPACE);
 
     client.close();
 

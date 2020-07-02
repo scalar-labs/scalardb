@@ -20,8 +20,8 @@ public class TransactionModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(DistributedTransactionManager.class).to(ConsensusCommitManager.class).in(Singleton.class);
-    // bind(DistributedStorage.class).to(Cassandra.class).in(Singleton.class);
-    bind(DistributedStorage.class).to(Cosmos.class).in(Singleton.class);
+    bind(DistributedStorage.class).to(Cassandra.class).in(Singleton.class);
+    //bind(DistributedStorage.class).to(Cosmos.class).in(Singleton.class);
   }
 
   @Provides

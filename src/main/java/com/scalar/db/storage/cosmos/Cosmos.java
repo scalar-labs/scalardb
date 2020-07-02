@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
@@ -125,6 +127,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
+    checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
       // TODO: Consider how to batch mutations
       throw new IllegalArgumentException("Batch of mutations isn't supported for Cosmos DB");
