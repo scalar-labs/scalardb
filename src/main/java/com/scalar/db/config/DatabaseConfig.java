@@ -3,6 +3,9 @@ package com.scalar.db.config;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.storage.cassandra.Cassandra;
+import com.scalar.db.storage.cosmos.Cosmos;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -19,11 +22,13 @@ public class DatabaseConfig {
   private int contactPort;
   private String username;
   private String password;
+  private Class<? extends DistributedStorage> storageClass;
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
   public static final String USERNAME = PREFIX + "username";
   public static final String PASSWORD = PREFIX + "password";
+  public static final String STORAGE = PREFIX + "storage";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -54,6 +59,21 @@ public class DatabaseConfig {
     }
     username = props.getProperty(USERNAME);
     password = props.getProperty(PASSWORD);
+
+    if (props.getProperty(STORAGE) == null) {
+      storageClass = Cassandra.class;
+    } else {
+      switch (props.getProperty(STORAGE).toLowerCase()) {
+        case "cassandra":
+          storageClass = Cassandra.class;
+          break;
+        case "cosmos":
+          storageClass = Cosmos.class;
+          break;
+        default:
+          throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
+      }
+    }
   }
 
   public List<String> getContactPoints() {
@@ -70,5 +90,9 @@ public class DatabaseConfig {
 
   public String getPassword() {
     return password;
+  }
+
+  public Class<? extends DistributedStorage> getStorageClass() {
+    return storageClass;
   }
 }

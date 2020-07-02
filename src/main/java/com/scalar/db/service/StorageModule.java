@@ -17,8 +17,7 @@ public class StorageModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(DistributedStorage.class).to(Cassandra.class).in(Singleton.class);
-    //bind(DistributedStorage.class).to(Cosmos.class).in(Singleton.class);
+    bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
   }
 
   @Provides
