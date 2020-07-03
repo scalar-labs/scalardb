@@ -10,16 +10,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A handler to read and cache {@link TableMetadata} to know the type of each column
+ * A manager to read and cache {@link TableMetadata} to know the type of each column
  *
  * @author Yuji Ito
  */
 @ThreadSafe
-public class TableMetadataHandler {
+public class TableMetadataManager {
   private final CosmosContainer container;
   private final Map<String, TableMetadata> tableMetadataMap;
 
-  public TableMetadataHandler(CosmosContainer container) {
+  public TableMetadataManager(CosmosContainer container) {
     this.container = container;
     this.tableMetadataMap = new ConcurrentHashMap<>();
   }

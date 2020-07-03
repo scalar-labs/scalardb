@@ -20,8 +20,8 @@ import javax.annotation.concurrent.ThreadSafe;
 public class DeleteStatementHandler extends MutateStatementHandler {
   private final String DELETE_IF = "deleteIf.js";
 
-  public DeleteStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
-    super(client, metadataHandler);
+  public DeleteStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+    super(client, metadataManager);
   }
 
   @Override

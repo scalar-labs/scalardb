@@ -31,15 +31,18 @@ public class StatementHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 1;
 
+  private SelectStatementHandler handler;
   @Mock private CosmosClient client;
-  @Mock private TableMetadataHandler metadataHandler;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    when(metadataHandler.getTableMetadata(any(Operation.class))).thenReturn(metadata);
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
+
+    handler = new SelectStatementHandler(client, metadataManager);
   }
 
   @Test
@@ -47,7 +50,7 @@ public class StatementHandlerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              new SelectStatementHandler(null, metadataHandler);
+              new SelectStatementHandler(null, metadataManager);
             })
         .isInstanceOf(NullPointerException.class);
   }
@@ -78,8 +81,6 @@ public class StatementHandlerTest {
             new IntValue(ANY_NAME_3, ANY_INT_1));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
-    SelectStatementHandler handler = new SelectStatementHandler(client, metadataHandler);
-
     // Act
     String actual = handler.getConcatenatedPartitionKey(get);
 
@@ -97,8 +98,6 @@ public class StatementHandlerTest {
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new TextValue(ANY_NAME_2, ANY_TEXT_2));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-
-    SelectStatementHandler handler = new SelectStatementHandler(client, metadataHandler);
 
     // Act Assert
     assertThatThrownBy(
@@ -121,8 +120,6 @@ public class StatementHandlerTest {
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
-    SelectStatementHandler handler = new SelectStatementHandler(client, metadataHandler);
-
     // Act
     String actual = handler.getId(get);
 
@@ -142,8 +139,6 @@ public class StatementHandlerTest {
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-
-    SelectStatementHandler handler = new SelectStatementHandler(client, metadataHandler);
 
     // Act Assert
     assertThatThrownBy(

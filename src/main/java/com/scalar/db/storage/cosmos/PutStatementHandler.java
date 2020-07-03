@@ -21,8 +21,8 @@ public class PutStatementHandler extends MutateStatementHandler {
   private final String PUT_IF_NOT_EXISTS = "putIfNotExists.js";
   private final String PUT_IF = "putIf.js";
 
-  public PutStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
-    super(client, metadataHandler);
+  public PutStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+    super(client, metadataManager);
   }
 
   @Override

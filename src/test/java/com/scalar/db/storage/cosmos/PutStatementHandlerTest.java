@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -54,7 +55,7 @@ public class PutStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private TableMetadataHandler metadataHandler;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse response;
   @Mock private CosmosScripts cosmosScripts;
@@ -65,11 +66,11 @@ public class PutStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    handler = new PutStatementHandler(client, metadataHandler);
+    handler = new PutStatementHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
-    when(metadataHandler.getTableMetadata(any(Operation.class))).thenReturn(metadata);
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
@@ -103,7 +104,8 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container).upsertItem(any(Record.class), any(CosmosItemRequestOptions.class));
+    verify(container)
+        .upsertItem(eq(handler.makeRecord(put).get()), any(CosmosItemRequestOptions.class));
   }
 
   @Test

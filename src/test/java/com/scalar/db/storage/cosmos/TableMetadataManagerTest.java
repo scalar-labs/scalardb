@@ -23,7 +23,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TableMetadataHandlerTest {
+public class TableMetadataManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -31,7 +31,7 @@ public class TableMetadataHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String FULLNAME = ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME;
 
-  private TableMetadataHandler handler;
+  private TableMetadataManager manager;
   @Mock private CosmosContainer container;
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse<TableMetadata> response;
@@ -40,7 +40,7 @@ public class TableMetadataHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    handler = new TableMetadataHandler(container);
+    manager = new TableMetadataManager(container);
   }
 
   @Test
@@ -54,7 +54,7 @@ public class TableMetadataHandlerTest {
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act
-    handler.getTableMetadata(get);
+    manager.getTableMetadata(get);
 
     verify(container).readItem(FULLNAME, new PartitionKey(FULLNAME), TableMetadata.class);
   }
@@ -72,8 +72,8 @@ public class TableMetadataHandlerTest {
     Get get2 = new Get(partitionKey2).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act
-    handler.getTableMetadata(get1);
-    handler.getTableMetadata(get2);
+    manager.getTableMetadata(get1);
+    manager.getTableMetadata(get2);
 
     verify(container, times(1)).readItem(FULLNAME, new PartitionKey(FULLNAME), TableMetadata.class);
   }
@@ -91,7 +91,7 @@ public class TableMetadataHandlerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              handler.getTableMetadata(get);
+              manager.getTableMetadata(get);
             })
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -110,7 +110,7 @@ public class TableMetadataHandlerTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              handler.getTableMetadata(get);
+              manager.getTableMetadata(get);
             })
         .isInstanceOf(StorageRuntimeException.class)
         .hasCause(toThrow);

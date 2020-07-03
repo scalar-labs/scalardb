@@ -23,17 +23,17 @@ import org.slf4j.LoggerFactory;
 public abstract class StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
   protected final CosmosClient client;
-  protected final TableMetadataHandler metadataHandler;
+  protected final TableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code StatementHandler} with the specified {@link CosmosClient}
    *
    * @param client {@code CosmosClient}
-   * @param metadataHandler {@code TableMetadataHandler}
+   * @param metadataManager {@code TableMetadataManager}
    */
-  protected StatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
+  protected StatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     this.client = checkNotNull(client);
-    this.metadataHandler = checkNotNull(metadataHandler);
+    this.metadataManager = checkNotNull(metadataManager);
   }
 
   /**
@@ -91,7 +91,7 @@ public abstract class StatementHandler {
               keyMap.put(v.getName(), v);
             });
 
-    TableMetadata metadata = metadataHandler.getTableMetadata(operation);
+    TableMetadata metadata = metadataManager.getTableMetadata(operation);
     ConcatenationVisitor visitor = new ConcatenationVisitor();
     metadata
         .getPartitionKeyNames()
@@ -128,7 +128,7 @@ public abstract class StatementHandler {
                       });
             });
 
-    TableMetadata metadata = metadataHandler.getTableMetadata(operation);
+    TableMetadata metadata = metadataManager.getTableMetadata(operation);
     ConcatenationVisitor visitor = new ConcatenationVisitor();
     List<String> keyNames = metadata.getKeyNames();
     keyNames.forEach(

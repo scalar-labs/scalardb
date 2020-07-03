@@ -26,8 +26,8 @@ import org.jooq.impl.DSL;
  * @author Yuji Ito
  */
 public class SelectStatementHandler extends StatementHandler {
-  public SelectStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
-    super(client, metadataHandler);
+  public SelectStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+    super(client, metadataManager);
   }
 
   @Override

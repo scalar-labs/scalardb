@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
 
-  public MutateStatementHandler(CosmosClient client, TableMetadataHandler metadataHandler) {
-    super(client, metadataHandler);
+  public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+    super(client, metadataManager);
   }
 
   @Override
@@ -80,26 +80,13 @@ public abstract class MutateStatementHandler extends StatementHandler {
     Record record = new Record();
     record.setId(getId(put));
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey(put));
-
-    MapVisitor partitionKeyVisitor = new MapVisitor();
-    put.getPartitionKey().forEach(v -> v.accept(partitionKeyVisitor));
     record.setPartitionKey(toMap(put.getPartitionKey().get()));
-
     put.getClusteringKey()
         .ifPresent(
             k -> {
               record.setClusteringKey(toMap(k.get()));
             });
-
     record.setValues(toMap(put.getValues().values()));
-    MapVisitor visitor = new MapVisitor();
-    put.getValues()
-        .values()
-        .forEach(
-            v -> {
-              v.accept(visitor);
-            });
-    record.setValues(visitor.get());
 
     return Optional.of(record);
   }

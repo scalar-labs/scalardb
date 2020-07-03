@@ -39,7 +39,7 @@ public class Cosmos implements DistributedStorage {
   private final String METADATA_CONTAINER = "metadata";
 
   private final CosmosClient client;
-  private final TableMetadataHandler metadataHandler;
+  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
@@ -58,11 +58,11 @@ public class Cosmos implements DistributedStorage {
 
     CosmosContainer container =
         client.getDatabase(METADATA_DATABASE).getContainer(METADATA_CONTAINER);
-    this.metadataHandler = new TableMetadataHandler(container);
+    this.metadataManager = new TableMetadataManager(container);
 
-    this.selectStatementHandler = new SelectStatementHandler(client, metadataHandler);
-    this.putStatementHandler = new PutStatementHandler(client, metadataHandler);
-    this.deleteStatementHandler = new DeleteStatementHandler(client, metadataHandler);
+    this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
+    this.putStatementHandler = new PutStatementHandler(client, metadataManager);
+    this.deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
 
@@ -87,7 +87,7 @@ public class Cosmos implements DistributedStorage {
       return Optional.empty();
     }
 
-    TableMetadata metadata = metadataHandler.getTableMetadata(get);
+    TableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(records.get(0), get, metadata));
   }
 
@@ -97,7 +97,7 @@ public class Cosmos implements DistributedStorage {
 
     List<Record> records = selectStatementHandler.handle(scan);
 
-    TableMetadata metadata = metadataHandler.getTableMetadata(scan);
+    TableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(records, scan, metadata);
   }
 
@@ -159,7 +159,7 @@ public class Cosmos implements DistributedStorage {
   }
 
   private void checkIfPrimaryKeyExists(Put put) {
-    TableMetadata metadata = metadataHandler.getTableMetadata(put);
+    TableMetadata metadata = metadataManager.getTableMetadata(put);
 
     throwIfNotMatched(Optional.of(put.getPartitionKey()), metadata.getPartitionKeyNames());
     throwIfNotMatched(put.getClusteringKey(), metadata.getClusteringKeyNames());

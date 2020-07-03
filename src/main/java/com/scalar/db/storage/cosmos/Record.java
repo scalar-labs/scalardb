@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
 /**
- * A record class to present a row of Scalar DB as a document on Cosmos DB
+ * A record class that Cosmos DB uses for storing a document based on Scalar DB data model.
  *
  * @author Yuji Ito
  */

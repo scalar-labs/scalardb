@@ -52,7 +52,7 @@ public class DeleteStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private TableMetadataHandler metadataHandler;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse response;
   @Mock private CosmosScripts cosmosScripts;
@@ -63,11 +63,11 @@ public class DeleteStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    handler = new DeleteStatementHandler(client, metadataHandler);
+    handler = new DeleteStatementHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
-    when(metadataHandler.getTableMetadata(any(Operation.class))).thenReturn(metadata);
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));

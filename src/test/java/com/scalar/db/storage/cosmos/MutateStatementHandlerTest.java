@@ -42,7 +42,7 @@ public class MutateStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private TableMetadataHandler metadataHandler;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
@@ -52,7 +52,7 @@ public class MutateStatementHandlerTest {
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
-    when(metadataHandler.getTableMetadata(any(Operation.class))).thenReturn(metadata);
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
@@ -87,7 +87,7 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeRecord_PutGiven_ShouldReturnWithValues() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataHandler);
+    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     Put put = preparePut();
     String id = handler.getId(put);
     String concatenatedPartitionKey = handler.getConcatenatedPartitionKey(put);
@@ -108,7 +108,7 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeRecord_DeleteGiven_ShouldReturnEmpty() {
     // Arrange
-    DeleteStatementHandler handler = new DeleteStatementHandler(client, metadataHandler);
+    DeleteStatementHandler handler = new DeleteStatementHandler(client, metadataManager);
     Delete delete = prepareDelete();
 
     // Act
@@ -121,7 +121,7 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeConditionalQuery_MutationWithoutConditionsGiven_ShouldReturnQuery() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataHandler);
+    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     Put put = preparePut();
     String id = handler.getId(put);
 
@@ -135,7 +135,7 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataHandler);
+    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     PutIf conditions =
         new PutIf(
             new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
