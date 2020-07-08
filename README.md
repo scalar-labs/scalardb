@@ -28,7 +28,7 @@ dependencies {
 ## Contributing 
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
-* For asking questions, finding answers and helping other users, please go to [scalardb-user (English only)](https://groups.google.com/forum/#!forum/scalardb-user) or [scalardb-user-ja (Japanese only)](https://groups.google.com/forum/#!forum/scalardb-user-ja).
+* For asking questions, finding answers and helping other users, please go to [scalardb-user](https://groups.google.com/forum/#!forum/scalardb-user).
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 Here are the contributors we are especially thankful for:
