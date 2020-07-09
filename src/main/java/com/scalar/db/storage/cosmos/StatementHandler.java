@@ -55,8 +55,7 @@ public abstract class StatementHandler {
     }
   }
 
-  protected abstract List<Record> execute(Operation operation)
-      throws CosmosException, NoMutationException;
+  protected abstract List<Record> execute(Operation operation) throws CosmosException;
 
   public static void checkArgument(Operation actual, Class<? extends Operation>... expected) {
     for (Class<? extends Operation> e : expected) {

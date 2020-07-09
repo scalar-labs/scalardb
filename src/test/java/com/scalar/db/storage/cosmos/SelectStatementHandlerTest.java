@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
@@ -26,6 +27,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -103,6 +105,25 @@ public class SelectStatementHandlerTest {
 
     // Assert
     verify(container).readItem(id, cosmosPartitionKey, Record.class);
+  }
+
+  @Test
+  public void handle_CosmosExceptionWithNotFound_ShouldReturnEmptyList() throws Exception {
+    // Arrange
+    CosmosException toThrow = mock(CosmosException.class);
+    doThrow(toThrow)
+        .when(container)
+        .readItem(anyString(), any(PartitionKey.class), eq(Record.class));
+    when(toThrow.getStatusCode()).thenReturn(CosmosErrorCode.NOT_FOUND.get());
+
+    Record expected = new Record();
+    Get get = prepareGet();
+
+    // Act Assert
+    List<Record> actual = handler.handle(get);
+
+    // Assert
+    assertThat(actual).isEmpty();
   }
 
   @Test

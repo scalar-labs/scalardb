@@ -6,18 +6,25 @@ import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.azure.cosmos.models.PartitionKey;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.PutIf;
+import com.scalar.db.api.PutIfExists;
+import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Value;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.jooq.SQLDialect;
@@ -30,6 +37,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
+  private final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
   public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
@@ -42,42 +50,71 @@ public abstract class MutateStatementHandler extends StatementHandler {
       List<Record> results = execute(operation);
 
       return results;
-    } catch (NoMutationException e) {
-      throw e;
-    } catch (RuntimeException e) {
-      LOGGER.error(e.getMessage());
-      throw new ExecutionException(e.getMessage(), e);
+    } catch (CosmosException e) {
+      throwException(e);
     }
+
+    return Collections.emptyList();
   }
 
-  protected void executeStoredProcedure(String storedProcedureName, Mutation mutation)
-      throws CosmosException, NoMutationException {
-    Optional<Record> record = makeRecord(mutation);
-    String query = makeConditionalQuery(mutation);
-    List<Object> args =
-        record.isPresent() ? Arrays.asList(record.get(), query) : Arrays.asList(query);
+  protected void executeStoredProcedure(Mutation mutation) throws CosmosException {
+    executeStoredProcedure(Arrays.asList(mutation));
+  }
+
+  protected void executeStoredProcedure(List<? extends Mutation> mutations) throws CosmosException {
+    List<Integer> types = new ArrayList<>();
+    List<Record> records = new ArrayList<>();
+    List<String> queries = new ArrayList<>();
+
+    mutations.forEach(
+        mutation -> {
+          types.add(getMutationType(mutation).ordinal());
+          records.add(makeRecord(mutation));
+          queries.add(makeConditionalQuery(mutation));
+        });
+    List<Object> args = new ArrayList<>();
+    args.add(mutations.size());
+    args.addAll(types);
+    args.addAll(records);
+    args.addAll(queries);
 
     CosmosStoredProcedureRequestOptions options =
         new CosmosStoredProcedureRequestOptions()
-            .setPartitionKey(new PartitionKey(getConcatenatedPartitionKey(mutation)));
+            .setPartitionKey(new PartitionKey(getConcatenatedPartitionKey(mutations.get(0))));
 
     CosmosStoredProcedure storedProcedure =
-        getContainer(mutation).getScripts().getStoredProcedure(storedProcedureName);
+        getContainer(mutations.get(0)).getScripts().getStoredProcedure(MUTATION_STORED_PROCEDURE);
     CosmosStoredProcedureResponse response = storedProcedure.execute(args, options);
+  }
 
-    if (!response.getResponseAsString().equals("true")) {
-      throw new NoMutationException("no mutation was applied.");
+  private MutationType getMutationType(Mutation mutation) {
+    if (!mutation.getCondition().isPresent()) {
+      if (mutation instanceof Put) {
+        return MutationType.PUT;
+      } else {
+        return MutationType.DELETE_IF;
+      }
+    }
+
+    MutationCondition condition = mutation.getCondition().get();
+    if (condition instanceof PutIfNotExists) {
+      return MutationType.PUT_IF_NOT_EXISTS;
+    } else if (condition instanceof PutIfExists || condition instanceof PutIf) {
+      return MutationType.PUT_IF;
+    } else {
+      return MutationType.DELETE_IF;
     }
   }
 
-  protected Optional<Record> makeRecord(Mutation mutation) {
+  protected Record makeRecord(Mutation mutation) {
     if (mutation instanceof Delete) {
-      return Optional.empty();
+      return makeDummyRecord();
     }
+
+    Record record = new Record();
     checkArgument(mutation, Put.class);
     Put put = (Put) mutation;
 
-    Record record = new Record();
     record.setId(getId(put));
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey(put));
     record.setPartitionKey(toMap(put.getPartitionKey().get()));
@@ -88,7 +125,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
             });
     record.setValues(toMap(put.getValues().values()));
 
-    return Optional.of(record);
+    return record;
   }
 
   protected String makeConditionalQuery(Mutation mutation) {
@@ -107,10 +144,43 @@ public abstract class MutateStatementHandler extends StatementHandler {
     return builder.getQuery();
   }
 
+  protected void throwException(CosmosException exception) throws ExecutionException {
+    LOGGER.error(exception.getMessage());
+    int statusCode = exception.getSubStatusCode();
+
+    if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
+      throw new NoMutationException("no mutation was applied.");
+    } else if (statusCode == CosmosErrorCode.RETRY_WITH.get()) {
+      throw new RetriableExecutionException(exception.getMessage(), exception);
+    }
+
+    throw new ExecutionException(exception.getMessage(), exception);
+  }
+
   private Map<String, Object> toMap(Collection<Value> values) {
     MapVisitor visitor = new MapVisitor();
     values.forEach(v -> v.accept(visitor));
 
     return visitor.get();
+  }
+
+  @VisibleForTesting
+  Record makeDummyRecord() {
+    Record record = new Record();
+
+    record.setId("");
+    record.setConcatenatedPartitionKey("");
+    record.setPartitionKey(Collections.emptyMap());
+    record.setClusteringKey(Collections.emptyMap());
+    record.setValues(Collections.emptyMap());
+
+    return record;
+  }
+
+  protected enum MutationType {
+    PUT,
+    PUT_IF_NOT_EXISTS,
+    PUT_IF,
+    DELETE_IF,
   }
 }

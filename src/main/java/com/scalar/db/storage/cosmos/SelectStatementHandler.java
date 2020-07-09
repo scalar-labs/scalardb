@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.CosmosClient;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.util.CosmosPagedIterable;
@@ -10,6 +11,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
@@ -32,15 +34,22 @@ public class SelectStatementHandler extends StatementHandler {
 
   @Override
   @Nonnull
-  protected List<Record> execute(Operation operation) {
-    if (operation instanceof Get) {
-      return executeRead(operation);
-    } else {
-      return executeQuery(operation);
+  protected List<Record> execute(Operation operation) throws CosmosException {
+    try {
+      if (operation instanceof Get) {
+        return executeRead(operation);
+      } else {
+        return executeQuery(operation);
+      }
+    } catch (CosmosException e) {
+      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return Collections.emptyList();
+      }
+      throw e;
     }
   }
 
-  private List<Record> executeRead(Operation operation) {
+  private List<Record> executeRead(Operation operation) throws CosmosException {
     checkArgument(operation, Get.class);
     Get get = (Get) operation;
 
@@ -53,7 +62,7 @@ public class SelectStatementHandler extends StatementHandler {
     return Arrays.asList(record);
   }
 
-  private List<Record> executeQuery(Operation operation) {
+  private List<Record> executeQuery(Operation operation) throws CosmosException {
     checkArgument(operation, Scan.class);
     Scan scan = (Scan) operation;
 

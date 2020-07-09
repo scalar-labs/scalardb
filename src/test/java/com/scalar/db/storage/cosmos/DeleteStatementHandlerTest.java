@@ -131,7 +131,6 @@ public class DeleteStatementHandlerTest {
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
     when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
-    when(spResponse.getResponseAsString()).thenReturn("true");
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
     String query = handler.makeConditionalQuery(delete);
@@ -144,21 +143,27 @@ public class DeleteStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(cosmosScripts).getStoredProcedure("deleteIf.js");
+    verify(cosmosScripts).getStoredProcedure("mutate.js");
     ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
-    assertThat((String) captor.getValue().get(0)).isEqualTo(query);
+    assertThat(captor.getValue().get(0)).isEqualTo(1);
+    assertThat(captor.getValue().get(1))
+        .isEqualTo(MutateStatementHandler.MutationType.DELETE_IF.ordinal());
+    assertThat(captor.getValue().get(2)).isEqualTo(handler.makeDummyRecord());
+    assertThat(captor.getValue().get(3)).isEqualTo(query);
   }
 
   @Test
-  public void handle_DeleteWithConditionsReturnFalseResponse_ShouldThrowNoMutationException() {
+  public void handle_CosmosExceptionWithPreconditionFailed_ShouldThrowNoMutationException() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
-    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
-        .thenReturn(spResponse);
-    when(spResponse.getResponseAsString()).thenReturn("false");
+    CosmosException toThrow = mock(CosmosException.class);
+    doThrow(toThrow)
+        .when(storedProcedure)
+        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+    when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 

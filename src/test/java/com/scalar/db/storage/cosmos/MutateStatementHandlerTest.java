@@ -19,7 +19,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -93,16 +92,15 @@ public class MutateStatementHandlerTest {
     String concatenatedPartitionKey = handler.getConcatenatedPartitionKey(put);
 
     // Act
-    Optional<Record> actual = handler.makeRecord(put);
+    Record actual = handler.makeRecord(put);
 
     // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getId()).isEqualTo(id);
-    assertThat(actual.get().getConcatenatedPartitionKey()).isEqualTo(concatenatedPartitionKey);
-    assertThat(actual.get().getPartitionKey().get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(actual.get().getClusteringKey().get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(actual.get().getValues().get(ANY_NAME_3)).isEqualTo(ANY_INT_1);
-    assertThat(actual.get().getValues().get(ANY_NAME_4)).isEqualTo(ANY_INT_2);
+    assertThat(actual.getId()).isEqualTo(id);
+    assertThat(actual.getConcatenatedPartitionKey()).isEqualTo(concatenatedPartitionKey);
+    assertThat(actual.getPartitionKey().get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.getClusteringKey().get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.getValues().get(ANY_NAME_3)).isEqualTo(ANY_INT_1);
+    assertThat(actual.getValues().get(ANY_NAME_4)).isEqualTo(ANY_INT_2);
   }
 
   @Test
@@ -112,10 +110,11 @@ public class MutateStatementHandlerTest {
     Delete delete = prepareDelete();
 
     // Act
-    Optional<Record> actual = handler.makeRecord(delete);
+    Record actual = handler.makeRecord(delete);
 
     // Assert
-    assertThat(actual.isPresent()).isFalse();
+    assertThat(actual.getId()).isEqualTo("");
+    assertThat(actual.getConcatenatedPartitionKey()).isEqualTo("");
   }
 
   @Test

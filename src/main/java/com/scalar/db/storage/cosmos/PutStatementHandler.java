@@ -18,24 +18,18 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class PutStatementHandler extends MutateStatementHandler {
-  private final String PUT_IF_NOT_EXISTS = "putIfNotExists.js";
-  private final String PUT_IF = "putIf.js";
 
   public PutStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 
   @Override
-  protected List<Record> execute(Operation operation) throws CosmosException, NoMutationException {
+  protected List<Record> execute(Operation operation) throws CosmosException {
     checkArgument(operation, Put.class);
     Put put = (Put) operation;
 
     if (put.getCondition().isPresent()) {
-      if (put.getCondition().get() instanceof PutIfNotExists) {
-        executeStoredProcedure(PUT_IF_NOT_EXISTS, put);
-      } else {
-        executeStoredProcedure(PUT_IF, put);
-      }
+      executeStoredProcedure(put);
     } else {
       execute(put);
     }
@@ -44,7 +38,7 @@ public class PutStatementHandler extends MutateStatementHandler {
   }
 
   private void execute(Put put) throws CosmosException {
-    Record record = makeRecord(put).get();
+    Record record = makeRecord(put);
     CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
     getContainer(put).upsertItem(record, options);

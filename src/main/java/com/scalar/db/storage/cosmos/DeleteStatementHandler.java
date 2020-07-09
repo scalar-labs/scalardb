@@ -25,12 +25,12 @@ public class DeleteStatementHandler extends MutateStatementHandler {
   }
 
   @Override
-  protected List<Record> execute(Operation operation) throws CosmosException, NoMutationException {
+  protected List<Record> execute(Operation operation) throws CosmosException {
     checkArgument(operation, Delete.class);
     Delete delete = (Delete) operation;
 
     if (delete.getCondition().isPresent()) {
-      executeStoredProcedure(DELETE_IF, delete);
+      executeStoredProcedure(delete);
     } else {
       execute(delete);
     }
