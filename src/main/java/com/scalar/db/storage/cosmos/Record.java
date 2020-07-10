@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -9,11 +10,11 @@ import java.util.Map;
  * @author Yuji Ito
  */
 public class Record {
-  private String id;
-  private String concatenatedPartitionKey;
-  private Map<String, Object> partitionKey;
-  private Map<String, Object> clusteringKey;
-  private Map<String, Object> values;
+  private String id = "";
+  private String concatenatedPartitionKey = "";
+  private Map<String, Object> partitionKey = Collections.emptyMap();
+  private Map<String, Object> clusteringKey = Collections.emptyMap();
+  private Map<String, Object> values = Collections.emptyMap();
 
   public Record() {}
 

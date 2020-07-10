@@ -124,6 +124,7 @@ public class BatchStatementHandlerTest {
     Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
     Record record1 = handler.makeRecord(put1);
     Record record2 = handler.makeRecord(put2);
+    Record emptyRecord = new Record();
     String query1 = handler.makeConditionalQuery(put1);
     String query2 = handler.makeConditionalQuery(put2);
     String query3 = handler.makeConditionalQuery(delete1);
@@ -154,8 +155,8 @@ public class BatchStatementHandlerTest {
 
     assertThat(captor.getValue().get(5)).isEqualTo(record1);
     assertThat(captor.getValue().get(6)).isEqualTo(record2);
-    assertThat(captor.getValue().get(7)).isEqualTo(handler.makeDummyRecord());
-    assertThat(captor.getValue().get(8)).isEqualTo(handler.makeDummyRecord());
+    assertThat(captor.getValue().get(7)).isEqualTo(emptyRecord);
+    assertThat(captor.getValue().get(8)).isEqualTo(emptyRecord);
 
     assertThat(captor.getValue().get(9)).isEqualTo(query1);
     assertThat(captor.getValue().get(10)).isEqualTo(query2);

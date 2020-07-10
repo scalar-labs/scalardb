@@ -6,7 +6,6 @@ import com.azure.cosmos.CosmosStoredProcedure;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.azure.cosmos.models.PartitionKey;
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationCondition;
@@ -107,11 +106,11 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   protected Record makeRecord(Mutation mutation) {
+    Record record = new Record();
     if (mutation instanceof Delete) {
-      return makeDummyRecord();
+      return record;
     }
 
-    Record record = new Record();
     checkArgument(mutation, Put.class);
     Put put = (Put) mutation;
 
@@ -162,19 +161,6 @@ public abstract class MutateStatementHandler extends StatementHandler {
     values.forEach(v -> v.accept(visitor));
 
     return visitor.get();
-  }
-
-  @VisibleForTesting
-  Record makeDummyRecord() {
-    Record record = new Record();
-
-    record.setId("");
-    record.setConcatenatedPartitionKey("");
-    record.setPartitionKey(Collections.emptyMap());
-    record.setClusteringKey(Collections.emptyMap());
-    record.setValues(Collections.emptyMap());
-
-    return record;
   }
 
   protected enum MutationType {

@@ -109,6 +109,31 @@ public class PutStatementHandlerTest {
   }
 
   @Test
+  public void handle_PutWithoutClusteringKeyGiven_ShouldCallUpsertItem() {
+    // Arrange
+    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1));
+    when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
+        .thenReturn(response);
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Put put =
+        new Put(partitionKey)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
+            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(put);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(container).upsertItem(eq(handler.makeRecord(put)), any(CosmosItemRequestOptions.class));
+  }
+
+  @Test
   public void handle_PutWithoutConditionsCosmosExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     Put put = preparePut();

@@ -150,7 +150,7 @@ public class DeleteStatementHandlerTest {
     assertThat(captor.getValue().get(0)).isEqualTo(1);
     assertThat(captor.getValue().get(1))
         .isEqualTo(MutateStatementHandler.MutationType.DELETE_IF.ordinal());
-    assertThat(captor.getValue().get(2)).isEqualTo(handler.makeDummyRecord());
+    assertThat(captor.getValue().get(2)).isEqualTo(new Record());
     assertThat(captor.getValue().get(3)).isEqualTo(query);
   }
 
