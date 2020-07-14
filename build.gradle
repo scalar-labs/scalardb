@@ -26,7 +26,7 @@ configurations {
 
 dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
-    compile group: 'com.azure', name: 'azure-cosmos', version: '4.0.1'
+    compile group: 'com.azure', name: 'azure-cosmos', version: '4.1.0'
     compile group: 'org.jooq', name: 'jooq', version: '3.13.2'
     compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.0'
