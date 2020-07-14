@@ -133,7 +133,7 @@ public class DeleteStatementHandlerTest {
         .thenReturn(spResponse);
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
     String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert

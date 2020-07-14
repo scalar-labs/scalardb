@@ -14,9 +14,9 @@ public class CosmosOperation {
   private final Operation operation;
   private final TableMetadata metadata;
 
-  public CosmosOperation(Operation operation, TableMetadata metadata) {
+  public CosmosOperation(Operation operation, TableMetadataManager metadataManager) {
     this.operation = operation;
-    this.metadata = metadata;
+    this.metadata = metadataManager.getTableMetadata(operation);
   }
 
   @Nonnull

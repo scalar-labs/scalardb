@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,18 +31,21 @@ public class CosmosOperationTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 1;
 
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
+
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
   }
 
   @Test
   public void checkArgument_WrongOperationGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Operation operation = mock(Put.class);
-    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
 
     // Act Assert
     assertThatThrownBy(
@@ -63,7 +67,7 @@ public class CosmosOperationTest {
             new TextValue(ANY_NAME_2, ANY_TEXT_2),
             new IntValue(ANY_NAME_3, ANY_INT_1));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
     // Act
     String actual = cosmosOperation.getConcatenatedPartitionKey();
@@ -82,7 +86,7 @@ public class CosmosOperationTest {
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new TextValue(ANY_NAME_2, ANY_TEXT_2));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
     // Act Assert
     assertThatThrownBy(
@@ -104,7 +108,7 @@ public class CosmosOperationTest {
             new TextValue(ANY_NAME_2, ANY_TEXT_2),
             new IntValue(ANY_NAME_3, ANY_INT_1));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
     // Act
     PartitionKey actual = cosmosOperation.getCosmosPartitionKey();
@@ -125,7 +129,7 @@ public class CosmosOperationTest {
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
     // Act
     String actual = cosmosOperation.getId();
@@ -146,7 +150,7 @@ public class CosmosOperationTest {
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
     // Act Assert
     assertThatThrownBy(

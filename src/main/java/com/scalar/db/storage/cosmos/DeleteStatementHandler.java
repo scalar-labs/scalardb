@@ -37,8 +37,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
   }
 
   private void execute(Mutation mutation) throws CosmosException {
-    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
-    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
     cosmosMutation.checkArgument(Delete.class);
 
     String id = cosmosMutation.getId();

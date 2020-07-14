@@ -36,8 +36,7 @@ public class PutStatementHandler extends MutateStatementHandler {
   }
 
   private void execute(Mutation mutation) throws CosmosException {
-    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
-    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
     cosmosMutation.checkArgument(Put.class);
 
     Record record = cosmosMutation.makeRecord();

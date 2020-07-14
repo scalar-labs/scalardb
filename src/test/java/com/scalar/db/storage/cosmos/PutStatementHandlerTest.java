@@ -96,7 +96,7 @@ public class PutStatementHandlerTest {
     when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
         .thenReturn(response);
     Put put = preparePut();
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
 
     // Act Assert
@@ -123,7 +123,7 @@ public class PutStatementHandlerTest {
             .forTable(ANY_TABLE_NAME)
             .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
             .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
 
     // Act Assert
@@ -166,7 +166,7 @@ public class PutStatementHandlerTest {
     when(spResponse.getResponseAsString()).thenReturn("true");
 
     Put put = preparePut().withCondition(new PutIfNotExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 
@@ -198,7 +198,7 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
 
     Put put = preparePut().withCondition(new PutIfExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 

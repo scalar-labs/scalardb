@@ -58,11 +58,4 @@ public abstract class StatementHandler {
         .getDatabase(operation.forNamespace().get())
         .getContainer(operation.forTable().get());
   }
-
-  @Nonnull
-  protected CosmosOperation getCosmosOperation(Operation operation) {
-    TableMetadata metadata = metadataManager.getTableMetadata(operation);
-
-    return new CosmosOperation(operation, metadata);
-  }
 }

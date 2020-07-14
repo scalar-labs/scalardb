@@ -79,7 +79,7 @@ public class BatchHandler {
 
     mutations.forEach(
         mutation -> {
-          CosmosMutation cosmosMutation = getCosmosMutation(mutation);
+          CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
           types.add(cosmosMutation.getMutationType().ordinal());
           records.add(cosmosMutation.makeRecord());
           queries.add(cosmosMutation.makeConditionalQuery());
@@ -90,7 +90,7 @@ public class BatchHandler {
     args.addAll(records);
     args.addAll(queries);
 
-    CosmosMutation cosmosMutation = getCosmosMutation(mutations.get(0));
+    CosmosMutation cosmosMutation = new CosmosMutation(mutations.get(0), metadataManager);
     client
         .getDatabase(mutations.get(0).forNamespace().get())
         .getContainer(mutations.get(0).forTable().get())
@@ -110,11 +110,5 @@ public class BatchHandler {
     }
 
     throw new ExecutionException(exception.getMessage(), exception);
-  }
-
-  private CosmosMutation getCosmosMutation(Mutation mutation) {
-    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
-
-    return new CosmosMutation(mutation, metadata);
   }
 }

@@ -122,10 +122,10 @@ public class BatchHandlerTest {
     Put put2 = preparePut().withCondition(new PutIfNotExists());
     Delete delete1 = prepareDelete();
     Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
-    CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
-    CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
-    CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
-    CosmosMutation cosmosMutation4 = new CosmosMutation(delete2, metadata);
+    CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadataManager);
+    CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadataManager);
+    CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadataManager);
+    CosmosMutation cosmosMutation4 = new CosmosMutation(delete2, metadataManager);
     Record record1 = cosmosMutation1.makeRecord();
     Record record2 = cosmosMutation2.makeRecord();
     Record emptyRecord = new Record();

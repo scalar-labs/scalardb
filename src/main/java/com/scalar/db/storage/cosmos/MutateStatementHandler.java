@@ -40,7 +40,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   protected void executeStoredProcedure(Mutation mutation) throws CosmosException {
-    CosmosMutation cosmosMutation = getCosmosMutation(mutation);
+    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
     List<Object> args = new ArrayList<>();
     args.add(1);
     args.add(cosmosMutation.getMutationType().ordinal());
@@ -64,11 +64,5 @@ public abstract class MutateStatementHandler extends StatementHandler {
     }
 
     throw new ExecutionException(exception.getMessage(), exception);
-  }
-
-  private CosmosMutation getCosmosMutation(Mutation mutation) {
-    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
-
-    return new CosmosMutation(mutation, metadata);
   }
 }

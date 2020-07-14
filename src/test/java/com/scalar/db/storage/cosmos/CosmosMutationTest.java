@@ -2,12 +2,9 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.when;
 
-import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
-import com.azure.cosmos.CosmosDatabase;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
@@ -39,12 +36,14 @@ public class CosmosMutationTest {
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private CosmosContainer container;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
+    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
@@ -77,7 +76,7 @@ public class CosmosMutationTest {
   public void makeRecord_PutGiven_ShouldReturnWithValues() {
     // Arrange
     Put put = preparePut();
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     String id = cosmosMutation.getId();
     String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
 
@@ -97,7 +96,7 @@ public class CosmosMutationTest {
   public void makeRecord_DeleteGiven_ShouldReturnEmpty() {
     // Arrange
     Delete delete = prepareDelete();
-    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
 
     // Act
     Record actual = cosmosMutation.makeRecord();
@@ -111,7 +110,7 @@ public class CosmosMutationTest {
   public void makeConditionalQuery_MutationWithoutConditionsGiven_ShouldReturnQuery() {
     // Arrange
     Put put = preparePut();
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     String id = cosmosMutation.getId();
 
     // Act
@@ -129,7 +128,7 @@ public class CosmosMutationTest {
             new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
             new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
     Put put = preparePut().withCondition(conditions);
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     String id = cosmosMutation.getId();
 
     // Act

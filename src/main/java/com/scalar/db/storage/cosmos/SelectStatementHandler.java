@@ -50,7 +50,7 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private List<Record> executeRead(Operation operation) throws CosmosException {
-    CosmosOperation cosmosOperation = getCosmosOperation(operation);
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
     cosmosOperation.checkArgument(Get.class);
 
     String id = cosmosOperation.getId();
@@ -62,7 +62,7 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private List<Record> executeQuery(Operation operation) throws CosmosException {
-    CosmosOperation cosmosOperation = getCosmosOperation(operation);
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
     cosmosOperation.checkArgument(Scan.class);
     Scan scan = (Scan) operation;
 

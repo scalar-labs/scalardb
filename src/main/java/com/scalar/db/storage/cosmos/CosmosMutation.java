@@ -19,8 +19,8 @@ import org.jooq.impl.DSL;
 
 /** A class to treating utilities for a mutation */
 public class CosmosMutation extends CosmosOperation {
-  CosmosMutation(Mutation mutation, TableMetadata metadata) {
-    super(mutation, metadata);
+  CosmosMutation(Mutation mutation, TableMetadataManager metadataManager) {
+    super(mutation, metadataManager);
   }
 
   @Nonnull
