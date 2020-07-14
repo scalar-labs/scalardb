@@ -17,6 +17,7 @@ dependencies {
 * [Getting started](docs/getting-started.md)
 * [Design document](docs/design.md)
 * Slides
+    * [Scalar DB: A library that makes non-ACID databases ACID-compliant](https://www.slideshare.net/scalar-inc/scalar-db-a-library-that-makes-nonacid-databases-acidcompliant) at Database Lounge Tokyo #6 2020
     * [Transaction Management on Cassandra](https://www.slideshare.net/scalar-inc/transaction-management-on-cassandra) at Next Generation Cassandra Conference / ApacheCon NA 2019
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
@@ -27,7 +28,7 @@ dependencies {
 ## Contributing 
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
-* For asking questions, finding answers and helping other users, please go to [scalardb-user (English only)](https://groups.google.com/forum/#!forum/scalardb-user) or [scalardb-user-ja (Japanese only)](https://groups.google.com/forum/#!forum/scalardb-user-ja).
+* For asking questions, finding answers and helping other users, please go to [scalardb-user](https://groups.google.com/forum/#!forum/scalardb-user).
 * For filing bugs, suggesting improvements, or requesting new features, help us out by opening an issue.
 
 Here are the contributors we are especially thankful for:
