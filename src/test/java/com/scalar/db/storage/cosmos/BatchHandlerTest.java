@@ -38,7 +38,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class BatchStatementHandlerTest {
+public class BatchHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANOTHER_TABLE_NAME = "another_table";
@@ -53,7 +53,7 @@ public class BatchStatementHandlerTest {
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
 
-  private BatchStatementHandler handler;
+  private BatchHandler handler;
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
@@ -67,7 +67,7 @@ public class BatchStatementHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    handler = new BatchStatementHandler(client, metadataManager);
+    handler = new BatchHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
 
@@ -122,13 +122,17 @@ public class BatchStatementHandlerTest {
     Put put2 = preparePut().withCondition(new PutIfNotExists());
     Delete delete1 = prepareDelete();
     Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
-    Record record1 = handler.makeRecord(put1);
-    Record record2 = handler.makeRecord(put2);
+    CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
+    CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
+    CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
+    CosmosMutation cosmosMutation4 = new CosmosMutation(delete2, metadata);
+    Record record1 = cosmosMutation1.makeRecord();
+    Record record2 = cosmosMutation2.makeRecord();
     Record emptyRecord = new Record();
-    String query1 = handler.makeConditionalQuery(put1);
-    String query2 = handler.makeConditionalQuery(put2);
-    String query3 = handler.makeConditionalQuery(delete1);
-    String query4 = handler.makeConditionalQuery(delete2);
+    String query1 = cosmosMutation1.makeConditionalQuery();
+    String query2 = cosmosMutation2.makeConditionalQuery();
+    String query3 = cosmosMutation3.makeConditionalQuery();
+    String query4 = cosmosMutation4.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -144,14 +148,11 @@ public class BatchStatementHandlerTest {
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(4);
 
-    assertThat(captor.getValue().get(1))
-        .isEqualTo(MutateStatementHandler.MutationType.PUT.ordinal());
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.PUT.ordinal());
     assertThat(captor.getValue().get(2))
-        .isEqualTo(MutateStatementHandler.MutationType.PUT_IF_NOT_EXISTS.ordinal());
-    assertThat(captor.getValue().get(3))
-        .isEqualTo(MutateStatementHandler.MutationType.DELETE_IF.ordinal());
-    assertThat(captor.getValue().get(4))
-        .isEqualTo(MutateStatementHandler.MutationType.DELETE_IF.ordinal());
+        .isEqualTo(CosmosMutation.MutationType.PUT_IF_NOT_EXISTS.ordinal());
+    assertThat(captor.getValue().get(3)).isEqualTo(CosmosMutation.MutationType.DELETE_IF.ordinal());
+    assertThat(captor.getValue().get(4)).isEqualTo(CosmosMutation.MutationType.DELETE_IF.ordinal());
 
     assertThat(captor.getValue().get(5)).isEqualTo(record1);
     assertThat(captor.getValue().get(6)).isEqualTo(record2);

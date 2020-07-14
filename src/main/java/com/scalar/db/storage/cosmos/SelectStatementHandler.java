@@ -50,23 +50,23 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private List<Record> executeRead(Operation operation) throws CosmosException {
-    checkArgument(operation, Get.class);
-    Get get = (Get) operation;
+    CosmosOperation cosmosOperation = getCosmosOperation(operation);
+    cosmosOperation.checkArgument(Get.class);
 
-    String id = getId(get);
-    String concatenatedPartitionKey = getConcatenatedPartitionKey(get);
-    PartitionKey partitionKey = new PartitionKey(concatenatedPartitionKey);
+    String id = cosmosOperation.getId();
+    PartitionKey partitionKey = cosmosOperation.getCosmosPartitionKey();
 
-    Record record = getContainer(get).readItem(id, partitionKey, Record.class).getItem();
+    Record record = getContainer(operation).readItem(id, partitionKey, Record.class).getItem();
 
     return Arrays.asList(record);
   }
 
   private List<Record> executeQuery(Operation operation) throws CosmosException {
-    checkArgument(operation, Scan.class);
+    CosmosOperation cosmosOperation = getCosmosOperation(operation);
+    cosmosOperation.checkArgument(Scan.class);
     Scan scan = (Scan) operation;
 
-    String concatenatedPartitionKey = getConcatenatedPartitionKey(scan);
+    String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
     SelectConditionStep<org.jooq.Record> select =
         DSL.using(SQLDialect.DEFAULT)
             .selectFrom("Record r")
@@ -85,7 +85,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     CosmosQueryRequestOptions options =
-        new CosmosQueryRequestOptions().setPartitionKey(new PartitionKey(concatenatedPartitionKey));
+        new CosmosQueryRequestOptions().setPartitionKey(cosmosOperation.getCosmosPartitionKey());
 
     CosmosPagedIterable<Record> iterable =
         getContainer(scan).queryItems(query, options, Record.class);

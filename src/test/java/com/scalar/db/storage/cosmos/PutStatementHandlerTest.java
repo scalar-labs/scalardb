@@ -96,6 +96,8 @@ public class PutStatementHandlerTest {
     when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
         .thenReturn(response);
     Put put = preparePut();
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    Record record = cosmosMutation.makeRecord();
 
     // Act Assert
     assertThatCode(
@@ -105,7 +107,7 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container).upsertItem(eq(handler.makeRecord(put)), any(CosmosItemRequestOptions.class));
+    verify(container).upsertItem(eq(record), any(CosmosItemRequestOptions.class));
   }
 
   @Test
@@ -121,6 +123,8 @@ public class PutStatementHandlerTest {
             .forTable(ANY_TABLE_NAME)
             .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
             .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    Record record = cosmosMutation.makeRecord();
 
     // Act Assert
     assertThatCode(
@@ -130,7 +134,7 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container).upsertItem(eq(handler.makeRecord(put)), any(CosmosItemRequestOptions.class));
+    verify(container).upsertItem(eq(record), any(CosmosItemRequestOptions.class));
   }
 
   @Test
@@ -162,8 +166,9 @@ public class PutStatementHandlerTest {
     when(spResponse.getResponseAsString()).thenReturn("true");
 
     Put put = preparePut().withCondition(new PutIfNotExists());
-    Record record = handler.makeRecord(put);
-    String query = handler.makeConditionalQuery(put);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    Record record = cosmosMutation.makeRecord();
+    String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -179,7 +184,7 @@ public class PutStatementHandlerTest {
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(1);
     assertThat(captor.getValue().get(1))
-        .isEqualTo(MutateStatementHandler.MutationType.PUT_IF_NOT_EXISTS.ordinal());
+        .isEqualTo(CosmosMutation.MutationType.PUT_IF_NOT_EXISTS.ordinal());
     assertThat(captor.getValue().get(2)).isEqualTo(record);
     assertThat(captor.getValue().get(3)).isEqualTo(query);
   }
@@ -193,8 +198,9 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
 
     Put put = preparePut().withCondition(new PutIfExists());
-    Record record = handler.makeRecord(put);
-    String query = handler.makeConditionalQuery(put);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    Record record = cosmosMutation.makeRecord();
+    String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -209,8 +215,7 @@ public class PutStatementHandlerTest {
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(1);
-    assertThat(captor.getValue().get(1))
-        .isEqualTo(MutateStatementHandler.MutationType.PUT_IF.ordinal());
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.PUT_IF.ordinal());
     assertThat(captor.getValue().get(2)).isEqualTo(record);
     assertThat(captor.getValue().get(3)).isEqualTo(query);
   }

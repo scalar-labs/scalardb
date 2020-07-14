@@ -5,14 +5,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
-import com.google.common.base.Joiner;
 import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.io.Value;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -57,21 +52,6 @@ public abstract class StatementHandler {
 
   protected abstract List<Record> execute(Operation operation) throws CosmosException;
 
-  public static void checkArgument(Operation actual, Class<? extends Operation>... expected) {
-    for (Class<? extends Operation> e : expected) {
-      if (e.isInstance(actual)) {
-        return;
-      }
-    }
-    throw new IllegalArgumentException(
-        Joiner.on(" ")
-            .join(
-                new String[] {
-                  actual.getClass().toString(), "is passed where something like",
-                  expected[0].toString(), "is expected."
-                }));
-  }
-
   @Nonnull
   protected CosmosContainer getContainer(Operation operation) {
     return client
@@ -80,65 +60,9 @@ public abstract class StatementHandler {
   }
 
   @Nonnull
-  protected String getConcatenatedPartitionKey(Operation operation) {
-    Map<String, Value> keyMap = new HashMap<>();
-    operation
-        .getPartitionKey()
-        .get()
-        .forEach(
-            v -> {
-              keyMap.put(v.getName(), v);
-            });
-
+  protected CosmosOperation getCosmosOperation(Operation operation) {
     TableMetadata metadata = metadataManager.getTableMetadata(operation);
-    ConcatenationVisitor visitor = new ConcatenationVisitor();
-    metadata
-        .getPartitionKeyNames()
-        .forEach(
-            name -> {
-              if (keyMap.containsKey(name)) {
-                keyMap.get(name).accept(visitor);
-              } else {
-                throw new IllegalArgumentException("The partition key is not properly specified.");
-              }
-            });
 
-    return visitor.build();
-  }
-
-  @Nonnull
-  protected String getId(Operation operation) {
-    Map<String, Value> keyMap = new HashMap<>();
-    operation
-        .getPartitionKey()
-        .get()
-        .forEach(
-            v -> {
-              keyMap.put(v.getName(), v);
-            });
-    operation
-        .getClusteringKey()
-        .ifPresent(
-            k -> {
-              k.get()
-                  .forEach(
-                      v -> {
-                        keyMap.put(v.getName(), v);
-                      });
-            });
-
-    TableMetadata metadata = metadataManager.getTableMetadata(operation);
-    ConcatenationVisitor visitor = new ConcatenationVisitor();
-    List<String> keyNames = metadata.getKeyNames();
-    keyNames.forEach(
-        name -> {
-          if (keyMap.containsKey(name)) {
-            keyMap.get(name).accept(visitor);
-          } else {
-            throw new IllegalArgumentException("The primary key is not properly specified.");
-          }
-        });
-
-    return visitor.build();
+    return new CosmosOperation(operation, metadata);
   }
 }

@@ -133,7 +133,8 @@ public class DeleteStatementHandlerTest {
         .thenReturn(spResponse);
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
-    String query = handler.makeConditionalQuery(delete);
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
+    String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -148,8 +149,7 @@ public class DeleteStatementHandlerTest {
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(1);
-    assertThat(captor.getValue().get(1))
-        .isEqualTo(MutateStatementHandler.MutationType.DELETE_IF.ordinal());
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.DELETE_IF.ordinal());
     assertThat(captor.getValue().get(2)).isEqualTo(new Record());
     assertThat(captor.getValue().get(3)).isEqualTo(query);
   }

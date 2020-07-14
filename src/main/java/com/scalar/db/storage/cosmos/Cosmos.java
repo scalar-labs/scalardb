@@ -43,7 +43,7 @@ public class Cosmos implements DistributedStorage {
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
-  private final BatchStatementHandler batchStatementHandler;
+  private final BatchHandler batchHandler;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -64,7 +64,7 @@ public class Cosmos implements DistributedStorage {
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     this.putStatementHandler = new PutStatementHandler(client, metadataManager);
     this.deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
-    this.batchStatementHandler = new BatchStatementHandler(client, metadataManager);
+    this.batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
 
@@ -132,7 +132,7 @@ public class Cosmos implements DistributedStorage {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
       setTargetToIfNot(mutations);
-      batchStatementHandler.handle(mutations);
+      batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {

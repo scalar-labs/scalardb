@@ -24,7 +24,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class MutateStatementHandlerTest {
+public class CosmosMutationTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -38,20 +38,13 @@ public class MutateStatementHandlerTest {
   private static final int ANY_INT_3 = 3;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
-  @Mock private CosmosClient client;
-  @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    when(client.getDatabase(anyString())).thenReturn(database);
-    when(database.getContainer(anyString())).thenReturn(container);
-
-    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
@@ -80,19 +73,16 @@ public class MutateStatementHandlerTest {
     return del;
   }
 
-  // executeStoredProcedure() is tested in DeleteStatementHandlerTest and
-  // PutStatementHandlerTest
-
   @Test
   public void makeRecord_PutGiven_ShouldReturnWithValues() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     Put put = preparePut();
-    String id = handler.getId(put);
-    String concatenatedPartitionKey = handler.getConcatenatedPartitionKey(put);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    String id = cosmosMutation.getId();
+    String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
 
     // Act
-    Record actual = handler.makeRecord(put);
+    Record actual = cosmosMutation.makeRecord();
 
     // Assert
     assertThat(actual.getId()).isEqualTo(id);
@@ -106,11 +96,11 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeRecord_DeleteGiven_ShouldReturnEmpty() {
     // Arrange
-    DeleteStatementHandler handler = new DeleteStatementHandler(client, metadataManager);
     Delete delete = prepareDelete();
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
 
     // Act
-    Record actual = handler.makeRecord(delete);
+    Record actual = cosmosMutation.makeRecord();
 
     // Assert
     assertThat(actual.getId()).isEqualTo("");
@@ -120,12 +110,12 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeConditionalQuery_MutationWithoutConditionsGiven_ShouldReturnQuery() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     Put put = preparePut();
-    String id = handler.getId(put);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    String id = cosmosMutation.getId();
 
     // Act
-    String actual = handler.makeConditionalQuery(put);
+    String actual = cosmosMutation.makeConditionalQuery();
 
     // Assert
     assertThat(actual).isEqualTo("select * from Record r where r.id = '" + id + "'");
@@ -134,16 +124,16 @@ public class MutateStatementHandlerTest {
   @Test
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
-    PutStatementHandler handler = new PutStatementHandler(client, metadataManager);
     PutIf conditions =
         new PutIf(
             new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
             new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
     Put put = preparePut().withCondition(conditions);
-    String id = handler.getId(put);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    String id = cosmosMutation.getId();
 
     // Act
-    String actual = handler.makeConditionalQuery(put);
+    String actual = cosmosMutation.makeConditionalQuery();
 
     // Assert
     assertThat(actual)

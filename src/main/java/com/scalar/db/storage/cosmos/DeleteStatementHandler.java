@@ -5,8 +5,8 @@ import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
-import com.scalar.db.exception.storage.NoMutationException;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
@@ -18,7 +18,6 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class DeleteStatementHandler extends MutateStatementHandler {
-  private final String DELETE_IF = "deleteIf.js";
 
   public DeleteStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
@@ -26,23 +25,26 @@ public class DeleteStatementHandler extends MutateStatementHandler {
 
   @Override
   protected List<Record> execute(Operation operation) throws CosmosException {
-    checkArgument(operation, Delete.class);
-    Delete delete = (Delete) operation;
+    Mutation mutation = (Mutation) operation;
 
-    if (delete.getCondition().isPresent()) {
-      executeStoredProcedure(delete);
+    if (mutation.getCondition().isPresent()) {
+      executeStoredProcedure(mutation);
     } else {
-      execute(delete);
+      execute(mutation);
     }
 
     return Collections.emptyList();
   }
 
-  private void execute(Delete delete) throws CosmosException {
-    String id = getId(delete);
-    PartitionKey partitionKey = new PartitionKey(getConcatenatedPartitionKey(delete));
+  private void execute(Mutation mutation) throws CosmosException {
+    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
+    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadata);
+    cosmosMutation.checkArgument(Delete.class);
+
+    String id = cosmosMutation.getId();
+    PartitionKey partitionKey = cosmosMutation.getCosmosPartitionKey();
     CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
-    getContainer(delete).deleteItem(id, partitionKey, options);
+    getContainer(mutation).deleteItem(id, partitionKey, options);
   }
 }
