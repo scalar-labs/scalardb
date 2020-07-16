@@ -98,6 +98,7 @@ public class ClusterManager {
             .addContactPoints(config.getContactPoints().toArray(new String[0]))
             .withPort(
                 config.getContactPort() == 0 ? DEFAULT_CASSANDRA_PORT : config.getContactPort())
+            .withoutJMXReporting()
             // .withCompression ?
             // .withPoolingOptions ?
             .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
