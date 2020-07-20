@@ -13,6 +13,7 @@ import com.scalar.db.io.Value;
 import java.util.Collection;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.jooq.Field;
 import org.jooq.SQLDialect;
 import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
@@ -69,16 +70,34 @@ public class CosmosMutation extends CosmosOperation {
 
   @Nonnull
   public String makeConditionalQuery() {
+    Mutation mutation = (Mutation) getOperation();
+
     SelectConditionStep<org.jooq.Record> select;
     if (isPrimaryKeySpecified()) {
       String id = getId();
       select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
     } else {
       String concatenatedPartitionKey = getConcatenatedPartitionKey();
-      select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+      select =
+          DSL.using(SQLDialect.DEFAULT)
+              .selectFrom("Record r")
+              .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+
+      mutation
+          .getClusteringKey()
+          .ifPresent(
+              k -> {
+                ValueBinder binder = new ValueBinder();
+                k.get()
+                    .forEach(
+                        v -> {
+                          Field<Object> field = DSL.field("r.clusteringKey." + v.getName());
+                          binder.set(s -> select.and(field.equal(s)));
+                          v.accept(binder);
+                        });
+              });
     }
 
-    Mutation mutation = (Mutation) getOperation();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
     mutation
         .getCondition()
