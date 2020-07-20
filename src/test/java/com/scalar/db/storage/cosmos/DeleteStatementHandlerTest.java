@@ -125,6 +125,42 @@ public class DeleteStatementHandlerTest {
   }
 
   @Test
+  public void handle_DeleteWithoutClusteringKeyGiven_ShouldCallStoredProcedure() {
+    // Arrange
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+        .thenReturn(spResponse);
+
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
+    Delete delete =
+        new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
+    String query = cosmosMutation.makeConditionalQuery();
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(delete);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(cosmosScripts).getStoredProcedure("mutate.js");
+    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+    verify(storedProcedure)
+        .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
+    assertThat(captor.getValue().get(0)).isEqualTo(1);
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.DELETE_IF.ordinal());
+    assertThat(captor.getValue().get(2)).isEqualTo(new Record());
+    assertThat(captor.getValue().get(3)).isEqualTo(query);
+  }
+
+  @Test
   public void handle_DeleteWithConditionsGiven_ShouldCallStoredProcedure() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);

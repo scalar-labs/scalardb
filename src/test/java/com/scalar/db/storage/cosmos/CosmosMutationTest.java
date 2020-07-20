@@ -121,6 +121,30 @@ public class CosmosMutationTest {
   }
 
   @Test
+  public void makeConditionalQuery_MutationWithoutClusteringKeyGiven_ShouldReturnQuery() {
+    // Arrange
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Delete delete =
+        new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
+    String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
+
+    // Act
+    String actual = cosmosMutation.makeConditionalQuery();
+
+    // Assert
+    assertThat(actual)
+        .isEqualTo(
+            "select * from Record r where r.concatenatedPartitionKey = '"
+                + concatenatedPartitionKey
+                + "'");
+  }
+
+  @Test
   public void makeConditionalQuery_MutationWithConditionsGiven_ShouldReturnQuery() {
     // Arrange
     PutIf conditions =

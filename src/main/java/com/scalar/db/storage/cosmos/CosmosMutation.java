@@ -69,9 +69,14 @@ public class CosmosMutation extends CosmosOperation {
 
   @Nonnull
   public String makeConditionalQuery() {
-    String id = getId();
-    SelectConditionStep<org.jooq.Record> select =
-        DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+    SelectConditionStep<org.jooq.Record> select;
+    if (isPrimaryKeySpecified()) {
+      String id = getId();
+      select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.id").eq(id));
+    } else {
+      String concatenatedPartitionKey = getConcatenatedPartitionKey();
+      select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r").where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+    }
 
     Mutation mutation = (Mutation) getOperation();
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
