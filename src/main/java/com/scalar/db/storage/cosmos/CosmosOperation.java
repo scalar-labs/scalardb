@@ -7,6 +7,7 @@ import com.scalar.db.io.Value;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 /** A class to treating utilities for a operation */
@@ -17,6 +18,21 @@ public class CosmosOperation {
   public CosmosOperation(Operation operation, TableMetadataManager metadataManager) {
     this.operation = operation;
     this.metadata = metadataManager.getTableMetadata(operation);
+  }
+
+  public boolean isPrimaryKeySpecified() {
+    if (metadata.getClusteringKeyNames().isEmpty()) {
+      return true;
+    }
+
+    if (operation.getClusteringKey().isPresent()) {
+      return operation.getClusteringKey().get().get().stream()
+          .map(v -> v.getName())
+          .collect(Collectors.toList())
+          .containsAll(metadata.getClusteringKeyNames());
+    } else {
+      return false;
+    }
   }
 
   @Nonnull

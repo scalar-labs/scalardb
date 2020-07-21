@@ -40,10 +40,15 @@ public class DeleteStatementHandler extends MutateStatementHandler {
     CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
     cosmosMutation.checkArgument(Delete.class);
 
-    String id = cosmosMutation.getId();
-    PartitionKey partitionKey = cosmosMutation.getCosmosPartitionKey();
-    CosmosItemRequestOptions options = new CosmosItemRequestOptions();
+    if (cosmosMutation.isPrimaryKeySpecified()) {
+      String id = cosmosMutation.getId();
+      PartitionKey partitionKey = cosmosMutation.getCosmosPartitionKey();
+      CosmosItemRequestOptions options = new CosmosItemRequestOptions();
 
-    getContainer(mutation).deleteItem(id, partitionKey, options);
+      getContainer(mutation).deleteItem(id, partitionKey, options);
+    } else {
+      // clustering key is not fully specified
+      executeStoredProcedure(mutation);
+    }
   }
 }

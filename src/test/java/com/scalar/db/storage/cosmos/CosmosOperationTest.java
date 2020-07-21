@@ -8,7 +8,9 @@ import static org.mockito.Mockito.when;
 
 import com.azure.cosmos.models.PartitionKey;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -53,6 +55,62 @@ public class CosmosOperationTest {
               cosmosOperation.checkArgument(Get.class);
             })
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void isPrimaryKeySpecified_PrimaryKeyWithoutClusteringKeyGiven_ShouldReturnTrue() {
+    // Arrange
+    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of());
+
+    Key partitionKey =
+        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
+    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
+
+    // Act
+    boolean actual = cosmosOperation.isPrimaryKeySpecified();
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isPrimaryKeySpecified_PrimaryKeyWithClusteringKeyGiven_ShouldReturnTrue() {
+    // Arrange
+    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of(ANY_NAME_2));
+
+    Key partitionKey =
+        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
+    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
+
+    // Act
+    boolean actual = cosmosOperation.isPrimaryKeySpecified();
+
+    // Assert
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  public void isPrimaryKeySpecified_NoClusteringKeyGiven_ShouldReturnTrue() {
+    // Arrange
+    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of(ANY_NAME_2));
+
+    Key partitionKey =
+        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
+    Delete delete =
+        new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    CosmosOperation cosmosOperation = new CosmosOperation(delete, metadataManager);
+
+    // Act
+    boolean actual = cosmosOperation.isPrimaryKeySpecified();
+
+    // Assert
+    assertThat(actual).isFalse();
   }
 
   @Test
