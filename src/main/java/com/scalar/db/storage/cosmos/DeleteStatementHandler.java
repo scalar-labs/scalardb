@@ -47,7 +47,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
 
       getContainer(mutation).deleteItem(id, partitionKey, options);
     } else {
-      // clustering key is not specified
+      // clustering key is not fully specified
       executeStoredProcedure(mutation);
     }
   }
