@@ -148,7 +148,7 @@ public class ResultImpl implements Result {
       case "varchar":
         return new TextValue(name, (String) recordValue);
       case "blob":
-        return new BlobValue(name, (byte[]) recordValue);
+        return new BlobValue(name, ((String) recordValue).getBytes());
       default:
         throw new UnsupportedTypeException(type);
     }
