@@ -147,7 +147,10 @@ public class ResultImpl implements Result {
         return new DoubleValue(name, (double) recordValue);
       case "text": // for backwards compatibility
       case "varchar":
-        return new TextValue(name, (String) recordValue);
+        return new TextValue(
+            name,
+            new String(
+                ((String) recordValue).getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8));
       case "blob":
         return new BlobValue(name, ((String) recordValue).getBytes(StandardCharsets.UTF_8));
       default:
