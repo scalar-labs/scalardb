@@ -9,7 +9,7 @@ import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,7 +27,7 @@ public class MapVisitorTest {
   private static final DoubleValue ANY_DOUBLE_VALUE = new DoubleValue("any_double", ANY_DOUBLE);
   private static final String ANY_TEXT = "test";
   private static final TextValue ANY_TEXT_VALUE = new TextValue("any_text", ANY_TEXT);
-  private static final byte[] ANY_BLOB = "scalar".getBytes();
+  private static final byte[] ANY_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
   private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
   private MapVisitor visitor;
 
@@ -96,7 +96,7 @@ public class MapVisitorTest {
     ANY_BLOB_VALUE.accept(visitor);
 
     // Assert
-    ByteBuffer any_buffer = (ByteBuffer) ByteBuffer.allocate(ANY_BLOB.length).put(ANY_BLOB).flip();
-    assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(any_buffer);
+    String expected = new String(ANY_BLOB);
+    assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(expected);
   }
 }
