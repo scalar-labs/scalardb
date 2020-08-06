@@ -75,7 +75,7 @@ public class ResultImplTest {
             .put(ANY_COLUMN_NAME_5, Double.MAX_VALUE)
             .put(ANY_COLUMN_NAME_6, "string")
             // Cosmos DB converts byte[] to a string
-            .put(ANY_COLUMN_NAME_7, "blob")
+            .put(ANY_COLUMN_NAME_7, "ブロブ")
             .build();
     record.setValues(values);
 

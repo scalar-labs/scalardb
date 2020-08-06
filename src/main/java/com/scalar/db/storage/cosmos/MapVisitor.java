@@ -8,6 +8,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -91,7 +92,7 @@ public class MapVisitor implements ValueVisitor {
 
   /**
    * Sets the specified {@code BlobValue} to the map. Scalar DB converts the blob as a string
-   * because Cosmos DB doesn't receive the value as a byte array.
+   * because Cosmos DB doesn't receive a byte array.
    *
    * @param value a {@code BlobValue} to be set
    */
@@ -101,7 +102,7 @@ public class MapVisitor implements ValueVisitor {
         .get()
         .ifPresent(
             b -> {
-              values.put(value.getName(), new String(value.get().get()));
+              values.put(value.getName(), new String(value.get().get(), StandardCharsets.UTF_8));
             });
   }
 }

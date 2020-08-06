@@ -18,6 +18,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -148,7 +149,7 @@ public class ResultImpl implements Result {
       case "varchar":
         return new TextValue(name, (String) recordValue);
       case "blob":
-        return new BlobValue(name, ((String) recordValue).getBytes());
+        return new BlobValue(name, ((String) recordValue).getBytes(StandardCharsets.UTF_8));
       default:
         throw new UnsupportedTypeException(type);
     }
