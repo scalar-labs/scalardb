@@ -7,7 +7,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
-import com.scalar.db.exception.storage.InvalidMetadataException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -93,41 +92,36 @@ public class ResultImpl implements Result {
 
   @VisibleForTesting
   void interpret(Record record, Selection selection, TableMetadata metadata) {
-    record.getPartitionKey().forEach((name, value) -> add(name, value));
-    record.getClusteringKey().forEach((name, value) -> add(name, value));
-
-    // This isn't actual projection...
+    Map<String, Object> recordValues = record.getValues();
     if (selection.getProjections().isEmpty()) {
-      record.getValues().forEach((name, value) -> add(name, value));
+      metadata
+          .getColumns()
+          .forEach(
+              (name, type) -> {
+                add(name, recordValues);
+              });
     } else {
-      Map<String, Object> recordValues = record.getValues();
+      // This isn't actual projection...
       selection
           .getProjections()
           .forEach(
               name -> {
-                if (recordValues.containsKey(name)) {
-                  add(name, recordValues.get(name));
-                }
+                add(name, recordValues);
               });
     }
+
+    metadata.getPartitionKeyNames().forEach(name -> add(name, record.getPartitionKey()));
+    metadata.getClusteringKeyNames().forEach(name -> add(name, record.getClusteringKey()));
   }
 
-  private void add(String name, Object value) {
-    if (metadata.getColumns().containsKey(name)) {
-      values.put(name, convert(value, name, metadata.getColumns().get(name)));
-    } else {
-      throw new InvalidMetadataException("metadata doesn't have the specified column: " + name);
-    }
+  private void add(String name, Map<String, Object> recordValues) {
+    values.put(name, convert(recordValues.get(name), name, metadata.getColumns().get(name)));
   }
 
   private Optional<Key> getKey(Set<String> names) {
     List<Value> list = new ArrayList<>();
     for (String name : names) {
       Value value = values.get(name);
-      if (value == null) {
-        LOGGER.warn("full key doesn't seem to be projected into the result");
-        return Optional.empty();
-      }
       list.add(value);
     }
     return Optional.of(new Key(list));
@@ -135,27 +129,35 @@ public class ResultImpl implements Result {
 
   private Value convert(Object recordValue, String name, String type)
       throws UnsupportedTypeException {
+    // When recordValue is NULL, the value will be the default value.
+    // It is the same behavior as the datastax C* driver
     switch (type) {
       case "boolean":
-        return new BooleanValue(name, (boolean) recordValue);
+        return new BooleanValue(name, recordValue == null ? false : (boolean) recordValue);
       case "int":
-        return new IntValue(name, (int) recordValue);
+        return new IntValue(name, recordValue == null ? 0 : (int) recordValue);
       case "bigint":
-        return new BigIntValue(name, (long) recordValue);
+        return new BigIntValue(name, recordValue == null ? 0L : (long) recordValue);
       case "float":
-        return new FloatValue(name, (float) recordValue);
+        return new FloatValue(name, recordValue == null ? 0.0f : (float) recordValue);
       case "double":
-        return new DoubleValue(name, (double) recordValue);
+        return new DoubleValue(name, recordValue == null ? 0.0 : (double) recordValue);
       case "text": // for backwards compatibility
       case "varchar":
         return new TextValue(
             name,
-            new String(
-                ((String) recordValue).getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8));
+            recordValue == null
+                ? null
+                : new String(
+                    ((String) recordValue).getBytes(StandardCharsets.UTF_8),
+                    StandardCharsets.UTF_8));
       case "blob":
         return new BlobValue(
             name,
-            Base64.getDecoder().decode(((String) recordValue).getBytes(StandardCharsets.UTF_8)));
+            recordValue == null
+                ? null
+                : Base64.getDecoder()
+                    .decode(((String) recordValue).getBytes(StandardCharsets.UTF_8)));
       default:
         throw new UnsupportedTypeException(type);
     }
