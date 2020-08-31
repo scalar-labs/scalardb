@@ -20,6 +20,7 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,7 +153,9 @@ public class ResultImpl implements Result {
             new String(
                 ((String) recordValue).getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8));
       case "blob":
-        return new BlobValue(name, ((String) recordValue).getBytes(StandardCharsets.UTF_8));
+        return new BlobValue(
+            name,
+            Base64.getDecoder().decode(((String) recordValue).getBytes(StandardCharsets.UTF_8)));
       default:
         throw new UnsupportedTypeException(type);
     }

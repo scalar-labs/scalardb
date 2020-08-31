@@ -10,12 +10,15 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Get;
+import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Before;
@@ -28,6 +31,8 @@ public class ResultImplTest {
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
+  private static final byte[] ANY_BLOB = "ブロブ".getBytes(StandardCharsets.UTF_8);
+  private static final String ANY_BLOB_STRING = Base64.getEncoder().encodeToString(ANY_BLOB);
   private static final String ANY_COLUMN_NAME_1 = "val1";
   private static final String ANY_COLUMN_NAME_2 = "val2";
   private static final String ANY_COLUMN_NAME_3 = "val3";
@@ -74,8 +79,8 @@ public class ResultImplTest {
             .put(ANY_COLUMN_NAME_4, Float.MAX_VALUE)
             .put(ANY_COLUMN_NAME_5, Double.MAX_VALUE)
             .put(ANY_COLUMN_NAME_6, "string")
-            // Cosmos DB converts byte[] to a string
-            .put(ANY_COLUMN_NAME_7, "ブロブ")
+            // Cosmos DB converts byte[] to a base64 string
+            .put(ANY_COLUMN_NAME_7, ANY_BLOB_STRING)
             .build();
     record.setValues(values);
 
@@ -106,6 +111,7 @@ public class ResultImplTest {
     assertThat(actual.get(ANY_NAME_1)).isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     assertThat(actual.get(ANY_NAME_2)).isEqualTo(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     assertThat(actual.get(ANY_COLUMN_NAME_1)).isEqualTo(new BooleanValue(ANY_COLUMN_NAME_1, true));
+    assertThat(actual.get(ANY_COLUMN_NAME_7)).isEqualTo(new BlobValue(ANY_COLUMN_NAME_7, ANY_BLOB));
   }
 
   @Test
