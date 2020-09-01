@@ -98,7 +98,7 @@ public class ResultImpl implements Result {
           .getColumns()
           .forEach(
               (name, type) -> {
-                add(name, recordValues);
+                add(name, recordValues.get(name));
               });
     } else {
       // This isn't actual projection...
@@ -106,16 +106,18 @@ public class ResultImpl implements Result {
           .getProjections()
           .forEach(
               name -> {
-                add(name, recordValues);
+                add(name, recordValues.get(name));
               });
     }
 
-    metadata.getPartitionKeyNames().forEach(name -> add(name, record.getPartitionKey()));
-    metadata.getClusteringKeyNames().forEach(name -> add(name, record.getClusteringKey()));
+    metadata.getPartitionKeyNames().forEach(name -> add(name, record.getPartitionKey().get(name)));
+    metadata
+        .getClusteringKeyNames()
+        .forEach(name -> add(name, record.getClusteringKey().get(name)));
   }
 
-  private void add(String name, Map<String, Object> recordValues) {
-    values.put(name, convert(recordValues.get(name), name, metadata.getColumns().get(name)));
+  private void add(String name, Object value) {
+    values.put(name, convert(value, name, metadata.getColumns().get(name)));
   }
 
   private Optional<Key> getKey(Set<String> names) {
