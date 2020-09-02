@@ -5,14 +5,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Get;
+import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
@@ -115,6 +117,31 @@ public class ResultImplTest {
   }
 
   @Test
+  public void getValues_NoValuesGivenInConstructor_ShouldReturnDefaultValueSet() {
+    // Arrange
+    Record emptyRecord = new Record();
+    emptyRecord.setId(ANY_ID_1);
+    emptyRecord.setConcatenatedPartitionKey(ANY_TEXT_1);
+    emptyRecord.setPartitionKey(ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1));
+    emptyRecord.setClusteringKey(ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2));
+
+    ResultImpl result = new ResultImpl(emptyRecord, get, metadata);
+
+    // Act
+    Map<String, Value> actual = result.getValues();
+
+    // Assert
+    assertThat(actual.get(ANY_COLUMN_NAME_1)).isEqualTo(new BooleanValue(ANY_COLUMN_NAME_1, false));
+    assertThat(actual.get(ANY_COLUMN_NAME_2)).isEqualTo(new IntValue(ANY_COLUMN_NAME_2, 0));
+    assertThat(actual.get(ANY_COLUMN_NAME_3)).isEqualTo(new BigIntValue(ANY_COLUMN_NAME_3, 0L));
+    assertThat(actual.get(ANY_COLUMN_NAME_4)).isEqualTo(new FloatValue(ANY_COLUMN_NAME_4, 0.0f));
+    assertThat(actual.get(ANY_COLUMN_NAME_5)).isEqualTo(new DoubleValue(ANY_COLUMN_NAME_5, 0.0));
+    assertThat(actual.get(ANY_COLUMN_NAME_6))
+        .isEqualTo(new TextValue(ANY_COLUMN_NAME_6, (String) null));
+    assertThat(actual.get(ANY_COLUMN_NAME_7)).isEqualTo(new BlobValue(ANY_COLUMN_NAME_7, null));
+  }
+
+  @Test
   public void getValue_GetValueCalledBefore_ShouldNotLoadAgain() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(record, get, metadata));
@@ -213,20 +240,6 @@ public class ResultImplTest {
   }
 
   @Test
-  public void getPartitionKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
-    // Arrange
-    TableMetadata spy = spy(metadata);
-    when(spy.getPartitionKeyNames()).thenReturn(ImmutableSet.of("another"));
-    ResultImpl result = new ResultImpl(record, get, spy);
-
-    // Act
-    Optional<Key> key = result.getPartitionKey();
-
-    // Assert
-    assertThat(key.isPresent()).isFalse();
-  }
-
-  @Test
   public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
     ResultImpl result = new ResultImpl(record, get, metadata);
@@ -237,19 +250,5 @@ public class ResultImplTest {
     // Assert
     assertThat(key.get().get().size()).isEqualTo(1);
     assertThat(key.get().get().get(0)).isEqualTo(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-  }
-
-  @Test
-  public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
-    // Arrange
-    TableMetadata spy = spy(metadata);
-    when(spy.getClusteringKeyNames()).thenReturn(ImmutableSet.of("another"));
-    ResultImpl result = new ResultImpl(record, get, spy);
-
-    // Act
-    Optional<Key> key = result.getClusteringKey();
-
-    // Assert
-    assertThat(key.isPresent()).isFalse();
   }
 }
