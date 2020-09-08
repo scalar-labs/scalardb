@@ -2,17 +2,18 @@
 
 ## Introduction
 
-Scalar DB is a distributed storage abstraction and client-coordinated distributed transaction manager on top of the storage. This design document briefly explains its background, design and implementation.
+Scalar DB is a library that makes non-ACID databases/storages ACID-compliant.
+This design document briefly explains its background, design and implementation.
 
 ## Background and Objectives
 
 Distributed storage is widely adopted in real-world applications and recent open-source distributed storages such as Cassandra and HBase have accelerated the trend. They are particularly used by large and sometimes mission-critical applications because of their high performance, high availability and high scalability. However, they often lack transaction capability, which is particularly important in mission-critical applications. Transaction capability can be added to HBase via third-party libraries, but they tend to sacrifice some availability property due to the master-slave architecture. Some companies have ended up creating yet another distributed transactional databases from scratch (such as CockroachDB and TiDB) to overcome such problem.
 
-Scalar DB v1 is a simple and practical solution to solve the above mentioned problem in a different way. It provides a simple storage abstraction layer on the existing storage implementations and a storage-independent scalable distributed transaction layer on top of the storage abstraction. So, it can fully utilize, not only battle-tested existing implementations, operational/management tools and good properties of storages, but also the eco-system, the best practices and the community which have grown for a long time.
+Scalar DB is a simple and practical solution to solve the above mentioned problem in a different way. It provides a simple storage abstraction layer on the existing storage implementations and a storage-agnostic universal transaction manager on top of the storage abstraction[1]. So, it can fully utilize, not only battle-tested existing implementations, operational/management tools and good properties of storages, but also the eco-system, the best practices and the community which have grown for a long time.
 
 ## Design Goals
 
-The primary design goals of Scalar DB are high availability, horizontal scalability and strong consistency for distributed storage and transaction operations. It aims to tolerate disk, machine, rack, and even data-center failures, with minimal performance degradation. It achieves these goals with an unbundled transaction layer [1] with easy and unified API so that the underlining storage implementations can be replaced with others without application code change. The performance of the Scalar DB is highly dependent on the underlying storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.
+The primary design goal of Scalar DB is achieving ACID transaction capability without loosing high availability, horizontal scalability and strong consistency of underlining storages. The performance of the Scalar DB is highly dependent on the underlying storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.
 
 ## High-level Architecture
 
@@ -49,7 +50,7 @@ Range scan is only supported for clustering-key access within the same partition
 
 ### Storage
 
-As of writing this, Scalar DB supports Cassandra and Cosmos DB as a storage implementation. More correctly, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB and Azure Cosmos DB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
+As of writing this, Scalar DB supports Cassandra and Cosmos DB as a storage implementation. More correctly for Cassandra, it supports Cassandra java-driver API. Thus Cassandra java-driver compatible storage systems, such as ScyllaDB, can potentially also be used. The storage abstraction assumes the following features/properties, which most recent distributed storages have:
 
 - Atomic CRUD operations (each single-record operation needs to be atomic)
 - Sequential consistency support
@@ -61,11 +62,11 @@ Please see the javadoc for more details and usage.
 ### Transaction
 
 Scalar DB executes transactions in a fully client-coordinated way so that it can do master-less transactions, which achieves almost linear scalability and high availability (especially when it is integrated with scalable and highly available storages).
-It basically follows the Cherry Garcia protocol proposed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
+It basically follows Cherry Garcia protocol proposed in [3]. More specifically, Scalar DB achieves scalable distributed transaction by utilizing atomic conditional mutation for managing transaction state and storing WAL (Write-Ahead-Logging) records in distributed fashion in each record by using meta-data ability.
 It also has some similarity to paxos-commit [4].
 
 Scalar DB supports Snapshot Isolation (SI) and Serializable as Isolation levels.
-SI in Scalar DB is a variant of SI defined in ANSI and similar to RCSI (Read Committed Snapshot Isolation) used in SQL Server. It doesn't create a global snapshot so Read Skew could happen in certain cases in addition to the usual SI anomalies such as Write Skew anomaly and Read-Only Transaction anomaly. Serializable is achieved with two strategies; Extra-write and Extra-read, which both avoid anti-dependency that is the root cause of the anomalies in SI. Extra-write basically converts reads into writes to remove anti-dependencies, and Extra-read re-read its read set in the commit phase to actually check if there is a anti-dependency.
+SI in Scalar DB is a variant of SI defined in ANSI and similar to RCSI (Read Committed Snapshot Isolation) used in SQL Server. It doesn't create a global snapshot so Read Skew could happen in certain cases in addition to the usual SI anomalies such as Write Skew anomaly and Read-Only Transaction anomaly. Serializable is achieved with two strategies; Extra-write and Extra-read, which both avoid anti-dependency that is the root cause of the anomalies in SI. Extra-write basically converts reads into writes to remove anti-dependencies, and Extra-read re-reads its read set in the commit phase to actually check if there is an anti-dependency.
 Please see the javadoc for more details and usage.
 
 ## References
