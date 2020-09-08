@@ -1,7 +1,7 @@
 # Schema Tool for Scalar DB
 This tool creates Scalar DB schemas on Cosmos DB and Cassandra.
   - For Cosmos DB, this tool creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB.
-  - For Cassandra, this tool create databases(keyspaces) and tables. You can specify the compaction strategy, the network topology strategy and the replication factor.
+  - For Cassandra, this tool creates databases(keyspaces) and tables. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
   - You don't have to add Scalar DB metadata for transactions. This tool automatically adds them when you set the `transaction` parameter `true` in your schema file.
 
 # Usage
