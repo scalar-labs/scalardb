@@ -13,7 +13,7 @@ Scalar DB is a simple and practical solution to solve the above mentioned proble
 
 ## Design Goals
 
-The primary design goal of Scalar DB is achieving ACID transaction capability without loosing high availability, horizontal scalability and strong consistency of underlining storages. The performance of the Scalar DB is highly dependent on the underlying storage performance, and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer.
+The primary design goal of Scalar DB is achieving ACID transaction capability without losing high availability, horizontal scalability, and strong consistency of underlining storage. The performance of the Scalar DB is highly dependent on the underlying storage performance and is usually slower than other scratch-built distributed databases since it adds a storage abstraction layer and storage-oblivious transaction layer, which makes various optimizations hard.
 
 ## High-level Architecture
 
