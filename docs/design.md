@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Scalar DB v1 is a distributed storage abstraction and client-coordinated distributed transaction manager on top of the storage. This design document briefly explains its background, design and implementation.
+Scalar DB is a distributed storage abstraction and client-coordinated distributed transaction manager on top of the storage. This design document briefly explains its background, design and implementation.
 
 ## Background and Objectives
 
