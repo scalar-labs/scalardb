@@ -83,5 +83,5 @@ $ java -jar target/scalar-schema.jar --help
   }
 }
 ```
-- `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored when Cosmos DB.
+- `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored in Cosmos DB.
 - This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB. `ru` is ignored when Cassandra.
