@@ -1,12 +1,11 @@
-## Getting Started with Scalar DB v1
+## Getting Started with Scalar DB
 
 ## Overview
-Scalar DB v1 is a library that provides a distributed storage abstraction and client-coordinated distributed transaction on the storage.
 This document briefly explains how you can get started with Scalar DB with a simple electronic money application.
 
 ## Install prerequisites
 
-Scalar DB v1 is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
+Scalar DB is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
