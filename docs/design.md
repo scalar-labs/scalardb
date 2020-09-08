@@ -3,7 +3,7 @@
 ## Introduction
 
 Scalar DB is a library that makes non-ACID databases/storages ACID-compliant.
-This design document briefly explains its background, design and implementation.
+This design document briefly explains its background, design, and implementation.
 
 ## Background and Objectives
 
