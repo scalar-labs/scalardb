@@ -1,6 +1,8 @@
 # Schema Tool for Scalar DB
-This tool makes schemas on Cassandra or Cosmos DB for [Scalar DB](https://github.com/scalar-labs/scalardb).
-  - This tool creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB for Cosmos DB
+This tool creates Scalar DB schemas on Cosmos DB and Cassandra.
+  - For Cosmos DB, this tool creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB.
+  - For Cassandra, this tool create databases(keyspaces) and tables. You can specify the compaction strategy, the network topology strategy and the replication factor.
+  - You don't have to add Scalar DB metadata for transactions. This tool automatically adds them when you set the `transaction` parameter `true` in your schema file.
 
 # Usage
 
@@ -20,14 +22,17 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [--network-strategy <NETWORK_STRATEGY> --replication-factor <REPLICATION_FACTOR>]
+$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [-n <NETWORK_STRATEGY> -R <REPLICATION_FACTOR>]
 ```
+  - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
 ### Delete all tables
 ```console
 # For Cosmos DB
-$ java -jar target/scalar-schema.jar --cosmos -h <ACCOUNT_URI> -p <KEY> -D
+$ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
+```
 
+```console
 # For Cassandra
 $ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
 ```
@@ -78,3 +83,5 @@ $ java -jar target/scalar-schema.jar --help
   }
 }
 ```
+- `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored when Cosmos DB.
+- This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB. `ru` is ignored when Cassandra.

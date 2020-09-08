@@ -8,7 +8,8 @@
 
 (def ^:private compaction-strategies
   {"STCS" :SizeTieredCompactionStrategy
-   "LCS" :LeveledCompactionStrategy})
+   "LCS" :LeveledCompactionStrategy
+   "TWCS" :TimeWindowCompactionStrategy})
 
 (defn- get-cluster
   [host user password]
@@ -34,7 +35,7 @@
                          (keyword database)
                          (clause/if-exists false)
                          (clause/with
-                           {:replication (make-replication-param options)}))))
+                          {:replication (make-replication-param options)}))))
 
 (defn- key-set->vec
   [key-set]

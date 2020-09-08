@@ -13,12 +13,12 @@
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
    ["-r" "--ru RESOURCE_UNIT" "Base RU for each table on Cosmos DB. The RU of the coordinator for Scalar DB transaction is specified by this option. This option is ignored when Cassandra."
     :default 400 :parse-fn #(Integer/parseInt %)]
-   [nil "--replication-factor REPLICATION_FACTOR"
+   ["-R" "--replication-factor REPLICATION_FACTOR"
     "The number of replicas. This options is ignored when Cosmos DB."
     :default 1 :parse-fn #(Integer/parseInt %)]
-   [nil "--network-strategy NETWORK_STRATEGY"
+   ["-n" "--network-strategy NETWORK_STRATEGY"
     "The network topology strategy. SimpleStrategy or NetworkTopologyStrategy. This options is ignored when Cosmos DB."]
-   ["-D" "--delete-all" "All database will be deleted. If this is enabled."]
+   ["-D" "--delete-all" "All database will be deleted, if this is enabled."]
    [nil "--help"]])
 
 (defn -main [& args]
