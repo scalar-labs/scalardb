@@ -13,7 +13,7 @@ A library that makes non-ACID distributed databases/storages ACID-compliant. It 
     * [Transaction Management on Cassandra](https://www.slideshare.net/scalar-inc/transaction-management-on-cassandra) at Next Generation Cassandra Conference / ApacheCon NA 2019
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
-* [TLA+](tla+/consensus-commit/README.md)
+* [TLA+](../tla+/consensus-commit/README.md)
 * Sample applications by contributors/collaborators
   * [Q&A application (From Indetail Engineering team)](https://github.com/indetail-blockchain/getting-started-with-scalardb)
 
