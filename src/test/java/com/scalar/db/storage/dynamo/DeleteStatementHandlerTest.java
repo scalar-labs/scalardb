@@ -86,7 +86,7 @@ public class DeleteStatementHandlerTest {
     verify(client).deleteItem(captor.capture());
     DeleteItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(dynamoMutation.getKeyMap());
-    assertThat(actualRequest.conditionExpression()).isEqualTo(null);
+    assertThat(actualRequest.conditionExpression()).isNull();
   }
 
   @Test
@@ -132,7 +132,7 @@ public class DeleteStatementHandlerTest {
     verify(client).deleteItem(captor.capture());
     DeleteItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(dynamoMutation.getKeyMap());
-    assertThat(actualRequest.conditionExpression()).isEqualTo(null);
+    assertThat(actualRequest.conditionExpression()).isNull();
   }
 
   @Test

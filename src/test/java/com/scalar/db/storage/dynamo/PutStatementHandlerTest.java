@@ -99,7 +99,7 @@ public class PutStatementHandlerTest {
     verify(client).putItem(captor.capture());
     PutItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.item()).isEqualTo(expectedItem);
-    assertThat(actualRequest.conditionExpression()).isEqualTo(null);
+    assertThat(actualRequest.conditionExpression()).isNull();
   }
 
   @Test
@@ -129,7 +129,7 @@ public class PutStatementHandlerTest {
     verify(client).putItem(captor.capture());
     PutItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.item()).isEqualTo(expectedItem);
-    assertThat(actualRequest.conditionExpression()).isEqualTo(null);
+    assertThat(actualRequest.conditionExpression()).isNull();
   }
 
   @Test

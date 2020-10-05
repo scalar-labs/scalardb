@@ -103,7 +103,7 @@ public class SelectStatementHandlerTest {
     verify(client).getItem(captor.capture());
     GetItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.key()).isEqualTo(expectedKeys);
-    assertThat(actualRequest.projectionExpression()).isEqualTo(null);
+    assertThat(actualRequest.projectionExpression()).isNull();
   }
 
   @Test
@@ -311,7 +311,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
-    assertThat(actualRequest.scanIndexForward()).isEqualTo(null);
+    assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
   }
 
@@ -361,7 +361,7 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
     // TODO: multiple ordering
-    assertThat(actualRequest.scanIndexForward()).isEqualTo(null);
+    assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
   }
 }
