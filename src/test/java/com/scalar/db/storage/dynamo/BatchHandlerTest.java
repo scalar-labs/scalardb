@@ -154,7 +154,7 @@ public class BatchHandlerTest {
     assertThat(items.get(1).put().conditionExpression())
         .isEqualTo(dynamoMutation2.getIfNotExistsCondition());
     assertThat(items.get(2).delete().key()).isEqualTo(dynamoMutation3.getKeyMap());
-    assertThat(items.get(2).delete().conditionExpression()).isEqualTo(null);
+    assertThat(items.get(2).delete().conditionExpression()).isNull();
     assertThat(items.get(3).delete().key()).isEqualTo(dynamoMutation4.getKeyMap());
     assertThat(items.get(3).delete().conditionExpression())
         .isEqualTo(dynamoMutation4.getIfExistsCondition());
