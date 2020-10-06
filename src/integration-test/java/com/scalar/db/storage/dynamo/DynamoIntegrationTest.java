@@ -46,6 +46,9 @@ import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.Projection;
+import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
@@ -57,6 +60,7 @@ public class DynamoIntegrationTest {
   private static final String KEYSPACE = "integration_testing";
   private static final String TABLE = "test_table";
   private static final String PARTITION_KEY = "concatenatedPartitionKey";
+  private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -84,7 +88,7 @@ public class DynamoIntegrationTest {
             i -> {
               Map<String, AttributeValue> key = new HashMap<>();
               key.put(PARTITION_KEY, i.get(PARTITION_KEY));
-              key.put(COL_NAME4, i.get(COL_NAME4));
+              key.put(CLUSTERING_KEY, i.get(CLUSTERING_KEY));
               DeleteItemRequest delRequest =
                   DeleteItemRequest.builder().tableName(KEYSPACE + "." + TABLE).key(key).build();
               client.deleteItem(delRequest);
@@ -263,8 +267,7 @@ public class DynamoIntegrationTest {
   }
 
   @Test
-  public void scan_ScanWithStartExclusiveRangeGiven_ShouldThrowIllegalArgumentException()
-      throws ExecutionException {
+  public void scan_ScanWithStartExclusiveRangeGiven_ShouldReturnInclusiveResults() throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -275,11 +278,21 @@ public class DynamoIntegrationTest {
             .withStart(new Key(new IntValue(COL_NAME4, 0)), false)
             .withEnd(new Key(new IntValue(COL_NAME4, 2)), true);
 
-    assertThatThrownBy(
-            () -> {
-              storage.scan(scan).all();
-            })
-        .isInstanceOf(IllegalArgumentException.class);
+    List<Result> actual = storage.scan(scan).all();
+    // verify
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
   }
 
   @Test
@@ -1136,31 +1149,58 @@ public class DynamoIntegrationTest {
   }
 
   private static void createUserTable() {
-    CreateTableRequest request =
+    CreateTableRequest.Builder builder =
         CreateTableRequest.builder()
-            .attributeDefinitions(
-                AttributeDefinition.builder()
-                    .attributeName(PARTITION_KEY)
-                    .attributeType(ScalarAttributeType.S)
-                    .build(),
-                AttributeDefinition.builder()
-                    .attributeName(COL_NAME4)
-                    .attributeType(ScalarAttributeType.N)
-                    .build())
-            .keySchema(
-                KeySchemaElement.builder()
-                    .attributeName(PARTITION_KEY)
-                    .keyType(KeyType.HASH)
-                    .build(),
-                KeySchemaElement.builder().attributeName(COL_NAME4).keyType(KeyType.RANGE).build())
             .provisionedThroughput(
                 ProvisionedThroughput.builder()
                     .readCapacityUnits(10L)
                     .writeCapacityUnits(10L)
                     .build())
-            .tableName(KEYSPACE + "." + TABLE)
+            .tableName(KEYSPACE + "." + TABLE);
+
+    List<AttributeDefinition> attributeDefinitions = new ArrayList<>();
+    attributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(PARTITION_KEY)
+            .attributeType(ScalarAttributeType.S)
+            .build());
+    attributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(CLUSTERING_KEY)
+            .attributeType(ScalarAttributeType.S)
+            .build());
+    attributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(COL_NAME4)
+            .attributeType(ScalarAttributeType.N)
+            .build());
+    builder.attributeDefinitions(attributeDefinitions);
+
+    List<KeySchemaElement> keySchemaElements = new ArrayList<>();
+    keySchemaElements.add(
+        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
+    keySchemaElements.add(
+        KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
+    builder.keySchema(keySchemaElements);
+
+    List<KeySchemaElement> indexKeys = new ArrayList<>();
+    indexKeys.add(
+        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
+    indexKeys.add(
+        KeySchemaElement.builder().attributeName(COL_NAME4).keyType(KeyType.RANGE).build());
+    LocalSecondaryIndex index =
+        LocalSecondaryIndex.builder()
+            .indexName("index." + COL_NAME4)
+            .keySchema(indexKeys)
+            .projection(
+                Projection.builder()
+                    .projectionType(ProjectionType.INCLUDE)
+                    .nonKeyAttributes(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME5)
+                    .build())
             .build();
-    client.createTable(request);
+    builder.localSecondaryIndexes(index);
+
+    client.createTable(builder.build());
   }
 
   private static void createMetadataTable() {
