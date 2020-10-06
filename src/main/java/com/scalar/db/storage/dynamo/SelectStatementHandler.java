@@ -61,7 +61,7 @@ public class SelectStatementHandler extends StatementHandler {
         return new ArrayList<>(executeQuery((Scan) operation).items());
       }
     } catch (DynamoDbException e) {
-      throw e;
+      throw new ExecutionException(e.getMessage(), e);
     }
   }
 
