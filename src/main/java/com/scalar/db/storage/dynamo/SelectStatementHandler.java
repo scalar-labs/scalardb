@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -88,21 +89,31 @@ public class SelectStatementHandler extends StatementHandler {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
+    getIndexName(scan)
+        .ifPresent(
+            name -> {
+              String indexTableName = dynamoOperation.getIndexName(name);
+              builder.indexName(indexTableName);
+            });
+
     setConditions(builder, scan);
 
-    if (!scan.getOrderings().isEmpty()) {
-      scan.getOrderings()
-          .forEach(
-              o -> {
-                if (dynamoOperation.isSortKey(o.getName())
-                    && o.getOrder() == Scan.Ordering.Order.DESC) {
-                  builder.scanIndexForward(false);
-                }
-              });
-    }
+    if (dynamoOperation.isSingleClusteringKey()) {
+      // When multiple clustering keys exist, the ordering and the limitation will be applied later
+      if (!scan.getOrderings().isEmpty()) {
+        scan.getOrderings()
+            .forEach(
+                o -> {
+                  if (dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
+                      && o.getOrder() == Scan.Ordering.Order.DESC) {
+                    builder.scanIndexForward(false);
+                  }
+                });
+      }
 
-    if (scan.getLimit() > 0) {
-      builder.limit(scan.getLimit());
+      if (scan.getLimit() > 0) {
+        builder.limit(scan.getLimit());
+      }
     }
 
     if (!scan.getProjections().isEmpty()) {
@@ -116,16 +127,29 @@ public class SelectStatementHandler extends StatementHandler {
     return client.query(builder.build());
   }
 
+  private Optional<String> getIndexName(Scan scan) {
+    if (scan.getStartClusteringKey().isPresent()) {
+      List<Value> start = scan.getStartClusteringKey().get().get();
+      return Optional.of(start.get(start.size() - 1).getName());
+    }
+
+    if (scan.getEndClusteringKey().isPresent()) {
+      List<Value> end = scan.getEndClusteringKey().get().get();
+      return Optional.of(end.get(end.size() - 1).getName());
+    }
+
+    return Optional.empty();
+  }
+
   private void setConditions(QueryRequest.Builder builder, Scan scan) {
     List<String> conditions = new ArrayList<>();
+    List<String> filters = new ArrayList<>();
 
     conditions.add(getPartitionKeyCondition());
 
     boolean isRangeEnabled = setRangeCondition(scan, conditions);
-    if (!isRangeEnabled) {
-      setStartCondition(scan, conditions);
-      setEndCondition(scan, conditions);
-    }
+    setStartCondition(scan, conditions, filters, isRangeEnabled);
+    setEndCondition(scan, conditions, filters, isRangeEnabled);
     String keyConditions = String.join(" AND ", conditions);
 
     Map<String, AttributeValue> bindMap = getPartitionKeyBindMap(scan);
@@ -134,6 +158,11 @@ public class SelectStatementHandler extends StatementHandler {
     }
     bindMap.putAll(getStartBindMap(scan, isRangeEnabled));
     bindMap.putAll(getEndBindMap(scan, isRangeEnabled));
+
+    if (!filters.isEmpty()) {
+      String filterExpression = String.join(" AND ", filters);
+      builder.filterExpression(filterExpression);
+    }
 
     builder.keyConditionExpression(keyConditions).expressionAttributeValues(bindMap);
   }
@@ -163,13 +192,10 @@ public class SelectStatementHandler extends StatementHandler {
     String startKeyName = start.get(start.size() - 1).getName();
     String endKeyName = end.get(end.size() - 1).getName();
 
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
-
     if (startKeyName.equals(endKeyName)) {
       conditions.add(startKeyName + DynamoOperation.RANGE_CONDITION);
       if (!scan.getStartInclusive() || !scan.getEndInclusive()) {
-        throw new IllegalArgumentException(
-            "DynamoDB does NOT support the range scan with the exclusiving option");
+        LOGGER.warn("DynamoDB does NOT support the range scan with the exclusiving option");
       }
       return true;
     } else {
@@ -177,47 +203,59 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private void setStartCondition(Scan scan, List<String> conditions) {
+  private void setStartCondition(
+      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              if (k.get().size() > 1) {
-                throw new IllegalArgumentException(
-                    "DynamoDB doesn't suuport multiple clustering keys.");
+              List<Value> start = k.get();
+              for (int i = 0; i < start.size(); i++) {
+                Value value = start.get(i);
+                List<String> elements = new ArrayList<>();
+                elements.add(value.getName());
+                if (i < start.size() - 1) {
+                  elements.add("=");
+                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
+                  filters.add(String.join(" ", elements));
+                } else if (!isRangeEnabled) {
+                  if (scan.getStartInclusive()) {
+                    elements.add(">=");
+                  } else {
+                    elements.add(">");
+                  }
+                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
+                  conditions.add(String.join(" ", elements));
+                }
               }
-              Value value = k.get().get(0);
-              List<String> elements = new ArrayList<>();
-              elements.add(value.getName());
-              if (scan.getStartInclusive()) {
-                elements.add(">=");
-              } else {
-                elements.add(">");
-              }
-              elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0");
-              conditions.add(String.join(" ", elements));
             });
   }
 
-  private void setEndCondition(Scan scan, List<String> conditions) {
+  private void setEndCondition(
+      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              if (k.get().size() > 1) {
-                throw new IllegalArgumentException(
-                    "DynamoDB doesn't suuport multiple clustering keys.");
+              List<Value> end = k.get();
+              for (int i = 0; i < end.size(); i++) {
+                Value value = end.get(i);
+                List<String> elements = new ArrayList<>();
+                elements.add(value.getName());
+                if (i < end.size() - 1) {
+                  elements.add("=");
+                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
+                  filters.add(String.join(" ", elements));
+                } else if (!isRangeEnabled) {
+                  if (scan.getEndInclusive()) {
+                    elements.add("<=");
+                  } else {
+                    elements.add("<");
+                  }
+                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
+                  conditions.add(String.join(" ", elements));
+                }
               }
-              Value value = k.get().get(0);
-              List<String> elements = new ArrayList<>();
-              elements.add(value.getName());
-              if (scan.getStartInclusive()) {
-                elements.add("<=");
-              } else {
-                elements.add("<");
-              }
-              elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0");
-              conditions.add(String.join(" ", elements));
             });
   }
 
