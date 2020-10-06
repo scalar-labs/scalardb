@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -64,6 +63,8 @@ public class SelectStatementHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
@@ -229,11 +230,13 @@ public class SelectStatementHandlerTest {
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
-  // TODO: multiple clustering keys
-  @Ignore
   @Test
-  public void handle_ScanOperationWithMultipleClusteringKeys_ShouldThrowIllegalArgumentException() {
+  public void handle_ScanOperationWithMultipleClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    Map<String, AttributeValue> expected = new HashMap<>();
+    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+
     Scan scan =
         prepareScan()
             .withStart(
@@ -243,28 +246,52 @@ public class SelectStatementHandlerTest {
                 new Key(
                     new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_4)));
 
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + ANY_NAME_3
+            + DynamoOperation.RANGE_CONDITION;
+    String expectedFilter =
+        ANY_NAME_2
+            + " = "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + "0 AND "
+            + ANY_NAME_2
+            + " = "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS
+            + "0";
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+    expectedBindMap.put(
+        DynamoOperation.RANGE_KEY_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
+    expectedBindMap.put(
+        DynamoOperation.RANGE_KEY_ALIAS + "1", AttributeValue.builder().s(ANY_TEXT_4).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0",
+        AttributeValue.builder().s(ANY_TEXT_2).build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS + "0",
+        AttributeValue.builder().s(ANY_TEXT_2).build());
+
     // Act Assert
-    assertThatThrownBy(
+    assertThatCode(
             () -> {
               handler.handle(scan);
             })
-        .isInstanceOf(IllegalArgumentException.class);
-  }
+        .doesNotThrowAnyException();
 
-  @Test
-  public void handle_ScanOperationWithNeitherInclusive_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Scan scan =
-        prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
-            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), false);
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(scan);
-            })
-        .isInstanceOf(IllegalArgumentException.class);
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.filterExpression()).isEqualTo(expectedFilter);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
   @Test
@@ -360,7 +387,6 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
-    // TODO: multiple ordering
     assertThat(actualRequest.scanIndexForward()).isNull();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
   }

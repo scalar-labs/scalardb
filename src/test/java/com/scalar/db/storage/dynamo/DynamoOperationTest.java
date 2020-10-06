@@ -36,6 +36,8 @@ public class DynamoOperationTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
@@ -70,7 +72,7 @@ public class DynamoOperationTest {
     DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
-    expected.put(ANY_NAME_2, AttributeValue.builder().s(ANY_TEXT_2).build());
+    expected.put(DynamoOperation.CLUSTERING_KEY, AttributeValue.builder().s(ANY_TEXT_2).build());
 
     // Act
     Map<String, AttributeValue> actual = dynamoOperation.getKeyMap();
