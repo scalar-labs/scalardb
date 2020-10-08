@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    jcenter()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:28.1-jre'
+    implementation group: 'info.picocli', name: 'picocli', version: '4.5.0'
+    implementation 'com.scalar-labs:scalardb:2.2.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.11.2'
+    implementation 'com.github.everit-org.json-schema:org.everit.json.schema:1.12.1'
+    implementation 'org.slf4j:slf4j-simple:1.7.3'
+    // for Base64.decode
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.60'
+    compileOnly 'org.projectlombok:lombok:1.18.12'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+
+    testCompileOnly 'org.projectlombok:lombok:1.18.12'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.12'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.5.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.5.2'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.14.0'
+}
+
+application {
+    mainClassName = 'com.scalar.dataloader.DataLoaderCli'
+}
+
+test {
+    useJUnitPlatform()
+}
