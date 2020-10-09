@@ -49,7 +49,7 @@ public class DynamoOperation {
 
   @Nonnull
   public String getIndexName(String clusteringKey) {
-    return INDEX_NAME_PREFIX + "." + clusteringKey;
+    return getTableName() + "." + INDEX_NAME_PREFIX + "." + clusteringKey;
   }
 
   @Nonnull
