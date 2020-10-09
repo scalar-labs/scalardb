@@ -1190,7 +1190,7 @@ public class DynamoIntegrationTest {
         KeySchemaElement.builder().attributeName(COL_NAME4).keyType(KeyType.RANGE).build());
     LocalSecondaryIndex index =
         LocalSecondaryIndex.builder()
-            .indexName("index." + COL_NAME4)
+            .indexName(KEYSPACE + "." + TABLE + ".index." + COL_NAME4)
             .keySchema(indexKeys)
             .projection(
                 Projection.builder()
@@ -1229,7 +1229,6 @@ public class DynamoIntegrationTest {
     values.put("table", AttributeValue.builder().s(KEYSPACE + "." + TABLE).build());
     values.put("partitionKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME1)).build());
     values.put("clusteringKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME4)).build());
-    values.put("sortKey", AttributeValue.builder().s(COL_NAME4).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());

@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -21,11 +20,9 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class TableMetadata {
   private static final String PARTITION_KEY = "partitionKey";
   private static final String CLUSTERING_KEY = "clusteringKey";
-  private static final String SORT_KEY = "sortKey";
   private static final String COLUMNS = "columns";
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
-  private Optional<String> sortKeyName;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
@@ -39,10 +36,6 @@ public class TableMetadata {
 
   public Set<String> getClusteringKeyNames() {
     return clusteringKeyNames;
-  }
-
-  public Optional<String> getSortKeyName() {
-    return sortKeyName;
   }
 
   public Map<String, String> getColumns() {
@@ -66,7 +59,6 @@ public class TableMetadata {
   private void convert(Map<String, AttributeValue> metadata) {
     this.partitionKeyNames = ImmutableSortedSet.copyOf(metadata.get(PARTITION_KEY).ss());
     this.clusteringKeyNames = ImmutableSortedSet.copyOf(metadata.get(CLUSTERING_KEY).ss());
-    this.sortKeyName = Optional.ofNullable(metadata.get(SORT_KEY).s());
 
     SortedMap<String, String> cs =
         metadata.get(COLUMNS).m().entrySet().stream()
