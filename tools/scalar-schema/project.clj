@@ -8,6 +8,7 @@
                  [org.slf4j/slf4j-log4j12 "1.7.30"]
                  [cheshire "5.10.0"]
                  [com.azure/azure-cosmos "4.1.0"]
+                 [software.amazon.awssdk/dynamodb "2.14.24"]
                  [com.google.guava/guava "24.1-jre"]
                  [cc.qbits/alia "4.3.3"]
                  [cc.qbits/hayt "4.1.0"]]
