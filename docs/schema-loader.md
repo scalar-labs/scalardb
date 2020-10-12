@@ -90,3 +90,9 @@ $ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cassan
 ```
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
   - `<REPLICATION_FACTOR>` All the namespaces defined in the same file will have the specified replication factor.
+
+Show help
+
+```console
+$ java -jar target/scalar-schema.jar --help
+```
