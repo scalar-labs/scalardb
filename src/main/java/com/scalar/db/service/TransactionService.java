@@ -26,6 +26,16 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public void withNamespace(String namespace) {
+    manager.withNamespace(namespace);
+  }
+
+  @Override
+  public void withTableName(String tableName) {
+    manager.withTableName(tableName);
+  }
+
+  @Override
   public DistributedTransaction start() {
     return manager.start();
   }

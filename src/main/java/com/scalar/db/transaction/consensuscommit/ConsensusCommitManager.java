@@ -51,6 +51,16 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   }
 
   @Override
+  public void withNamespace(String namespace) {
+    this.namespace = namespace;
+  }
+
+  @Override
+  public void withTableName(String tableName) {
+    this.tableName = tableName;
+  }
+
+  @Override
   public ConsensusCommit start() {
     return start(Isolation.SNAPSHOT);
   }

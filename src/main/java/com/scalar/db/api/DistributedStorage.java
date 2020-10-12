@@ -58,12 +58,26 @@ import java.util.Optional;
  */
 public interface DistributedStorage {
   /**
-   * Sets the specified namespace and the table name as a default values in the instance
+   * Sets the specified namespace and the table name as default values in the instance
    *
    * @param namespace default namespace to operate for
    * @param tableName default table name to operate for
    */
   void with(String namespace, String tableName);
+
+  /**
+   * Sets the specified namespace as a default value in the instance
+   *
+   * @param namespace default namespace to operate for
+   */
+  void withNamespace(String namespace);
+
+  /**
+   * Sets the specified table name as a default value in the instance
+   *
+   * @param tableName default table name to operate for
+   */
+  void withTableName(String tableName);
 
   /**
    * Retrieves a result from the storage with the specified {@link Get} command with a primary key

@@ -4,6 +4,10 @@ public interface DistributedTransactionManager {
 
   void with(String namespace, String tableName);
 
+  void withNamespace(String namespace);
+
+  void withTableName(String tableName);
+
   /**
    * Starts a new transaction.
    *
