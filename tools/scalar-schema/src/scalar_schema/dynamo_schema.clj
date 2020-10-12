@@ -2,7 +2,10 @@
   (:require [clojure.tools.logging :as log]
             [clojure.java.io :as io]
             [scalar-schema.common :as common])
-  (:import (software.amazon.awssdk.services.dynamodb DynamoDbClient)
+  (:import (software.amazon.awssdk.auth.credentials AwsBasicCredentials
+                                                    StaticCredentialsProvider)
+           (software.amazon.awssdk.regions Region)
+           (software.amazon.awssdk.services.dynamodb DynamoDbClient)
            (software.amazon.awssdk.services.dynamodb.model AttributeDefinition
                                                            AttributeValue
                                                            CreateTableRequest
@@ -38,8 +41,11 @@
    "blob" ScalarAttributeType/B})
 
 (defn- get-client
-  []
+  [user password region]
   (-> (DynamoDbClient/builder)
+      (.credentialsProvider (StaticCredentialsProvider/create
+                             (AwsBasicCredentials/create user password)))
+      (.region (Region/of region))
       .build))
 
 (defn- table-exists?
@@ -201,9 +207,8 @@
                 (into tables [META_TABLE coordinator])))))
 
 (defn operate-dynamo
-  [{:keys [schema-file host password] :as options}]
-  [host password schema-file options]
-  (with-open [client (get-client)]
+  [{:keys [schema-file host user password region] :as options}]
+  (with-open [client (get-client user password region)]
     (if (:delete-all options)
       (delete-all client schema-file)
       (create-tables client schema-file options))))
