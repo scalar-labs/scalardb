@@ -15,7 +15,7 @@
    ["-u" "--user USERNAME" "Username of the database. This option is ignored when Cosmos DB and DynamoDB."]
    ["-p" "--password ACCOUNT_PASSWORD" "Password of Cassandra or Cosmos DB account"]
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
-   ["-r" "--ru RESOURCE_UNIT" "Base RU for each table on Cosmos DB. The RU of the coordinator for Scalar DB transaction is specified by this option. This option is ignored when Cassandra."
+   ["-r" "--ru RESOURCE_UNIT" "Base RU for each table on Cosmos DB or DynamoDB. The RU of the coordinator for Scalar DB transaction is specified by this option. This option is ignored when Cassandra."
     :parse-fn #(Integer/parseInt %)]
    ["-R" "--replication-factor REPLICATION_FACTOR"
     "The number of replicas. This options is ignored when Cosmos DB and DynamoDB."
@@ -23,6 +23,7 @@
    ["-n" "--network-strategy NETWORK_STRATEGY"
     "The network topology strategy. SimpleStrategy or NetworkTopologyStrategy. This options is ignored when Cosmos DB and DynamoDB."]
    ["-D" "--delete-all" "All database will be deleted, if this is enabled."]
+   [nil "--region REGION" "Region where the tool creates tables for DynamoDB"]
    [nil "--help"]])
 
 (defn -main [& args]
