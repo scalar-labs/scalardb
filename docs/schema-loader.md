@@ -4,9 +4,9 @@ This document briefly explains tools used to generate and load database schemas 
 
 ## Scalar DB schema generator and loader
 
-Scalar DB schema generator (tools/schema/generator) generates storage implementation specific schema definition and metadata definition for Scalar DB transaction
-as described [here](/docs/schema.md) for a given Scalar DB database schema.
-Scalar DB schema loader (tools/schema/loader) uses the generator to get an implementation specific schema file and load it with a storage implemtation specific loader for a give Scalar DB database schema.
+Scalar DB schema generator (tools/scalar-schema) generates storage implementation specific schema definition and metadata definition for Scalar DB transaction
+as described [here](schema.md) for a given Scalar DB database schema.
+Scalar DB schema loader (tools/scalar-schema/target/scalar-schema.jar) uses the generator to get an implementation specific schema file and load it with a storage implementation specific loader for a give Scalar DB database schema.
 
 With the above tools, you don't need to think about implementation specific schemas when modeling data for your applications.
 
@@ -15,53 +15,78 @@ With the above tools, you don't need to think about implementation specific sche
 Scalar DB schema is an abstract schema to define applications data with Scalar DB.
 Here is a spec of the definition.
 
-```sql
-REPLICATION FACTOR number ';'
+```json
+schema_file            ::=  {
+                              "sample-db.sample-table1": {
+                                "transaction": true,
+                                "partition-key": [
+                                  "c1"
+                                ],
+                                "clustering-key": [
+                                  "c4"
+                                ],
+                                "columns": {
+                                  "c1": "INT",
+                                  "c2": "TEXT",
+                                  "c3": "INT",
+                                  "c4": "INT",
+                                  "c5": "BOOLEAN"
+                                },
+                                "compaction-strategy": "LCS"
+                              },
+                                            
+                              "sample-db.sample-table2": {
+                                "transaction": false,
+                                "partition-key": [
+                                  "c1"
+                                ],
+                                "clustering-key": [
+                                  "c3",
+                                  "c4"
+                                ],
+                                "columns": {
+                                  "c1": "INT",
+                                  "c2": "TEXT",
+                                  "c3": "INT",
+                                  "c4": "INT",
+                                  "c5": "BOOLEAN"
+                                },
+                                "ru": 800
+                              }
+                            }
 
-CREATE NAMESPACE namespace_name ';'
-
-create_table_statement ::=  CREATE [TRANSACTION] TABLE namespace_name'.'table_name  
-                            '('   
-                                column_definition
-                                ( ',' column_definition )*
-                            ');'
-column_definition      ::=  column_name data_type [key_definition]
+column_definition      ::=  column_name: data_type [example: "c1": "INT"]
 data_type              ::=  BIGINT | BLOB | BOOLEAN | DOUBLE | FLOAT | INT | TEXT 
-key_definition         ::=  PARTITIONKEY | CLUSTERINGKEY 
 ```
+- `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored in Cosmos DB.
+- This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB. `ru` is ignored in Cassandra.
+- If `transaction` value as `true`, the table is treated as transaction capable, and addtional metadata and coordinator namespace are added.
 
-`REPLICATION` is a global command for replication factor.
-All the namespaces defined in the same file will have the specified replication factor.
-
-`CREATE NAMESPACE` is a command to define namespaces.
-`CREATE [TRANSACTION] TABLE` is a command to define tables.
-The grammar for defining tables is as stated above.
-If you add `TRANSACTION` keyword, the table is treated as transaction capable, and addtional metadata and coordinator namespace are added.
-please see [this](/docs/schema.md) for more information about the metadata and the coordinator.
+please see [this](schema.md) for more information about the metadata and the coordinator.
 
 ## Install & Build
 
-Before installing, please install and setup [golang](https://golang.org/doc/install).
-Then, `make` will download the required packages and build generator and loader.
+Before installing, please install and setup [leiningen](https://leiningen.org/).
+Then, `lein uberjar` will download the required packages and build generator and loader.
 
 ```
-$ cd /path/to/scalardb/tools/schema
-$ make
+$ cd /path/to/scalardb/tools/scalar-schema
+$ lein uberjar
 ```
 
 ## Use
 
-After defining a schema, please run the command as follows. You don't need `--database` option as of writing since the only supported database is `cassandra`.
+After defining a schema, please run the command as follows. You need to use `--cassandra` or `--cosmos` option because scalar db supports cassandra and cosmos db.
 
+```console
+# For Cosmos DB
+$ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
-$ ./loader --help
-$ ./loader your-schema-file
-```
+  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
 
-You can also generate implementation schema file only.
-
+```console
+# For Cassandra
+$ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [-n <NETWORK_STRATEGY> -R <REPLICATION_FACTOR>]
 ```
-$ ./generator --help
-$ ./generator your-schema-file
-```
-
+  - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
+  - `<REPLICATION_FACTOR>` All the namespaces defined in the same file will have the specified replication factor.

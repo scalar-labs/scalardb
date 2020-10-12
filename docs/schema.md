@@ -28,49 +28,8 @@ Here are the supported data types and their mapping to Cassandra data types.
 Scalar DB executes transactions in a client-coordinated manner by storing and retrieving metadata stored along with the actual records.
 Thus, along with any required values by the application, additional values for the metadata need to be defined in the schema.
 
-Here is an example schema in Cassandra when it is used with Scalar DB transactions.
-
-```sql
-CREATE TABLE example.table1 (
-; keys and values required by an application
-  k1 TEXT,
-  k2 INT,
-  v1 INT
-
-; metadata for transaction management
-  tx_id TEXT,
-  tx_prepared_at BIGINT,
-  tx_committed_at BIGINT,
-  tx_state INT,
-  tx_version INT,
-  before_v1 INT,
-  before_tx_committed_at BIGINT,
-  before_tx_id TEXT,
-  before_tx_prepared_at BIGINT,
-  before_tx_state INT,
-  before_tx_version INT,
-
-  PRIMARY KEY (k1, k2)
-);
-```
-
-Let's assume that k1 is a partition key, k2 is a clustering key and v1 is a value, and those are the values required by an application.
-In addition to those, Scalar DB requires metadata for managing transactions.
-The rule behind it is as follows.
-* add `tx_id`, `tx_prepared_at`, `tx_committed_at`, `tx_state`, `tx_version` as metadata for the current record
-* add `before_` prefixed values for each existing value except for primary keys (partition keys and clustering keys) for managing before image
-
-Additionally, we need a state table for managing transaction states as follows.
-
-```sql
-CREATE TABLE IF NOT EXISTS coordinator.state (
-  tx_id text,
-  tx_state int,
-  tx_created_at bigint,
-  PRIMARY KEY (tx_id)
-);
-```
-
+Internal metadata schema creation managed by [scalar-schema](../tools/scalar-schema) tools.
+ 
 ## Schema generator and loader
 
 It is a little hard for application developers to care for the schema mapping and metadata for transactions,

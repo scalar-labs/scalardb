@@ -15,10 +15,9 @@ Scalar DB is written in Java and uses Cassandra as an underlining storage implem
 
 In addition to the above, the following software is needed to use schema tools.
 
-* make
-* [Golang](https://golang.org/)
+* [leiningen](https://leiningen.org/)
 
-From here, we assume Oracle JDK 8, Cassandra 3.11.x, make and Golang are properly installed in your local environment, and Cassandra is running in your localhost.
+From here, we assume Oracle JDK 8, Cassandra 3.11.x and leiningen are properly installed in your local environment, and Cassandra is running in your localhost.
 
 ## Build
 
@@ -28,8 +27,8 @@ $ SCALARDB_HOME=/path/to/scalardb
 $ cd $SCALARDB_HOME
 $ ./gradlew installDist
 $ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
-$ cd tools/schema
-$ make
+$ cd tools/scalar-schema
+$ lein uberjar
 $ cd -
 ```
 Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
@@ -51,19 +50,26 @@ First of all, you need to define how the data will be organized (a.k.a database 
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
 ```sql
-REPLICATION FACTOR 1;
-
-CREATE NAMESPACE emoney;
-
-CREATE TABLE emoney.account (
-    id TEXT PARTITIONKEY,
-    balance INT,
-);
+{
+  "emoney.account": {
+    "transaction": false,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    },
+    "compaction-strategy": "STCS"
+  }
+}
 ```
 
 To load the schema file, please run the following command.
 ```
-$ $SCALARDB_HOME/tools/schema/loader emoney-storage.sdbql
+$ cd $SCALARDB_HOME/tools/scalar-schema
+$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
 ```
 
 ## Store & retrieve data with storage service
@@ -148,21 +154,28 @@ With the transaction capability of Scalar DB, we can make such operations to be 
 Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
 
 ```sql
-REPLICATION FACTOR 1;
-
-CREATE NAMESPACE emoney;
-
-CREATE TRANSACTION TABLE emoney.account (
-    id TEXT PARTITIONKEY,
-    balance INT,
-);
+{
+  "emoney.account": {
+    "transaction": true,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    },
+    "compaction-strategy": "STCS"
+  }
+}
 ```
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following.
 (Sorry you need to issue implementation specific commands to do this.)
 ```
-$ cqlsh -e "drop keyspace emoney"
-$ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql
+$ cd $SCALARDB_HOME/tools/scalar-schema
+$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
+$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
 ```
 
 Now we can update the code as follows to make it transactional.
