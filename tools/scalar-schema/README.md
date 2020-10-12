@@ -23,8 +23,9 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For DynamoDB
-$ java -jar target/scalar-schema.jar --dynamo -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar target/scalar-schema.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
+  - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
   - `-r` option is almost the same as Cosmos DB option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
 
 ```console
@@ -41,7 +42,7 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For DynamoDB
-$ java -jar target/scalar-schema.jar --dynamo -f schema.json -D
+$ java -jar target/scalar-schema.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
   - For DynamoDB, only the tables which are included in the schema file will be deleted.
 
