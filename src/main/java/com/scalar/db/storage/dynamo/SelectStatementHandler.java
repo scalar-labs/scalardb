@@ -98,22 +98,20 @@ public class SelectStatementHandler extends StatementHandler {
 
     setConditions(builder, scan);
 
-    if (dynamoOperation.isSingleClusteringKey()) {
-      // When multiple clustering keys exist, the ordering and the limitation will be applied later
-      if (!scan.getOrderings().isEmpty()) {
-        scan.getOrderings()
-            .forEach(
-                o -> {
-                  if (dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
-                      && o.getOrder() == Scan.Ordering.Order.DESC) {
-                    builder.scanIndexForward(false);
-                  }
-                });
-      }
+    // When multiple clustering keys exist, the ordering and the limitation will be applied later
+    if (dynamoOperation.isSingleClusteringKey() && !scan.getOrderings().isEmpty()) {
+      scan.getOrderings()
+          .forEach(
+              o -> {
+                if (dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
+                    && o.getOrder() == Scan.Ordering.Order.DESC) {
+                  builder.scanIndexForward(false);
+                }
+              });
+    }
 
-      if (scan.getLimit() > 0) {
-        builder.limit(scan.getLimit());
-      }
+    if (dynamoOperation.isSingleClusteringKey() && scan.getLimit() > 0) {
+      builder.limit(scan.getLimit());
     }
 
     if (!scan.getProjections().isEmpty()) {
