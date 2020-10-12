@@ -27,8 +27,6 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class ResultImplTest {
-  private static final String ANY_ID_1 = "id1";
-  private static final String ANY_ID_2 = "id2";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_TEXT_1 = "text1";
@@ -51,7 +49,6 @@ public class ResultImplTest {
     Map<String, AttributeValue> metadataMap = new HashMap<>();
     metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
     metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2).build());
-    metadataMap.put("sortKey", AttributeValue.builder().s(ANY_NAME_2).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
     columns.put(ANY_NAME_2, AttributeValue.builder().s("text").build());
