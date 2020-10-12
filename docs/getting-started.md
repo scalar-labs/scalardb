@@ -165,7 +165,7 @@ $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 
 
 ## Set up database schema with transaction
 
-To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme. For instance, we modify our qa.question schema.
+To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme.
 
 ```json
 {
