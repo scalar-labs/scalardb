@@ -19,6 +19,25 @@ In addition to the above, the following software is needed to use schema tools.
 
 From here, we assume Oracle JDK 8, Cassandra 3.11.x and leiningen are properly installed in your local environment, and Cassandra is running in your localhost.
 
+## Configure the Cassandra connection
+
+The `database.properties` (conf/database.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
+
+```
+# Comma separated contact points
+scalar.db.contact_points=localhost
+
+# Port number for all the contact points. Default port number for each database is used if empty.
+scalar.db.contact_port=9042
+
+# Credential information to access the database
+scalar.db.username=cassandra
+scalar.db.password=cassandra
+
+# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
+#scalar.db.storage=cassandra
+```
+
 ## Build
 
 For building Scalar DB, what you will need to do is as follows.
@@ -42,25 +61,6 @@ dependencies {
 Let's move to the `getting-started` directory so that we can avoid too much copy-and-paste.
 ```
 $ cd docs/getting-started
-```
-
-## Configure the Cassandra connection
-
-The `database.properties` (conf/database.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
-
-```
-# Comma separated contact points
-scalar.db.contact_points=localhost
-
-# Port number for all the contact points. Default port number for each database is used if empty.
-scalar.db.contact_port=9042
-
-# Credential information to access the database
-scalar.db.username=cassandra
-scalar.db.password=cassandra
-
-# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
-#scalar.db.storage=cassandra
 ```
 
 ## Set up database schema
@@ -87,8 +87,7 @@ Here is a database schema for the sample application. For the supported data typ
 
 To load the schema file, please run the following command.
 ```
-$ cd $SCALARDB_HOME/tools/scalar-schema
-$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+$ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
 ```
 
 ## Store & retrieve data with storage service
@@ -188,9 +187,8 @@ To apply transaction, we can just add a key `transaction` and value as `true` in
 Before reapplying the schema, please drop the existing namespace first by issuing the following. 
 (Sorry you need to issue implementation specific commands to do this.)
 ```
-$ cd $SCALARDB_HOME/tools/scalar-schema
-$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
-$ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+$ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
+$ java -jar $SCALARDB_HOME/tools/scalar-schema/target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
 ```
 
 ## Store & retrieve data with transaction service
