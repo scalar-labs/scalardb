@@ -44,12 +44,31 @@ Let's move to the `getting-started` directory so that we can avoid too much copy
 $ cd docs/getting-started
 ```
 
+## Configure the Cassandra connection
+
+The `database.properties` (conf/database.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
+
+```
+# Comma separated contact points
+scalar.db.contact_points=localhost
+
+# Port number for all the contact points. Default port number for each database is used if empty.
+scalar.db.contact_port=9042
+
+# Credential information to access the database
+scalar.db.username=cassandra
+scalar.db.password=cassandra
+
+# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
+#scalar.db.storage=cassandra
+```
+
 ## Set up database schema
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
-```sql
+```json
 {
   "emoney.account": {
     "transaction": false,
@@ -145,15 +164,11 @@ $ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1
 $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
 ```
 
-## Store & retrieve data with transaction service
+## Set up database schema with transaction
 
-The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
-For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
+To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme. For instance, we modify our qa.question schema.
 
-With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
-Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
-
-```sql
+```json
 {
   "emoney.account": {
     "transaction": true,
@@ -170,13 +185,20 @@ Before updating the code, we need to update the schema to make it transaction ca
 }
 ```
 
-Before reapplying the schema, please drop the existing namespace first by issuing the following.
+Before reapplying the schema, please drop the existing namespace first by issuing the following. 
 (Sorry you need to issue implementation specific commands to do this.)
 ```
 $ cd $SCALARDB_HOME/tools/scalar-schema
 $ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
 $ java -jar target/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
 ```
+
+## Store & retrieve data with transaction service
+
+The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
+For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
+
+With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
 
 Now we can update the code as follows to make it transactional.
 ```java
