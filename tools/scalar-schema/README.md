@@ -22,7 +22,7 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [-n <NETWORK_STRATEGY> -R <REPLICATION_FACTOR>]
+$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -P <CASSANDRA_PORT> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [-n <NETWORK_STRATEGY> -R <REPLICATION_FACTOR>]
 ```
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
@@ -34,7 +34,7 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -P <CASSANDRA_PORT> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
 ```
 
 ### Show help
