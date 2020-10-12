@@ -21,8 +21,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
-  private String namespace;
-  private String tableName;
+  private Optional<String> namespace;
+  private Optional<String> tableName;
 
   @Inject
   public ConsensusCommitManager(DistributedStorage storage) {
@@ -30,6 +30,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.coordinator = new Coordinator(storage);
     this.recovery = new RecoveryHandler(storage, coordinator);
     this.commit = new CommitHandler(storage, coordinator, recovery);
+    this.namespace = storage.getNamespace();
+    this.tableName = storage.getTable();
   }
 
   @VisibleForTesting
@@ -42,22 +44,34 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.coordinator = coordinator;
     this.recovery = recovery;
     this.commit = commit;
+    this.namespace = storage.getNamespace();
+    this.tableName = storage.getTable();
   }
 
   @Override
   public void with(String namespace, String tableName) {
-    this.namespace = namespace;
-    this.tableName = tableName;
+    this.namespace = Optional.ofNullable(namespace);
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public void withNamespace(String namespace) {
-    this.namespace = namespace;
+    this.namespace = Optional.ofNullable(namespace);
   }
 
   @Override
-  public void withTableName(String tableName) {
-    this.tableName = tableName;
+  public Optional<String> getNamespace() {
+    return namespace;
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    this.tableName = Optional.ofNullable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return tableName;
   }
 
   @Override
@@ -107,7 +121,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     Snapshot snapshot = new Snapshot(txId, isolation, (SerializableStrategy) strategy);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
-    consensus.with(namespace, tableName);
+    namespace.ifPresent(n -> consensus.withNamespace(n));
+    tableName.ifPresent(t -> consensus.withTable(t));
     return consensus;
   }
 

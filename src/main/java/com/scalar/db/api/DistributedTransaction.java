@@ -14,7 +14,11 @@ public interface DistributedTransaction {
 
   void withNamespace(String namespace);
 
-  void withTableName(String tableName);
+  Optional<String> getNamespace();
+
+  void withTable(String tableName);
+
+  Optional<String> getTable();
 
   Optional<Result> get(Get get) throws CrudException;
 

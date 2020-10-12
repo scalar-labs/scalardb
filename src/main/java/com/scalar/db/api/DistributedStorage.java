@@ -73,11 +73,25 @@ public interface DistributedStorage {
   void withNamespace(String namespace);
 
   /**
+   * Returns the namespace
+   *
+   * @return an {@code Optional} with the namespace
+   */
+  Optional<String> getNamespace();
+
+  /**
    * Sets the specified table name as a default value in the instance
    *
    * @param tableName default table name to operate for
    */
-  void withTableName(String tableName);
+  void withTable(String tableName);
+
+  /**
+   * Returns the table name
+   *
+   * @return an {@code Optional} with the table name
+   */
+  Optional<String> getTable();
 
   /**
    * Retrieves a result from the storage with the specified {@link Get} command with a primary key
