@@ -137,13 +137,15 @@ public class ResultImpl implements Result {
       case "boolean":
         return new BooleanValue(name, recordValue == null ? false : (boolean) recordValue);
       case "int":
-        return new IntValue(name, recordValue == null ? 0 : (int) recordValue);
+        return new IntValue(name, recordValue == null ? 0 : ((Number) recordValue).intValue());
       case "bigint":
-        return new BigIntValue(name, recordValue == null ? 0L : (long) recordValue);
+        return new BigIntValue(name, recordValue == null ? 0L : ((Number) recordValue).longValue());
       case "float":
-        return new FloatValue(name, recordValue == null ? 0.0f : (float) recordValue);
+        return new FloatValue(
+            name, recordValue == null ? 0.0f : ((Number) recordValue).floatValue());
       case "double":
-        return new DoubleValue(name, recordValue == null ? 0.0 : (double) recordValue);
+        return new DoubleValue(
+            name, recordValue == null ? 0.0 : ((Number) recordValue).doubleValue());
       case "text": // for backwards compatibility
       case "varchar":
         return new TextValue(
