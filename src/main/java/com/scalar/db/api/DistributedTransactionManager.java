@@ -1,8 +1,18 @@
 package com.scalar.db.api;
 
+import java.util.Optional;
+
 public interface DistributedTransactionManager {
 
   void with(String namespace, String tableName);
+
+  void withNamespace(String namespace);
+
+  Optional<String> getNamespace();
+
+  void withTable(String tableName);
+
+  Optional<String> getTable();
 
   /**
    * Starts a new transaction.

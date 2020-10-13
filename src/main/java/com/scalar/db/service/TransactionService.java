@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
+import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,26 @@ public class TransactionService implements DistributedTransactionManager {
   @Override
   public void with(String namespace, String tableName) {
     manager.with(namespace, tableName);
+  }
+
+  @Override
+  public void withNamespace(String namespace) {
+    manager.withNamespace(namespace);
+  }
+
+  @Override
+  public Optional<String> getNamespace() {
+    return manager.getNamespace();
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    manager.withTable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return manager.getTable();
   }
 
   @Override
