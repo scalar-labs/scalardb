@@ -20,9 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -1118,9 +1116,9 @@ public class DynamoIntegrationTest {
 
     // reuse this storage instance through the tests
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "dummy");
-    props.setProperty(DatabaseConfig.USERNAME, "dummy");
-    props.setProperty(DatabaseConfig.PASSWORD, "dummy");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, System.getenv("AWS_REGION"));
+    props.setProperty(DatabaseConfig.USERNAME, System.getenv("AWS_ACCESS_KEY_ID"));
+    props.setProperty(DatabaseConfig.PASSWORD, System.getenv("AWS_SECRET_ACCESS_KEY"));
     storage = new Dynamo(new DatabaseConfig(props));
   }
 
