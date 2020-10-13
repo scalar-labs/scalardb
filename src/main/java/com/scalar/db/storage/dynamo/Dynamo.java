@@ -23,6 +23,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -34,8 +37,6 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @ThreadSafe
 public class Dynamo implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
-  private final String METADATA_DATABASE = "scalardb";
-  private final String METADATA_CONTAINER = "metadata";
 
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
@@ -48,7 +49,13 @@ public class Dynamo implements DistributedStorage {
 
   @Inject
   public Dynamo(DatabaseConfig config) {
-    this.client = DynamoDbClient.builder().build();
+    this.client =
+        DynamoDbClient.builder()
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(config.getUsername(), config.getPassword())))
+            .region(Region.of(config.getContactPoints().get(0)))
+            .build();
 
     this.metadataManager = new TableMetadataManager(client);
 
