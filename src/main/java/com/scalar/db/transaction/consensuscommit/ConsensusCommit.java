@@ -55,6 +55,26 @@ public class ConsensusCommit implements DistributedTransaction {
   }
 
   @Override
+  public void withNamespace(String namespace) {
+    this.namespace = Optional.ofNullable(namespace);
+  }
+
+  @Override
+  public Optional<String> getNamespace() {
+    return namespace;
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    this.tableName = Optional.ofNullable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return tableName;
+  }
+
+  @Override
   public Optional<Result> get(Get get) throws CrudException {
     setTargetToIfNot(get);
     get.clearProjections(); // project all
