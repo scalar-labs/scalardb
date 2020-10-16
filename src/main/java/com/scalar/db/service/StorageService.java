@@ -32,6 +32,26 @@ public class StorageService implements DistributedStorage {
   }
 
   @Override
+  public void withNamespace(String namespace) {
+    storage.withNamespace(namespace);
+  }
+
+  @Override
+  public Optional<String> getNamespace() {
+    return storage.getNamespace();
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    storage.withTable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return storage.getTable();
+  }
+
+  @Override
   public Optional<Result> get(Get get) throws ExecutionException {
     return storage.get(get);
   }

@@ -79,6 +79,26 @@ public class Cosmos implements DistributedStorage {
   }
 
   @Override
+  public void withNamespace(String namespace) {
+    this.namespace = Optional.ofNullable(namespace);
+  }
+
+  @Override
+  public Optional<String> getNamespace() {
+    return namespace;
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    this.tableName = Optional.ofNullable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return tableName;
+  }
+
+  @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     setTargetToIfNot(get);
