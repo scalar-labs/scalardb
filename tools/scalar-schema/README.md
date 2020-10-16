@@ -22,8 +22,12 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -P <CASSANDRA_PORT> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f schema.json [-n <NETWORK_STRATEGY> -R <REPLICATION_FACTOR>]
+$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
+
+  - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
+  - If `-u <CASSNDRA_USER>` is not supplied, it defaults to `cassandra`.
+  - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
 ### Delete all tables
@@ -34,7 +38,7 @@ $ java -jar target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACC
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> -P <CASSANDRA_PORT> -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar target/scalar-schema.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -D
 ```
 
 ### Show help
