@@ -93,7 +93,7 @@
 
 (defn operate-cassandra
   [{:keys [schema-file host port user password]
-    :or {user "cassandra" password "cassandra"} :as options}]
+    :or {port 9042 user "cassandra" password "cassandra"} :as options}]
   (let [cluster (get-cluster host port user password)
         session (alia/connect cluster)]
     (if (:delete-all options)
