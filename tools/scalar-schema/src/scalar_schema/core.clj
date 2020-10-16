@@ -8,6 +8,8 @@
   [[nil "--cassandra" "Operate for Cassandra"]
    [nil "--cosmos" "Operate for Cosmos DB"]
    ["-h" "--host DB_HOST" "Address of Cassandra like IP or URI address of your Cosmos DB account"]
+   ["-P" "--port DB_PORT" "Port of Cassandra. This option is ignored when Cosmos DB."
+    :parse-fn #(Integer/parseInt %)]
    ["-u" "--user USERNAME" "Username of the database. This option is ignored when Cosmos DB."]
    ["-p" "--password ACCOUNT_PASSWORD" "Password of Cassandra or Cosmos DB account"]
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
