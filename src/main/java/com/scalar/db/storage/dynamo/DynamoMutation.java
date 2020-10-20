@@ -2,8 +2,8 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
+import com.scalar.db.io.Value;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -83,9 +83,31 @@ public class DynamoMutation extends DynamoOperation {
 
   @Nonnull
   public String getUpdateExpression() {
+    return getUpdateExpression(false);
+  }
+
+  @Nonnull
+  public String getUpdateExpressionWithKey() {
+    return getUpdateExpression(true);
+  }
+
+  private String getUpdateExpression(boolean withKey) {
     Put put = (Put) getOperation();
     List<String> expressions = new ArrayList<>();
     int i = 0;
+
+    if (withKey) {
+      for (Value key : put.getPartitionKey().get()) {
+        expressions.add(key.getName() + " = " + VALUE_ALIAS + i);
+        i++;
+      }
+      if (put.getClusteringKey().isPresent()) {
+        for (Value key : put.getClusteringKey().get().get()) {
+          expressions.add(key.getName() + " = " + VALUE_ALIAS + i);
+          i++;
+        }
+      }
+    }
 
     for (String name : put.getValues().keySet()) {
       expressions.add(name + " = " + VALUE_ALIAS + i);
@@ -111,8 +133,23 @@ public class DynamoMutation extends DynamoOperation {
 
   @Nonnull
   public Map<String, AttributeValue> getValueBindMap() {
+    return getValueBindMap(false);
+  }
+
+  @Nonnull
+  public Map<String, AttributeValue> getValueBindMapWithKey() {
+    return getValueBindMap(true);
+  }
+
+  private Map<String, AttributeValue> getValueBindMap(boolean withKey) {
     ValueBinder binder = new ValueBinder(VALUE_ALIAS);
     Put put = (Put) getOperation();
+
+    if (withKey) {
+      put.getPartitionKey().get().forEach(v -> v.accept(binder));
+      put.getClusteringKey().ifPresent(k -> k.get().forEach(v -> v.accept(binder)));
+    }
+
     put.getValues().forEach((a, v) -> v.accept(binder));
 
     return binder.build();
