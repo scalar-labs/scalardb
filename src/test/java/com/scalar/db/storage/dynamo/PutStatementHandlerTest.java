@@ -30,8 +30,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
-import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 
@@ -51,7 +49,6 @@ public class PutStatementHandlerTest {
   @Mock private DynamoDbClient client;
   @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
-  @Mock private PutItemResponse putResponse;
   @Mock private UpdateItemResponse updateResponse;
 
   @Before
@@ -80,12 +77,15 @@ public class PutStatementHandlerTest {
   }
 
   @Test
-  public void handle_PutWithoutConditionsGiven_ShouldCallPutItem() {
+  public void handle_PutWithoutConditionsGiven_ShouldCallUpdateItem() {
     // Arrange
-    when(client.putItem(any(PutItemRequest.class))).thenReturn(putResponse);
+    when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut();
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-    Map<String, AttributeValue> expectedItem = dynamoMutation.getValueMapWithKey();
+    Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
+    String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
+    String expectedCondition = dynamoMutation.getIfExistsCondition();
+    Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
     assertThatCode(
@@ -95,17 +95,19 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    ArgumentCaptor<PutItemRequest> captor = ArgumentCaptor.forClass(PutItemRequest.class);
-    verify(client).putItem(captor.capture());
-    PutItemRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.item()).isEqualTo(expectedItem);
+    ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
+    verify(client).updateItem(captor.capture());
+    UpdateItemRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.key()).isEqualTo(expectedKeys);
+    assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isNull();
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
   @Test
-  public void handle_PutWithoutClusteringKeyGiven_ShouldCallUpsertItem() {
+  public void handle_PutWithoutClusteringKeyGiven_ShouldCallUpdateItem() {
     // Arrange
-    when(client.putItem(any(PutItemRequest.class))).thenReturn(putResponse);
+    when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1));
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Put put =
@@ -115,7 +117,9 @@ public class PutStatementHandlerTest {
             .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
             .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-    Map<String, AttributeValue> expectedItem = dynamoMutation.getValueMapWithKey();
+    Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
+    String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
+    Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
     assertThatCode(
@@ -125,11 +129,13 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    ArgumentCaptor<PutItemRequest> captor = ArgumentCaptor.forClass(PutItemRequest.class);
-    verify(client).putItem(captor.capture());
-    PutItemRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.item()).isEqualTo(expectedItem);
+    ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
+    verify(client).updateItem(captor.capture());
+    UpdateItemRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.key()).isEqualTo(expectedKeys);
+    assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isNull();
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
   @Test
@@ -138,7 +144,7 @@ public class PutStatementHandlerTest {
     Put put = preparePut();
 
     DynamoDbException toThrow = mock(DynamoDbException.class);
-    doThrow(toThrow).when(client).putItem(any(PutItemRequest.class));
+    doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
 
     // Act Assert
     assertThatThrownBy(
@@ -150,14 +156,16 @@ public class PutStatementHandlerTest {
   }
 
   @Test
-  public void handle_PutIfNotExistsGiven_ShouldCallPutItemWithCondition() {
+  public void handle_PutIfNotExistsGiven_ShouldCallUpdateItemWithCondition() {
     // Arrange
-    when(client.putItem(any(PutItemRequest.class))).thenReturn(putResponse);
+    when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut().withCondition(new PutIfNotExists());
 
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-    Map<String, AttributeValue> expectedItem = dynamoMutation.getValueMapWithKey();
+    Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
+    String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
     String expectedCondition = dynamoMutation.getIfNotExistsCondition();
+    Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
     assertThatCode(
@@ -167,17 +175,19 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    ArgumentCaptor<PutItemRequest> captor = ArgumentCaptor.forClass(PutItemRequest.class);
-    verify(client).putItem(captor.capture());
-    PutItemRequest actualRequest = captor.getValue();
-    assertThat(actualRequest.item()).isEqualTo(expectedItem);
+    ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
+    verify(client).updateItem(captor.capture());
+    UpdateItemRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.key()).isEqualTo(expectedKeys);
+    assertThat(actualRequest.updateExpression()).isEqualTo(updateExpression);
     assertThat(actualRequest.conditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
   @Test
   public void handle_PutIfExistsGiven_ShouldCallUpdateItemWithCondition() {
     // Arrange
-    when(client.putItem(any(PutItemRequest.class))).thenReturn(putResponse);
+    when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut().withCondition(new PutIfExists());
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
