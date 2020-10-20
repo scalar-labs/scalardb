@@ -9,7 +9,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-/** A class to treating utilities for a mutation */
+/** A utility class for a mutation */
 public class DynamoMutation extends DynamoOperation {
 
   DynamoMutation(Mutation mutation, TableMetadataManager metadataManager) {

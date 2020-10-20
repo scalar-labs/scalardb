@@ -10,7 +10,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-/** A class to treating utilities for a operation */
+/** A utility class for an operation */
 public class DynamoOperation {
   static final String PARTITION_KEY = "concatenatedPartitionKey";
   static final String CLUSTERING_KEY = "concatenatedClusteringKey";
