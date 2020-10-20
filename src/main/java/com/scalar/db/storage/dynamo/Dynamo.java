@@ -37,7 +37,6 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @ThreadSafe
 public class Dynamo implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
-
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
@@ -74,6 +73,26 @@ public class Dynamo implements DistributedStorage {
   public void with(String namespace, String tableName) {
     this.namespace = Optional.ofNullable(namespace);
     this.tableName = Optional.ofNullable(tableName);
+  }
+
+  @Override
+  public void withNamespace(String namespace) {
+    this.namespace = Optional.ofNullable(namespace);
+  }
+
+  @Override
+  public Optional<String> getNamespace() {
+    return namespace;
+  }
+
+  @Override
+  public void withTable(String tableName) {
+    this.tableName = Optional.ofNullable(tableName);
+  }
+
+  @Override
+  public Optional<String> getTable() {
+    return tableName;
   }
 
   @Override
