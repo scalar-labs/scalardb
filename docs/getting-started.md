@@ -78,9 +78,7 @@ Here is a database schema for the sample application. For the supported data typ
 }
 ```
 
-To load the schema file, please run the following command.
-
-* Download `scalar-schema-<vesrion>.jar` file from [scalardb release](https://github.com/scalar-labs/scalardb/releases)
+Then, download the schema loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
 ```
 $ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
@@ -180,8 +178,6 @@ To apply transaction, we can just add a key `transaction` and value as `true` in
 ```
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following. 
-
-* Download `scalar-schema-<vesrion>.jar` file from [scalardb release](https://github.com/scalar-labs/scalardb/releases)
 
 ```
 $ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
