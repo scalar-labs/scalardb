@@ -1,9 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -16,7 +14,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 
 /**
@@ -35,14 +32,9 @@ public class PutStatementHandler extends StatementHandler {
   public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
     checkArgument(operation, Put.class);
     Put put = (Put) operation;
-    MutationCondition condition = put.getCondition().orElse(null);
 
     try {
-      if (condition != null && (condition instanceof PutIf || condition instanceof PutIfExists)) {
-        update(put);
-      } else {
-        insert(put);
-      }
+      execute(put);
     } catch (ConditionalCheckFailedException e) {
       throw new NoMutationException("no mutation was applied.", e);
     } catch (DynamoDbException e) {
@@ -52,31 +44,26 @@ public class PutStatementHandler extends StatementHandler {
     return Collections.emptyList();
   }
 
-  private void insert(Put put) {
+  private void execute(Put put) {
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-
-    PutItemRequest.Builder builder =
-        PutItemRequest.builder()
-            .tableName(dynamoMutation.getTableName())
-            .item(dynamoMutation.getValueMapWithKey());
-
-    if (put.getCondition().isPresent() && put.getCondition().get() instanceof PutIfNotExists) {
-      String condition = dynamoMutation.getIfNotExistsCondition();
-      builder.conditionExpression(condition);
-    }
-
-    client.putItem(builder.build());
-  }
-
-  private void update(Put put) {
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-    String condition;
+    String expression;
+    String condition = null;
     Map<String, AttributeValue> bindMap;
-    if (put.getCondition().get() instanceof PutIfExists) {
+
+    if (!put.getCondition().isPresent()) {
+      expression = dynamoMutation.getUpdateExpressionWithKey();
+      bindMap = dynamoMutation.getValueBindMapWithKey();
+    } else if (put.getCondition().get() instanceof PutIfNotExists) {
+      expression = dynamoMutation.getUpdateExpressionWithKey();
+      bindMap = dynamoMutation.getValueBindMapWithKey();
+      condition = dynamoMutation.getIfNotExistsCondition();
+    } else if (put.getCondition().get() instanceof PutIfExists) {
+      expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
-      condition = dynamoMutation.getCondition();
+      expression = dynamoMutation.getUpdateExpression();
+      condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());
     }
@@ -85,7 +72,7 @@ public class PutStatementHandler extends StatementHandler {
         UpdateItemRequest.builder()
             .tableName(dynamoMutation.getTableName())
             .key(dynamoMutation.getKeyMap())
-            .updateExpression(dynamoMutation.getUpdateExpression())
+            .updateExpression(expression)
             .conditionExpression(condition)
             .expressionAttributeValues(bindMap)
             .build();
