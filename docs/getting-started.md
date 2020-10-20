@@ -41,7 +41,8 @@ For building Scalar DB, what you will need to do is as follows.
 $ SCALARDB_HOME=/path/to/scalardb
 $ cd $SCALARDB_HOME
 $ ./gradlew installDist
-$ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
+$ sudo mkdir /var/log/scalar
+$ sudo chmod 777 /var/log/scalar
 ```
 Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
@@ -72,15 +73,17 @@ Here is a database schema for the sample application. For the supported data typ
     "columns": {
       "id": "TEXT",
       "balance": "INT"
-    },
-    "compaction-strategy": "STCS"
+    }
   }
 }
 ```
 
 To load the schema file, please run the following command.
+
+* Download `scalar-schema-<vesrion>.jar` file from [scalardb release](https://github.com/scalar-labs/scalardb/releases)
+
 ```
-$ java -jar $SCALARDB_HOME/tools/scalar-schema/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
 ```
 
 ## Store & retrieve data with storage service
@@ -171,17 +174,18 @@ To apply transaction, we can just add a key `transaction` and value as `true` in
     "columns": {
       "id": "TEXT",
       "balance": "INT"
-    },
-    "compaction-strategy": "STCS"
+    }
   }
 }
 ```
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following. 
-(Sorry you need to issue implementation specific commands to do this.)
+
+* Download `scalar-schema-<vesrion>.jar` file from [scalardb release](https://github.com/scalar-labs/scalardb/releases)
+
 ```
-$ java -jar $SCALARDB_HOME/tools/scalar-schema/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
-$ java -jar $SCALARDB_HOME/tools/scalar-schema/scalar-schema.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
 ```
 
 ## Store & retrieve data with transaction service
