@@ -1,7 +1,7 @@
-## Getting Started with Scalar DB
+## Getting Started with Scalar DB and Cassandra
 
 ## Overview
-This document briefly explains how you can get started with Scalar DB with a simple electronic money application.
+This document briefly explains how you can get started a simple electronic money application with scalar DB and Cassandra.
 
 ## Install prerequisites
 
