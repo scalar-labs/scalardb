@@ -13,15 +13,11 @@ Scalar DB is written in Java and uses Cosmos DB as an underlining storage implem
 ### Cosmos DB setup
 
 * [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction)
-    * Take a look at [this document](https://docs.microsoft.com/en-us/azure/cosmos-db/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) for how to set up Cosmos DB.
-    * Choose API as `Core (SQL)` while creating the cosmos db.
-    * Change default `Consistency Level` from `SESSION` to `STRONG` in Settings of `Default Consistency`.
+    * Take a look at [this document](https://docs.microsoft.com/en-us/azure/cosmos-db/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) for how to create an Azure Cosmos DB account.
+    * Choose API as `Core (SQL)` while creating the cosmos db account.
+    * Select `Default consistency` from the left navigation on your Azure Cosmos DB account page, and then change `Consistency Level` from `SESSION` to `STRONG`.
 
 From here, we assume Oracle JDK 8 is properly installed in your local environment, and Cosmos DB is running in Azure environment.
-
-## Build
-
-Please use [this](getting-started-with-cassandra.md#Build) to create a build.
 
 ## Configure the Cosmos DB connection
     
@@ -41,6 +37,10 @@ scalar.db.password=<YOUR_ACCOUNT_PASSWORD>
 # Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
 scalar.db.storage=cosmos
 ```
+
+## Build
+
+Please use [this](getting-started-with-cassandra.md#Build) to create a build.
 
 ## Set up database schema
 
@@ -70,7 +70,7 @@ Then, download the schema loader that matches with the version you use from [sca
 $ java -jar scalar-schema-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
-Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-storage-service) to check different storage functions.
+Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-storage-service) to check different storage services.
 
 ## Set up database schema with transaction
 
@@ -100,4 +100,4 @@ $ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT
 $ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
 ```
 
-Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-transaction-service) to check different storage functions.
+Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-transaction-service) to check different transaction services.

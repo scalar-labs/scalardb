@@ -276,11 +276,3 @@ $ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merch
 $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
 ```
 
-## Further documentation
-
-These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
-
-* [Design Document](design.md)
-* [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
-* [Database schema in Scalar DB](schema.md)
-* [Schema tool](../tools/scalar-schema/README.md)
