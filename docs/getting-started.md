@@ -13,12 +13,26 @@ Scalar DB is written in Java and uses Cassandra as an underlining storage implem
     * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
 * Other libraries used from the above are automatically installed through gradle
 
-In addition to the above, the following software is needed to use schema tools.
+From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment, and Cassandra is running in your localhost.
 
-* make
-* [Golang](https://golang.org/)
+## Configure the Cassandra connection
 
-From here, we assume Oracle JDK 8, Cassandra 3.11.x, make and Golang are properly installed in your local environment, and Cassandra is running in your localhost.
+The `database.properties` (conf/database.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
+
+```
+# Comma separated contact points
+scalar.db.contact_points=localhost
+
+# Port number for all the contact points. Default port number for each database is used if empty.
+scalar.db.contact_port=9042
+
+# Credential information to access the database
+scalar.db.username=cassandra
+scalar.db.password=cassandra
+
+# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
+#scalar.db.storage=cassandra
+```
 
 ## Build
 
@@ -27,10 +41,8 @@ For building Scalar DB, what you will need to do is as follows.
 $ SCALARDB_HOME=/path/to/scalardb
 $ cd $SCALARDB_HOME
 $ ./gradlew installDist
-$ sudo mkdir /var/log/scalar; sudo chmod 777 /var/log/scalar
-$ cd tools/schema
-$ make
-$ cd -
+$ sudo mkdir /var/log/scalar
+$ sudo chmod 777 /var/log/scalar
 ```
 Or you can download from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb).
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
@@ -50,20 +62,26 @@ $ cd docs/getting-started
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
 
-```sql
-REPLICATION FACTOR 1;
-
-CREATE NAMESPACE emoney;
-
-CREATE TABLE emoney.account (
-    id TEXT PARTITIONKEY,
-    balance INT,
-);
+```json
+{
+  "emoney.account": {
+    "transaction": false,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    }
+  }
+}
 ```
 
-To load the schema file, please run the following command.
+Then, download the schema loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+
 ```
-$ $SCALARDB_HOME/tools/schema/loader emoney-storage.sdbql
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
 ```
 
 ## Store & retrieve data with storage service
@@ -139,31 +157,39 @@ $ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1
 $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 -from user1"
 ```
 
+## Set up database schema with transaction
+
+To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme.
+
+```json
+{
+  "emoney.account": {
+    "transaction": true,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    }
+  }
+}
+```
+
+Before reapplying the schema, please drop the existing namespace first by issuing the following. 
+
+```
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+```
+
 ## Store & retrieve data with transaction service
 
 The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
 For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.
 
 With the transaction capability of Scalar DB, we can make such operations to be executed with ACID properties.
-Before updating the code, we need to update the schema to make it transaction capable by adding `TRANSACTION` keyword in `CREATE TABLE`.
-
-```sql
-REPLICATION FACTOR 1;
-
-CREATE NAMESPACE emoney;
-
-CREATE TRANSACTION TABLE emoney.account (
-    id TEXT PARTITIONKEY,
-    balance INT,
-);
-```
-
-Before reapplying the schema, please drop the existing namespace first by issuing the following.
-(Sorry you need to issue implementation specific commands to do this.)
-```
-$ cqlsh -e "drop keyspace emoney"
-$ $SCALARDB_HOME/tools/schema/loader emoney-transaction.sdbql
-```
 
 Now we can update the code as follows to make it transactional.
 ```java
@@ -257,3 +283,4 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * [Design Document](design.md)
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * [Database schema in Scalar DB](schema.md)
+* [Schema tool](../tools/scalar-schema/README.md)
