@@ -35,16 +35,9 @@ public class DynamoMutation extends DynamoOperation {
   public String getIfNotExistsCondition() {
     List<String> expressions = new ArrayList<>();
     expressions.add("attribute_not_exists(" + PARTITION_KEY + ")");
-    getOperation()
-        .getClusteringKey()
-        .ifPresent(
-            k -> {
-              k.get()
-                  .forEach(
-                      c -> {
-                        expressions.add("attribute_not_exists(" + c.getName() + ")");
-                      });
-            });
+    if (getOperation().getClusteringKey().isPresent()) {
+      expressions.add("attribute_not_exists(" + CLUSTERING_KEY + ")");
+    }
 
     return String.join(" AND ", expressions);
   }
@@ -53,16 +46,9 @@ public class DynamoMutation extends DynamoOperation {
   public String getIfExistsCondition() {
     List<String> expressions = new ArrayList<>();
     expressions.add("attribute_exists(" + PARTITION_KEY + ")");
-    getOperation()
-        .getClusteringKey()
-        .ifPresent(
-            k -> {
-              k.get()
-                  .forEach(
-                      c -> {
-                        expressions.add("attribute_exists(" + c.getName() + ")");
-                      });
-            });
+    if (getOperation().getClusteringKey().isPresent()) {
+      expressions.add("attribute_exists(" + CLUSTERING_KEY + ")");
+    }
 
     return String.join(" AND ", expressions);
   }
