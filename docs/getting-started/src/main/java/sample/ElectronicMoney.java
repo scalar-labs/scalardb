@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public abstract class ElectronicMoney {
-  private static final String SCALARDB_PROPERTIES = "database.properties";
+  private static final String SCALARDB_PROPERTIES = "scalardb.properties";
   protected static final String NAMESPACE = "emoney";
   protected static final String TABLENAME = "account";
   protected static final String ID = "id";
