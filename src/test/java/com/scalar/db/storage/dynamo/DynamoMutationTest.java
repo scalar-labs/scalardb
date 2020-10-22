@@ -94,7 +94,7 @@ public class DynamoMutationTest {
             "attribute_not_exists("
                 + DynamoOperation.PARTITION_KEY
                 + ") AND attribute_not_exists("
-                + ANY_NAME_2
+                + DynamoOperation.CLUSTERING_KEY
                 + ")");
   }
 
@@ -113,7 +113,7 @@ public class DynamoMutationTest {
             "attribute_exists("
                 + DynamoOperation.PARTITION_KEY
                 + ") AND attribute_exists("
-                + ANY_NAME_2
+                + DynamoOperation.CLUSTERING_KEY
                 + ")");
   }
 
