@@ -4,8 +4,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.MutationCondition;
-import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -22,7 +20,6 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
 import software.amazon.awssdk.services.dynamodb.model.Delete;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.Put;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
@@ -90,12 +87,7 @@ public class BatchHandler {
     TransactWriteItem.Builder itemBuilder = TransactWriteItem.builder();
 
     if (mutation instanceof com.scalar.db.api.Put) {
-      MutationCondition condition = mutation.getCondition().orElse(null);
-      if (condition != null && (condition instanceof PutIf || condition instanceof PutIfExists)) {
-        itemBuilder.update(makeUpdate((com.scalar.db.api.Put) mutation));
-      } else {
-        itemBuilder.put(makePut((com.scalar.db.api.Put) mutation));
-      }
+      itemBuilder.update(makeUpdate((com.scalar.db.api.Put) mutation));
     } else {
       itemBuilder.delete(makeDelete((com.scalar.db.api.Delete) mutation));
     }
@@ -103,29 +95,27 @@ public class BatchHandler {
     return itemBuilder.build();
   }
 
-  private Put makePut(com.scalar.db.api.Put put) {
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
-    Put.Builder putBuilder = Put.builder();
-
-    putBuilder.tableName(dynamoMutation.getTableName()).item(dynamoMutation.getValueMapWithKey());
-    if (put.getCondition().isPresent() && put.getCondition().get() instanceof PutIfNotExists) {
-      putBuilder.conditionExpression(dynamoMutation.getIfNotExistsCondition());
-    }
-
-    return putBuilder.build();
-  }
-
   private Update makeUpdate(com.scalar.db.api.Put put) {
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
     Update.Builder updateBuilder = Update.builder();
-    String condition;
+    String expression;
+    String condition = null;
     Map<String, AttributeValue> bindMap;
 
-    if (put.getCondition().get() instanceof PutIfExists) {
+    if (!put.getCondition().isPresent()) {
+      expression = dynamoMutation.getUpdateExpressionWithKey();
+      bindMap = dynamoMutation.getValueBindMapWithKey();
+    } else if (put.getCondition().get() instanceof PutIfNotExists) {
+      expression = dynamoMutation.getUpdateExpressionWithKey();
+      bindMap = dynamoMutation.getValueBindMapWithKey();
+      condition = dynamoMutation.getIfNotExistsCondition();
+    } else if (put.getCondition().get() instanceof PutIfExists) {
+      expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
-      condition = dynamoMutation.getCondition();
+      expression = dynamoMutation.getUpdateExpression();
+      condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());
     }
@@ -133,7 +123,7 @@ public class BatchHandler {
     updateBuilder
         .tableName(dynamoMutation.getTableName())
         .key(dynamoMutation.getKeyMap())
-        .updateExpression(dynamoMutation.getUpdateExpression())
+        .updateExpression(expression)
         .conditionExpression(condition)
         .expressionAttributeValues(bindMap)
         .build();

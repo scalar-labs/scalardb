@@ -121,7 +121,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_MultipleMutationsGiven_ShouldCallStoredProcedure() {
+  public void handle_MultipleMutationsGiven_ShouldCallTransactWriteItems() {
     // Arrange
     when(client.transactWriteItems(any(TransactWriteItemsRequest.class)))
         .thenReturn(transactWriteResponse);
@@ -148,10 +148,14 @@ public class BatchHandlerTest {
     verify(client).transactWriteItems(captor.capture());
     List<TransactWriteItem> items = captor.getValue().transactItems();
     assertThat(items.size()).isEqualTo(4);
-    assertThat(items.get(0).put().item()).isEqualTo(dynamoMutation1.getValueMapWithKey());
-    assertThat(items.get(0).put().conditionExpression()).isNull();
-    assertThat(items.get(1).put().item()).isEqualTo(dynamoMutation2.getValueMapWithKey());
-    assertThat(items.get(1).put().conditionExpression())
+    assertThat(items.get(0).update().key()).isEqualTo(dynamoMutation1.getKeyMap());
+    assertThat(items.get(0).update().expressionAttributeValues())
+        .isEqualTo(dynamoMutation1.getValueBindMapWithKey());
+    assertThat(items.get(0).update().conditionExpression()).isNull();
+    assertThat(items.get(1).update().key()).isEqualTo(dynamoMutation2.getKeyMap());
+    assertThat(items.get(1).update().expressionAttributeValues())
+        .isEqualTo(dynamoMutation2.getValueBindMapWithKey());
+    assertThat(items.get(1).update().conditionExpression())
         .isEqualTo(dynamoMutation2.getIfNotExistsCondition());
     assertThat(items.get(2).delete().key()).isEqualTo(dynamoMutation3.getKeyMap());
     assertThat(items.get(2).delete().conditionExpression()).isNull();
@@ -161,7 +165,7 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_MultiPartitionOperationsGiven_ShouldExecuteTransactWriteItems() {
+  public void handle_MultiPartitionOperationsGiven_ShouldCallTransactWriteItems() {
     // Arrange
     when(client.transactWriteItems(any(TransactWriteItemsRequest.class)))
         .thenReturn(transactWriteResponse);
