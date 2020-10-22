@@ -21,7 +21,7 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 
 ## Configure the Cosmos DB connection
     
-The [**scalardb.properties**](../conf/database.properties) file holds the configuration for Scalar DB. Basically, Cosmos DB account_uri and primary_key will get from Azure Cosmos DB account.
+The **scalardb.properties** (getting-started/src/main/resources/scalardb.properties) file holds the configuration for Scalar DB. Basically, Cosmos DB account_uri and primary_key will get from Azure Cosmos DB account.
     
 ```
 # Comma separated contact points

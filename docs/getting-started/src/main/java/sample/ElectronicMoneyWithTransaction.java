@@ -6,7 +6,6 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -16,13 +15,14 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.service.TransactionModule;
 import com.scalar.db.service.TransactionService;
 
+import java.io.IOException;
 import java.util.Optional;
 
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   private final TransactionService service;
 
-  public ElectronicMoneyWithTransaction() {
-    Injector injector = Guice.createInjector(new TransactionModule(new DatabaseConfig(props)));
+  public ElectronicMoneyWithTransaction() throws IOException  {
+    Injector injector = Guice.createInjector(new TransactionModule(dbConfig));
     service = injector.getInstance(TransactionService.class);
     service.with(NAMESPACE, TABLENAME);
   }
