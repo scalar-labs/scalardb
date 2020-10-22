@@ -43,22 +43,21 @@ public class TableMetadata {
   }
 
   public List<String> getKeyNames() {
-    if (keyNames != null) {
-      return keyNames;
-    }
-
-    keyNames =
-        new ImmutableList.Builder<String>()
-            .addAll(partitionKeyNames)
-            .addAll(clusteringKeyNames)
-            .build();
-
     return keyNames;
   }
 
   private void convert(Map<String, AttributeValue> metadata) {
     this.partitionKeyNames = ImmutableSortedSet.copyOf(metadata.get(PARTITION_KEY).ss());
-    this.clusteringKeyNames = ImmutableSortedSet.copyOf(metadata.get(CLUSTERING_KEY).ss());
+    if (metadata.containsKey(CLUSTERING_KEY)) {
+      this.clusteringKeyNames = ImmutableSortedSet.copyOf(metadata.get(CLUSTERING_KEY).ss());
+    } else {
+      this.clusteringKeyNames = ImmutableSortedSet.of();
+    }
+    this.keyNames =
+        new ImmutableList.Builder<String>()
+            .addAll(partitionKeyNames)
+            .addAll(clusteringKeyNames)
+            .build();
 
     SortedMap<String, String> cs =
         metadata.get(COLUMNS).m().entrySet().stream()
