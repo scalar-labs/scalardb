@@ -114,8 +114,8 @@
 (defn- make-throughput
   [ru]
   (-> (ProvisionedThroughput/builder)
-      (.readCapacityUnits ru)
-      (.writeCapacityUnits ru)
+      (.readCapacityUnits (long ru))
+      (.writeCapacityUnits (long ru))
       .build))
 
 (defn- insert-metadata
