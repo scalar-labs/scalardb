@@ -51,7 +51,7 @@ scalar.db.storage=cosmos
 
 ## Build
 
-Please use [this](getting-started-with-cassandra.md#Build) to create a build.
+Please [see](getting-started-with-cassandra.md#Build).
 
 ## Set up database schema
 
