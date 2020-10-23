@@ -5,7 +5,7 @@ This document briefly explains how you can get started a simple electronic money
 
 ## Install prerequisites
 
-Scalar DB is written in Java and uses Cosmos DB as an underlining storage implementation, so the following software is required to run it.
+Scalar DB and simple electronic money applications are written in Java. Azure Cosmos DB is used for storage implementation. So the following software and Azure Cosmos DB account are required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
@@ -13,11 +13,22 @@ Scalar DB is written in Java and uses Cosmos DB as an underlining storage implem
 ### Cosmos DB setup
 
 * [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction)
-    * Take a look at [this document](https://docs.microsoft.com/en-us/azure/cosmos-db/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) for how to create an Azure Cosmos DB account.
-    * Choose API as `Core (SQL)` while creating the cosmos db account.
-    * Select `Default consistency` from the left navigation on your Azure Cosmos DB account page, and then change `Consistency Level` from `SESSION` to `STRONG`.
-
-From here, we assume Oracle JDK 8 is properly installed in your local environment, and Cosmos DB is running in Azure environment.
+    * Select **Azure Cosmos DB** service from the services on Azure web console.
+    * Select **Add**
+    * On the Create Azure Cosmos DB Account page, enter the basic settings for the new Azure Cosmos account.
+        * Create new or choose the existing **Resource Group**
+        * Enter the cosmos db **Account Name**
+        * Choose **API** as `Core (SQL)`
+        * Choose **Location**
+        * Select **Review + create**. You can skip the **Network** and **Tags** sections.
+        * Review the account settings, and then select **Create**.
+        * Please wait some time for **Azure Cosmos DB** account creation.
+    * Select **Go to resource** to go to the Azure Cosmos DB account page.
+    * Select **Default consistency** from the left navigation on your Azure Cosmos DB account page,
+        * Change `Consistency Level` from `SESSION` to `STRONG`.
+        * Select **Save**
+        
+From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB account is properly configured in Azure.
 
 ## Configure the Cosmos DB connection
     
@@ -70,7 +81,7 @@ Then, download the schema loader that matches with the version you use from [sca
 $ java -jar scalar-schema-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
-Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-storage-service) to check different storage services.
+Please follow the [Store & retrieve data with storage service](getting-started-with-cassandra.md#store--retrieve-data-with-storage-service).
 
 ## Set up database schema with transaction
 
@@ -100,4 +111,4 @@ $ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT
 $ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
 ```
 
-Please use [this](getting-started-with-cassandra.md#store--retrieve-data-with-transaction-service) to check different transaction services.
+Please follow the [Store & retrieve data with transaction service](getting-started-with-cassandra.md#store--retrieve-data-with-transaction-service).
