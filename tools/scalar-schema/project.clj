@@ -17,5 +17,5 @@
   :repl-options {:init-ns scalar-schema.cassandra-schema}
   :main scalar-schema.core
   :profiles {:uberjar {:aot :all
-                       :uberjar-name "scalar-schema.jar"
+                       :uberjar-name "scalar-schema-standalone-%s.jar"
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
