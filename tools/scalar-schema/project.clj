@@ -1,4 +1,4 @@
-(defproject scalar-schema "0.1.0-SNAPSHOT"
+(defproject scalar-schema "2.2.2"
   :description "Schema tool for Scalar DB"
   :url "http://github.com/scalar-labs/scalardb"
   :dependencies [[org.clojure/clojure "1.10.1"]
@@ -17,5 +17,5 @@
   :repl-options {:init-ns scalar-schema.cassandra-schema}
   :main scalar-schema.core
   :profiles {:uberjar {:aot :all
-                       :uberjar-name "scalar-schema.jar"
+                       :uberjar-name "scalar-schema-standalone-%s.jar"
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
