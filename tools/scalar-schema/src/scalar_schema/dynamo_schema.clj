@@ -34,7 +34,7 @@
 
 (def ^:private type-map
   {"int" ScalarAttributeType/N
-   "biging" ScalarAttributeType/N
+   "bigint" ScalarAttributeType/N
    "float" ScalarAttributeType/N
    "double" ScalarAttributeType/N
    "text" ScalarAttributeType/S
