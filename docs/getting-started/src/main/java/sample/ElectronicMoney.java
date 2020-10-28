@@ -19,8 +19,7 @@ public abstract class ElectronicMoney {
 
 
   public ElectronicMoney() throws IOException {
-    dbConfig =
-            new DatabaseConfig(new FileInputStream(SCALARDB_PROPERTIES));
+    dbConfig = new DatabaseConfig(new FileInputStream(SCALARDB_PROPERTIES));
   }
 
   abstract void charge(String id, int amount) throws Exception;
