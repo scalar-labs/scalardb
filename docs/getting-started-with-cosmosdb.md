@@ -1,16 +1,17 @@
-## Getting Started with Scalar DB and Cosmos DB
+## Getting Started with Scalar DB on Cosmos DB
 
 ## Overview
-This document briefly explains how you can get started a simple electronic money application with scalar DB and Cosmos DB.
+This document briefly explains how you can get started with Scalar DB on Cosmos DB with a simple electronic money application.
 
 ## Install prerequisites
 
-Scalar DB and simple electronic money applications are written in Java. Azure Cosmos DB is used for storage implementation. So the following software and Azure Cosmos DB account are required to run it.
+Scalar DB is written in Java. So the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
 
-### Cosmos DB setup
+## Cosmos DB setup
+Scalar DB uses Azure Cosmos DB for storage implementation. So Azure Cosmos DB account also required to run it.
 
 * [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction)
     * Select **Azure Cosmos DB** service from the services on Azure web console.
@@ -32,7 +33,7 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 
 ## Configure the Cosmos DB connection
     
-The **scalardb.properties** (docs/getting-started/src/main/resources/scalardb.properties) file holds the configuration for Scalar DB. Basically, Cosmos DB account_uri and primary_key will get from Azure Cosmos DB account.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, Cosmos DB account_uri and primary_key will get from Azure Cosmos DB account.
     
 ```
 # Comma separated contact points
@@ -49,66 +50,4 @@ scalar.db.password=<YOUR_ACCOUNT_PASSWORD>
 scalar.db.storage=cosmos
 ```
 
-## Build
-
-Please [see](getting-started-with-cassandra.md#Build).
-
-## Set up database schema
-
-First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
-Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
-
-```json
-{
-  "emoney.account": {
-    "transaction": false,
-    "partition-key": [
-      "id"
-    ],
-    "clustering-key": [],
-    "columns": {
-      "id": "TEXT",
-      "balance": "INT"
-    },
-    "ru": 400
-  }
-}
-```
-
-Then, download the schema loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
-
-```
-$ java -jar scalar-schema-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
-```
-
-Please follow the [Store & retrieve data with storage service](getting-started-with-cassandra.md#store--retrieve-data-with-storage-service).
-
-## Set up database schema with transaction
-
-To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme. For instance, we modify our qa.question schema.
-
-```json
-{
-  "emoney.account": {
-    "transaction": true,
-    "partition-key": [
-      "id"
-    ],
-    "clustering-key": [],
-    "columns": {
-      "id": "TEXT",
-      "balance": "INT"
-    },
-    "ru": 400
-  }
-}
-```
-
-Before reapplying the schema, please drop the existing namespace first by issuing the following. 
-
-```
-$ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
-$ java -jar $PATH_TO_SCALARDB/target/scalar-schema.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
-```
-
-Please follow the [Store & retrieve data with transaction service](getting-started-with-cassandra.md#store--retrieve-data-with-transaction-service).
+Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md)
