@@ -20,6 +20,7 @@ public class DynamoOperation {
   static final String END_CLUSTERING_KEY_ALIAS = ":eck";
   static final String CONDITION_VALUE_ALIAS = ":cval";
   static final String VALUE_ALIAS = ":val";
+  static final String COLUMN_NAME_ALIAS = "#col";
   static final String RANGE_KEY_ALIAS = ":sk";
   static final String RANGE_CONDITION = " BETWEEN :sk0 AND :sk1";
   static final String INDEX_NAME_PREFIX = "index";
