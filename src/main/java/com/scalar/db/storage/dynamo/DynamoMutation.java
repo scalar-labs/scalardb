@@ -4,6 +4,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -84,23 +85,59 @@ public class DynamoMutation extends DynamoOperation {
 
     if (withKey) {
       for (Value key : put.getPartitionKey().get()) {
-        expressions.add(key.getName() + " = " + VALUE_ALIAS + i);
+        expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
         i++;
       }
       if (put.getClusteringKey().isPresent()) {
         for (Value key : put.getClusteringKey().get().get()) {
-          expressions.add(key.getName() + " = " + VALUE_ALIAS + i);
+          expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
           i++;
         }
       }
     }
 
     for (String name : put.getValues().keySet()) {
-      expressions.add(name + " = " + VALUE_ALIAS + i);
+      expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
       i++;
     }
 
     return "SET " + String.join(", ", expressions);
+  }
+
+  @Nonnull
+  public Map<String, String> getColumnMap() {
+    return getColumnMap(false);
+  }
+
+  @Nonnull
+  public Map<String, String> getColumnMapWithKey() {
+    return getColumnMap(true);
+  }
+
+  private Map<String, String> getColumnMap(boolean withKey) {
+    Put put = (Put) getOperation();
+    Map<String, String> columnMap = new HashMap<>();
+    int i = 0;
+
+    if (withKey) {
+      for (Value key : put.getPartitionKey().get()) {
+        columnMap.put(COLUMN_NAME_ALIAS + i, key.getName());
+        i++;
+      }
+      if (put.getClusteringKey().isPresent()) {
+        for (Value key : put.getClusteringKey().get().get()) {
+          columnMap.put(COLUMN_NAME_ALIAS + i, key.getName());
+          i++;
+        }
+      }
+    }
+
+    for (String name : put.getValues().keySet()) {
+      columnMap.put(COLUMN_NAME_ALIAS + i, name);
+      i++;
+    }
+
+    return columnMap;
   }
 
   @Nonnull
