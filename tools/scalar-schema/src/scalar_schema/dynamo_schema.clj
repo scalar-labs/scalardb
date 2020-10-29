@@ -102,8 +102,7 @@
       (.keySchema [(make-key-schema-element PARTITION_KEY KeyType/HASH)
                    (make-key-schema-element index-key KeyType/RANGE)])
       (.projection (-> (Projection/builder)
-                       (.projectionType (ProjectionType/INCLUDE))
-                       (.nonKeyAttributes ((comp keys :columns) schema))
+                       (.projectionType (ProjectionType/ALL))
                        .build))
       .build))
 
