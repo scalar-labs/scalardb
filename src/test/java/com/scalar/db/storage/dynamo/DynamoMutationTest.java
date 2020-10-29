@@ -157,12 +157,12 @@ public class DynamoMutationTest {
     assertThat(actual)
         .isEqualTo(
             "SET "
-                + ANY_NAME_3
-                + " = "
+                + DynamoOperation.COLUMN_NAME_ALIAS
+                + "0 = "
                 + DynamoOperation.VALUE_ALIAS
                 + "0, "
-                + ANY_NAME_4
-                + " = "
+                + DynamoOperation.COLUMN_NAME_ALIAS
+                + "1 = "
                 + DynamoOperation.VALUE_ALIAS
                 + "1");
   }
