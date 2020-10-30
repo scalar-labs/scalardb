@@ -1,4 +1,4 @@
-## Getting Started with Scalar DB on Cassandra
+# Getting Started with Scalar DB on Cassandra
     
 ## Overview
 This document briefly explains how you can get started with Scalar DB on Cassandra with a simple electronic money application.
@@ -15,7 +15,7 @@ Scalar DB is written in Java and uses Cassandra as an underlining storage implem
 
 From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment, and Cassandra is running in your localhost.
 
-## Configure the Cassandra connection
+## Configure Scalar DB
 
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
 
