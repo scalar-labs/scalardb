@@ -17,7 +17,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -131,22 +130,23 @@ public class ResultImpl implements Result {
       throws UnsupportedTypeException {
     // When itemValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver
+    boolean isNull = itemValue == null || (itemValue.nul() != null && itemValue.nul());
     switch (type) {
       case "boolean":
-        return new BooleanValue(name, itemValue == null ? false : itemValue.bool());
+        return new BooleanValue(name, isNull ? false : itemValue.bool());
       case "int":
-        return new IntValue(name, itemValue == null ? 0 : Integer.valueOf(itemValue.n()));
+        return new IntValue(name, isNull ? 0 : Integer.valueOf(itemValue.n()));
       case "bigint":
-        return new BigIntValue(name, itemValue == null ? 0L : Long.valueOf(itemValue.n()));
+        return new BigIntValue(name, isNull ? 0L : Long.valueOf(itemValue.n()));
       case "float":
-        return new FloatValue(name, itemValue == null ? 0.0f : Float.valueOf(itemValue.n()));
+        return new FloatValue(name, isNull ? 0.0f : Float.valueOf(itemValue.n()));
       case "double":
-        return new DoubleValue(name, itemValue == null ? 0.0 : Double.valueOf(itemValue.n()));
+        return new DoubleValue(name, isNull ? 0.0 : Double.valueOf(itemValue.n()));
       case "text": // for backwards compatibility
       case "varchar":
-        return new TextValue(name, itemValue == null ? null : itemValue.s());
+        return new TextValue(name, isNull ? (String) null : itemValue.s());
       case "blob":
-        return new BlobValue(name, itemValue == null ? null : itemValue.b().asByteArray());
+        return new BlobValue(name, isNull ? null : itemValue.b().asByteArray());
       default:
         throw new UnsupportedTypeException(type);
     }
