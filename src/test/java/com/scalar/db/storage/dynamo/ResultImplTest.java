@@ -128,6 +128,37 @@ public class ResultImplTest {
   }
 
   @Test
+  public void getValues_NullValuesGivenInConstructor_ShouldReturnDefaultValueSet() {
+    // Arrange
+    Map<String, AttributeValue> nullItem = new HashMap<>();
+    nullItem.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
+    nullItem.put(ANY_NAME_1, AttributeValue.builder().s(ANY_TEXT_1).build());
+    nullItem.put(ANY_NAME_2, AttributeValue.builder().s(ANY_TEXT_2).build());
+    nullItem.put(ANY_COLUMN_NAME_1, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_2, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_3, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_4, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_5, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_6, AttributeValue.builder().nul(true).build());
+    nullItem.put(ANY_COLUMN_NAME_7, AttributeValue.builder().nul(true).build());
+
+    ResultImpl result = new ResultImpl(nullItem, get, metadata);
+
+    // Act
+    Map<String, Value> actual = result.getValues();
+
+    // Assert
+    assertThat(actual.get(ANY_COLUMN_NAME_1)).isEqualTo(new BooleanValue(ANY_COLUMN_NAME_1, false));
+    assertThat(actual.get(ANY_COLUMN_NAME_2)).isEqualTo(new IntValue(ANY_COLUMN_NAME_2, 0));
+    assertThat(actual.get(ANY_COLUMN_NAME_3)).isEqualTo(new BigIntValue(ANY_COLUMN_NAME_3, 0L));
+    assertThat(actual.get(ANY_COLUMN_NAME_4)).isEqualTo(new FloatValue(ANY_COLUMN_NAME_4, 0.0f));
+    assertThat(actual.get(ANY_COLUMN_NAME_5)).isEqualTo(new DoubleValue(ANY_COLUMN_NAME_5, 0.0));
+    assertThat(actual.get(ANY_COLUMN_NAME_6))
+        .isEqualTo(new TextValue(ANY_COLUMN_NAME_6, (String) null));
+    assertThat(actual.get(ANY_COLUMN_NAME_7)).isEqualTo(new BlobValue(ANY_COLUMN_NAME_7, null));
+  }
+
+  @Test
   public void getValue_GetValueCalledBefore_ShouldNotLoadAgain() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(item, get, metadata));

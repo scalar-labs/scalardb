@@ -100,7 +100,13 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value.getString().ifPresent(s -> values.put(alias + i, AttributeValue.builder().s(s).build()));
+    AttributeValue.Builder builder = AttributeValue.builder();
+    if (value.getString().isPresent()) {
+      builder.s(value.getString().get());
+    } else {
+      builder.nul(true);
+    }
+    values.put(alias + i, builder.build());
     i++;
   }
 
@@ -111,12 +117,13 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
-    value
-        .get()
-        .ifPresent(
-            b ->
-                values.put(
-                    alias + i, AttributeValue.builder().b(SdkBytes.fromByteArray(b)).build()));
+    AttributeValue.Builder builder = AttributeValue.builder();
+    if (value.get().isPresent()) {
+      builder.b(SdkBytes.fromByteArray(value.get().get()));
+    } else {
+      builder.nul(true);
+    }
+    values.put(alias + i, builder.build());
     i++;
   }
 }
