@@ -34,4 +34,4 @@ scalar.db.password=cassandra
 #scalar.db.storage=cassandra
 ```
 
-Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md)
+Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
