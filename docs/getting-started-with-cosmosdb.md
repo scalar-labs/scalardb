@@ -50,4 +50,4 @@ scalar.db.password=<YOUR_ACCOUNT_PASSWORD>
 scalar.db.storage=cosmos
 ```
 
-Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md)
+Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
