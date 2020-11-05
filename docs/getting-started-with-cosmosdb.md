@@ -14,7 +14,7 @@ Scalar DB is written in Java. So the following software is required to run it.
 You also need to set up a Cosmos DB account to get started with Scalar DB on Cosmos DB.
 
 This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) with Azure portal.
-1. Select **Azure Cosmos DB** service from the services on Azure web console.
+1. Select **Azure Cosmos DB** service from the services on Azure portal.
 2. Select **Add**
 3. On the **Create Azure Cosmos DB Account** page, enter the basic settings for the new **Azure Cosmos DB** account.
     * Create new or choose the existing **Resource Group**
