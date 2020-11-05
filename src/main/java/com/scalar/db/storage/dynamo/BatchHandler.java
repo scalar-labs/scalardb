@@ -100,22 +100,27 @@ public class BatchHandler {
     Update.Builder updateBuilder = Update.builder();
     String expression;
     String condition = null;
+    Map<String, String> columnMap;
     Map<String, AttributeValue> bindMap;
 
     if (!put.getCondition().isPresent()) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
+      columnMap = dynamoMutation.getColumnMapWithKey();
       bindMap = dynamoMutation.getValueBindMapWithKey();
     } else if (put.getCondition().get() instanceof PutIfNotExists) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
+      columnMap = dynamoMutation.getColumnMapWithKey();
       bindMap = dynamoMutation.getValueBindMapWithKey();
       condition = dynamoMutation.getIfNotExistsCondition();
     } else if (put.getCondition().get() instanceof PutIfExists) {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition();
+      columnMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
+      columnMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());
     }
@@ -125,6 +130,7 @@ public class BatchHandler {
         .key(dynamoMutation.getKeyMap())
         .updateExpression(expression)
         .conditionExpression(condition)
+        .expressionAttributeNames(columnMap)
         .expressionAttributeValues(bindMap)
         .build();
 

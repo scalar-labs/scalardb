@@ -149,10 +149,14 @@ public class BatchHandlerTest {
     List<TransactWriteItem> items = captor.getValue().transactItems();
     assertThat(items.size()).isEqualTo(4);
     assertThat(items.get(0).update().key()).isEqualTo(dynamoMutation1.getKeyMap());
+    assertThat(items.get(0).update().expressionAttributeNames())
+        .isEqualTo(dynamoMutation1.getColumnMapWithKey());
     assertThat(items.get(0).update().expressionAttributeValues())
         .isEqualTo(dynamoMutation1.getValueBindMapWithKey());
     assertThat(items.get(0).update().conditionExpression()).isNull();
     assertThat(items.get(1).update().key()).isEqualTo(dynamoMutation2.getKeyMap());
+    assertThat(items.get(1).update().expressionAttributeNames())
+        .isEqualTo(dynamoMutation2.getColumnMapWithKey());
     assertThat(items.get(1).update().expressionAttributeValues())
         .isEqualTo(dynamoMutation2.getValueBindMapWithKey());
     assertThat(items.get(1).update().conditionExpression())
