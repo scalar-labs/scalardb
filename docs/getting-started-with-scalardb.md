@@ -1,38 +1,7 @@
-## Getting Started with Scalar DB
+# Getting Started with Scalar DB
 
-## Overview
-This document briefly explains how you can get started with Scalar DB with a simple electronic money application.
-
-## Install prerequisites
-
-Scalar DB is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
-
-* [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
-* [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
-    * Take a look at [this document](http://cassandra.apache.org/download/) for how to set up Cassandra.
-    * Change `commitlog_sync` from `periodic` to `batch` in `cassandra.yaml` not to lose data when quorum of replica nodes go down
-* Other libraries used from the above are automatically installed through gradle
-
-From here, we assume Oracle JDK 8 and Cassandra 3.11.x are properly installed in your local environment, and Cassandra is running in your localhost.
-
-## Configure the Cassandra connection
-
-The `database.properties` (conf/database.properties) file holds the configuration for Scalar DB. Basically, it describes the Cassandra installation that will be used.
-
-```
-# Comma separated contact points
-scalar.db.contact_points=localhost
-
-# Port number for all the contact points. Default port number for each database is used if empty.
-scalar.db.contact_port=9042
-
-# Credential information to access the database
-scalar.db.username=cassandra
-scalar.db.password=cassandra
-
-# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
-#scalar.db.storage=cassandra
-```
+Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
+If you haven't done it, please configure them first by following [this](docs/README.md).
 
 ## Build
 
@@ -78,10 +47,16 @@ Here is a database schema for the sample application. For the supported data typ
 }
 ```
 
-Then, download the schema loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+Then, download the scalar schema standalone loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
+For Cassandra
 ```
-$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+```
+
+For Cosmos DB
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
 ## Store & retrieve data with storage service
@@ -179,9 +154,18 @@ To apply transaction, we can just add a key `transaction` and value as `true` in
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following. 
 
+For Cassandra
+
 ```
-$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
-$ java -jar scalar-schema-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+```
+
+For Cosmos DB
+
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
+$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
 ```
 
 ## Store & retrieve data with transaction service
