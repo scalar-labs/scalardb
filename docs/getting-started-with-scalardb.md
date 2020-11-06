@@ -59,6 +59,11 @@ For Cosmos DB
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
+For Dynamo DB
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
+```
+
 ## Store & retrieve data with storage service
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
@@ -166,6 +171,13 @@ For Cosmos DB
 ```
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
+```
+
+For Cosmos DB
+
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
 ```
 
 ## Store & retrieve data with transaction service
