@@ -1,7 +1,7 @@
 # Getting Started with Scalar DB
 
 Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
-If you haven't done it, please configure them first by following [this](docs/README.md).
+If you haven't done it, please configure them first by following [this](README.md).
 
 ## Build
 
