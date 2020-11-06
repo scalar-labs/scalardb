@@ -5,7 +5,6 @@ import com.google.inject.Injector;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -13,13 +12,14 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.service.StorageModule;
 import com.scalar.db.service.StorageService;
 
+import java.io.IOException;
 import java.util.Optional;
 
 public class ElectronicMoneyWithStorage extends ElectronicMoney {
   private final StorageService service;
 
-  public ElectronicMoneyWithStorage() {
-    Injector injector = Guice.createInjector(new StorageModule(new DatabaseConfig(props)));
+  public ElectronicMoneyWithStorage() throws IOException {
+    Injector injector = Guice.createInjector(new StorageModule(dbConfig));
     service = injector.getInstance(StorageService.class);
     service.with(NAMESPACE, TABLENAME);
   }
