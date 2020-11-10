@@ -30,11 +30,13 @@
   (let [{:keys [options summary errors]
          {:keys [cassandra cosmos dynamo help]} :options}
         (parse-opts args cli-options)]
-    (if (or help errors)
-      (do (when (not help)
-            (println (str "ERROR: " errors)))
-          (println summary))
-      (do
-        (when cassandra (cassandra-schema/operate-cassandra options))
-        (when cosmos (cosmos-schema/operate-cosmos options))
-        (when dynamo (dynamo-schema/operate-dynamo options))))))
+    (cond
+      help (println summary)
+      errors (do
+               (println (str "ERROR: " errors))
+               (println summary)
+               (System/exit 1))
+      :else (do
+              (when cassandra (cassandra-schema/operate-cassandra options))
+              (when cosmos (cosmos-schema/operate-cosmos options))
+              (when dynamo (dynamo-schema/operate-dynamo options))))))
