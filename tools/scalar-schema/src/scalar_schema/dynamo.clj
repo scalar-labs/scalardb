@@ -1,7 +1,7 @@
-(ns scalar-schema.dynamo-schema
+(ns scalar-schema.dynamo
   (:require [clojure.tools.logging :as log]
-            [clojure.java.io :as io]
-            [scalar-schema.common :as common])
+            [scalar-schema.common :as common]
+            [scalar-schema.protocols :as proto])
   (:import (software.amazon.awssdk.auth.credentials AwsBasicCredentials
                                                     StaticCredentialsProvider)
            (software.amazon.awssdk.regions Region)
@@ -20,8 +20,6 @@
                                                            ScalarAttributeType)))
 
 (def ^:const ^:private ^String WAIT_FOR_CREATION 10000)
-(def ^:const ^:private ^String METADATA_DATABASE "scalardb")
-(def ^:const ^:private ^String METADATA_TABLE "metadata")
 (def ^:const ^:private ^String METADATA_PARTITION_KEY "table")
 (def ^:const ^:private ^String PARTITION_KEY "concatenatedPartitionKey")
 (def ^:const ^:private ^String CLUSTERING_KEY "concatenatedClusteringKey")
@@ -29,8 +27,8 @@
 (def ^:const ^:private ^String PARTITION_KEY_COLUMN "partitionKey")
 (def ^:const ^:private ^String CLUSTERING_KEY_COLUMN "clusteringKey")
 (def ^:const ^:private ^String COLUMNS_COLUMN "columns")
-(def ^:private META_TABLE (common/get-fullname METADATA_DATABASE
-                                               METADATA_TABLE))
+(def ^:private META_TABLE (common/get-fullname common/METADATA_DATABASE
+                                               common/METADATA_TABLE))
 
 (def ^:private type-map
   {"int" ScalarAttributeType/N
@@ -40,11 +38,15 @@
    "text" ScalarAttributeType/S
    "blob" ScalarAttributeType/B})
 
+(defn- get-credentials-provider
+  [user password]
+  (StaticCredentialsProvider/create
+   (AwsBasicCredentials/create user password)))
+
 (defn- get-client
   [user password region]
   (-> (DynamoDbClient/builder)
-      (.credentialsProvider (StaticCredentialsProvider/create
-                             (AwsBasicCredentials/create user password)))
+      (.credentialsProvider (get-credentials-provider user password))
       (.region (Region/of region))
       .build))
 
@@ -175,39 +177,21 @@
                                   (make-local-secondary-indexes schema)))
         (.createTable client (.build builder))))))
 
-(defn- create-transaction-table
-  [client schema opts]
-  (create-table client (common/update-for-transaction schema) opts)
-  (create-table client common/COORDINATOR_SCHEMA opts))
-
-(defn- create-tables
-  [client schema-file opts]
-  (->> (common/parse-schema schema-file)
-       (map #(if (:transaction %)
-               (create-transaction-table client % opts)
-               (create-table client % opts)))
-       doall))
-
 (defn- delete-table
-  [client table]
-  (if (table-exists? client table)
-    (->> (-> (DeleteTableRequest/builder) (.tableName table) .build)
-         (.deleteTable client))
-    (log/warn table "doesn't exist")))
+  [client schema]
+  (let [table (common/get-fullname (:database schema) (:table schema))]
+    (if (table-exists? client table)
+      (->> (-> (DeleteTableRequest/builder) (.tableName table) .build)
+           (.deleteTable client))
+      (log/warn table "doesn't exist"))))
 
-(defn- delete-all
-  [client schema-file]
-  (log/warn "Deleting all databases and tables in the file")
-  (let [tables (map #(common/get-fullname (:database %) (:table %))
-                    (common/parse-schema schema-file))
-        coordinator (common/get-fullname (:database common/COORDINATOR_SCHEMA)
-                                         (:table common/COORDINATOR_SCHEMA))]
-    (doall (map #(delete-table client %)
-                (into tables [META_TABLE coordinator])))))
-
-(defn operate-dynamo
-  [{:keys [schema-file host user password region] :as options}]
-  (with-open [client (get-client user password region)]
-    (if (:delete-all options)
-      (delete-all client schema-file)
-      (create-tables client schema-file options))))
+(defn make-dynamo-operator
+  [{:keys [user password region]}]
+  (let [client (get-client user password region)]
+    (reify proto/IOperator
+      (create-table [_ schema opts]
+        (create-table client schema opts))
+      (delete-table [_ schema _]
+        (delete-table client schema))
+      (close [_ _]
+        (.close client)))))

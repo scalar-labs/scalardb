@@ -1,6 +1,6 @@
-(ns scalar-schema.cassandra-schema
+(ns scalar-schema.cassandra
   (:require [clojure.tools.logging :as log]
-            [scalar-schema.common :as common]
+            [scalar-schema.protocols :as proto]
             [qbits.alia :as alia]
             [qbits.hayt :refer [->raw]]
             [qbits.hayt.dsl.clause :as clause]
@@ -69,35 +69,20 @@
                           (clause/with
                            {:compaction {:class cs}}))))))
 
-(defn- create-transaction-table
-  [session schema opts]
-  (create-table session (common/update-for-transaction schema) opts)
-  (create-table session common/COORDINATOR_SCHEMA opts))
+(defn- delete-table
+  [session schema]
+  (alia/execute session (->raw (statement/drop-keyspace (:database schema)))))
 
-(defn- create-tables
-  [session schema-file options]
-  (->> (common/parse-schema schema-file)
-       (map #(if (:transaction %)
-               (create-transaction-table session % options)
-               (create-table session % options)))
-       doall))
-
-(defn- delete-all
-  [session]
-  (->> (alia/execute session
-                     "SELECT keyspace_name FROM system_schema.keyspaces")
-       (mapcat vals)
-       (filter #(not (re-find #"^system*" %)))
-       (map (fn [ks] (alia/execute session (->raw (statement/drop-keyspace ks)))))
-       doall))
-
-(defn operate-cassandra
-  [{:keys [schema-file host port user password]
-    :or {port 9042 user "cassandra" password "cassandra"} :as options}]
+(defn make-cassandra-operator
+  [{:keys [host port user password]
+    :or {port 9042 user "cassandra" password "cassandra"}}]
   (let [cluster (get-cluster host port user password)
         session (alia/connect cluster)]
-    (if (:delete-all options)
-      (delete-all session)
-      (create-tables session schema-file options))
-    (alia/shutdown session)
-    (alia/shutdown cluster)))
+    (reify proto/IOperator
+      (create-table [_ schema opts]
+        (create-table session schema opts))
+      (delete-table [_ schema _]
+        (delete-table session schema))
+      (close [_ _]
+        (alia/shutdown session)
+        (alia/shutdown cluster)))))
