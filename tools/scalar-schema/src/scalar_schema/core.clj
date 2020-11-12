@@ -1,8 +1,6 @@
 (ns scalar-schema.core
   (:require [clojure.tools.cli :refer [parse-opts]]
-            [scalar-schema.cassandra-schema :as cassandra-schema]
-            [scalar-schema.cosmos-schema :as cosmos-schema]
-            [scalar-schema.dynamo-schema :as dynamo-schema])
+            [scalar-schema.operations :as op])
   (:gen-class))
 
 (def cli-options
@@ -27,14 +25,12 @@
    [nil "--help"]])
 
 (defn -main [& args]
-  (let [{:keys [options summary errors]
-         {:keys [cassandra cosmos dynamo help]} :options}
+  (let [{:keys [options summary errors] {:keys [help]} :options}
         (parse-opts args cli-options)]
     (if (or help errors)
       (do (when (not help)
             (println (str "ERROR: " errors)))
           (println summary))
-      (do
-        (when cassandra (cassandra-schema/operate-cassandra options))
-        (when cosmos (cosmos-schema/operate-cosmos options))
-        (when dynamo (dynamo-schema/operate-dynamo options))))))
+      (if (:delete-all options)
+        (op/delete-all options)
+        (op/create-tables options)))))
