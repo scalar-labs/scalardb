@@ -1,7 +1,8 @@
-(ns scalar-schema.cosmos-schema
+(ns scalar-schema.cosmos
   (:require [clojure.tools.logging :as log]
             [clojure.java.io :as io]
-            [scalar-schema.common :as common])
+            [scalar-schema.common :as common]
+            [scalar-schema.protocols :as proto])
   (:import (com.azure.cosmos CosmosClient
                              CosmosClientBuilder
                              ConsistencyLevel)
@@ -14,10 +15,7 @@
                                     ThroughputProperties)
            (com.scalar.db.storage.cosmos TableMetadata)))
 
-(def ^:const ^:private ^String METADATA_DATABASE "scalardb")
-(def ^:const ^:private ^String METADATA_CONTAINER "metadata")
 (def ^:const ^:private ^String METADATA_PARTITION_KEY "/id")
-
 (def ^:const ^:private ^String
   CONTAINER_PARTITION_KEY "/concatenatedPartitionKey")
 (def ^:const ^:private ^String
@@ -68,7 +66,7 @@
 
 (defn- make-container-properties
   [container]
-  (if (= container METADATA_CONTAINER)
+  (if (= container common/METADATA_TABLE)
     (CosmosContainerProperties. container METADATA_PARTITION_KEY)
     (let [policy (doto (IndexingPolicy.)
                    (.setIncludedPaths
@@ -86,18 +84,18 @@
 
 (defn- create-metadata
   [client schema]
-  (when-not (database-exists? client METADATA_DATABASE)
-    (create-database client METADATA_DATABASE 400))
-  (when-not (container-exists? client METADATA_DATABASE METADATA_CONTAINER)
-    (create-container client METADATA_DATABASE METADATA_CONTAINER))
+  (when-not (database-exists? client common/METADATA_DATABASE)
+    (create-database client common/METADATA_DATABASE 400))
+  (when-not (container-exists? client common/METADATA_DATABASE common/METADATA_TABLE)
+    (create-container client common/METADATA_DATABASE common/METADATA_TABLE))
   (let [metadata (doto (TableMetadata.)
                    (.setId (common/get-fullname (:database schema)
                                                 (:table schema)))
                    (.setPartitionKeyNames (:partition-key schema))
                    (.setClusteringKeyNames (:clustering-key schema))
                    (.setColumns (:columns schema)))]
-    (-> (.getDatabase client METADATA_DATABASE)
-        (.getContainer METADATA_CONTAINER)
+    (-> (.getDatabase client common/METADATA_DATABASE)
+        (.getContainer common/METADATA_TABLE)
         (.upsertItem metadata))))
 
 (defn- register-stored-procedure
@@ -127,29 +125,18 @@
         (create-container client database table)
         (register-stored-procedure client database table)))))
 
-(defn- create-transaction-table
-  [client schema opts]
-  (create-table client (common/update-for-transaction schema) opts)
-  (create-table client common/COORDINATOR_SCHEMA opts))
+(defn- delete-table
+  [client {:keys [database]}]
+  (when (database-exists? client database)
+    (->> (.getDatabase client database) .delete)))
 
-(defn- create-tables
-  [client schema-file opts]
-  (->> (common/parse-schema schema-file)
-       (map #(if (:transaction %)
-               (create-transaction-table client % opts)
-               (create-table client % opts)))
-       doall))
-
-(defn- delete-all
-  [client]
-  (log/warn "Deleting all databases and tables")
-  (mapv #(->> (.getId %) (.getDatabase client) .delete)
-        (.readAllDatabases client)))
-
-(defn operate-cosmos
-  [{:keys [schema-file host password] :as options}]
-  [host password schema-file options]
-  (with-open [client (get-client host password)]
-    (if (:delete-all options)
-      (delete-all client)
-      (create-tables client schema-file options))))
+(defn make-cosmos-operator
+  [{:keys [host password]}]
+  (let [client (get-client host password)]
+    (reify proto/IOperator
+      (create-table [_ schema opts]
+        (create-table client schema opts))
+      (delete-table [_ schema _]
+        (delete-table client schema))
+      (close [_ _]
+        (.close client)))))
