@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
+import com.scalar.db.storage.dynamo.Dynamo;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -69,6 +70,9 @@ public class DatabaseConfig {
           break;
         case "cosmos":
           storageClass = Cosmos.class;
+          break;
+        case "dynamo":
+          storageClass = Dynamo.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
