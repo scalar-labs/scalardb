@@ -66,7 +66,7 @@
   [schema-file]
   (->> (cheshire/parse-stream (io/reader schema-file) true
                               #(when (or (= % "partition-key")
-                                         (= % "clustering-key")) #{}))
+                                         (= % "clustering-key")) []))
        format-schema
        apply-transaction
        add-coordinator))
