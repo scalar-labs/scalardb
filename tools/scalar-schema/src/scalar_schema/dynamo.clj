@@ -1,6 +1,7 @@
 (ns scalar-schema.dynamo
   (:require [clojure.tools.logging :as log]
             [scalar-schema.common :as common]
+            [scalar-schema.dynamo.auto-scaling :as scaling]
             [scalar-schema.protocols :as proto])
   (:import (software.amazon.awssdk.auth.credentials AwsBasicCredentials
                                                     StaticCredentialsProvider)
@@ -187,11 +188,16 @@
 
 (defn make-dynamo-operator
   [{:keys [user password region]}]
-  (let [client (get-client user password region)]
+  (let [client (get-client user password region)
+        scaling-client (scaling/get-scaling-client user password region)]
     (reify proto/IOperator
       (create-table [_ schema opts]
-        (create-table client schema opts))
+        (create-table client schema opts)
+        (Thread/sleep WAIT_FOR_CREATION)
+        (scaling/enable-auto-scaling scaling-client schema opts))
       (delete-table [_ schema _]
+        (scaling/disable-auto-scaling scaling-client schema)
         (delete-table client schema))
       (close [_ _]
-        (.close client)))))
+        (.close client)
+        (.close scaling-client)))))
