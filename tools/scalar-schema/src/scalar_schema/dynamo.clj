@@ -2,10 +2,9 @@
   (:require [clojure.tools.logging :as log]
             [scalar-schema.common :as common]
             [scalar-schema.dynamo.auto-scaling :as scaling]
+            [scalar-schema.dynamo.common :as dynamo]
             [scalar-schema.protocols :as proto])
-  (:import (software.amazon.awssdk.auth.credentials AwsBasicCredentials
-                                                    StaticCredentialsProvider)
-           (software.amazon.awssdk.regions Region)
+  (:import (software.amazon.awssdk.regions Region)
            (software.amazon.awssdk.services.dynamodb DynamoDbClient)
            (software.amazon.awssdk.services.dynamodb.model AttributeDefinition
                                                            AttributeValue
@@ -28,8 +27,9 @@
 (def ^:const ^:private ^String PARTITION_KEY_COLUMN "partitionKey")
 (def ^:const ^:private ^String CLUSTERING_KEY_COLUMN "clusteringKey")
 (def ^:const ^:private ^String COLUMNS_COLUMN "columns")
-(def ^:private META_TABLE (common/get-fullname common/METADATA_DATABASE
-                                               common/METADATA_TABLE))
+(def ^:private META_TABLE (dynamo/get-table-name
+                           {:database common/METADATA_DATABASE
+                            :table common/METADATA_TABLE}))
 
 (def ^:private type-map
   {"int" ScalarAttributeType/N
@@ -39,15 +39,10 @@
    "text" ScalarAttributeType/S
    "blob" ScalarAttributeType/B})
 
-(defn- get-credentials-provider
-  [user password]
-  (StaticCredentialsProvider/create
-   (AwsBasicCredentials/create user password)))
-
 (defn- get-client
   [user password region]
   (-> (DynamoDbClient/builder)
-      (.credentialsProvider (get-credentials-provider user password))
+      (.credentialsProvider (dynamo/get-credentials-provider user password))
       (.region (Region/of region))
       .build))
 
@@ -95,8 +90,7 @@
 
 (defn- get-index-name
   [schema key-name]
-  (str (common/get-fullname (:database schema) (:table schema))
-       "." INDEX_NAME_PREFIX "." key-name))
+  (str (dynamo/get-table-name schema) \. INDEX_NAME_PREFIX \. key-name))
 
 (defn- make-local-secondary-index
   [schema index-key]
@@ -122,7 +116,7 @@
 
 (defn- insert-metadata
   [client schema]
-  (let [table (common/get-fullname (:database schema) (:table schema))
+  (let [table (dynamo/get-table-name schema)
         columns (reduce-kv (fn [m c t]
                              (assoc m c (-> (AttributeValue/builder)
                                             (.s t) .build)))
@@ -161,7 +155,7 @@
 
 (defn- create-table
   [client schema {:keys [ru] :or {ru 10}}]
-  (let [table (common/get-fullname (:database schema) (:table schema))
+  (let [table (dynamo/get-table-name schema)
         ru (if (:ru schema) (:ru schema) ru)
         builder (-> (CreateTableRequest/builder)
                     (.attributeDefinitions
@@ -180,7 +174,7 @@
 
 (defn- delete-table
   [client schema]
-  (let [table (common/get-fullname (:database schema) (:table schema))]
+  (let [table (dynamo/get-table-name schema)]
     (if (table-exists? client table)
       (->> (-> (DeleteTableRequest/builder) (.tableName table) .build)
            (.deleteTable client))
