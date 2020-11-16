@@ -8,8 +8,8 @@
 
 (def COORDINATOR_SCHEMA {:database "coordinator"
                          :table "state"
-                         :partition-key #{"tx_id"}
-                         :clustering-key #{}
+                         :partition-key ["tx_id"]
+                         :clustering-key []
                          :columns {"tx_id" "text"
                                    "tx_state" "int"
                                    "tx_created_at" "bigint"}})
@@ -40,8 +40,8 @@
   [schema]
   (let [s (merge (:columns schema) TRANSACTION_METADATA_COLUMNS)]
     (->> (reduce (fn [m [name type]]
-                   (if (or (contains? (:partition-key schema) name)
-                           (contains? (:clustering-key schema) name))
+                   (if (or (some #(= name %) (:partition-key schema))
+                           (some #(= name %) (:clustering-key schema)))
                      m
                      (assoc m (str "before_" name) type)))
                  {} s)
@@ -66,7 +66,7 @@
   [schema-file]
   (->> (cheshire/parse-stream (io/reader schema-file) true
                               #(when (or (= % "partition-key")
-                                         (= % "clustering-key")) #{}))
+                                         (= % "clustering-key")) []))
        format-schema
        apply-transaction
        add-coordinator))
