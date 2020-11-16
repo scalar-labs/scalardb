@@ -13,7 +13,7 @@
       "c4": "INT",
       "c5": "BOOLEAN"
     },
-
+    "ru": 123,
     "compaction-strategy": "LCS"
   },
 
@@ -40,8 +40,8 @@
       "c1"
     ],
     "clustering-key": [
-      "c3",
-      "c4"
+      "c4",
+      "c3"
     ],
     "columns": {
       "c1": "INT",

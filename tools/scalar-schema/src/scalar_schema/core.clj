@@ -27,10 +27,11 @@
 (defn -main [& args]
   (let [{:keys [options summary errors] {:keys [help]} :options}
         (parse-opts args cli-options)]
-    (if (or help errors)
-      (do (when (not help)
-            (println (str "ERROR: " errors)))
-          (println summary))
-      (if (:delete-all options)
-        (op/delete-all options)
-        (op/create-tables options)))))
+    (cond
+      help (println summary)
+      errors (do
+               (println (str "ERROR: " errors))
+               (println summary)
+               (System/exit 1))
+      (:delete-all options) (op/delete-all options)
+      :else (op/create-tables options))))
