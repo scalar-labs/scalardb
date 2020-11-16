@@ -1,8 +1,7 @@
-# Getting Started with Scalar DB on Dynamo DB
+# Getting Started with Scalar DB on DynamoDB
 
 ## Overview
-This document briefly explains how you can get started with Scalar DB on Dynamo DB with a simple electronic money application.
-
+This document briefly explains how you can get started with Scalar DB on DynamoDB with a simple electronic money application.
 ## Install prerequisites
 
 Scalar DB is written in Java. So the following software is required to run it.
@@ -14,8 +13,7 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 
 ## Configure Scalar DB
     
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with aws region, `username` with your aws access key id, `password` with your aws access secret key and `storage` with `dynamo`.
-    
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with AWS region, `username` with your AWS access key id, `password` with your AWS access secret key and `storage` with `dynamo`.
 ```
 # Comma separated contact points
 scalar.db.contact_points=<REGION>

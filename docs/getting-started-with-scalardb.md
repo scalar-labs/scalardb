@@ -59,7 +59,7 @@ For Cosmos DB
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
-For Dynamo DB
+For DynamoDB
 ```
 $ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
@@ -173,7 +173,7 @@ $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
 ```
 
-For Cosmos DB
+For DynamoDB
 
 ```
 $ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
