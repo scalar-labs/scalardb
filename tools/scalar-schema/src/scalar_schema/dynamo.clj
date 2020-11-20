@@ -181,14 +181,15 @@
       (log/warn table "doesn't exist"))))
 
 (defn make-dynamo-operator
-  [{:keys [user password region]}]
+  [{:keys [user password region no-scaling]}]
   (let [client (get-client user password region)
         scaling-client (scaling/get-scaling-client user password region)]
     (reify proto/IOperator
       (create-table [_ schema opts]
         (create-table client schema opts)
-        (Thread/sleep WAIT_FOR_CREATION)
-        (scaling/enable-auto-scaling scaling-client schema opts))
+        (when (not no-scaling)
+          (Thread/sleep WAIT_FOR_CREATION)
+          (scaling/enable-auto-scaling scaling-client schema opts)))
       (delete-table [_ schema _]
         (scaling/disable-auto-scaling scaling-client schema)
         (delete-table client schema))

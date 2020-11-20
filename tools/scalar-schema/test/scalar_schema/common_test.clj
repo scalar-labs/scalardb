@@ -24,7 +24,7 @@
             "c4" "int"
             "c5" "boolean"}
            (:columns table0)))
-    (is (= 123 (:ru table0)))
+    (is (= 5000 (:ru table0)))
     (is (= "LCS" (:compaction-strategy table0)))
 
     ;; sample_db.sample_table1

@@ -38,21 +38,20 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSAN
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
-### Delete all tables
+### Delete tables
 ```console
 # For Cosmos DB
-$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
+$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json -D
 ```
 
 ```console
 # For DynamoDB
 $ java -jar target/scalar-schema.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
-  - For DynamoDB, only the tables which are included in the schema file will be deleted.
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -D
+$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
 ```
 
 ### Show help
