@@ -103,3 +103,14 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --help
 ```
 - `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored in Cosmos DB and DynamoDB.
 - This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB and DynamoDB. `ru` is ignored in Cassandra.
+
+## Performance tuning
+We can tune the throughput of Cosmos DB and DynamoDB by `-r` option or `ru` parameter for each table. For Cassandra, the tool cannot tune it since the performance depends on the resources of the node.
+
+### RU
+The RU means Request Unit for Cosmos DB, Capacity Unit for DynamoDB. This unit is different between [Cosmos DB](https://docs.microsoft.com/azure/cosmos-db/request-units) and [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual). DynamoDB has Read Capacity Unit and Write Capacity Unit. The tool sets the same value to both.
+
+The tool set the maximum RU 400 on Cosmos DB, and 10 on DynamoDB by default. You can set the RU of all tables by `-r` option. If you want to set a different value to the specific table, you need to add `ru` parameter of the table in the schema file.
+
+### Auto-scaling
+The tool enables auto-scaling of RU for all tables automatically to reduce the cost. The RU can be scaled in or out between 10% and 100% of RU depending on the workload. When you add `-r 10000` to the table the creation, the RU of each table will be scaled in or out between 1000 and 10000. The auto-scaling of Cosmos DB is enabled when you set more than 4000 RU because the minimum Request Unit of Cosmos DB is 400.
