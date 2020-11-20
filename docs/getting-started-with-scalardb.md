@@ -1,7 +1,7 @@
 # Getting Started with Scalar DB
 
 Here we assume Oracle JDK 8 and the underlying storage/database such as Cassandra are properly configured.
-If you haven't done it, please configure them first by following [this](docs/README.md).
+If you haven't done it, please configure them first by following [this](README.md).
 
 ## Build
 
@@ -57,6 +57,11 @@ $ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <
 For Cosmos DB
 ```
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
+```
+
+For DynamoDB
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
 
 ## Store & retrieve data with storage service
@@ -166,6 +171,13 @@ For Cosmos DB
 ```
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
 $ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
+```
+
+For DynamoDB
+
+```
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
+$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
 ```
 
 ## Store & retrieve data with transaction service
