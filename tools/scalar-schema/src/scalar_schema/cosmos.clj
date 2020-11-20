@@ -126,8 +126,9 @@
         (register-stored-procedure client database table)))))
 
 (defn- delete-table
-  [client schema]
-  (->> (.getDatabase client (:database schema)) .delete))
+  [client {:keys [database]}]
+  (when (database-exists? client database)
+    (->> (.getDatabase client database) .delete)))
 
 (defn make-cosmos-operator
   [{:keys [host password]}]

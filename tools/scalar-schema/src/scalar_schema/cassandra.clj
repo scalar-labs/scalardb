@@ -71,7 +71,9 @@
 
 (defn- delete-table
   [session schema]
-  (alia/execute session (->raw (statement/drop-keyspace (:database schema)))))
+  (alia/execute session
+                (->raw (statement/drop-keyspace (:database schema)
+                                                (clause/if-exists true)))))
 
 (defn make-cassandra-operator
   [{:keys [host port user password]
