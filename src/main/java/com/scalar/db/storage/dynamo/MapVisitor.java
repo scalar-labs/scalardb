@@ -16,7 +16,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /**
- * A visitor to make a map to be used to create {@link Record}
+ * A visitor to make a map of {@link AttributeValue}.
  *
  * @author Yuji Ito
  */
