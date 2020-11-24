@@ -47,22 +47,22 @@
     (catch Exception _ false)))
 
 (defn- make-throughput-properties
-  [ru]
-  (if (<= 4000 ru)
-    (ThroughputProperties/createAutoscaledThroughput ru)
-    (ThroughputProperties/createManualThroughput ru)))
+  [ru no-scaling]
+  (if (or (<= ru 4000) no-scaling)
+    (ThroughputProperties/createManualThroughput ru)
+    (ThroughputProperties/createAutoscaledThroughput ru)))
 
 (defn- create-database
-  [client database ru]
+  [client database ru no-scaling]
   (.createDatabaseIfNotExists client database
-                              (make-throughput-properties ru)))
+                              (make-throughput-properties ru no-scaling)))
 
 (defn- update-throughput
-  [client database ru]
+  [client database ru no-scaling]
   (let [db (.getDatabase client database)
         cur-ru (-> db .readThroughput .getMinThroughput)]
     (when (< cur-ru ru)
-      (.replaceThroughput db (make-throughput-properties ru)))))
+      (.replaceThroughput db (make-throughput-properties ru no-scaling)))))
 
 (defn- make-container-properties
   [container]
@@ -85,14 +85,14 @@
 (defn- create-metadata
   [client schema]
   (when-not (database-exists? client common/METADATA_DATABASE)
-    (create-database client common/METADATA_DATABASE 400))
+    (create-database client common/METADATA_DATABASE 400 true))
   (when-not (container-exists? client common/METADATA_DATABASE common/METADATA_TABLE)
     (create-container client common/METADATA_DATABASE common/METADATA_TABLE))
   (let [metadata (doto (TableMetadata.)
                    (.setId (common/get-fullname (:database schema)
                                                 (:table schema)))
-                   (.setPartitionKeyNames (:partition-key schema))
-                   (.setClusteringKeyNames (:clustering-key schema))
+                   (.setPartitionKeyNames (set (:partition-key schema)))
+                   (.setClusteringKeyNames (set (:clustering-key schema)))
                    (.setColumns (:columns schema)))]
     (-> (.getDatabase client common/METADATA_DATABASE)
         (.getContainer common/METADATA_TABLE)
@@ -109,16 +109,16 @@
                             (CosmosStoredProcedureRequestOptions.))))
 
 (defn- create-table
-  [client schema {:keys [ru] :or {ru 400}}]
+  [client schema {:keys [ru no-scaling] :or {ru 400 no-scaling false}}]
   (let [database (:database schema)
         table (:table schema)
         ru (if (:ru schema) (:ru schema) ru)]
     (create-metadata client schema)
     (if (database-exists? client database)
       (do
-        (update-throughput client database ru)
+        (update-throughput client database ru no-scaling)
         (log/warn database "already exists"))
-      (create-database client database ru))
+      (create-database client database ru no-scaling))
     (if (container-exists? client database table)
       (log/warn (common/get-fullname database table) "already exists")
       (do
