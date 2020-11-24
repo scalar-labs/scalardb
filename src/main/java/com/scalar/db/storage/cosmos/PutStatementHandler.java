@@ -26,22 +26,8 @@ public class PutStatementHandler extends MutateStatementHandler {
   protected List<Record> execute(Operation operation) throws CosmosException {
     Mutation mutation = (Mutation) operation;
 
-    if (mutation.getCondition().isPresent()) {
-      executeStoredProcedure(mutation);
-    } else {
-      execute(mutation);
-    }
+    executeStoredProcedure(mutation);
 
     return Collections.emptyList();
-  }
-
-  private void execute(Mutation mutation) throws CosmosException {
-    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
-    cosmosMutation.checkArgument(Put.class);
-
-    Record record = cosmosMutation.makeRecord();
-    CosmosItemRequestOptions options = new CosmosItemRequestOptions();
-
-    getContainer(mutation).upsertItem(record, options);
   }
 }

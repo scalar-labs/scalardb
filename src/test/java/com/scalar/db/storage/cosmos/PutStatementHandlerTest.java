@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -91,13 +90,18 @@ public class PutStatementHandlerTest {
   }
 
   @Test
-  public void handle_PutWithoutConditionsGiven_ShouldCallUpsertItem() {
+  public void handle_PutWithoutConditionsGiven_ShouldCallStoredProcedure() {
     // Arrange
-    when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
-        .thenReturn(response);
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+        .thenReturn(spResponse);
+    when(spResponse.getResponseAsString()).thenReturn("true");
+
     Put put = preparePut();
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
+    String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -107,15 +111,26 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container).upsertItem(eq(record), any(CosmosItemRequestOptions.class));
+    verify(cosmosScripts).getStoredProcedure("mutate.js");
+    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+    verify(storedProcedure)
+        .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
+    assertThat(captor.getValue().get(0)).isEqualTo(1);
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.PUT.ordinal());
+    assertThat(captor.getValue().get(2)).isEqualTo(record);
+    assertThat(captor.getValue().get(3)).isEqualTo(query);
   }
 
   @Test
-  public void handle_PutWithoutClusteringKeyGiven_ShouldCallUpsertItem() {
+  public void handle_PutWithoutClusteringKeyGiven_ShouldCallStoredProcedure() {
     // Arrange
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1));
-    when(container.upsertItem(any(Record.class), any(CosmosItemRequestOptions.class)))
-        .thenReturn(response);
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
+    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+        .thenReturn(spResponse);
+    when(spResponse.getResponseAsString()).thenReturn("true");
+
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Put put =
         new Put(partitionKey)
@@ -125,6 +140,7 @@ public class PutStatementHandlerTest {
             .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
     CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
     Record record = cosmosMutation.makeRecord();
+    String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
     assertThatCode(
@@ -134,26 +150,35 @@ public class PutStatementHandlerTest {
         .doesNotThrowAnyException();
 
     // Assert
-    verify(container).upsertItem(eq(record), any(CosmosItemRequestOptions.class));
+    verify(cosmosScripts).getStoredProcedure("mutate.js");
+    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+    verify(storedProcedure)
+        .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
+    assertThat(captor.getValue().get(0)).isEqualTo(1);
+    assertThat(captor.getValue().get(1)).isEqualTo(CosmosMutation.MutationType.PUT.ordinal());
+    assertThat(captor.getValue().get(2)).isEqualTo(record);
+    assertThat(captor.getValue().get(3)).isEqualTo(query);
   }
 
   @Test
   public void handle_PutWithoutConditionsCosmosExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
-    Put put = preparePut();
-
+    when(container.getScripts()).thenReturn(cosmosScripts);
+    when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
-        .when(container)
-        .upsertItem(any(Record.class), any(CosmosItemRequestOptions.class));
+        .when(storedProcedure)
+        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+    when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
+
+    Put put = preparePut();
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               handler.handle(put);
             })
-        .isInstanceOf(ExecutionException.class)
-        .hasCause(toThrow);
+        .isInstanceOf(NoMutationException.class);
   }
 
   @Test
