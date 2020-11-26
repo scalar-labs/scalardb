@@ -38,6 +38,7 @@ public class Cassandra implements DistributedStorage {
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
   private final Map<String, CassandraTableMetadata> tableMetadataMap;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -57,6 +58,7 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
+    namespacePrefix = config.getNamespacePrefix();
     namespace = Optional.empty();
     tableName = Optional.empty();
     tableMetadataMap = new ConcurrentHashMap<>();

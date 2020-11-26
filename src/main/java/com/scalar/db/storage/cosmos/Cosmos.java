@@ -42,6 +42,7 @@ public class Cosmos implements DistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -55,8 +56,14 @@ public class Cosmos implements DistributedStorage {
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
+    namespacePrefix = config.getNamespacePrefix();
+    namespace = Optional.empty();
+    tableName = Optional.empty();
+
+    String metadataDatabase =
+        namespacePrefix.isPresent() ? namespacePrefix.get() + METADATA_DATABASE : METADATA_DATABASE;
     CosmosContainer container =
-        client.getDatabase(METADATA_DATABASE).getContainer(METADATA_CONTAINER);
+        client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER);
     this.metadataManager = new TableMetadataManager(container);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
@@ -65,9 +72,6 @@ public class Cosmos implements DistributedStorage {
     this.batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
-
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @Override

@@ -41,6 +41,7 @@ public class Dynamo implements DistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -54,7 +55,7 @@ public class Dynamo implements DistributedStorage {
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
 
-    this.metadataManager = new TableMetadataManager(client);
+    this.metadataManager = new TableMetadataManager(client, namespacePrefix);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     this.putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -63,6 +64,7 @@ public class Dynamo implements DistributedStorage {
 
     LOGGER.info("DynamoDB object is created properly.");
 
+    namespacePrefix = config.getNamespacePrefix();
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
