@@ -23,7 +23,7 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCO
 
 ```console
 # For DynamoDB
-$ java -jar target/scalar-schema.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar target/scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
   - `-r` option is almost the same as Cosmos DB option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
@@ -46,7 +46,7 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCO
 
 ```console
 # For DynamoDB
-$ java -jar target/scalar-schema.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
+$ java -jar target/scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
 
 ```console
