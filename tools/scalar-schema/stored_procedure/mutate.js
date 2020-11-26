@@ -27,48 +27,22 @@ function mutate(num, ...args) {
 
   function mutateWithQuery(mutation, record, query) {
     return new Promise((resolve, reject) => {
-      if (mutation == MUTATION.PUT) {
-        const isMutationAccepted = __.upsertDocument(__.getSelfLink(), record,
-          (error, result, options) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          });
-        if (!isMutationAccepted) {
-          reject(new Error("The query was not accepted by the server."));
-        }
-      } else {
-        const isAccepted = __.queryDocuments(__.getSelfLink(), query,
-          (error, reads, options) => {
-            if (error) {
-              reject(error);
-              return;
-            }
+      const isAccepted = __.queryDocuments(__.getSelfLink(), query,
+        (error, reads, options) => {
+          if (error) {
+            reject(error);
+            return;
+          }
 
-            const records = checkQueryResult(mutation, record, reads);
-            if (!records.length) {
-              reject(new Error(ERROR_CODE.PRECONDITION_FAILED, "no mutation"));
-              return;
-            }
+          const records = checkQueryResult(mutation, record, reads);
+          if (!records.length) {
+            reject(new Error(ERROR_CODE.PRECONDITION_FAILED, "no mutation"));
+            return;
+          }
 
-            if (mutation == MUTATION.DELETE_IF) {
-              for (let i = 0; i < records.length; i++) {
-                const isMutationAccepted = __.deleteDocument(records[i]._self,
-                  (error, result, options) => {
-                    if (error) {
-                      reject(error);
-                    } else {
-                      resolve(result);
-                    }
-                  });
-                if (!isMutationAccepted) {
-                  reject(new Error("The query was not accepted by the server."));
-                }
-              }
-            } else {
-              const isMutationAccepted = __.upsertDocument(__.getSelfLink(), records[0],
+          if (mutation == MUTATION.DELETE_IF) {
+            for (let i = 0; i < records.length; i++) {
+              const isMutationAccepted = __.deleteDocument(records[i]._self,
                 (error, result, options) => {
                   if (error) {
                     reject(error);
@@ -80,16 +54,28 @@ function mutate(num, ...args) {
                 reject(new Error("The query was not accepted by the server."));
               }
             }
-          });
-        if (!isAccepted) reject(new Error("The query was not accepted by the server."));
-      }
+          } else {
+            const isMutationAccepted = __.upsertDocument(__.getSelfLink(), records[0],
+              (error, result, options) => {
+                if (error) {
+                  reject(error);
+                } else {
+                  resolve(result);
+                }
+              });
+            if (!isMutationAccepted) {
+              reject(new Error("The query was not accepted by the server."));
+            }
+          }
+        });
+      if (!isAccepted) reject(new Error("The query was not accepted by the server."));
     });
   }
 
   function checkQueryResult(mutation, record, reads) {
     if (!reads || !reads.length) {
       // The specified record does not exist
-      if (mutation == MUTATION.PUT_IF_NOT_EXISTS) {
+      if (mutation == MUTATION.PUT || mutation == MUTATION.PUT_IF_NOT_EXISTS) {
         return [record];
       } else {
         // For other conditional mutations, the condition isn't satisfied
@@ -99,7 +85,7 @@ function mutate(num, ...args) {
 
     if (mutation == MUTATION.PUT_IF_NOT_EXISTS) {
       return [];
-    } else if (mutation == MUTATION.PUT_IF) {
+    } else if (mutation == MUTATION.PUT || mutation == MUTATION.PUT_IF) {
       if (reads.length != 1) {
         throw new Error("Unable to update multiple records.");
       } else {

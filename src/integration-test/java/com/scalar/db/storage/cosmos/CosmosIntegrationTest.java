@@ -340,34 +340,6 @@ public class CosmosIntegrationTest {
   }
 
   @Test
-  public void put_SinglePutGiven_ShouldStoreProperly() throws ExecutionException {
-    // Arrange
-    int pKey = 0;
-    int cKey = 0;
-    List<Put> puts = preparePuts();
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
-    Get get = new Get(partitionKey, clusteringKey);
-
-    // Act
-    storage.put(puts.get(pKey * 2 + cKey));
-
-    // Assert
-    Optional<Result> actual = storage.get(get);
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
-  }
-
-  @Test
   public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
       throws ExecutionException {
     // Arrange
