@@ -3,6 +3,7 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
+import com.scalar.db.storage.TableMetadata;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -15,14 +16,14 @@ import java.util.SortedSet;
  *
  * @author Yuji Ito
  */
-public class TableMetadata {
+public class CosmosTableMetadata implements TableMetadata {
   private String id;
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
-  public TableMetadata() {}
+  public CosmosTableMetadata() {}
 
   public void setId(String id) {
     this.id = id;
@@ -48,10 +49,12 @@ public class TableMetadata {
     return id;
   }
 
+  @Override
   public Set<String> getPartitionKeyNames() {
     return ImmutableSortedSet.copyOf(partitionKeyNames);
   }
 
+  @Override
   public Set<String> getClusteringKeyNames() {
     return ImmutableSortedSet.copyOf(clusteringKeyNames);
   }

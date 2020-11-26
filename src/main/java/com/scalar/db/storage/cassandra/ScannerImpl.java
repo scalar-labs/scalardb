@@ -16,9 +16,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public final class ScannerImpl implements Scanner {
   private final ResultSet resultSet;
-  private final TableMetadata metadata;
+  private final CassandraTableMetadata metadata;
 
-  public ScannerImpl(ResultSet resultSet, TableMetadata metadata) {
+  public ScannerImpl(ResultSet resultSet, CassandraTableMetadata metadata) {
     this.resultSet = checkNotNull(resultSet);
     this.metadata = checkNotNull(metadata);
   }
@@ -47,6 +47,5 @@ public final class ScannerImpl implements Scanner {
   }
 
   @Override
-  public void close() {
-  }
+  public void close() {}
 }

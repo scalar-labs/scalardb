@@ -34,10 +34,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
   private final Selection selection;
-  private final TableMetadata metadata;
+  private final DynamoTableMetadata metadata;
   private final Map<String, Value> values;
 
-  public ResultImpl(Map<String, AttributeValue> item, Selection selection, TableMetadata metadata) {
+  public ResultImpl(
+      Map<String, AttributeValue> item, Selection selection, DynamoTableMetadata metadata) {
     checkNotNull(item);
     this.selection = selection;
     this.metadata = checkNotNull(metadata);
@@ -92,7 +93,7 @@ public class ResultImpl implements Result {
   }
 
   @VisibleForTesting
-  void interpret(Map<String, AttributeValue> item, TableMetadata metadata) {
+  void interpret(Map<String, AttributeValue> item, DynamoTableMetadata metadata) {
     if (selection.getProjections().isEmpty()) {
       metadata
           .getColumns()

@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
 /** A class to treating utilities for a operation */
 public class CosmosOperation {
   private final Operation operation;
-  private final TableMetadata metadata;
+  private final CosmosTableMetadata metadata;
 
   public CosmosOperation(Operation operation, TableMetadataManager metadataManager) {
     this.operation = operation;

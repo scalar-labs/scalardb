@@ -41,7 +41,7 @@ public class ResultImplTest {
   private static final String ANY_COLUMN_NAME_7 = "val7";
 
   private Get get;
-  private TableMetadata metadata;
+  private DynamoTableMetadata metadata;
   private Map<String, AttributeValue> item = new HashMap<>();
 
   @Before
@@ -60,7 +60,7 @@ public class ResultImplTest {
     columns.put(ANY_COLUMN_NAME_6, AttributeValue.builder().s("text").build());
     columns.put(ANY_COLUMN_NAME_7, AttributeValue.builder().s("blob").build());
     metadataMap.put("columns", AttributeValue.builder().m(columns).build());
-    metadata = new TableMetadata(metadataMap);
+    metadata = new DynamoTableMetadata(metadataMap);
 
     item.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
     item.put(ANY_NAME_1, AttributeValue.builder().s(ANY_TEXT_1).build());

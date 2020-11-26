@@ -12,10 +12,12 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public final class ScannerIterator implements Iterator<Result> {
   private final Iterator<Map<String, AttributeValue>> iterator;
   private final Selection selection;
-  private final TableMetadata metadata;
+  private final DynamoTableMetadata metadata;
 
   public ScannerIterator(
-      Iterator<Map<String, AttributeValue>> iterator, Selection selection, TableMetadata metadata) {
+      Iterator<Map<String, AttributeValue>> iterator,
+      Selection selection,
+      DynamoTableMetadata metadata) {
     this.iterator = iterator;
     this.selection = selection;
     this.metadata = metadata;

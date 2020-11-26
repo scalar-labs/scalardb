@@ -38,7 +38,7 @@ public class DynamoMutationTest {
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private DynamoTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {

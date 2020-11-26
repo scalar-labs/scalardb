@@ -8,7 +8,7 @@ import java.util.Map;
 import org.junit.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-public class TableMetadataTest {
+public class DynamoTableMetadataTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -30,7 +30,7 @@ public class TableMetadataTest {
     metadata.put("columns", AttributeValue.builder().m(columns).build());
 
     // Act
-    TableMetadata actual = new TableMetadata(metadata);
+    DynamoTableMetadata actual = new DynamoTableMetadata(metadata);
 
     // Assert
     assertThat(actual.getPartitionKeyNames().size()).isEqualTo(2);
@@ -60,7 +60,7 @@ public class TableMetadataTest {
     metadata.put("columns", AttributeValue.builder().m(columns).build());
 
     // Act
-    TableMetadata actual = new TableMetadata(metadata);
+    DynamoTableMetadata actual = new DynamoTableMetadata(metadata);
 
     // Assert
     assertThat(actual.getPartitionKeyNames().size()).isEqualTo(1);

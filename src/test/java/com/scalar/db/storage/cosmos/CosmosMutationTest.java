@@ -37,7 +37,7 @@ public class CosmosMutationTest {
 
   @Mock private CosmosContainer container;
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private CosmosTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {

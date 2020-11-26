@@ -53,7 +53,7 @@ public class DeleteStatementHandlerTest {
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private CosmosTableMetadata metadata;
   @Mock private CosmosItemResponse response;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;

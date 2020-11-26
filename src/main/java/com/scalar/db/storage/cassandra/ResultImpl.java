@@ -37,10 +37,10 @@ import org.slf4j.LoggerFactory;
 @Immutable
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
-  private final TableMetadata metadata;
+  private final CassandraTableMetadata metadata;
   private Map<String, Value> values;
 
-  public ResultImpl(Row row, TableMetadata metadata) {
+  public ResultImpl(Row row, CassandraTableMetadata metadata) {
     checkNotNull(row);
     this.metadata = checkNotNull(metadata);
     interpret(row);
@@ -52,7 +52,7 @@ public class ResultImpl implements Result {
    * @param values
    */
   @VisibleForTesting
-  ResultImpl(Collection<Value> values, TableMetadata metadata) {
+  ResultImpl(Collection<Value> values, CassandraTableMetadata metadata) {
     this.metadata = metadata;
     this.values = new HashMap<>();
     values.forEach(v -> this.values.put(v.getName(), v));
@@ -65,7 +65,7 @@ public class ResultImpl implements Result {
 
   @Override
   public Optional<Key> getClusteringKey() {
-    return getKey(metadata.getClusteringColumnNames());
+    return getKey(metadata.getClusteringKeyNames());
   }
 
   @Override
@@ -117,9 +117,7 @@ public class ResultImpl implements Result {
 
   @VisibleForTesting
   Map<String, DataType> getColumnDefinitions(Row row) {
-    return row.getColumnDefinitions()
-        .asList()
-        .stream()
+    return row.getColumnDefinitions().asList().stream()
         .collect(
             Collectors.toMap(
                 Definition::getName,

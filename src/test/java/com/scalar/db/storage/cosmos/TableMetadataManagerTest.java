@@ -33,8 +33,8 @@ public class TableMetadataManagerTest {
 
   private TableMetadataManager manager;
   @Mock private CosmosContainer container;
-  @Mock private TableMetadata metadata;
-  @Mock private CosmosItemResponse<TableMetadata> response;
+  @Mock private CosmosTableMetadata metadata;
+  @Mock private CosmosItemResponse<CosmosTableMetadata> response;
 
   @Before
   public void setUp() throws Exception {
@@ -46,7 +46,7 @@ public class TableMetadataManagerTest {
   @Test
   public void getTableMetadata_ProperOperationGivenFirst_ShouldCallReadItem() {
     // Arrange
-    when(container.readItem(anyString(), any(PartitionKey.class), eq(TableMetadata.class)))
+    when(container.readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class)))
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
@@ -56,13 +56,13 @@ public class TableMetadataManagerTest {
     // Act
     manager.getTableMetadata(get);
 
-    verify(container).readItem(FULLNAME, new PartitionKey(FULLNAME), TableMetadata.class);
+    verify(container).readItem(FULLNAME, new PartitionKey(FULLNAME), CosmosTableMetadata.class);
   }
 
   @Test
   public void getTableMetadata_SameTableGiven_ShouldCallReadItemOnce() {
     // Arrange
-    when(container.readItem(anyString(), any(PartitionKey.class), eq(TableMetadata.class)))
+    when(container.readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class)))
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
@@ -75,13 +75,14 @@ public class TableMetadataManagerTest {
     manager.getTableMetadata(get1);
     manager.getTableMetadata(get2);
 
-    verify(container, times(1)).readItem(FULLNAME, new PartitionKey(FULLNAME), TableMetadata.class);
+    verify(container, times(1))
+        .readItem(FULLNAME, new PartitionKey(FULLNAME), CosmosTableMetadata.class);
   }
 
   @Test
   public void getTableMetadata_OperationWithoutTableGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    when(container.readItem(anyString(), any(PartitionKey.class), eq(TableMetadata.class)))
+    when(container.readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class)))
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
@@ -102,7 +103,7 @@ public class TableMetadataManagerTest {
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(container)
-        .readItem(anyString(), any(PartitionKey.class), eq(TableMetadata.class));
+        .readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class));
 
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);

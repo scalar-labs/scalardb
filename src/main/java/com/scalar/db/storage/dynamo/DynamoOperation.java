@@ -26,14 +26,14 @@ public class DynamoOperation {
   static final String INDEX_NAME_PREFIX = "index";
 
   private final Operation operation;
-  private final TableMetadata metadata;
+  private final DynamoTableMetadata metadata;
 
   public DynamoOperation(Operation operation, TableMetadataManager metadataManager) {
     this.operation = operation;
     this.metadata = metadataManager.getTableMetadata(operation);
   }
 
-  public DynamoOperation(Operation operation, TableMetadata metadata) {
+  public DynamoOperation(Operation operation, DynamoTableMetadata metadata) {
     this.operation = operation;
     this.metadata = metadata;
   }
@@ -44,7 +44,7 @@ public class DynamoOperation {
   }
 
   @Nonnull
-  public TableMetadata getMetadata() {
+  public DynamoTableMetadata getMetadata() {
     return metadata;
   }
 

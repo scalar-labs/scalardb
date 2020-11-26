@@ -10,21 +10,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A manager to read and cache {@link TableMetadata} to know the type of each column
+ * A manager to read and cache {@link CosmosTableMetadata} to know the type of each column
  *
  * @author Yuji Ito
  */
 @ThreadSafe
 public class TableMetadataManager {
   private final CosmosContainer container;
-  private final Map<String, TableMetadata> tableMetadataMap;
+  private final Map<String, CosmosTableMetadata> tableMetadataMap;
 
   public TableMetadataManager(CosmosContainer container) {
     this.container = container;
     this.tableMetadataMap = new ConcurrentHashMap<>();
   }
 
-  public TableMetadata getTableMetadata(Operation operation) {
+  public CosmosTableMetadata getTableMetadata(Operation operation) {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
@@ -32,7 +32,7 @@ public class TableMetadataManager {
     return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }
 
-  private TableMetadata getTableMetadata(String namespace, String tableName) {
+  private CosmosTableMetadata getTableMetadata(String namespace, String tableName) {
     String fullName = namespace + "." + tableName;
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(fullName, readMetadata(fullName));
@@ -40,10 +40,10 @@ public class TableMetadataManager {
     return tableMetadataMap.get(fullName);
   }
 
-  private TableMetadata readMetadata(String fullName) {
+  private CosmosTableMetadata readMetadata(String fullName) {
     try {
       return container
-          .readItem(fullName, new PartitionKey(fullName), TableMetadata.class)
+          .readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class)
           .getItem();
     } catch (CosmosException e) {
       throw new StorageRuntimeException("Failed to read the table metadata", e);

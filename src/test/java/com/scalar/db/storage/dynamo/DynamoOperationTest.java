@@ -27,7 +27,7 @@ public class DynamoOperationTest {
   private static final String ANY_TEXT_2 = "text2";
 
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private DynamoTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {

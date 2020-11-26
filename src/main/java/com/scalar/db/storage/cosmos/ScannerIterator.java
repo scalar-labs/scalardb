@@ -10,9 +10,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 public final class ScannerIterator implements Iterator<Result> {
   private final Iterator<Record> iterator;
   private final Selection selection;
-  private final TableMetadata metadata;
+  private final CosmosTableMetadata metadata;
 
-  public ScannerIterator(Iterator<Record> iterator, Selection selection, TableMetadata metadata) {
+  public ScannerIterator(Iterator<Record> iterator, Selection selection, CosmosTableMetadata metadata) {
     this.iterator = iterator;
     this.selection = selection;
     this.metadata = metadata;

@@ -34,10 +34,10 @@ import org.slf4j.LoggerFactory;
 @Immutable
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
-  private final TableMetadata metadata;
+  private final CosmosTableMetadata metadata;
   private final Map<String, Value> values;
 
-  public ResultImpl(Record record, Selection selection, TableMetadata metadata) {
+  public ResultImpl(Record record, Selection selection, CosmosTableMetadata metadata) {
     checkNotNull(record);
     this.metadata = checkNotNull(metadata);
     values = new HashMap<>();
@@ -91,7 +91,7 @@ public class ResultImpl implements Result {
   }
 
   @VisibleForTesting
-  void interpret(Record record, Selection selection, TableMetadata metadata) {
+  void interpret(Record record, Selection selection, CosmosTableMetadata metadata) {
     Map<String, Object> recordValues = record.getValues();
     if (selection.getProjections().isEmpty()) {
       metadata

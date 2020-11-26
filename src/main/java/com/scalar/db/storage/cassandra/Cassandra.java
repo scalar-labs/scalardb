@@ -8,7 +8,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -18,6 +17,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.StorageUtility;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,7 +39,7 @@ public class Cassandra implements DistributedStorage {
   private final StatementHandlerManager handlers;
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
-  private final Map<String, TableMetadata> tableMetadataMap;
+  private final Map<String, CassandraTableMetadata> tableMetadataMap;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -94,9 +94,10 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    setTargetToIfNot(get);
+    StorageUtility.setTargetToIfNot(get, namespace, tableName);
     addProjectionsForKeys(get);
-    TableMetadata metadata = getTableMetadata(get.forNamespace().get(), get.forTable().get());
+    CassandraTableMetadata metadata =
+        getTableMetadata(get.forNamespace().get(), get.forTable().get());
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -112,9 +113,10 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    setTargetToIfNot(scan);
+    StorageUtility.setTargetToIfNot(scan, namespace, tableName);
     addProjectionsForKeys(scan);
-    TableMetadata metadata = getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
+    CassandraTableMetadata metadata =
+        getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -123,7 +125,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    setTargetToIfNot(put);
+    StorageUtility.setTargetToIfNot(put, namespace, tableName);
     checkIfPrimaryKeyExists(put);
     handlers.get(put).handle(put);
   }
@@ -137,7 +139,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    setTargetToIfNot(delete);
+    StorageUtility.setTargetToIfNot(delete, namespace, tableName);
     handlers.delete().handle(delete);
   }
 
@@ -152,7 +154,7 @@ public class Cassandra implements DistributedStorage {
     checkArgument(mutations.size() != 0);
     LOGGER.debug("executing batch-mutate operation with " + mutations);
     if (mutations.size() > 1) {
-      setTargetToIfNot(mutations);
+      StorageUtility.setTargetToIfNot(mutations, namespace, tableName);
       batch.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -169,22 +171,6 @@ public class Cassandra implements DistributedStorage {
     clusterManager.close();
   }
 
-  private void setTargetToIfNot(Operation operation) {
-    if (!operation.forNamespace().isPresent()) {
-      operation.forNamespace(namespace.orElse(null));
-    }
-    if (!operation.forTable().isPresent()) {
-      operation.forTable(tableName.orElse(null));
-    }
-    if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("operation has no target namespace and table name");
-    }
-  }
-
-  private void setTargetToIfNot(List<? extends Operation> operations) {
-    operations.forEach(o -> setTargetToIfNot(o));
-  }
-
   private void addProjectionsForKeys(Selection selection) {
     if (selection.getProjections().size() == 0) { // meaning projecting all
       return;
@@ -198,35 +184,19 @@ public class Cassandra implements DistributedStorage {
             });
   }
 
-  private synchronized TableMetadata getTableMetadata(String namespace, String tableName) {
+  private synchronized CassandraTableMetadata getTableMetadata(String namespace, String tableName) {
     String fullName = namespace + "." + tableName;
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(
-          fullName, new TableMetadata(clusterManager.getMetadata(namespace, tableName)));
+          fullName, new CassandraTableMetadata(clusterManager.getMetadata(namespace, tableName)));
     }
     return tableMetadataMap.get(fullName);
   }
 
   private void checkIfPrimaryKeyExists(Put put) {
-    TableMetadata metadata = getTableMetadata(put.forNamespace().get(), put.forTable().get());
+    CassandraTableMetadata metadata =
+        getTableMetadata(put.forNamespace().get(), put.forTable().get());
 
-    throwIfNotMatched(Optional.of(put.getPartitionKey()), metadata.getPartitionKeyNames());
-    throwIfNotMatched(put.getClusteringKey(), metadata.getClusteringColumnNames());
-  }
-
-  private void throwIfNotMatched(Optional<Key> key, Set<String> names) {
-    String message = "The primary key is not properly specified.";
-    if ((!key.isPresent() && names.size() > 0)
-        || (key.isPresent() && (key.get().size() != names.size()))) {
-      throw new IllegalArgumentException(message);
-    }
-    key.ifPresent(
-        k ->
-            k.forEach(
-                v -> {
-                  if (!names.contains(v.getName())) {
-                    throw new IllegalArgumentException(message);
-                  }
-                }));
+    StorageUtility.checkIfPrimaryKeyExists(put, metadata);
   }
 }
