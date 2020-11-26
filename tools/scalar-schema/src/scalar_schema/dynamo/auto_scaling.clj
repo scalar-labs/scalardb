@@ -89,7 +89,7 @@
         .build)))
 
 (defn enable-auto-scaling
-  [scaling-client schema {:keys [ru] :or {ru 10}}]
+  [scaling-client schema {:keys [ru] :or {ru (int 10)}}]
   (mapv (fn [type]
           (doto scaling-client
             (.registerScalableTarget (make-scaling-request schema ru type))
