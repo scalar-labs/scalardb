@@ -35,14 +35,11 @@ public class TableMetadataManager {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
 
-    return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
-  }
-
-  private DynamoTableMetadata getTableMetadata(String namespace, String tableName) {
-    String fullName = namespace + "." + tableName;
+    String fullName = operation.forFullNamespace().get() + "." + operation.forTable().get();
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(fullName, readMetadata(fullName));
     }
+
     return tableMetadataMap.get(fullName);
   }
 
