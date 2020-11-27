@@ -94,7 +94,7 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(get);
     CassandraTableMetadata metadata =
         getTableMetadata(get.forNamespace().get(), get.forTable().get());
@@ -113,7 +113,7 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(scan);
     CassandraTableMetadata metadata =
         getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
@@ -125,7 +125,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
     checkIfPrimaryKeyExists(put);
     handlers.get(put).handle(put);
   }
@@ -139,7 +139,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
     handlers.delete().handle(delete);
   }
 
@@ -154,7 +154,7 @@ public class Cassandra implements DistributedStorage {
     checkArgument(mutations.size() != 0);
     LOGGER.debug("executing batch-mutate operation with " + mutations);
     if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
       batch.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);

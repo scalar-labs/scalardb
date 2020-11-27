@@ -19,6 +19,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 public abstract class Operation {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
   private Consistency consistency;
@@ -26,9 +27,20 @@ public abstract class Operation {
   public Operation(Key partitionKey, Key clusteringKey) {
     this.partitionKey = checkNotNull(partitionKey);
     this.clusteringKey = Optional.ofNullable(clusteringKey);
+    namespacePrefix = Optional.empty();
     namespace = Optional.empty();
     tableName = Optional.empty();
     consistency = Consistency.SEQUENTIAL;
+  }
+
+  /**
+   * Returns the namespace prefix for this operation
+   *
+   * @return an {@code Optional} with the returned namespace prefix
+   */
+  @Nonnull
+  public Optional<String> forNamespacePrefix() {
+    return namespacePrefix;
   }
 
   /**
@@ -42,6 +54,22 @@ public abstract class Operation {
   }
 
   /**
+   * Returns the namespace with the prefix for this operation
+   *
+   * @return an {@code Optional} with the returned namespace with the prefix
+   */
+  @Nonnull
+  public Optional<String> forFullNamespace() {
+    if (namespace.isPresent() && namespacePrefix.isPresent()) {
+      StringBuilder builder = new StringBuilder(namespacePrefix.get());
+      builder.append(namespace.get());
+      return Optional.of(builder.toString());
+    } else {
+      return namespace;
+    }
+  }
+
+  /**
    * Returns the table name for this operation
    *
    * @return an {@code Optional} with the returned table name
@@ -49,6 +77,18 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forTable() {
     return tableName;
+  }
+
+  /**
+   * Sets the specified target namespace prefix for this operation We don't have to set it
+   * explicitly since the prefix will be set by Scalar DB.
+   *
+   * @param prefix target namespace prefix for this operation
+   * @return this object
+   */
+  public Operation forNamespacePrefix(String prefix) {
+    this.namespacePrefix = Optional.ofNullable(prefix);
+    return this;
   }
 
   /**
@@ -142,6 +182,10 @@ public abstract class Operation {
                 other.clusteringKey.orElse(null),
                 Ordering.natural().nullsFirst())
             .compare(
+                namespacePrefix.orElse(null),
+                other.namespacePrefix.orElse(null),
+                Ordering.natural().nullsFirst())
+            .compare(
                 namespace.orElse(null),
                 other.namespace.orElse(null),
                 Ordering.natural().nullsFirst())
@@ -156,7 +200,8 @@ public abstract class Operation {
 
   @Override
   public int hashCode() {
-    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency);
+    return Objects.hash(
+        partitionKey, clusteringKey, namespacePrefix, namespace, tableName, consistency);
   }
 
   /**

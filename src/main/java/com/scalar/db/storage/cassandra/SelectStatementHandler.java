@@ -116,7 +116,7 @@ public class SelectStatementHandler extends StatementHandler {
     Select.Selection selection = select();
 
     setProjections(selection, sel.getProjections());
-    return selection.from(sel.forNamespace().get(), sel.forTable().get());
+    return selection.from(sel.forFullNamespace().get(), sel.forTable().get());
   }
 
   private void setProjections(Select.Selection selection, List<String> projections) {

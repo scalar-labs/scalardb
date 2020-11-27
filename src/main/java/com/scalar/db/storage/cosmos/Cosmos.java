@@ -103,7 +103,7 @@ public class Cosmos implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
 
     List<Record> records = selectStatementHandler.handle(get);
 
@@ -117,7 +117,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
 
     List<Record> records = selectStatementHandler.handle(scan);
 
@@ -127,7 +127,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
     checkIfPrimaryKeyExists(put);
 
     putStatementHandler.handle(put);
@@ -140,7 +140,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
     deleteStatementHandler.handle(delete);
   }
 
@@ -153,7 +153,7 @@ public class Cosmos implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
       batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);

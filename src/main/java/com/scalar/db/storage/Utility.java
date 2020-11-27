@@ -27,15 +27,11 @@ public final class Utility {
       Optional<String> namespacePrefix,
       Optional<String> namespace,
       Optional<String> tableName) {
+    if (!operation.forNamespacePrefix().isPresent()) {
+      operation.forNamespacePrefix(namespacePrefix.orElse(null));
+    }
     if (!operation.forNamespace().isPresent()) {
-      if (namespace.isPresent()) {
-        String name = namespace.get();
-        operation.forNamespace(namespacePrefix.isPresent() ? namespacePrefix.get() + name : name);
-      } else {
-        operation.forNamespace(null);
-      }
-    } else if (namespacePrefix.isPresent()) {
-      operation.forNamespace(namespacePrefix.get() + operation.forNamespace().get());
+      operation.forNamespace(namespace.orElse(null));
     }
     if (!operation.forTable().isPresent()) {
       operation.forTable(tableName.orElse(null));
