@@ -10,9 +10,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public final class ScannerIterator implements Iterator<Result> {
   private final Iterator<Row> iterator;
-  private final TableMetadata metadata;
+  private final CassandraTableMetadata metadata;
 
-  public ScannerIterator(ResultSet resultSet, TableMetadata metadata) {
+  public ScannerIterator(ResultSet resultSet, CassandraTableMetadata metadata) {
     iterator = resultSet.iterator();
     this.metadata = metadata;
   }

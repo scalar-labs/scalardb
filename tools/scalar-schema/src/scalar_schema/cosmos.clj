@@ -13,7 +13,7 @@
                                     IncludedPath
                                     IndexingPolicy
                                     ThroughputProperties)
-           (com.scalar.db.storage.cosmos TableMetadata)))
+           (com.scalar.db.storage.cosmos CosmosTableMetadata)))
 
 (def ^:const ^:private ^String METADATA_PARTITION_KEY "/id")
 (def ^:const ^:private ^String
@@ -88,7 +88,7 @@
     (create-database client common/METADATA_DATABASE 400 true))
   (when-not (container-exists? client common/METADATA_DATABASE common/METADATA_TABLE)
     (create-container client common/METADATA_DATABASE common/METADATA_TABLE))
-  (let [metadata (doto (TableMetadata.)
+  (let [metadata (doto (CosmosTableMetadata.)
                    (.setId (common/get-fullname (:database schema)
                                                 (:table schema)))
                    (.setPartitionKeyNames (set (:partition-key schema)))

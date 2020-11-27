@@ -46,11 +46,11 @@ public class ResultImplTest {
 
   private Record record;
   private Get get;
-  private TableMetadata metadata;
+  private CosmosTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
-    metadata = new TableMetadata();
+    metadata = new CosmosTableMetadata();
     metadata.setId("ks.tbl");
     metadata.setPartitionKeyNames(ImmutableSet.of(ANY_NAME_1));
     metadata.setClusteringKeyNames(ImmutableSet.of(ANY_NAME_2));

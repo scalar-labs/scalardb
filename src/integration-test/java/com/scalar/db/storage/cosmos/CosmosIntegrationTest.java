@@ -535,7 +535,7 @@ public class CosmosIntegrationTest {
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(METADATA_TABLE, "/id");
     client.getDatabase(METADATA_KEYSPACE).createContainerIfNotExists(containerProperties);
-    TableMetadata metadata = new TableMetadata();
+    CosmosTableMetadata metadata = new CosmosTableMetadata();
     metadata.setId(KEYSPACE + "." + TABLE);
     metadata.setPartitionKeyNames(new HashSet<>(Arrays.asList(COL_NAME1)));
     metadata.setClusteringKeyNames(new HashSet<>(Arrays.asList(COL_NAME4)));

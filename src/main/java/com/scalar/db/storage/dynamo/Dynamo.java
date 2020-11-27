@@ -7,18 +7,16 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.Key;
+import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -98,7 +96,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    setTargetToIfNot(get);
+    Utility.setTargetToIfNot(get, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
 
@@ -106,23 +104,23 @@ public class Dynamo implements DistributedStorage {
       return Optional.empty();
     }
 
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(items.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    setTargetToIfNot(scan);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
-    TableMetadata metadata = metadataManager.getTableMetadata(scan);
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(items, scan, metadata);
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
-    setTargetToIfNot(put);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     checkIfPrimaryKeyExists(put);
 
     putStatementHandler.handle(put);
@@ -135,7 +133,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    setTargetToIfNot(delete);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     checkIfPrimaryKeyExists(delete);
 
     deleteStatementHandler.handle(delete);
@@ -150,7 +148,7 @@ public class Dynamo implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
-      setTargetToIfNot(mutations);
+      Utility.setTargetToIfNot(mutations, namespace, tableName);
       batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -167,42 +165,9 @@ public class Dynamo implements DistributedStorage {
     client.close();
   }
 
-  private void setTargetToIfNot(List<? extends Operation> operations) {
-    operations.forEach(o -> setTargetToIfNot(o));
-  }
-
-  private void setTargetToIfNot(Operation operation) {
-    if (!operation.forNamespace().isPresent()) {
-      operation.forNamespace(namespace.orElse(null));
-    }
-    if (!operation.forTable().isPresent()) {
-      operation.forTable(tableName.orElse(null));
-    }
-    if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("operation has no target namespace and table name");
-    }
-  }
-
   private void checkIfPrimaryKeyExists(Mutation mutation) {
-    TableMetadata metadata = metadataManager.getTableMetadata(mutation);
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(mutation);
 
-    throwIfNotMatched(Optional.of(mutation.getPartitionKey()), metadata.getPartitionKeyNames());
-    throwIfNotMatched(mutation.getClusteringKey(), metadata.getClusteringKeyNames());
-  }
-
-  private void throwIfNotMatched(Optional<Key> key, Set<String> names) {
-    String message = "The primary key is not properly specified.";
-    if ((!key.isPresent() && names.size() > 0)
-        || (key.isPresent() && (key.get().size() != names.size()))) {
-      throw new IllegalArgumentException(message);
-    }
-    key.ifPresent(
-        k ->
-            k.forEach(
-                v -> {
-                  if (!names.contains(v.getName())) {
-                    throw new IllegalArgumentException(message);
-                  }
-                }));
+    Utility.checkIfPrimaryKeyExists(mutation, metadata);
   }
 }

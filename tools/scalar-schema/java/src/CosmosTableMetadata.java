@@ -10,17 +10,17 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
-/* Copied from Scalar DB
- * https://github.com/scalar-labs/scalardb/blob/master/src/main/java/com/scalar/db/storage/cosmos/TableMetadata.java
+/* Based on Scalar DB
+ * https://github.com/scalar-labs/scalardb/blob/master/src/main/java/com/scalar/db/storage/cosmos/CosmosTableMetadata.java
  */
-public class TableMetadata {
+public class CosmosTableMetadata {
   private String id;
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
-  public TableMetadata() {}
+  public CosmosTableMetadata() {}
 
   public void setId(String id) {
     this.id = id;

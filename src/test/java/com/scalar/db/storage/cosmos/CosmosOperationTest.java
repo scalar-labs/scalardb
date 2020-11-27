@@ -34,7 +34,7 @@ public class CosmosOperationTest {
   private static final int ANY_INT_1 = 1;
 
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private CosmosTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {

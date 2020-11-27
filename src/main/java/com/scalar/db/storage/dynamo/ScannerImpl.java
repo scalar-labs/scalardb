@@ -18,11 +18,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @NotThreadSafe
 public final class ScannerImpl implements Scanner {
   private final Selection selection;
-  private final TableMetadata metadata;
+  private final DynamoTableMetadata metadata;
   private List<Map<String, AttributeValue>> items;
 
   public ScannerImpl(
-      List<Map<String, AttributeValue>> items, Selection selection, TableMetadata metadata) {
+      List<Map<String, AttributeValue>> items, Selection selection, DynamoTableMetadata metadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, metadata);
     if (dynamoOperation.isSingleClusteringKey()) {
       // the ordering and the limitation already are applied in DynamoDB if there is only a single

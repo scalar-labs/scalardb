@@ -42,7 +42,7 @@ public class ResultImplTest {
   private static final int ANY_INT = 10;
   private Definitions definitions;
   @Mock private Row row;
-  @Mock private TableMetadata tableMetadata;
+  @Mock private CassandraTableMetadata CassandraTableMetadata;
   @Mock private ColumnMetadata columnMetadata;
 
   @Before
@@ -172,8 +172,9 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(tableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
+    when(CassandraTableMetadata.getPartitionKeyNames())
+        .thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -189,8 +190,8 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(tableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of("another"));
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
+    when(CassandraTableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of("another"));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -204,8 +205,9 @@ public class ResultImplTest {
   @Test
   public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(tableMetadata.getClusteringColumnNames()).thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
+    when(CassandraTableMetadata.getClusteringKeyNames())
+        .thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -221,8 +223,8 @@ public class ResultImplTest {
   @Test
   public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
-    when(tableMetadata.getClusteringColumnNames()).thenReturn(ImmutableSet.of("another"));
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
+    when(CassandraTableMetadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of("another"));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 

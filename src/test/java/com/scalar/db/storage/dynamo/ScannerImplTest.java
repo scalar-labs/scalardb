@@ -28,22 +28,22 @@ public class ScannerImplTest {
   @Before
   public void setUp() throws Exception {}
 
-  private TableMetadata prepareMetadataForSingleClusteringKey() {
+  private DynamoTableMetadata prepareMetadataForSingleClusteringKey() {
     Map<String, AttributeValue> metadataMap = new HashMap<>();
     metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
     metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2).build());
     metadataMap.put("columns", AttributeValue.builder().m(prepareColumns()).build());
 
-    return new TableMetadata(metadataMap);
+    return new DynamoTableMetadata(metadataMap);
   }
 
-  private TableMetadata prepareMetadataForMultipleClusteringKeys() {
+  private DynamoTableMetadata prepareMetadataForMultipleClusteringKeys() {
     Map<String, AttributeValue> metadataMap = new HashMap<>();
     metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
     metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2, ANY_NAME_3).build());
     metadataMap.put("columns", AttributeValue.builder().m(prepareColumns()).build());
 
-    return new TableMetadata(metadataMap);
+    return new DynamoTableMetadata(metadataMap);
   }
 
   private Map<String, AttributeValue> prepareColumns() {
@@ -71,7 +71,7 @@ public class ScannerImplTest {
   @Test
   public void constructor_ItemsWithSingleClusteringKeyGiven_ShouldNotSortItems() {
     // Arrange
-    TableMetadata metadata = prepareMetadataForSingleClusteringKey();
+    DynamoTableMetadata metadata = prepareMetadataForSingleClusteringKey();
     Map<String, AttributeValue> item1 = prepareItem();
     item1.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Map<String, AttributeValue> item2 = prepareItem();
@@ -91,7 +91,7 @@ public class ScannerImplTest {
   @Test
   public void constructor_ItemsWithMultipleClusteringKeysGiven_ShouldSortItems() {
     // Arrange
-    TableMetadata metadata = prepareMetadataForMultipleClusteringKeys();
+    DynamoTableMetadata metadata = prepareMetadataForMultipleClusteringKeys();
     Map<String, AttributeValue> item1 = prepareItem();
     Map<String, AttributeValue> item2 = prepareItem();
     item2.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());

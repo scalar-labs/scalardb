@@ -21,7 +21,7 @@ public class ItemSorter {
   private final Scan scan;
   private final Comparator<Map<String, AttributeValue>> comparator;
 
-  public ItemSorter(Scan scan, TableMetadata metadata) {
+  public ItemSorter(Scan scan, DynamoTableMetadata metadata) {
     checkNotNull(metadata);
     this.scan = checkNotNull(scan);
     this.comparator = getComparator(scan, metadata);
@@ -42,7 +42,8 @@ public class ItemSorter {
     return items;
   }
 
-  private Comparator<Map<String, AttributeValue>> getComparator(Scan scan, TableMetadata metadata) {
+  private Comparator<Map<String, AttributeValue>> getComparator(
+      Scan scan, DynamoTableMetadata metadata) {
     return new Comparator<Map<String, AttributeValue>>() {
       public int compare(Map<String, AttributeValue> o1, Map<String, AttributeValue> o2) {
         int compareResult = 0;

@@ -41,7 +41,7 @@ public class DeleteStatementHandlerTest {
   private String concatenatedPartitionKey;
   @Mock private DynamoDbClient client;
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private DynamoTableMetadata metadata;
   @Mock private DeleteItemResponse response;
 
   @Before

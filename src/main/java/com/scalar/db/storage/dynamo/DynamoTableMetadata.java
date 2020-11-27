@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.scalar.db.storage.TableMetadata;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
  *
  * @author Yuji Ito
  */
-public class TableMetadata {
+public class DynamoTableMetadata implements TableMetadata {
   private static final String PARTITION_KEY = "partitionKey";
   private static final String CLUSTERING_KEY = "clusteringKey";
   private static final String COLUMNS = "columns";
@@ -26,14 +27,16 @@ public class TableMetadata {
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
-  public TableMetadata(Map<String, AttributeValue> metadata) {
+  public DynamoTableMetadata(Map<String, AttributeValue> metadata) {
     convert(metadata);
   }
 
+  @Override
   public Set<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
 
+  @Override
   public Set<String> getClusteringKeyNames() {
     return clusteringKeyNames;
   }

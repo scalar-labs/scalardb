@@ -41,7 +41,7 @@ public class ItemSorterTest {
   private static final byte[] ANY_SMALL_BLOB = "a".getBytes();
   private static final String ANY_COLUMN_NAME_1 = "val1";
 
-  private TableMetadata metadata;
+  private DynamoTableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
@@ -63,7 +63,7 @@ public class ItemSorterTest {
     columns.put(ANY_NAME_8, AttributeValue.builder().s("blob").build());
     columns.put(ANY_COLUMN_NAME_1, AttributeValue.builder().s("text").build());
     metadataMap.put("columns", AttributeValue.builder().m(columns).build());
-    metadata = new TableMetadata(metadataMap);
+    metadata = new DynamoTableMetadata(metadataMap);
   }
 
   private Map<String, AttributeValue> prepareItemWithSmallValues() {

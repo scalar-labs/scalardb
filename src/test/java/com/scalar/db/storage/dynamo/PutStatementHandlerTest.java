@@ -48,7 +48,7 @@ public class PutStatementHandlerTest {
   private PutStatementHandler handler;
   @Mock private DynamoDbClient client;
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private DynamoTableMetadata metadata;
   @Mock private UpdateItemResponse updateResponse;
 
   @Before

@@ -16,9 +16,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 public final class ScannerImpl implements Scanner {
   private final List<Record> records;
   private final Selection selection;
-  private final TableMetadata metadata;
+  private final CosmosTableMetadata metadata;
 
-  public ScannerImpl(List<Record> records, Selection selection, TableMetadata metadata) {
+  public ScannerImpl(List<Record> records, Selection selection, CosmosTableMetadata metadata) {
     this.records = checkNotNull(records);
     this.selection = selection;
     this.metadata = checkNotNull(metadata);

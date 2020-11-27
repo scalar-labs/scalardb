@@ -54,7 +54,7 @@ public class SelectStatementHandlerTest {
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   @Mock private TableMetadataManager metadataManager;
-  @Mock private TableMetadata metadata;
+  @Mock private CosmosTableMetadata metadata;
   @Mock private CosmosItemResponse<Record> response;
   @Mock private CosmosPagedIterable<Record> responseIterable;
 
