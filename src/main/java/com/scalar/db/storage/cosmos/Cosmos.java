@@ -17,7 +17,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.StorageUtility;
+import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -99,7 +99,7 @@ public class Cosmos implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespace, tableName);
 
     List<Record> records = selectStatementHandler.handle(get);
 
@@ -113,7 +113,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
 
     List<Record> records = selectStatementHandler.handle(scan);
 
@@ -123,7 +123,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     checkIfPrimaryKeyExists(put);
 
     putStatementHandler.handle(put);
@@ -136,7 +136,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     deleteStatementHandler.handle(delete);
   }
 
@@ -149,7 +149,7 @@ public class Cosmos implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
-      StorageUtility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespace, tableName);
       batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -169,6 +169,6 @@ public class Cosmos implements DistributedStorage {
   private void checkIfPrimaryKeyExists(Put put) {
     CosmosTableMetadata metadata = metadataManager.getTableMetadata(put);
 
-    StorageUtility.checkIfPrimaryKeyExists(put, metadata);
+    Utility.checkIfPrimaryKeyExists(put, metadata);
   }
 }

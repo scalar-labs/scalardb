@@ -13,12 +13,10 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.Key;
-import com.scalar.db.storage.StorageUtility;
+import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -98,7 +96,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
 
@@ -112,7 +110,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
@@ -122,7 +120,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     checkIfPrimaryKeyExists(put);
 
     putStatementHandler.handle(put);
@@ -135,7 +133,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    StorageUtility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     checkIfPrimaryKeyExists(delete);
 
     deleteStatementHandler.handle(delete);
@@ -150,7 +148,7 @@ public class Dynamo implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
-      StorageUtility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespace, tableName);
       batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -170,6 +168,6 @@ public class Dynamo implements DistributedStorage {
   private void checkIfPrimaryKeyExists(Mutation mutation) {
     DynamoTableMetadata metadata = metadataManager.getTableMetadata(mutation);
 
-    StorageUtility.checkIfPrimaryKeyExists(mutation, metadata);
+    Utility.checkIfPrimaryKeyExists(mutation, metadata);
   }
 }

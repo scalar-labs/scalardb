@@ -8,11 +8,11 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Utilities for {@link DistributedStorage}
+ * Utilities for {@link com.scalar.db.api.DistributedStorage}
  *
  * @author Yuji Ito
  */
-public final class StorageUtility {
+public final class Utility {
 
   public static void setTargetToIfNot(
       List<? extends Operation> operations,

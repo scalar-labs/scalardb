@@ -16,12 +16,10 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
-import com.scalar.db.io.Key;
-import com.scalar.db.storage.StorageUtility;
+import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -94,7 +92,7 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    StorageUtility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespace, tableName);
     addProjectionsForKeys(get);
     CassandraTableMetadata metadata =
         getTableMetadata(get.forNamespace().get(), get.forTable().get());
@@ -113,7 +111,7 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    StorageUtility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
     addProjectionsForKeys(scan);
     CassandraTableMetadata metadata =
         getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
@@ -125,7 +123,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    StorageUtility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     checkIfPrimaryKeyExists(put);
     handlers.get(put).handle(put);
   }
@@ -139,7 +137,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    StorageUtility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     handlers.delete().handle(delete);
   }
 
@@ -154,7 +152,7 @@ public class Cassandra implements DistributedStorage {
     checkArgument(mutations.size() != 0);
     LOGGER.debug("executing batch-mutate operation with " + mutations);
     if (mutations.size() > 1) {
-      StorageUtility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespace, tableName);
       batch.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -197,6 +195,6 @@ public class Cassandra implements DistributedStorage {
     CassandraTableMetadata metadata =
         getTableMetadata(put.forNamespace().get(), put.forTable().get());
 
-    StorageUtility.checkIfPrimaryKeyExists(put, metadata);
+    Utility.checkIfPrimaryKeyExists(put, metadata);
   }
 }
