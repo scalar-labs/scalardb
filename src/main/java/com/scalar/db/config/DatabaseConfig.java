@@ -3,6 +3,7 @@ package com.scalar.db.config;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
@@ -82,7 +83,7 @@ public class DatabaseConfig {
       }
     }
 
-    if (props.getProperty(NAMESPACE_PREFIX) == null) {
+    if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
       namespacePrefix = Optional.empty();
     } else {
       namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");

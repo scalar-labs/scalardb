@@ -140,9 +140,9 @@
 
 (defn- create-metadata
   [client schema prefix]
-  (let [prefixed-table (str prefix \_ (dynamo/get-table-name
-                                       {:database common/METADATA_DATABASE
-                                        :table common/METADATA_TABLE}))
+  (let [table (dynamo/get-table-name {:database common/METADATA_DATABASE
+                                      :table common/METADATA_TABLE})
+        prefixed-table (if prefix (str prefix \_ table) table)
         builder (-> (CreateTableRequest/builder)
                     (.attributeDefinitions
                      [(make-attribute-definition METADATA_PARTITION_KEY

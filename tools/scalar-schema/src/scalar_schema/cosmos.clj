@@ -84,7 +84,9 @@
 
 (defn- create-metadata
   [client schema prefix]
-  (let [prefixed-database (str prefix \_ common/METADATA_DATABASE)
+  (let [prefixed-database (if prefix
+                            (str prefix \_ common/METADATA_DATABASE)
+                            common/METADATA_DATABASE)
         metadata (doto (CosmosTableMetadata.)
                    (.setId (common/get-fullname (:database schema)
                                                 (:table schema)))

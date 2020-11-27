@@ -28,7 +28,9 @@
         parsed (common/parse-schema opts)
         schema (if (or cosmos dynamo)
                  (conj parsed
-                       {:database (str prefix \_ common/METADATA_DATABASE)
+                       {:database (if prefix
+                                    (str prefix \_ common/METADATA_DATABASE)
+                                    common/METADATA_DATABASE)
                         :table common/METADATA_TABLE})
                  parsed)]
     (doall (map #(proto/delete-table operator % opts) schema))
