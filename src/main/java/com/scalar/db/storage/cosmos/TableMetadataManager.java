@@ -29,7 +29,7 @@ public class TableMetadataManager {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
 
-    String fullName = operation.forFullNamespace().get() + "." + operation.forTable().get();
+    String fullName = operation.forFullTableName().get();
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(fullName, readMetadata(fullName));
     }

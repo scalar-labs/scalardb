@@ -8,6 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -96,8 +97,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(get);
-    CassandraTableMetadata metadata =
-        getTableMetadata(get.forNamespace().get(), get.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -115,8 +115,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(scan);
-    CassandraTableMetadata metadata =
-        getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -184,18 +183,21 @@ public class Cassandra implements DistributedStorage {
             });
   }
 
-  private synchronized CassandraTableMetadata getTableMetadata(String namespace, String tableName) {
-    String fullName = namespace + "." + tableName;
+  private synchronized CassandraTableMetadata getTableMetadata(Operation operation) {
+    String fullName = operation.forFullTableName().get();
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(
-          fullName, new CassandraTableMetadata(clusterManager.getMetadata(namespace, tableName)));
+          fullName,
+          new CassandraTableMetadata(
+              clusterManager.getMetadata(
+                  operation.forFullNamespace().get(), operation.forTable().get())));
     }
+
     return tableMetadataMap.get(fullName);
   }
 
   private void checkIfPrimaryKeyExists(Put put) {
-    CassandraTableMetadata metadata =
-        getTableMetadata(put.forNamespace().get(), put.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(put);
 
     Utility.checkIfPrimaryKeyExists(put, metadata);
   }

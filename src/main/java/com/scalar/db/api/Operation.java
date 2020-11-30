@@ -80,6 +80,33 @@ public abstract class Operation {
   }
 
   /**
+   * Returns the full table name with the full namespace for this operation
+   *
+   * @return an {@code Optional} with the returned the full table name
+   */
+  @Nonnull
+  public Optional<String> forFullTableName() {
+    if (!namespace.isPresent() || !tableName.isPresent()) {
+      return Optional.empty();
+    }
+
+    if (namespacePrefix.isPresent()) {
+      StringBuilder builder = new StringBuilder(namespacePrefix.get());
+      builder.append(namespace.get());
+      builder.append(".");
+      builder.append(tableName.get());
+
+      return Optional.of(builder.toString());
+    } else {
+      StringBuilder builder = new StringBuilder(namespace.get());
+      builder.append(".");
+      builder.append(tableName.get());
+
+      return Optional.of(builder.toString());
+    }
+  }
+
+  /**
    * Sets the specified target namespace prefix for this operation We don't have to set it
    * explicitly since the prefix will be set by Scalar DB.
    *

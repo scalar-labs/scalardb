@@ -50,7 +50,7 @@ public class DynamoOperation {
 
   @Nonnull
   public String getTableName() {
-    return operation.forFullNamespace().get() + "." + operation.forTable().get();
+    return operation.forFullTableName().get();
   }
 
   @Nonnull
