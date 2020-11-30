@@ -62,22 +62,11 @@
     (merge schema COORDINATOR_SCHEMA)
     schema))
 
-(defn- add-prefix
-  [schema prefix]
-  (if prefix
-    (map (fn [table-schema]
-           (assoc table-schema
-                  :database
-                  (str prefix \_ (:database table-schema))))
-         schema)
-    schema))
-
 (defn parse-schema
-  [{:keys [schema-file prefix]}]
-  (-> (cheshire/parse-stream (io/reader schema-file) true
-                             #(when (or (= % "partition-key")
-                                        (= % "clustering-key")) []))
-      format-schema
-      apply-transaction
-      add-coordinator
-      (add-prefix prefix)))
+  [schema-file]
+  (->> (cheshire/parse-stream (io/reader schema-file) true
+                              #(when (or (= % "partition-key")
+                                         (= % "clustering-key")) []))
+       format-schema
+       apply-transaction
+       add-coordinator))

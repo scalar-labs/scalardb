@@ -115,7 +115,7 @@
       .build))
 
 (defn- insert-metadata
-  [client schema metadata-table]
+  [client schema]
   (let [table (dynamo/get-table-name schema)
         columns (reduce-kv (fn [m c t]
                              (assoc m c (-> (AttributeValue/builder)
@@ -134,30 +134,27 @@
                           (.ss (:clustering-key schema)) .build))
                base-item)
         request (-> (PutItemRequest/builder)
-                    (.tableName metadata-table)
+                    (.tableName META_TABLE)
                     (.item item) .build)]
     (.putItem client request)))
 
 (defn- create-metadata
-  [client schema prefix]
-  (let [table (dynamo/get-table-name {:database common/METADATA_DATABASE
-                                      :table common/METADATA_TABLE})
-        prefixed-table (if prefix (str prefix \_ table) table)
-        builder (-> (CreateTableRequest/builder)
+  [client schema]
+  (let [builder (-> (CreateTableRequest/builder)
                     (.attributeDefinitions
                      [(make-attribute-definition METADATA_PARTITION_KEY
                                                  "text")])
                     (.keySchema [(make-key-schema-element
                                   METADATA_PARTITION_KEY KeyType/HASH)])
                     (.provisionedThroughput (make-throughput 1))
-                    (.tableName prefixed-table))]
-    (when-not (table-exists? client prefixed-table)
+                    (.tableName META_TABLE))]
+    (when-not (table-exists? client META_TABLE)
       (.createTable client (.build builder))
       (Thread/sleep WAIT_FOR_CREATION))
-    (insert-metadata client schema prefixed-table)))
+    (insert-metadata client schema)))
 
 (defn- create-table
-  [client schema {:keys [ru prefix] :or {ru 10}}]
+  [client schema {:keys [ru] :or {ru 10}}]
   (let [table (dynamo/get-table-name schema)
         ru (if (:ru schema) (:ru schema) ru)
         builder (-> (CreateTableRequest/builder)
@@ -166,7 +163,7 @@
                     (.keySchema (make-primary-key-schema schema))
                     (.provisionedThroughput (make-throughput ru))
                     (.tableName table))]
-    (create-metadata client schema prefix)
+    (create-metadata client schema)
     (if (table-exists? client table)
       (log/warn table "already exists")
       (do

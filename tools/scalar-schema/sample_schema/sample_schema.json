@@ -13,6 +13,7 @@
       "c4": "INT",
       "c5": "BOOLEAN"
     },
+    "ru": 5000,
     "compaction-strategy": "LCS"
   },
 

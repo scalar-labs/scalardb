@@ -17,21 +17,18 @@
 (defn create-tables
   [opts]
   (let [operator (make-operator opts)
-        schema (common/parse-schema opts)]
+        schema (common/parse-schema (:schema-file opts))]
     (doall (map #(proto/create-table operator % opts) schema))
     (proto/close operator opts)))
 
 (defn delete-all
-  [{:keys [cosmos dynamo prefix] :as opts}]
+  [opts]
   (log/warn "Deleting all databases and tables in the file")
   (let [operator (make-operator opts)
-        parsed (common/parse-schema opts)
-        schema (if (or cosmos dynamo)
-                 (conj parsed
-                       {:database (if prefix
-                                    (str prefix \_ common/METADATA_DATABASE)
-                                    common/METADATA_DATABASE)
-                        :table common/METADATA_TABLE})
+        parsed (common/parse-schema (:schema-file opts))
+        schema (if (or (:cosmos opts) (:dynamo opts))
+                 (conj parsed {:database common/METADATA_DATABASE
+                               :table common/METADATA_TABLE})
                  parsed)]
     (doall (map #(proto/delete-table operator % opts) schema))
     (proto/close operator opts)))

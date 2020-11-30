@@ -22,7 +22,6 @@
     "The network topology strategy. SimpleStrategy or NetworkTopologyStrategy. This options is ignored when Cosmos DB and DynamoDB."]
    ["-D" "--delete-all" "All database will be deleted, if this is enabled."]
    [nil "--region REGION" "Region where the tool creates tables for DynamoDB"]
-   [nil "--prefix DATABASE_PREFIX" "Database prefix. The prefix will be added to all database."]
    [nil "--no-scaling" "Disable auto-scaling"]
    [nil "--help"]])
 
