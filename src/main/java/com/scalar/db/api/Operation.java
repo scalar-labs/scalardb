@@ -65,7 +65,7 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forFullNamespace() {
     if (!namespace.isPresent()) {
-      LOGGER.warn("namespace isn't specified");
+      LOGGER.warn("namespace is not set. So, you might get an unexpected return value.");
     }
 
     if (namespace.isPresent() && namespacePrefix.isPresent()) {
