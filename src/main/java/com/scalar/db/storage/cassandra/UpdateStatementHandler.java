@@ -61,7 +61,7 @@ public class UpdateStatementHandler extends MutateStatementHandler {
   }
 
   private Update prepare(Put put) {
-    Update update = QueryBuilder.update(put.forNamespace().get(), put.forTable().get());
+    Update update = QueryBuilder.update(put.forFullNamespace().get(), put.forTable().get());
 
     Update.Assignments assignments = update.with();
     put.getValues().forEach((k, v) -> assignments.and(set(k, bindMarker())));

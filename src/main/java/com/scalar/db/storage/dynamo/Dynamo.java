@@ -41,6 +41,7 @@ public class Dynamo implements DistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -54,7 +55,11 @@ public class Dynamo implements DistributedStorage {
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
 
-    this.metadataManager = new TableMetadataManager(client);
+    namespacePrefix = config.getNamespacePrefix();
+    namespace = Optional.empty();
+    tableName = Optional.empty();
+
+    this.metadataManager = new TableMetadataManager(client, namespacePrefix);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     this.putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -62,9 +67,6 @@ public class Dynamo implements DistributedStorage {
     this.batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("DynamoDB object is created properly.");
-
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @Override
@@ -96,7 +98,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
 
@@ -110,7 +112,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
@@ -120,7 +122,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
     checkIfPrimaryKeyExists(put);
 
     putStatementHandler.handle(put);
@@ -133,7 +135,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
     checkIfPrimaryKeyExists(delete);
 
     deleteStatementHandler.handle(delete);
@@ -148,7 +150,7 @@ public class Dynamo implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
     if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
       batchHandler.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);

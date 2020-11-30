@@ -8,6 +8,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -38,6 +39,7 @@ public class Cassandra implements DistributedStorage {
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
   private final Map<String, CassandraTableMetadata> tableMetadataMap;
+  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -57,6 +59,7 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
+    namespacePrefix = config.getNamespacePrefix();
     namespace = Optional.empty();
     tableName = Optional.empty();
     tableMetadataMap = new ConcurrentHashMap<>();
@@ -92,10 +95,9 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(get);
-    CassandraTableMetadata metadata =
-        getTableMetadata(get.forNamespace().get(), get.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -111,10 +113,9 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     addProjectionsForKeys(scan);
-    CassandraTableMetadata metadata =
-        getTableMetadata(scan.forNamespace().get(), scan.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -123,7 +124,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
     checkIfPrimaryKeyExists(put);
     handlers.get(put).handle(put);
   }
@@ -137,7 +138,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
     handlers.delete().handle(delete);
   }
 
@@ -152,7 +153,7 @@ public class Cassandra implements DistributedStorage {
     checkArgument(mutations.size() != 0);
     LOGGER.debug("executing batch-mutate operation with " + mutations);
     if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespace, tableName);
+      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
       batch.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -182,18 +183,21 @@ public class Cassandra implements DistributedStorage {
             });
   }
 
-  private synchronized CassandraTableMetadata getTableMetadata(String namespace, String tableName) {
-    String fullName = namespace + "." + tableName;
+  private synchronized CassandraTableMetadata getTableMetadata(Operation operation) {
+    String fullName = operation.forFullTableName().get();
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(
-          fullName, new CassandraTableMetadata(clusterManager.getMetadata(namespace, tableName)));
+          fullName,
+          new CassandraTableMetadata(
+              clusterManager.getMetadata(
+                  operation.forFullNamespace().get(), operation.forTable().get())));
     }
+
     return tableMetadataMap.get(fullName);
   }
 
   private void checkIfPrimaryKeyExists(Put put) {
-    CassandraTableMetadata metadata =
-        getTableMetadata(put.forNamespace().get(), put.forTable().get());
+    CassandraTableMetadata metadata = getTableMetadata(put);
 
     Utility.checkIfPrimaryKeyExists(put, metadata);
   }

@@ -60,7 +60,7 @@ public class InsertStatementHandler extends MutateStatementHandler {
   }
 
   private Insert prepare(Put put) {
-    Insert insert = insertInto(put.forNamespace().get(), put.forTable().get());
+    Insert insert = insertInto(put.forFullNamespace().get(), put.forTable().get());
 
     put.getPartitionKey().forEach(v -> insert.value(v.getName(), bindMarker()));
     put.getClusteringKey()
