@@ -6,7 +6,8 @@
   (is (= "ks.tbl" (common/get-fullname "ks" "tbl"))))
 
 (deftest parse-schema
-  (let [schema (common/parse-schema "sample_schema/sample_schema.json")
+  (let [schema (common/parse-schema {:schema-file
+                                     "sample_schema/sample_schema.json"})
         table0 (first (filter #(and (= "sample_db" (:database %))
                                     (= "sample_table" (:table %))) schema))
         table1 (first (filter #(and (= "sample_db" (:database %))
