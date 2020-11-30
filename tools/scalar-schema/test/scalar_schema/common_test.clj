@@ -70,4 +70,14 @@
     (is (= {"tx_id" "text"
             "tx_state" "int"
             "tx_created_at" "bigint"}
-           (:columns coordinator)))))
+           (:columns coordinator))))
+
+  ;; prefix
+  (let [schema (common/parse-schema {:schema-file
+                                     "sample_schema/sample_schema.json"
+                                     :prefix "test"})
+        tables (filter #(= "test_sample_db" (:database %)) schema)
+        coordinator (filter #(= "test_coordinator" (:database %)) schema)]
+    (is (= ["sample_table" "sample_table1" "sample_table2"]
+           (mapv #(:table %) tables)))
+    (is (= ["state"] (mapv #(:table %) coordinator)))))
