@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An abstraction for storage operations.
@@ -17,6 +19,8 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public abstract class Operation {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Operation.class);
+
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private Optional<String> namespacePrefix;
@@ -60,6 +64,10 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forFullNamespace() {
+    if (!namespace.isPresent()) {
+      LOGGER.warn("namespace isn't specified");
+    }
+
     if (namespace.isPresent() && namespacePrefix.isPresent()) {
       StringBuilder builder = new StringBuilder(namespacePrefix.get());
       builder.append(namespace.get());
@@ -87,23 +95,19 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forFullTableName() {
     if (!namespace.isPresent() || !tableName.isPresent()) {
+      LOGGER.warn("namespace or table name isn't specified");
       return Optional.empty();
     }
 
+    StringBuilder builder = new StringBuilder();
     if (namespacePrefix.isPresent()) {
-      StringBuilder builder = new StringBuilder(namespacePrefix.get());
-      builder.append(namespace.get());
-      builder.append(".");
-      builder.append(tableName.get());
-
-      return Optional.of(builder.toString());
-    } else {
-      StringBuilder builder = new StringBuilder(namespace.get());
-      builder.append(".");
-      builder.append(tableName.get());
-
-      return Optional.of(builder.toString());
+      builder.append(namespacePrefix.get());
     }
+    builder.append(namespace.get());
+    builder.append(".");
+    builder.append(tableName.get());
+
+    return Optional.of(builder.toString());
   }
 
   /**
