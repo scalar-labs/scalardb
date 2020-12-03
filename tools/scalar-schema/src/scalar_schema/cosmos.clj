@@ -83,18 +83,21 @@
         (.createContainerIfNotExists prop))))
 
 (defn- create-metadata
-  [client schema]
-  (when-not (database-exists? client common/METADATA_DATABASE)
-    (create-database client common/METADATA_DATABASE 400 true))
-  (when-not (container-exists? client common/METADATA_DATABASE common/METADATA_TABLE)
-    (create-container client common/METADATA_DATABASE common/METADATA_TABLE))
-  (let [metadata (doto (CosmosTableMetadata.)
+  [client schema prefix]
+  (let [prefixed-database (if prefix
+                            (str prefix \_ common/METADATA_DATABASE)
+                            common/METADATA_DATABASE)
+        metadata (doto (CosmosTableMetadata.)
                    (.setId (common/get-fullname (:database schema)
                                                 (:table schema)))
                    (.setPartitionKeyNames (set (:partition-key schema)))
                    (.setClusteringKeyNames (set (:clustering-key schema)))
                    (.setColumns (:columns schema)))]
-    (-> (.getDatabase client common/METADATA_DATABASE)
+    (when-not (database-exists? client prefixed-database)
+      (create-database client prefixed-database 400 true))
+    (when-not (container-exists? client prefixed-database common/METADATA_TABLE)
+      (create-container client prefixed-database common/METADATA_TABLE))
+    (-> (.getDatabase client prefixed-database)
         (.getContainer common/METADATA_TABLE)
         (.upsertItem metadata))))
 
@@ -109,11 +112,11 @@
                             (CosmosStoredProcedureRequestOptions.))))
 
 (defn- create-table
-  [client schema {:keys [ru no-scaling] :or {ru 400 no-scaling false}}]
+  [client schema {:keys [ru prefix no-scaling] :or {ru 400 no-scaling false}}]
   (let [database (:database schema)
         table (:table schema)
         ru (if (:ru schema) (:ru schema) ru)]
-    (create-metadata client schema)
+    (create-metadata client schema prefix)
     (if (database-exists? client database)
       (do
         (update-throughput client database ru no-scaling)
