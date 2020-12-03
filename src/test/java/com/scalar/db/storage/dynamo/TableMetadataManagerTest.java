@@ -16,6 +16,7 @@ import com.scalar.db.io.TextValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,8 +48,11 @@ public class TableMetadataManagerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    manager = new TableMetadataManager(client);
+    manager = new TableMetadataManager(client, Optional.empty());
+    setMetadataMap();
+  }
 
+  private void setMetadataMap() {
     metadataMap = new HashMap<>();
     metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
     metadataMap.put("clusteringKey", AttributeValue.builder().ss(new ArrayList<String>()).build());
@@ -80,6 +84,29 @@ public class TableMetadataManagerTest {
     verify(client).getItem(captor.capture());
     GetItemRequest actualRequest = captor.getValue();
     assertThat(actualRequest.tableName()).isEqualTo("scalardb.metadata");
+    assertThat(actualRequest.key()).isEqualTo(expectedKey);
+  }
+
+  @Test
+  public void getTableMetadata_ProperOperationGivenFirstWithPrefix_ShouldCallGetItem() {
+    // Arrange
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
+    when(response.item()).thenReturn(metadataMap);
+    manager = new TableMetadataManager(client, Optional.of("prefix_"));
+
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Map<String, AttributeValue> expectedKey = new HashMap<>();
+    expectedKey.put("table", AttributeValue.builder().s(FULLNAME).build());
+
+    // Act
+    manager.getTableMetadata(get);
+
+    // Assert
+    ArgumentCaptor<GetItemRequest> captor = ArgumentCaptor.forClass(GetItemRequest.class);
+    verify(client).getItem(captor.capture());
+    GetItemRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.tableName()).isEqualTo("prefix_scalardb.metadata");
     assertThat(actualRequest.key()).isEqualTo(expectedKey);
   }
 

@@ -4,6 +4,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -20,10 +21,12 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 public class TableMetadataManager {
   private final String METADATA_TABLE = "scalardb.metadata";
   private final DynamoDbClient client;
+  private final Optional<String> namespacePrefix;
   private final Map<String, DynamoTableMetadata> tableMetadataMap;
 
-  public TableMetadataManager(DynamoDbClient client) {
+  public TableMetadataManager(DynamoDbClient client, Optional<String> namespacePrefix) {
     this.client = client;
+    this.namespacePrefix = namespacePrefix;
     this.tableMetadataMap = new ConcurrentHashMap<>();
   }
 
@@ -32,23 +35,22 @@ public class TableMetadataManager {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
 
-    return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
-  }
-
-  private DynamoTableMetadata getTableMetadata(String namespace, String tableName) {
-    String fullName = namespace + "." + tableName;
+    String fullName = operation.forFullTableName().get();
     if (!tableMetadataMap.containsKey(fullName)) {
       tableMetadataMap.put(fullName, readMetadata(fullName));
     }
+
     return tableMetadataMap.get(fullName);
   }
 
   private DynamoTableMetadata readMetadata(String fullName) {
     Map<String, AttributeValue> key = new HashMap<>();
     key.put("table", AttributeValue.builder().s(fullName).build());
+    String metadataTable =
+        namespacePrefix.isPresent() ? namespacePrefix.get() + METADATA_TABLE : METADATA_TABLE;
 
     GetItemRequest request =
-        GetItemRequest.builder().tableName(METADATA_TABLE).key(key).consistentRead(true).build();
+        GetItemRequest.builder().tableName(metadataTable).key(key).consistentRead(true).build();
     try {
       return new DynamoTableMetadata(client.getItem(request).item());
     } catch (DynamoDbException e) {

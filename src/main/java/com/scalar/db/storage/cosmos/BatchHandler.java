@@ -92,7 +92,7 @@ public class BatchHandler {
 
     CosmosMutation cosmosMutation = new CosmosMutation(mutations.get(0), metadataManager);
     client
-        .getDatabase(mutations.get(0).forNamespace().get())
+        .getDatabase(mutations.get(0).forFullNamespace().get())
         .getContainer(mutations.get(0).forTable().get())
         .getScripts()
         .getStoredProcedure(MUTATION_STORED_PROCEDURE)

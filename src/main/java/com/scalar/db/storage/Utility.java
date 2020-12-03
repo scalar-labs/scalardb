@@ -16,13 +16,20 @@ public final class Utility {
 
   public static void setTargetToIfNot(
       List<? extends Operation> operations,
+      Optional<String> namespacePrefix,
       Optional<String> namespace,
       Optional<String> tableName) {
-    operations.forEach(o -> setTargetToIfNot(o, namespace, tableName));
+    operations.forEach(o -> setTargetToIfNot(o, namespacePrefix, namespace, tableName));
   }
 
   public static void setTargetToIfNot(
-      Operation operation, Optional<String> namespace, Optional<String> tableName) {
+      Operation operation,
+      Optional<String> namespacePrefix,
+      Optional<String> namespace,
+      Optional<String> tableName) {
+    if (!operation.forNamespacePrefix().isPresent()) {
+      operation.forNamespacePrefix(namespacePrefix.orElse(null));
+    }
     if (!operation.forNamespace().isPresent()) {
       operation.forNamespace(namespace.orElse(null));
     }
