@@ -1709,7 +1709,11 @@ public class ConsensusCommitIntegrationTest {
                                 .forNamespace(NAMESPACE)
                                 .forTable(TABLE_1)
                                 .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
-                        transaction.put(put);
+                        try {
+                          transaction.put(put);
+                        } catch (CrudException e) {
+                          throw new RuntimeException(e);
+                        }
                       });
             });
     transaction.commit();
