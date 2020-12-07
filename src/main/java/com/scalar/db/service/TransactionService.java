@@ -8,6 +8,8 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
+
+import com.scalar.db.exception.transaction.TransactionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,48 +49,52 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
-  public DistributedTransaction start() {
+  public DistributedTransaction start() throws TransactionException {
     return manager.start();
   }
 
   @Override
-  public DistributedTransaction start(String txId) {
+  public DistributedTransaction start(String txId) throws TransactionException {
     return manager.start(txId);
   }
 
   @Override
-  public DistributedTransaction start(Isolation isolation) {
+  public DistributedTransaction start(Isolation isolation) throws TransactionException {
     return manager.start(isolation);
   }
 
   @Override
-  public DistributedTransaction start(String txId, Isolation isolation) {
+  public DistributedTransaction start(String txId, Isolation isolation)
+    throws TransactionException {
     return manager.start(txId, isolation);
   }
 
   @Override
-  public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy) {
+  public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
+    throws TransactionException {
     return manager.start(isolation, strategy);
   }
 
   @Override
-  public DistributedTransaction start(SerializableStrategy strategy) {
+  public DistributedTransaction start(SerializableStrategy strategy)
+    throws TransactionException {
     return manager.start(strategy);
   }
 
   @Override
-  public DistributedTransaction start(String txId, SerializableStrategy strategy) {
+  public DistributedTransaction start(String txId, SerializableStrategy strategy)
+    throws TransactionException {
     return manager.start(txId, strategy);
   }
 
   @Override
-  public DistributedTransaction start(
-      String txId, Isolation isolation, SerializableStrategy strategy) {
-    return null;
+  public DistributedTransaction start(String txId, Isolation isolation,
+    SerializableStrategy strategy) throws TransactionException {
+    return manager.start(txId, isolation, strategy);
   }
 
   @Override
-  public TransactionState getState(String txId) {
+  public TransactionState getState(String txId) throws TransactionException {
     return manager.getState(txId);
   }
 

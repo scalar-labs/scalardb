@@ -1,5 +1,7 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.TransactionException;
+
 import java.util.Optional;
 
 public interface DistributedTransactionManager {
@@ -18,8 +20,9 @@ public interface DistributedTransactionManager {
    * Starts a new transaction.
    *
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
-  DistributedTransaction start();
+  DistributedTransaction start() throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID. It is users' responsibility to
@@ -28,17 +31,19 @@ public interface DistributedTransactionManager {
    *
    * @param txId an user-provided unique transaction ID
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
-  DistributedTransaction start(String txId);
+  DistributedTransaction start(String txId) throws TransactionException;
 
   /**
    * Starts a new transaction with the specified {@link Isolation} level.
    *
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(Isolation isolation);
+  DistributedTransaction start(Isolation isolation) throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID and {@link Isolation} level. It is
@@ -48,9 +53,10 @@ public interface DistributedTransactionManager {
    * @param txId an user-provided unique transaction ID
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(String txId, Isolation isolation);
+  DistributedTransaction start(String txId, Isolation isolation) throws TransactionException;
 
   /**
    * Starts a new transaction with the specified {@link Isolation} level and {@link
@@ -60,9 +66,11 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(Isolation isolation, SerializableStrategy strategy);
+  DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
+    throws TransactionException;
 
   /**
    * Starts a new transaction with Serializable isolation level and the specified {@link
@@ -70,9 +78,10 @@ public interface DistributedTransactionManager {
    *
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(SerializableStrategy strategy);
+  DistributedTransaction start(SerializableStrategy strategy) throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID, Serializable isolation level and
@@ -83,9 +92,11 @@ public interface DistributedTransactionManager {
    * @param txId an user-provided unique transaction ID
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(String txId, SerializableStrategy strategy);
+  DistributedTransaction start(String txId, SerializableStrategy strategy)
+    throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID, {@link Isolation} level and {@link
@@ -97,17 +108,20 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
+   * @throws TransactionException if starting the transaction failed
    */
   @Deprecated
-  DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy);
+  DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
+    throws TransactionException;
 
   /**
    * Returns the state of a given transaction.
    *
    * @param txId a transaction ID
    * @return {@link TransactionState}
+   * @throws TransactionException if getting the state of a given transaction failed
    */
-  TransactionState getState(String txId);
+  TransactionState getState(String txId) throws TransactionException;
 
   /**
    * Closes connections to the cluster. The connections are shared among multiple services such as
