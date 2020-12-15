@@ -51,17 +51,17 @@ Then, download the scalar schema standalone loader that matches with the version
 
 For Cassandra
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
 ```
 
 For Cosmos DB
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
 ```
 
 For DynamoDB
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
+$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
 
 ## Store & retrieve data with storage service
@@ -162,22 +162,22 @@ Before reapplying the schema, please drop the existing namespace first by issuin
 For Cassandra
 
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -D
+$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
 ```
 
 For Cosmos DB
 
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
-$ java -jar scalar-schema-standalone-<vesrion>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
 ```
 
 For DynamoDB
 
 ```
-$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
-$ java -jar scalar-schema-standalone-<vesrion>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
+$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
+$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
 ```
 
 ## Store & retrieve data with transaction service
