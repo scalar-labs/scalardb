@@ -24,6 +24,12 @@ public class TransactionModule extends AbstractModule {
     bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
   }
 
+  @Singleton
+  @Provides
+  DatabaseConfig provideDatabaseConfig() {
+    return config;
+  }
+
   @Provides
   Cassandra provideCassandra() {
     return new Cassandra(config);
