@@ -15,6 +15,8 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.io.Key;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,23 +68,27 @@ public class CrudHandler {
     }
 
     List<Snapshot.Key> keys = new ArrayList<>();
-    for (Result r : getFromStorage(scan)) {
-      TransactionResult result = new TransactionResult(r);
-      if (!result.isCommitted()) {
-        throw new UncommittedRecordException(result, "the record needs recovery");
-      }
+    try (Scanner scanner = getFromStorage(scan)) {
+      for (Result r : scanner) {
+        TransactionResult result = new TransactionResult(r);
+        if (!result.isCommitted()) {
+          throw new UncommittedRecordException(result, "the record needs recovery");
+        }
 
-      Snapshot.Key key =
+        Snapshot.Key key =
           getSnapshotKey(r, scan)
-              .orElseThrow(() -> new CrudRuntimeException("can't get a snapshot key"));
+            .orElseThrow(() -> new CrudRuntimeException("can't get a snapshot key"));
 
-      if (snapshot.get(key).isPresent()) {
-        result = snapshot.get(key).get();
+        if (snapshot.get(key).isPresent()) {
+          result = snapshot.get(key).get();
+        }
+
+        snapshot.put(key, Optional.of(result));
+        keys.add(key);
+        results.add(result);
       }
-
-      snapshot.put(key, Optional.of(result));
-      keys.add(key);
-      results.add(result);
+    } catch (IOException e) {
+      throw new CrudException("Failed to close the scanner", e);
     }
     snapshot.put(scan, Optional.of(keys));
 

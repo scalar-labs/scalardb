@@ -8,6 +8,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.storage.jdbc.JDBC;
 
 public class StorageModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -34,5 +35,10 @@ public class StorageModule extends AbstractModule {
   @Provides
   Dynamo provideDynamo() {
     return new Dynamo(config);
+  }
+
+  @Provides
+  JDBC provideJDBC() {
+    return new JDBC(config);
   }
 }

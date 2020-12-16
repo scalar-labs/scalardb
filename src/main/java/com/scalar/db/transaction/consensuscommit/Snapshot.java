@@ -12,9 +12,13 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
+
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -189,13 +193,17 @@ public class Snapshot {
     Set<Key> validatedReadSetByScan = new HashSet<>();
     for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
       Set<TransactionResult> currentReadSetByScan = new HashSet<>();
-      for (Result result : storage.scan(entry.getKey())) {
-        TransactionResult transactionResult = new TransactionResult(result);
-        // Ignore records that this transaction has prepared (and that are in the write set)
-        if (transactionResult.getId().equals(id)) {
-          continue;
+      try (Scanner scanner = storage.scan(entry.getKey())) {
+        for (Result result : scanner) {
+          TransactionResult transactionResult = new TransactionResult(result);
+          // Ignore records that this transaction has prepared (and that are in the write set)
+          if (transactionResult.getId().equals(id)) {
+            continue;
+          }
+          currentReadSetByScan.add(transactionResult);
         }
-        currentReadSetByScan.add(transactionResult);
+      } catch (IOException e) {
+        throw new ExecutionException("Failed to close the scanner", e);
       }
 
       for (Key key : entry.getValue().get()) {
