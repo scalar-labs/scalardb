@@ -5,9 +5,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -27,6 +29,8 @@ public class DatabaseConfig {
   private String password;
   private Class<? extends DistributedStorage> storageClass;
   private Optional<String> namespacePrefix;
+  private Isolation isolation = Isolation.SNAPSHOT;
+  private SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
@@ -34,6 +38,10 @@ public class DatabaseConfig {
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
+  public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+  public static final String CONSENSUSCOMMIT_PREFIX = PREFIX + "consensuscommit.";
+  public static final String SERIALIZABLE_STRATEGY =
+      CONSENSUSCOMMIT_PREFIX + "serializable_strategy";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -88,6 +96,15 @@ public class DatabaseConfig {
     } else {
       namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
     }
+
+    if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
+      isolation = Isolation.valueOf(props.getProperty(ISOLATION_LEVEL).toUpperCase());
+    }
+
+    if (!Strings.isNullOrEmpty(props.getProperty(SERIALIZABLE_STRATEGY))) {
+      strategy =
+          SerializableStrategy.valueOf(props.getProperty(SERIALIZABLE_STRATEGY).toUpperCase());
+    }
   }
 
   public List<String> getContactPoints() {
@@ -112,5 +129,13 @@ public class DatabaseConfig {
 
   public Optional<String> getNamespacePrefix() {
     return namespacePrefix;
+  }
+
+  public Isolation getIsolation() {
+    return isolation;
+  }
+
+  public com.scalar.db.api.SerializableStrategy getSerializableStrategy() {
+    return strategy;
   }
 }

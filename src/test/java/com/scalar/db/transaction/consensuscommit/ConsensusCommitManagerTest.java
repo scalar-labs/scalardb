@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import org.mockito.MockitoAnnotations;
 public class ConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
   @Mock private DistributedStorage storage;
+  @Mock private DatabaseConfig config;
   @Mock private Coordinator coordinator;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
@@ -28,6 +30,9 @@ public class ConsensusCommitManagerTest {
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
+
+    when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
+    when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
   }
 
   @Test

@@ -9,15 +9,20 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ConsensusCommitManager implements DistributedTransactionManager {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
+  private final DatabaseConfig config;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
@@ -25,8 +30,9 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private Optional<String> tableName;
 
   @Inject
-  public ConsensusCommitManager(DistributedStorage storage) {
+  public ConsensusCommitManager(DistributedStorage storage, DatabaseConfig config) {
     this.storage = storage;
+    this.config = config;
     this.coordinator = new Coordinator(storage);
     this.recovery = new RecoveryHandler(storage, coordinator);
     this.commit = new CommitHandler(storage, coordinator, recovery);
@@ -37,10 +43,12 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   @VisibleForTesting
   ConsensusCommitManager(
       DistributedStorage storage,
+      DatabaseConfig config,
       Coordinator coordinator,
       RecoveryHandler recovery,
       CommitHandler commit) {
     this.storage = storage;
+    this.config = config;
     this.coordinator = coordinator;
     this.recovery = recovery;
     this.commit = commit;
@@ -76,24 +84,27 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
 
   @Override
   public ConsensusCommit start() {
-    return start(Isolation.SNAPSHOT);
+    return start(config.getIsolation(), config.getSerializableStrategy());
   }
 
   @Override
   public ConsensusCommit start(String txId) {
-    return start(txId, Isolation.SNAPSHOT);
+    return start(txId, config.getIsolation(), config.getSerializableStrategy());
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(Isolation isolation) {
-    return start(isolation, SerializableStrategy.EXTRA_WRITE);
+    return start(isolation, config.getSerializableStrategy());
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(String txId, Isolation isolation) {
-    return start(txId, isolation, SerializableStrategy.EXTRA_WRITE);
+    return start(txId, isolation, config.getSerializableStrategy());
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(
       Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
@@ -101,12 +112,14 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     return start(txId, isolation, strategy);
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
     String txId = UUID.randomUUID().toString();
     return start(txId, Isolation.SERIALIZABLE, strategy);
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(
       String txId, com.scalar.db.api.SerializableStrategy strategy) {
@@ -118,6 +131,12 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
       String txId, Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
     checkArgument(!Strings.isNullOrEmpty(txId));
     checkArgument(isolation != null);
+    if (!config.getIsolation().equals(isolation)
+        || !config.getSerializableStrategy().equals(strategy)) {
+      LOGGER.warn(
+          "Setting different isolation level or serializable strategy from the ones"
+              + "in DatabaseConfig might cause unexpected anomalies.");
+    }
     Snapshot snapshot = new Snapshot(txId, isolation, (SerializableStrategy) strategy);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
