@@ -10,6 +10,7 @@ import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
+import com.scalar.db.storage.jdbc.JDBC;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,7 +23,7 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class DatabaseConfig {
-  private final Properties props;
+  protected final Properties props;
   private List<String> contactPoints;
   private int contactPort;
   private String username;
@@ -58,7 +59,7 @@ public class DatabaseConfig {
     load();
   }
 
-  private void load() {
+  protected void load() {
     checkNotNull(props.getProperty(CONTACT_POINTS));
     checkNotNull(props.getProperty(USERNAME));
     checkNotNull(props.getProperty(PASSWORD));
@@ -85,6 +86,9 @@ public class DatabaseConfig {
           break;
         case "dynamo":
           storageClass = Dynamo.class;
+          break;
+        case "jdbc":
+          storageClass = JDBC.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
