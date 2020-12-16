@@ -10,7 +10,7 @@ Scalar DB is written in Java. So the following software is required to run it.
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
 
-## Cosmos DB setup
+### Cosmos DB setup
 You also need to set up a Cosmos DB account to get started with Scalar DB on Cosmos DB.
 
 This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) with Azure portal.
