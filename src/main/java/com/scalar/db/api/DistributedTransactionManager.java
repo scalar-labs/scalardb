@@ -37,6 +37,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(Isolation isolation);
 
   /**
@@ -48,6 +49,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(String txId, Isolation isolation);
 
   /**
@@ -59,6 +61,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(Isolation isolation, SerializableStrategy strategy);
 
   /**
@@ -68,6 +71,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(SerializableStrategy strategy);
 
   /**
@@ -80,6 +84,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(String txId, SerializableStrategy strategy);
 
   /**
@@ -93,6 +98,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    */
+  @Deprecated
   DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy);
 
   /**
