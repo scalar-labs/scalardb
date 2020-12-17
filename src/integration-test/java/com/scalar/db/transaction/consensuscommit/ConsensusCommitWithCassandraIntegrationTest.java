@@ -22,6 +22,7 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   private static final String PASSWORD = "cassandra";
   private static final String CONTACT_POINT = "localhost";
   private DistributedStorage storage;
+  private DatabaseConfig config;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
   private CommitHandler commit;
@@ -34,11 +35,12 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
     props.setProperty(DatabaseConfig.USERNAME, USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
-    storage = spy(new Cassandra(new DatabaseConfig(props)));
+    config = new DatabaseConfig(props);
+    storage = spy(new Cassandra(config));
     coordinator = spy(new Coordinator(storage));
     recovery = spy(new RecoveryHandler(storage, coordinator));
     commit = spy(new CommitHandler(storage, coordinator, recovery));
-    manager = new ConsensusCommitManager(storage, coordinator, recovery, commit);
+    manager = new ConsensusCommitManager(storage, config, coordinator, recovery, commit);
 
     test = new ConsensusCommitIntegrationTest(manager, storage, coordinator, recovery);
     test.setUp();
