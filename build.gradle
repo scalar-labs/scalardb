@@ -91,7 +91,7 @@ targetCompatibility = 1.8
 
 group = "com.scalar-labs"
 archivesBaseName = "scalardb"
-//version = "2.3.0"
+//version = "2.4.0"
 
 // for archiving and uploading to maven central
 //apply from: 'archive.gradle'
