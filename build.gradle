@@ -13,7 +13,9 @@ sourceSets {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/java/com/scalar/db/storage/cassandra')
+            srcDir file('src/integration-test/java')
+            exclude '**/com/scalar/db/storage/cosmos/CosmosIntegrationTest.java'
+            exclude '**/com/scalar/db/storage/dynamo/DynamoIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
