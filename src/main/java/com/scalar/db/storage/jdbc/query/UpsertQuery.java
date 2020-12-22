@@ -2,28 +2,27 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.RDBType;
-import com.scalar.db.storage.jdbc.Table;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
-import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Optional;
 
 public interface UpsertQuery extends Query {
 
   class Builder {
-    private final RDBType rdbType;
-    final Table table;
+    private final RdbEngine rdbEngine;
+    final String fullTableName;
     Key partitionKey;
-    @Nullable Key clusteringKey;
+    Optional<Key> clusteringKey;
     Map<String, Value> values;
 
-    Builder(RDBType rdbType, Table table) {
-      this.rdbType = rdbType;
-      this.table = table;
+    Builder(RdbEngine rdbEngine, String fullTableName) {
+      this.rdbEngine = rdbEngine;
+      this.fullTableName = fullTableName;
     }
 
     public Builder values(
-        Key partitionKey, @Nullable Key clusteringKey, Map<String, Value> values) {
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.values = values;
@@ -31,21 +30,17 @@ public interface UpsertQuery extends Query {
     }
 
     public UpsertQuery build() {
-      if (table == null || partitionKey == null) {
-        throw new IllegalStateException("table or partitionKey is null.");
-      }
-
-      switch (rdbType) {
-        case MYSQL:
+      switch (rdbEngine) {
+        case MY_SQL:
           return new InsertOnDuplicateKeyUpdateQuery(this);
-        case POSTGRESQL:
+        case POSTGRE_SQL:
           return new InsertOnConflictDoUpdateQuery(this);
         case ORACLE:
           return new MergeIntoQuery(this);
-        case SQLSERVER:
+        case SQL_SERVER:
           return new MergeQuery(this);
         default:
-          throw new AssertionError("invalid rdb type: " + rdbType);
+          throw new AssertionError("invalid rdb type: " + rdbEngine);
       }
     }
   }

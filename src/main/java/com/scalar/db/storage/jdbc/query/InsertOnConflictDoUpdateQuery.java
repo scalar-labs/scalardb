@@ -2,25 +2,24 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.Table;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements UpsertQuery {
 
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
+  private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
 
   InsertOnConflictDoUpdateQuery(Builder builder) {
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -28,23 +27,21 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
 
   protected String sql() {
     return "INSERT INTO "
-        + table
+        + fullTableName
         + " "
-        + makeValuesSQLString()
+        + makeValuesSqlString()
         + " "
-        + makeOnConflictDoUpdateSQLString();
+        + makeOnConflictDoUpdateSqlString();
   }
 
-  private String makeValuesSQLString() {
+  private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
     for (Value value : partitionKey) {
       names.add(value.getName());
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        names.add(value.getName());
-      }
-    }
+
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> names.add(v.getName())));
+
     names.addAll(values.keySet());
 
     return "("
@@ -54,16 +51,13 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
         + ")";
   }
 
-  private String makeOnConflictDoUpdateSQLString() {
+  private String makeOnConflictDoUpdateSqlString() {
     List<String> primaryKeys = new ArrayList<>();
     for (Value value : partitionKey) {
       primaryKeys.add(value.getName());
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        primaryKeys.add(value.getName());
-      }
-    }
+
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> primaryKeys.add(v.getName())));
 
     return "ON CONFLICT ("
         + String.join(",", primaryKeys)
@@ -80,8 +74,8 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

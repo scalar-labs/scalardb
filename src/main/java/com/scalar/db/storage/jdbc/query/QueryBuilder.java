@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc.query;
 
-import com.scalar.db.storage.jdbc.RDBType;
-import com.scalar.db.storage.jdbc.Table;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
 import java.util.List;
@@ -15,30 +14,30 @@ import java.util.Objects;
 public final class QueryBuilder {
 
   private final TableMetadataManager tableMetadataManager;
-  private final RDBType rdbType;
+  private final RdbEngine rdbEngine;
 
-  public QueryBuilder(TableMetadataManager tableMetadataManager, RDBType rdbType) {
+  public QueryBuilder(TableMetadataManager tableMetadataManager, RdbEngine rdbEngine) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
-    this.rdbType = Objects.requireNonNull(rdbType);
+    this.rdbEngine = Objects.requireNonNull(rdbEngine);
   }
 
   public SelectQuery.Builder select(List<String> projections) {
-    return new SelectQuery.Builder(tableMetadataManager, rdbType, projections);
+    return new SelectQuery.Builder(tableMetadataManager, rdbEngine, projections);
   }
 
-  public InsertQuery.Builder insertInto(Table table) {
-    return new InsertQuery.Builder(table);
+  public InsertQuery.Builder insertInto(String fullTableName) {
+    return new InsertQuery.Builder(fullTableName);
   }
 
-  public UpdateQuery.Builder update(Table table) {
-    return new UpdateQuery.Builder(table);
+  public UpdateQuery.Builder update(String fullTableName) {
+    return new UpdateQuery.Builder(fullTableName);
   }
 
-  public DeleteQuery.Builder deleteFrom(Table table) {
-    return new DeleteQuery.Builder(table);
+  public DeleteQuery.Builder deleteFrom(String fullTableName) {
+    return new DeleteQuery.Builder(fullTableName);
   }
 
-  public UpsertQuery.Builder upsertInto(Table table) {
-    return new UpsertQuery.Builder(rdbType, table);
+  public UpsertQuery.Builder upsertInto(String fullTableName) {
+    return new UpsertQuery.Builder(rdbEngine, fullTableName);
   }
 }

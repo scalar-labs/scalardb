@@ -12,6 +12,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.storage.jdbc.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -28,6 +29,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +38,10 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class JDBCServiceTest {
+public class JdbcServiceTest {
+
+  private static final Optional<String> NAMESPACE = Optional.of("s1");
+  private static final Optional<String> TABLE_NAME = Optional.of("t1");
 
   @Mock private OperationChecker operationChecker;
   @Mock private QueryBuilder queryBuilder;
@@ -57,12 +62,12 @@ public class JDBCServiceTest {
   @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
 
-  private JDBCService jdbcService;
+  private JdbcService jdbcService;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
-    jdbcService = new JDBCService(operationChecker, queryBuilder, "");
+    jdbcService = new JdbcService(operationChecker, queryBuilder, Optional.empty());
   }
 
   @Test
@@ -79,10 +84,10 @@ public class JDBCServiceTest {
 
     // Act
     Get get = new Get(new Key(new TextValue("p1", "val")));
-    jdbcService.get(get, connection, "s1", "t1");
+    jdbcService.get(get, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
-    verify(operationChecker).checkGet(any(), any(), any(), any());
+    verify(operationChecker).check(any(Get.class));
     verify(queryBuilder).select(any());
   }
 
@@ -105,10 +110,10 @@ public class JDBCServiceTest {
 
     // Act
     Scan scan = new Scan(new Key(new TextValue("p1", "val")));
-    jdbcService.scan(scan, connection, "s1", "t1");
+    jdbcService.scan(scan, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
-    verify(operationChecker).checkScan(any(), any(), any(), any(), any(), anyInt(), any());
+    verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
   }
 
@@ -123,11 +128,11 @@ public class JDBCServiceTest {
 
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkPut(any(), any(), any(), any(), any());
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).upsertInto(any());
   }
 
@@ -150,11 +155,11 @@ public class JDBCServiceTest {
                 new PutIf(
                     new ConditionalExpression(
                         "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)));
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkPut(any(), any(), any(), any(), any());
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any());
   }
 
@@ -176,7 +181,7 @@ public class JDBCServiceTest {
                 new PutIf(
                     new ConditionalExpression(
                         "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)));
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isFalse();
@@ -199,11 +204,11 @@ public class JDBCServiceTest {
         new Put(new Key(new TextValue("p1", "val1")))
             .withValue(new TextValue("v1", "val2"))
             .withCondition(new PutIfExists());
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkPut(any(), any(), any(), any(), any());
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any());
   }
 
@@ -222,7 +227,7 @@ public class JDBCServiceTest {
         new Put(new Key(new TextValue("p1", "val1")))
             .withValue(new TextValue("v1", "val2"))
             .withCondition(new PutIfExists());
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isFalse();
@@ -243,11 +248,11 @@ public class JDBCServiceTest {
         new Put(new Key(new TextValue("p1", "val1")))
             .withValue(new TextValue("v1", "val2"))
             .withCondition(new PutIfNotExists());
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkPut(any(), any(), any(), any(), any());
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).insertInto(any());
   }
 
@@ -267,7 +272,7 @@ public class JDBCServiceTest {
         new Put(new Key(new TextValue("p1", "val1")))
             .withValue(new TextValue("v1", "val2"))
             .withCondition(new PutIfNotExists());
-    boolean ret = jdbcService.put(put, connection, "s1", "t1");
+    boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isFalse();
@@ -284,11 +289,11 @@ public class JDBCServiceTest {
 
     // Act
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    boolean ret = jdbcService.delete(delete, connection, "s1", "t1");
+    boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkDelete(any(), any(), any(), any());
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any());
   }
 
@@ -310,11 +315,11 @@ public class JDBCServiceTest {
                 new DeleteIf(
                     new ConditionalExpression(
                         "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)));
-    boolean ret = jdbcService.delete(delete, connection, "s1", "t1");
+    boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkDelete(any(), any(), any(), any());
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any());
   }
 
@@ -334,7 +339,7 @@ public class JDBCServiceTest {
                 new DeleteIf(
                     new ConditionalExpression(
                         "v1", new TextValue("val2"), ConditionalExpression.Operator.EQ)));
-    boolean ret = jdbcService.delete(delete, connection, "s1", "t1");
+    boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isFalse();
@@ -354,11 +359,11 @@ public class JDBCServiceTest {
     // Act
     Delete delete =
         new Delete(new Key(new TextValue("p1", "val1"))).withCondition(new DeleteIfExists());
-    boolean ret = jdbcService.delete(delete, connection, "s1", "t1");
+    boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkDelete(any(), any(), any(), any());
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any());
   }
 
@@ -375,7 +380,7 @@ public class JDBCServiceTest {
     // Act
     Delete delete =
         new Delete(new Key(new TextValue("p1", "val1"))).withCondition(new DeleteIfExists());
-    boolean ret = jdbcService.delete(delete, connection, "s1", "t1");
+    boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isFalse();
@@ -398,13 +403,13 @@ public class JDBCServiceTest {
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection, "s1", "t1");
+    boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).checkPut(any(), any(), any(), any(), any());
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).upsertInto(any());
-    verify(operationChecker).checkDelete(any(), any(), any(), any());
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any());
   }
 }

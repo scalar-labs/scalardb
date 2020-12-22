@@ -3,36 +3,36 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.Table;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 public class DeleteQuery extends AbstractQuery {
 
   public static class Builder {
-    private final Table table;
+    private final String fullTableName;
     private Key partitionKey;
-    @Nullable private Key clusteringKey;
-    @Nullable private List<ConditionalExpression> otherConditions;
+    private Optional<Key> clusteringKey;
+    private List<ConditionalExpression> otherConditions;
 
-    Builder(Table table) {
-      this.table = table;
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
     }
 
-    public Builder where(Key partitionKey, @Nullable Key clusteringKey) {
-      return where(partitionKey, clusteringKey, null);
+    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
+      return where(partitionKey, clusteringKey, Collections.emptyList());
     }
 
     public Builder where(
         Key partitionKey,
-        @Nullable Key clusteringKey,
-        @Nullable List<ConditionalExpression> otherConditions) {
+        Optional<Key> clusteringKey,
+        List<ConditionalExpression> otherConditions) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.otherConditions = otherConditions;
@@ -40,41 +40,34 @@ public class DeleteQuery extends AbstractQuery {
     }
 
     public DeleteQuery build() {
-      if (table == null || partitionKey == null) {
-        throw new IllegalStateException("table or partitionKey is null.");
-      }
       return new DeleteQuery(this);
     }
   }
 
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
-  @Nullable private final List<ConditionalExpression> otherConditions;
+  private final Optional<Key> clusteringKey;
+  private final List<ConditionalExpression> otherConditions;
 
   private DeleteQuery(Builder builder) {
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     otherConditions = builder.otherConditions;
   }
 
   protected String sql() {
-    return "DELETE FROM " + table + " WHERE " + conditionSQLString();
+    return "DELETE FROM " + fullTableName + " WHERE " + conditionSqlString();
   }
 
-  private String conditionSQLString() {
+  private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
 
     for (Value value : partitionKey) {
       conditions.add(value.getName() + "=?");
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        conditions.add(value.getName() + "=?");
-      }
-    }
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
 
     if (otherConditions != null) {
       for (ConditionalExpression condition : otherConditions) {
@@ -94,14 +87,14 @@ public class DeleteQuery extends AbstractQuery {
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    if (otherConditions != null) {
+    if (!otherConditions.isEmpty()) {
       for (ConditionalExpression condition : otherConditions) {
         condition.getValue().accept(binder);
         binder.throwSQLExceptionIfOccurred();

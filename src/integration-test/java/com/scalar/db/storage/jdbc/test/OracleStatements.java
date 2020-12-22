@@ -5,11 +5,12 @@ import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class OracleStatements extends AbstractStatements {
-  public OracleStatements(StatementsStrategy strategy) {
-    super(strategy);
+  public OracleStatements(BaseStatements baseStatements) {
+    super(baseStatements);
   }
 
   private List<String> createSchema(String schema) {
@@ -23,12 +24,12 @@ public class OracleStatements extends AbstractStatements {
   }
 
   @Override
-  public List<String> createMetadataSchemaStatements(String schemaPrefix) {
+  public List<String> createMetadataSchemaStatements(Optional<String> schemaPrefix) {
     return createSchema(TableMetadataManager.getSchema(schemaPrefix));
   }
 
   @Override
-  public List<String> insertMetadataStatements(String schemaPrefix) {
+  public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
     return super.insertMetadataStatements(schemaPrefix).stream()
         .map(s -> s.replace("true", "1"))
         .map(s -> s.replace("false", "0"))
@@ -36,32 +37,32 @@ public class OracleStatements extends AbstractStatements {
   }
 
   @Override
-  public List<String> dropMetadataSchemaStatements(String schemaPrefix) {
+  public List<String> dropMetadataSchemaStatements(Optional<String> schemaPrefix) {
     return dropSchema(TableMetadataManager.getSchema(schemaPrefix));
   }
 
   @Override
-  public List<String> createMetadataTableStatements(String schemaPrefix) {
+  public List<String> createMetadataTableStatements(Optional<String> schemaPrefix) {
     return convertCreateTableStatements(super.createMetadataTableStatements(schemaPrefix));
   }
 
   @Override
-  public List<String> createDataSchemaStatements(String schemaPrefix) {
-    return dataSchemas(schemaPrefix).stream()
+  public List<String> createSchemaStatements(Optional<String> schemaPrefix) {
+    return schemas(schemaPrefix).stream()
         .flatMap(s -> createSchema(s).stream())
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> dropDataSchemaStatements(String schemaPrefix) {
-    return dataSchemas(schemaPrefix).stream()
+  public List<String> dropSchemaStatements(Optional<String> schemaPrefix) {
+    return schemas(schemaPrefix).stream()
         .flatMap(s -> dropSchema(s).stream())
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> createDataTableStatements(String schemaPrefix) {
-    return convertCreateTableStatements(super.createDataTableStatements(schemaPrefix));
+  public List<String> createTableStatements(Optional<String> schemaPrefix) {
+    return convertCreateTableStatements(super.createTableStatements(schemaPrefix));
   }
 
   private List<String> convertCreateTableStatements(List<String> statements) {

@@ -9,7 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
-import com.scalar.db.storage.jdbc.JDBC;
+import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 
 public class TransactionModule extends AbstractModule {
@@ -47,7 +47,7 @@ public class TransactionModule extends AbstractModule {
   }
 
   @Provides
-  JDBC provideJDBC() {
-    return new JDBC(config);
+  JdbcDatabase provideJdbc() {
+    return new JdbcDatabase(config);
   }
 }

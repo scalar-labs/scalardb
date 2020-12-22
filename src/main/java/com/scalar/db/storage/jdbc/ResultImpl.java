@@ -12,7 +12,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.TableMetadata;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 
 import javax.annotation.concurrent.Immutable;
 import java.sql.ResultSet;
@@ -28,10 +28,10 @@ import java.util.Optional;
 @Immutable
 public class ResultImpl implements Result {
 
-  private final TableMetadata tableMetadata;
+  private final JdbcTableMetadata tableMetadata;
   private final Map<String, Value> values;
 
-  public ResultImpl(TableMetadata tableMetadata, List<String> projections, ResultSet resultSet)
+  public ResultImpl(JdbcTableMetadata tableMetadata, List<String> projections, ResultSet resultSet)
       throws SQLException {
     this.tableMetadata = tableMetadata;
 
@@ -47,31 +47,24 @@ public class ResultImpl implements Result {
     }
   }
 
-  private Value getValue(TableMetadata tableMetadata, String name, ResultSet resultSet)
+  private Value getValue(JdbcTableMetadata tableMetadata, String name, ResultSet resultSet)
       throws SQLException {
     DataType dataType = tableMetadata.getDataType(name);
     switch (dataType) {
       case BOOLEAN:
         return new BooleanValue(name, resultSet.getBoolean(name));
-
       case INT:
         return new IntValue(name, resultSet.getInt(name));
-
       case BIGINT:
         return new BigIntValue(name, resultSet.getLong(name));
-
       case FLOAT:
         return new FloatValue(name, resultSet.getFloat(name));
-
       case DOUBLE:
         return new DoubleValue(name, resultSet.getDouble(name));
-
       case TEXT:
         return new TextValue(name, resultSet.getString(name));
-
       case BLOB:
         return new BlobValue(name, resultSet.getBytes(name));
-
       default:
         throw new AssertionError();
     }

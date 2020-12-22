@@ -6,10 +6,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.RDBType;
-import com.scalar.db.storage.jdbc.Table;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.TableMetadata;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,12 +20,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 public class QueryBuilderTest {
+
+  private static final String TABLE_FULL_NAME = "s1.t1";
 
   @Mock private TableMetadataManager tableMetadataManager;
 
@@ -35,9 +37,9 @@ public class QueryBuilderTest {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata
-    TableMetadata dummyTableMetadata =
-        new TableMetadata(
-            new Table("s1", "t1"),
+    JdbcTableMetadata dummyTableMetadata =
+        new JdbcTableMetadata(
+            TABLE_FULL_NAME,
             new HashMap<String, DataType>() {
               {
                 put("p1", DataType.TEXT);
@@ -59,18 +61,18 @@ public class QueryBuilderTest {
             },
             new HashSet<>());
 
-    when(tableMetadataManager.getTableMetadata(any())).thenReturn(dummyTableMetadata);
+    when(tableMetadataManager.getTableMetadata(any(String.class))).thenReturn(dummyTableMetadata);
   }
 
   @Test
   public void simpleSelectQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
-                .where(new Key(new TextValue("p1", "aaa")), null)
+                .from(TABLE_FULL_NAME)
+                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=?");
@@ -78,8 +80,10 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(new Table("s1", "t1"))
-                .where(new Key(new TextValue("p1", "aaa"), new TextValue("p2", "bbb")), null)
+                .from(TABLE_FULL_NAME)
+                .where(
+                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "bbb")),
+                    Optional.empty())
                 .build()
                 .toString())
         .isEqualTo("SELECT * FROM s1.t1 WHERE p1=? AND p2=?");
@@ -87,8 +91,10 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
-                .where(new Key(new TextValue("p1", "aaa")), new Key(new TextValue("c1", "aaa")))
+                .from(TABLE_FULL_NAME)
+                .where(
+                    new Key(new TextValue("p1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))))
                 .build()
                 .toString())
         .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1=?");
@@ -96,10 +102,10 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb")))
+                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb"))))
                 .build()
                 .toString())
         .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1=? AND c2=?");
@@ -107,12 +113,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .build()
                 .toString())
@@ -122,12 +128,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     false,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     false)
                 .build()
                 .toString())
@@ -136,12 +142,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa"), new TextValue("c2", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb"))),
                     false)
                 .build()
                 .toString())
@@ -152,12 +158,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .orderBy(
                     Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
@@ -169,12 +175,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .orderBy(
                     Arrays.asList(
@@ -188,12 +194,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .orderBy(
                     Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
@@ -205,12 +211,12 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .orderBy(
                     Arrays.asList(
@@ -224,16 +230,16 @@ public class QueryBuilderTest {
 
   @Test
   public void selectQueryWithLimitForMySQLAndPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .limit(10)
                 .build()
@@ -245,16 +251,16 @@ public class QueryBuilderTest {
 
   @Test
   public void selectQueryWithLimitForOracleTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.ORACLE);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.ORACLE);
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .limit(10)
                 .build()
@@ -266,16 +272,16 @@ public class QueryBuilderTest {
 
   @Test
   public void selectQueryWithLimitForSQLServerTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.SQLSERVER);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.SQL_SERVER);
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(new Table("s1", "t1"))
+                .from(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "aaa"))),
                     true,
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     true)
                 .limit(10)
                 .build()
@@ -287,7 +293,7 @@ public class QueryBuilderTest {
 
   @Test
   public void insertQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -296,18 +302,18 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .insertInto(new Table("s1", "t1"))
-                .values(new Key(new TextValue("p1", "aaa")), null, values)
+                .insertInto(TABLE_FULL_NAME)
+                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo("INSERT INTO s1.t1 (p1,v1,v2,v3) VALUES(?,?,?,?)");
 
     assertThat(
             queryBuilder
-                .insertInto(new Table("s1", "t1"))
+                .insertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
@@ -317,10 +323,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .insertInto(new Table("s1", "t1"))
+                .insertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
                 .build()
                 .toString())
@@ -329,7 +335,7 @@ public class QueryBuilderTest {
 
   @Test
   public void updateQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -338,40 +344,42 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .update(new Table("s1", "t1"))
+                .update(TABLE_FULL_NAME)
                 .set(values)
-                .where(new Key(new TextValue("p1", "aaa")), null)
+                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=?");
 
     assertThat(
             queryBuilder
-                .update(new Table("s1", "t1"))
+                .update(TABLE_FULL_NAME)
                 .set(values)
-                .where(new Key(new TextValue("p1", "aaa")), new Key(new TextValue("c1", "bbb")))
+                .where(
+                    new Key(new TextValue("p1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))))
                 .build()
                 .toString())
         .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?");
 
     assertThat(
             queryBuilder
-                .update(new Table("s1", "t1"))
+                .update(TABLE_FULL_NAME)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")))
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
                 .build()
                 .toString())
         .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?");
 
     assertThat(
             queryBuilder
-                .update(new Table("s1", "t1"))
+                .update(TABLE_FULL_NAME)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     Collections.singletonList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
@@ -380,11 +388,11 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .update(new Table("s1", "t1"))
+                .update(TABLE_FULL_NAME)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     Arrays.asList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
                         new ConditionalExpression("v2", new TextValue("ddd"), Operator.GT),
@@ -397,40 +405,42 @@ public class QueryBuilderTest {
 
   @Test
   public void deleteQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
 
     assertThat(
             queryBuilder
-                .deleteFrom(new Table("s1", "t1"))
-                .where(new Key(new TextValue("p1", "aaa")), null)
+                .deleteFrom(TABLE_FULL_NAME)
+                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo("DELETE FROM s1.t1 WHERE p1=?");
 
     assertThat(
             queryBuilder
-                .deleteFrom(new Table("s1", "t1"))
-                .where(new Key(new TextValue("p1", "aaa")), new Key(new TextValue("c1", "bbb")))
+                .deleteFrom(TABLE_FULL_NAME)
+                .where(
+                    new Key(new TextValue("p1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))))
                 .build()
                 .toString())
         .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND c1=?");
 
     assertThat(
             queryBuilder
-                .deleteFrom(new Table("s1", "t1"))
+                .deleteFrom(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")))
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
                 .build()
                 .toString())
         .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?");
 
     assertThat(
             queryBuilder
-                .deleteFrom(new Table("s1", "t1"))
+                .deleteFrom(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     Collections.singletonList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
@@ -439,10 +449,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .deleteFrom(new Table("s1", "t1"))
+                .deleteFrom(TABLE_FULL_NAME)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     Arrays.asList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
                         new ConditionalExpression("v2", new TextValue("ddd"), Operator.GTE),
@@ -454,7 +464,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryForMySQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.MYSQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -463,8 +473,8 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
-                .values(new Key(new TextValue("p1", "aaa")), null, values)
+                .upsertInto(TABLE_FULL_NAME)
+                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo(
@@ -473,10 +483,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
@@ -488,10 +498,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
                 .build()
                 .toString())
@@ -502,7 +512,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryForPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.POSTGRESQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.POSTGRE_SQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -511,8 +521,8 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
-                .values(new Key(new TextValue("p1", "aaa")), null, values)
+                .upsertInto(TABLE_FULL_NAME)
+                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo(
@@ -521,10 +531,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
@@ -536,10 +546,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
                 .build()
                 .toString())
@@ -550,7 +560,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryForOracleAndSQLServerTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RDBType.ORACLE);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.ORACLE);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -559,8 +569,8 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
-                .values(new Key(new TextValue("p1", "aaa")), null, values)
+                .upsertInto(TABLE_FULL_NAME)
+                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo(
@@ -570,10 +580,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
-                    new Key(new TextValue("c1", "bbb")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
@@ -586,10 +596,10 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .upsertInto(new Table("s1", "t1"))
+                .upsertInto(TABLE_FULL_NAME)
                 .values(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
                 .build()
                 .toString())

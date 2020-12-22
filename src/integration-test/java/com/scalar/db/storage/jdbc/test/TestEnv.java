@@ -1,8 +1,8 @@
 package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JDBCUtils;
-import com.scalar.db.storage.jdbc.RDBType;
+import com.scalar.db.storage.jdbc.JdbcUtils;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import javax.sql.DataSource;
@@ -12,59 +12,59 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 public class TestEnv implements Closeable {
-  public static final RDBInfo MYSQL_RDB_INFO =
-      new RDBInfo("jdbc:mysql://localhost:3306/", "root", "mysql");
-  public static final RDBInfo POSTGRESQL_RDB_INFO =
-      new RDBInfo("jdbc:postgresql://localhost:5432/", "postgres", "postgres");
-  public static final RDBInfo ORACLE_RDB_INFO =
-      new RDBInfo("jdbc:oracle:thin:@localhost:1521/ORACLE", "SYSTEM", "Oracle19");
-  public static final RDBInfo SQLSERVER_RDB_INFO =
-      new RDBInfo("jdbc:sqlserver://localhost:1433", "SA", "P@ssw0rd!");
+  public static final JdbcConnectionInfo MY_SQL_INFO =
+      new JdbcConnectionInfo("jdbc:mysql://localhost:3306/", "root", "mysql");
+  public static final JdbcConnectionInfo POSTGRE_SQL_INFO =
+      new JdbcConnectionInfo("jdbc:postgresql://localhost:5432/", "postgres", "postgres");
+  public static final JdbcConnectionInfo ORACLE_INFO =
+      new JdbcConnectionInfo("jdbc:oracle:thin:@localhost:1521/ORACLE", "SYSTEM", "Oracle19");
+  public static final JdbcConnectionInfo SQL_SERVER_INFO =
+      new JdbcConnectionInfo("jdbc:sqlserver://localhost:1433", "SA", "P@ssw0rd!");
 
-  private final RDBInfo rdbInfo;
-  private final String schemaPrefix;
+  private final JdbcConnectionInfo jdbcConnectionInfo;
+  private final Optional<String> schemaPrefix;
   private final Statements statements;
   private final BasicDataSource dataSource;
 
-  public TestEnv(RDBInfo rdbInfo, StatementsStrategy strategy) {
-    this(rdbInfo, strategy, "");
-  }
-
-  public TestEnv(RDBInfo rdbInfo, StatementsStrategy strategy, String schemaPrefix) {
-    this.rdbInfo = rdbInfo;
+  public TestEnv(
+      JdbcConnectionInfo jdbcConnectionInfo,
+      BaseStatements baseStatements,
+      Optional<String> schemaPrefix) {
+    this.jdbcConnectionInfo = jdbcConnectionInfo;
     this.schemaPrefix = schemaPrefix;
 
-    RDBType rdbType = JDBCUtils.getRDBType(rdbInfo.jdbcJrl);
-    switch (rdbType) {
-      case MYSQL:
-        statements = new MySQLStatements(strategy);
+    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
+    switch (rdbEngine) {
+      case MY_SQL:
+        statements = new MySqlStatements(baseStatements);
         break;
-      case POSTGRESQL:
-        statements = new PostgreSQLStatements(strategy);
+      case POSTGRE_SQL:
+        statements = new PostgreSqlStatements(baseStatements);
         break;
       case ORACLE:
-        statements = new OracleStatements(strategy);
+        statements = new OracleStatements(baseStatements);
         break;
-      case SQLSERVER:
+      case SQL_SERVER:
       default:
-        statements = new SQLServerStatements(strategy);
+        statements = new SqlServerStatements(baseStatements);
         break;
     }
 
     dataSource = new BasicDataSource();
-    dataSource.setUrl(rdbInfo.jdbcJrl);
-    dataSource.setUsername(rdbInfo.username);
-    dataSource.setPassword(rdbInfo.password);
+    dataSource.setUrl(jdbcConnectionInfo.url);
+    dataSource.setUsername(jdbcConnectionInfo.username);
+    dataSource.setPassword(jdbcConnectionInfo.password);
     dataSource.setMinIdle(5);
     dataSource.setMaxIdle(10);
     dataSource.setMaxTotal(25);
   }
 
-  private String schemaPrefix() {
-    return schemaPrefix + (!schemaPrefix.isEmpty() ? "_" : "");
+  private Optional<String> schemaPrefix() {
+    return schemaPrefix.map(prefix -> prefix + "_");
   }
 
   public void createMetadataTableAndInsertMetadata() throws SQLException {
@@ -80,21 +80,21 @@ public class TestEnv implements Closeable {
     }
   }
 
-  public void createDataTable() throws SQLException {
+  public void createTables() throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropDataTableStatements(schemaPrefix()));
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropDataSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createDataSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createDataTableStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(schemaPrefix()));
+      execute(stmt, statements.createSchemaStatements(schemaPrefix()));
+      execute(stmt, statements.createTableStatements(schemaPrefix()));
     }
   }
 
   public void dropAllTablesAndSchemas() throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropDataTableStatements(schemaPrefix()));
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropDataSchemaStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(schemaPrefix()));
       executeAndIgnoreIfExceptionHappens(
           stmt, statements.dropMetadataTableStatements(schemaPrefix()));
       executeAndIgnoreIfExceptionHappens(
@@ -123,13 +123,11 @@ public class TestEnv implements Closeable {
 
   public DatabaseConfig getDatabaseConfig() {
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, rdbInfo.jdbcJrl);
-    props.setProperty(DatabaseConfig.USERNAME, rdbInfo.username);
-    props.setProperty(DatabaseConfig.PASSWORD, rdbInfo.password);
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcConnectionInfo.url);
+    props.setProperty(DatabaseConfig.USERNAME, jdbcConnectionInfo.username);
+    props.setProperty(DatabaseConfig.PASSWORD, jdbcConnectionInfo.password);
 
-    if (!schemaPrefix.isEmpty()) {
-      props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, schemaPrefix);
-    }
+    schemaPrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
 
     return new DatabaseConfig(props);
   }

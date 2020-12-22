@@ -7,14 +7,13 @@ import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 
-public interface StatementsStrategy {
-  List<String> insertMetadataStatements(String schemaPrefix);
+public interface BaseStatements {
 
-  static String insertMetaColumnsTableStatement(
-      String schemaPrefix,
-      String schema,
-      String table,
+  static String insertMetadataStatement(
+      Optional<String> schemaPrefix,
+      String fullTableName,
       String columnName,
       DataType dataType,
       @Nullable KeyType keyType,
@@ -22,11 +21,9 @@ public interface StatementsStrategy {
       boolean indexed,
       int ordinalPosition) {
     return String.format(
-        "INSERT INTO "
-            + TableMetadataManager.getTable(schemaPrefix)
-            + " VALUES('%s','%s','%s','%s',%s,%s,%s,%d)",
-        schema,
-        table,
+        "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
+        TableMetadataManager.getFullTableName(schemaPrefix),
+        fullTableName,
         columnName,
         dataType,
         keyType != null ? "'" + keyType + "'" : "NULL",
@@ -35,9 +32,11 @@ public interface StatementsStrategy {
         ordinalPosition);
   }
 
-  List<String> dataSchemas(String schemaPrefix);
+  List<String> insertMetadataStatements(Optional<String> schemaPrefix);
 
-  List<String> dataTables(String schemaPrefix);
+  List<String> schemas(Optional<String> schemaPrefix);
 
-  List<String> createDataTableStatements(String schemaPrefix);
+  List<String> tables(Optional<String> schemaPrefix);
+
+  List<String> createTableStatements(Optional<String> schemaPrefix);
 }

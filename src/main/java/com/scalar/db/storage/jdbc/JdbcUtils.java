@@ -5,25 +5,25 @@ import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.Connection;
 
-public final class JDBCUtils {
-  private JDBCUtils() {}
+public final class JdbcUtils {
+  private JdbcUtils() {}
 
-  public static RDBType getRDBType(String jdbcUrl) {
+  public static RdbEngine getRdbEngine(String jdbcUrl) {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return RDBType.MYSQL;
+      return RdbEngine.MY_SQL;
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return RDBType.POSTGRESQL;
+      return RdbEngine.POSTGRE_SQL;
     } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
-      return RDBType.ORACLE;
+      return RdbEngine.ORACLE;
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
-      return RDBType.SQLSERVER;
+      return RdbEngine.SQL_SERVER;
     } else {
-      throw new IllegalArgumentException("the specified rdb is not supported.");
+      throw new IllegalArgumentException("the specified rdb engine is not supported.");
     }
   }
 
   public static BasicDataSource initDataSource(DatabaseConfig config) {
-    return initDataSource(config, true);
+    return initDataSource(config, false);
   }
 
   public static BasicDataSource initDataSource(DatabaseConfig config, boolean transactional) {
@@ -32,21 +32,24 @@ public final class JDBCUtils {
     dataSource.setUsername(config.getUsername());
     dataSource.setPassword(config.getPassword());
 
-    if (!transactional) {
+    if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
-    if (config instanceof JDBCDatabaseConfig) {
-      JDBCDatabaseConfig jdbcDatabaseConfig = (JDBCDatabaseConfig) config;
+    if (config instanceof JdbcDatabaseConfig) {
+      JdbcDatabaseConfig jdbcDatabaseConfig = (JdbcDatabaseConfig) config;
       dataSource.setMinIdle(jdbcDatabaseConfig.getConnectionPoolMinIdle());
       dataSource.setMaxIdle(jdbcDatabaseConfig.getConnectionPoolMaxIdle());
       dataSource.setMaxTotal(jdbcDatabaseConfig.getConnectionPoolMaxTotal());
+      dataSource.setPoolPreparedStatements(jdbcDatabaseConfig.isPreparedStatementsPoolEnabled());
+      dataSource.setMaxOpenPreparedStatements(
+          jdbcDatabaseConfig.getPreparedStatementsPoolMaxOpen());
     } else {
-      dataSource.setMinIdle(JDBCDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
-      dataSource.setMaxIdle(JDBCDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
-      dataSource.setMaxTotal(JDBCDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+      dataSource.setMinIdle(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
+      dataSource.setMaxIdle(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
+      dataSource.setMaxTotal(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
     }
     return dataSource;
   }

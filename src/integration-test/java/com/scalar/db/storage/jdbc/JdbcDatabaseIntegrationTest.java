@@ -21,8 +21,8 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.test.RDBInfo;
-import com.scalar.db.storage.jdbc.test.StatementsStrategy;
+import com.scalar.db.storage.jdbc.test.BaseStatements;
+import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -38,17 +38,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static com.scalar.db.storage.jdbc.test.StatementsStrategy.insertMetaColumnsTableStatement;
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.SQLSERVER_RDB_INFO;
+import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
+import static com.scalar.db.storage.jdbc.test.TestEnv.MY_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRE_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(Parameterized.class)
-public class JDBCIntegrationTest {
+public class JdbcDatabaseIntegrationTest {
 
   private static final String NAMESPACE = "integration_testing";
   private static final String TABLE = "test_table";
@@ -58,25 +58,25 @@ public class JDBCIntegrationTest {
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
 
-  private static String getSchema(String schemaPrefix) {
-    return schemaPrefix + NAMESPACE;
+  private static String getSchema(Optional<String> schemaPrefix) {
+    return schemaPrefix.orElse("") + NAMESPACE;
   }
 
-  private static String getTable(String schemaPrefix) {
+  private static String getFullTableName(Optional<String> schemaPrefix) {
     return getSchema(schemaPrefix) + "." + TABLE;
   }
 
   @Parameterized.Parameters(name = "RDB={0}, namespace_prefix={1}")
-  public static Collection<Object[]> rdbInfos() {
+  public static Collection<Object[]> jdbcConnectionInfos() {
     return Arrays.asList(
-        new Object[] {MYSQL_RDB_INFO, ""},
-        new Object[] {MYSQL_RDB_INFO, "ns_prefix"},
-        new Object[] {POSTGRESQL_RDB_INFO, ""},
-        new Object[] {ORACLE_RDB_INFO, ""},
-        new Object[] {SQLSERVER_RDB_INFO, ""});
+        new Object[] {MY_SQL_INFO, null},
+        new Object[] {MY_SQL_INFO, "ns_prefix"},
+        new Object[] {POSTGRE_SQL_INFO, null},
+        new Object[] {ORACLE_INFO, null},
+        new Object[] {SQL_SERVER_INFO, null});
   }
 
-  @Parameterized.Parameter() public RDBInfo rdbInfo;
+  @Parameterized.Parameter() public JdbcConnectionInfo jdbcConnectionInfo;
 
   @Parameterized.Parameter(1)
   public String namespacePrefix;
@@ -90,55 +90,50 @@ public class JDBCIntegrationTest {
   public void setUp() throws Exception {
     testEnv =
         new TestEnv(
-            rdbInfo,
-            new StatementsStrategy() {
+            jdbcConnectionInfo,
+            new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(String schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
                 return Arrays.asList(
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         COL_NAME1,
                         DataType.INT,
                         KeyType.PARTITION,
                         null,
                         false,
                         1),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         COL_NAME2,
                         DataType.TEXT,
                         null,
                         null,
                         false,
                         2),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         COL_NAME3,
                         DataType.INT,
                         null,
                         null,
                         false,
                         3),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         COL_NAME4,
                         DataType.INT,
                         KeyType.CLUSTERING,
                         Scan.Ordering.Order.ASC,
                         false,
                         4),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         COL_NAME5,
                         DataType.BOOLEAN,
                         null,
@@ -148,20 +143,20 @@ public class JDBCIntegrationTest {
               }
 
               @Override
-              public List<String> dataSchemas(String schemaPrefix) {
+              public List<String> schemas(Optional<String> schemaPrefix) {
                 return Collections.singletonList(getSchema(schemaPrefix));
               }
 
               @Override
-              public List<String> dataTables(String schemaPrefix) {
-                return Collections.singletonList(getTable(schemaPrefix));
+              public List<String> tables(Optional<String> schemaPrefix) {
+                return Collections.singletonList(getFullTableName(schemaPrefix));
               }
 
               @Override
-              public List<String> createDataTableStatements(String schemaPrefix) {
+              public List<String> createTableStatements(Optional<String> schemaPrefix) {
                 return Collections.singletonList(
                     "CREATE TABLE "
-                        + getTable(schemaPrefix)
+                        + getFullTableName(schemaPrefix)
                         + " ("
                         + COL_NAME1
                         + " INT,"
@@ -180,11 +175,11 @@ public class JDBCIntegrationTest {
                         + "))");
               }
             },
-            namespacePrefix);
+            Optional.ofNullable(namespacePrefix));
 
     testEnv.createMetadataTableAndInsertMetadata();
-    testEnv.createDataTable();
-    storage = new JDBC(testEnv.getDatabaseConfig());
+    testEnv.createTables();
+    storage = new JdbcDatabase(testEnv.getDatabaseConfig());
     storage.with(NAMESPACE, TABLE);
   }
 

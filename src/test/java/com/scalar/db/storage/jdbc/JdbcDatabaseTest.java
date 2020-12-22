@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -28,33 +29,34 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class JDBCTest {
+public class JdbcDatabaseTest {
 
   @Mock private BasicDataSource dataSource;
-  @Mock private JDBCService jdbcService;
+  @Mock private JdbcService jdbcService;
 
   @Mock private SelectQuery selectQuery;
   @Mock private Connection connection;
+  @Mock private PreparedStatement preparedStatement;
   @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
 
-  private JDBC jdbc;
+  private JdbcDatabase jdbcDatabase;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
-    jdbc = new JDBC(dataSource, jdbcService);
+    jdbcDatabase = new JdbcDatabase(dataSource, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }
 
   @Test
-  public void whenGetOperationExecuted_shouldCallJDBCService() throws Exception {
+  public void whenGetOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
 
     // Act
     Get get = new Get(new Key(new TextValue("p1", "val")));
-    jdbc.get(get);
+    jdbcDatabase.get(get);
 
     // Assert
     verify(jdbcService).get(any(), any(), any(), any());
@@ -63,7 +65,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenGetOperationExecutedAndJDBCServiceThrowsSQLException_shouldThrowExecutionException()
+      whenGetOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
     when(jdbcService.get(any(), any(), any(), any())).thenThrow(sqlException);
@@ -72,21 +74,21 @@ public class JDBCTest {
     assertThatThrownBy(
             () -> {
               Get get = new Get(new Key(new TextValue("p1", "val")));
-              jdbc.get(get);
+              jdbcDatabase.get(get);
             })
         .isInstanceOf(ExecutionException.class);
     verify(connection).close();
   }
 
   @Test
-  public void whenScanOperationExecutedAndScannerClosed_shouldCallJDBCService() throws Exception {
+  public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.scan(any(), any(), any(), any()))
-        .thenReturn(new ScannerImpl(selectQuery, connection, resultSet));
+        .thenReturn(new ScannerImpl(selectQuery, connection, preparedStatement, resultSet));
 
     // Act
     Scan scan = new Scan(new Key(new TextValue("p1", "val")));
-    Scanner scanner = jdbc.scan(scan);
+    Scanner scanner = jdbcDatabase.scan(scan);
     scanner.close();
 
     // Assert
@@ -96,7 +98,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenScanOperationExecutedAndJDBCServiceThrowsSQLException_shouldThrowExecutionException()
+      whenScanOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
     when(jdbcService.scan(any(), any(), any(), any())).thenThrow(sqlException);
@@ -105,20 +107,20 @@ public class JDBCTest {
     assertThatThrownBy(
             () -> {
               Scan scan = new Scan(new Key(new TextValue("p1", "val")));
-              jdbc.scan(scan);
+              jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class);
     verify(connection).close();
   }
 
   @Test
-  public void whenPutOperationExecuted_shouldCallJDBCService() throws Exception {
+  public void whenPutOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
 
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
-    jdbc.put(put);
+    jdbcDatabase.put(put);
 
     // Assert
     verify(jdbcService).put(any(), any(), any(), any());
@@ -127,7 +129,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenPutOperationWithConditionExecutedAndJDBCServiceReturnsFalse_shouldThrowNoMutationException()
+      whenPutOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
     when(jdbcService.put(any(), any(), any(), any())).thenReturn(false);
@@ -139,7 +141,7 @@ public class JDBCTest {
                   new Put(new Key(new TextValue("p1", "val1")))
                       .withValue(new TextValue("v1", "val2"))
                       .withCondition(new PutIfNotExists());
-              jdbc.put(put);
+              jdbcDatabase.put(put);
             })
         .isInstanceOf(NoMutationException.class);
     verify(connection).close();
@@ -147,7 +149,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenPutOperationExecutedAndJDBCServiceThrowsSQLException_shouldThrowExecutionException()
+      whenPutOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
     when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
@@ -158,20 +160,20 @@ public class JDBCTest {
               Put put =
                   new Put(new Key(new TextValue("p1", "val1")))
                       .withValue(new TextValue("v1", "val2"));
-              jdbc.put(put);
+              jdbcDatabase.put(put);
             })
         .isInstanceOf(ExecutionException.class);
     verify(connection).close();
   }
 
   @Test
-  public void whenDeleteOperationExecuted_shouldCallJDBCService() throws Exception {
+  public void whenDeleteOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);
 
     // Act
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    jdbc.delete(delete);
+    jdbcDatabase.delete(delete);
 
     // Assert
     verify(jdbcService).delete(any(), any(), any(), any());
@@ -180,7 +182,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenDeleteOperationWithConditionExecutedAndJDBCServiceReturnsFalse_shouldThrowNoMutationException()
+      whenDeleteOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
     when(jdbcService.delete(any(), any(), any(), any())).thenReturn(false);
@@ -191,7 +193,7 @@ public class JDBCTest {
               Delete delete =
                   new Delete(new Key(new TextValue("p1", "val1")))
                       .withCondition(new DeleteIfExists());
-              jdbc.delete(delete);
+              jdbcDatabase.delete(delete);
             })
         .isInstanceOf(NoMutationException.class);
     verify(connection).close();
@@ -199,7 +201,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenDeleteOperationExecutedAndJDBCServiceThrowsSQLException_shouldThrowExecutionException()
+      whenDeleteOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
     when(jdbcService.delete(any(), any(), any(), any())).thenThrow(sqlException);
@@ -208,21 +210,21 @@ public class JDBCTest {
     assertThatThrownBy(
             () -> {
               Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-              jdbc.delete(delete);
+              jdbcDatabase.delete(delete);
             })
         .isInstanceOf(ExecutionException.class);
     verify(connection).close();
   }
 
   @Test
-  public void whenMutateOperationExecuted_shouldCallJDBCService() throws Exception {
+  public void whenMutateOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(true);
 
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    jdbc.mutate(Arrays.asList(put, delete));
+    jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
     verify(jdbcService).mutate(any(), any(), any(), any());
@@ -231,7 +233,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenMutateOperationWithConditionExecutedAndJDBCServiceReturnsFalse_shouldThrowNoMutationException()
+      whenMutateOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
     when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(false);
@@ -246,7 +248,7 @@ public class JDBCTest {
               Delete delete =
                   new Delete(new Key(new TextValue("p1", "val1")))
                       .withCondition(new DeleteIfExists());
-              jdbc.mutate(Arrays.asList(put, delete));
+              jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(NoMutationException.class);
     verify(connection).close();
@@ -254,7 +256,7 @@ public class JDBCTest {
 
   @Test
   public void
-      whenMutateOperationExecutedAndJDBCServiceThrowsSQLException_shouldThrowExecutionException()
+      whenMutateOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
     when(jdbcService.mutate(any(), any(), any(), any())).thenThrow(sqlException);
@@ -266,7 +268,7 @@ public class JDBCTest {
                   new Put(new Key(new TextValue("p1", "val1")))
                       .withValue(new TextValue("v1", "val2"));
               Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-              jdbc.mutate(Arrays.asList(put, delete));
+              jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(ExecutionException.class);
     verify(connection).close();

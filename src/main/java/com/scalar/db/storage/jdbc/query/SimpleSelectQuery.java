@@ -5,27 +5,26 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.ResultImpl;
-import com.scalar.db.storage.jdbc.Table;
-import com.scalar.db.storage.jdbc.metadata.TableMetadata;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
-  private final TableMetadata tableMetadata;
+  private final JdbcTableMetadata tableMetadata;
   private final List<String> projections;
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
-  @Nullable private final Key commonClusteringKey;
-  @Nullable private final Value startValue;
+  private final Optional<Key> clusteringKey;
+  private final Optional<Key> commonClusteringKey;
+  private final Optional<Value> startValue;
   private final boolean startInclusive;
-  @Nullable private final Value endValue;
+  private final Optional<Value> endValue;
   private final boolean endInclusive;
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
@@ -33,7 +32,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   SimpleSelectQuery(Builder builder) {
     tableMetadata = builder.tableMetadata;
     projections = builder.projections;
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     commonClusteringKey = builder.commonClusteringKey;
@@ -47,52 +46,37 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
 
   protected String sql() {
     return "SELECT "
-        + projectionSQLString()
+        + projectionSqlString()
         + " FROM "
-        + table
+        + fullTableName
         + " WHERE "
-        + conditionSQLString()
-        + orderBySQLString();
+        + conditionSqlString()
+        + orderBySqlString();
   }
 
-  private String projectionSQLString() {
+  private String projectionSqlString() {
     if (projections.isEmpty()) {
       return "*";
     }
     return String.join(",", projections);
   }
 
-  private String conditionSQLString() {
+  private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
 
     for (Value value : partitionKey) {
       conditions.add(value.getName() + "=?");
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        conditions.add(value.getName() + "=?");
-      }
-    }
-
-    if (commonClusteringKey != null) {
-      for (Value value : commonClusteringKey) {
-        conditions.add(value.getName() + "=?");
-      }
-    }
-
-    if (startValue != null) {
-      conditions.add(startValue.getName() + (startInclusive ? ">=?" : ">?"));
-    }
-
-    if (endValue != null) {
-      conditions.add(endValue.getName() + (endInclusive ? "<=?" : "<?"));
-    }
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
+    commonClusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
+    startValue.ifPresent(sv -> conditions.add(sv.getName() + (startInclusive ? ">=?" : ">?")));
+    endValue.ifPresent(ev -> conditions.add(ev.getName() + (endInclusive ? "<=?" : "<?")));
 
     return String.join(" AND ", conditions);
   }
 
-  private String orderBySQLString() {
+  private String orderBySqlString() {
     if (isRangeQuery) {
       List<Scan.Ordering> orderingList = new ArrayList<>(orderings);
 
@@ -137,27 +121,27 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    if (commonClusteringKey != null) {
-      for (Value value : commonClusteringKey) {
+    if (commonClusteringKey.isPresent()) {
+      for (Value value : commonClusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    if (startValue != null) {
-      startValue.accept(binder);
+    if (startValue.isPresent()) {
+      startValue.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (endValue != null) {
-      endValue.accept(binder);
+    if (endValue.isPresent()) {
+      endValue.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
   }

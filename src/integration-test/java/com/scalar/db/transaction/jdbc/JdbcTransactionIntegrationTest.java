@@ -14,8 +14,8 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.test.RDBInfo;
-import com.scalar.db.storage.jdbc.test.StatementsStrategy;
+import com.scalar.db.storage.jdbc.test.BaseStatements;
+import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -31,76 +31,74 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static com.scalar.db.storage.jdbc.test.StatementsStrategy.insertMetaColumnsTableStatement;
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.SQLSERVER_RDB_INFO;
+import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
+import static com.scalar.db.storage.jdbc.test.TestEnv.MY_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRE_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Parameterized.class)
-public class JDBCTransactionIntegrationTest {
+public class JdbcTransactionIntegrationTest {
 
-  static final String NAMESPACE = "integration_testing";
-  static final String TABLE = "tx_test_table";
-  static final String ACCOUNT_ID = "account_id";
-  static final String ACCOUNT_TYPE = "account_type";
-  static final String BALANCE = "balance";
-  static final int INITIAL_BALANCE = 1000;
-  static final int NUM_ACCOUNTS = 4;
-  static final int NUM_TYPES = 4;
+  private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
+  private static final String NAMESPACE = "integration_testing";
+  private static final String TABLE = "tx_test_table";
+  private static final String ACCOUNT_ID = "account_id";
+  private static final String ACCOUNT_TYPE = "account_type";
+  private static final String BALANCE = "balance";
+  private static final int INITIAL_BALANCE = 1000;
+  private static final int NUM_ACCOUNTS = 4;
+  private static final int NUM_TYPES = 4;
 
-  private static String getSchema(String schemaPrefix) {
-    return schemaPrefix + NAMESPACE;
+  private static String getSchema(Optional<String> schemaPrefix) {
+    return schemaPrefix.orElse("") + NAMESPACE;
   }
 
-  private static String getTable(String schemaPrefix) {
+  private static String getFullTableName(Optional<String> schemaPrefix) {
     return getSchema(schemaPrefix) + "." + TABLE;
   }
 
   @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<RDBInfo> rdbInfos() {
-    return Arrays.asList(MYSQL_RDB_INFO, POSTGRESQL_RDB_INFO, ORACLE_RDB_INFO, SQLSERVER_RDB_INFO);
+  public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
+    return Arrays.asList(MY_SQL_INFO, POSTGRE_SQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
 
-  @Parameterized.Parameter public RDBInfo rdbInfo;
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   private TestEnv testEnv;
-  private JDBCTransactionManager manager;
+  private JdbcTransactionManager manager;
 
   @Before
   public void setUp() throws Exception {
     testEnv =
         new TestEnv(
-            rdbInfo,
-            new StatementsStrategy() {
+            jdbcConnectionInfo,
+            new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(String schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
                 return Arrays.asList(
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         ACCOUNT_ID,
                         DataType.INT,
                         KeyType.PARTITION,
                         null,
                         false,
                         1),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         ACCOUNT_TYPE,
                         DataType.INT,
                         KeyType.CLUSTERING,
                         Scan.Ordering.Order.ASC,
                         false,
                         2),
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        NAMESPACE,
-                        TABLE,
+                        getFullTableName(schemaPrefix),
                         BALANCE,
                         DataType.INT,
                         null,
@@ -110,20 +108,20 @@ public class JDBCTransactionIntegrationTest {
               }
 
               @Override
-              public List<String> dataSchemas(String schemaPrefix) {
+              public List<String> schemas(Optional<String> schemaPrefix) {
                 return Collections.singletonList(getSchema(schemaPrefix));
               }
 
               @Override
-              public List<String> dataTables(String schemaPrefix) {
-                return Collections.singletonList(getTable(schemaPrefix));
+              public List<String> tables(Optional<String> schemaPrefix) {
+                return Collections.singletonList(getFullTableName(schemaPrefix));
               }
 
               @Override
-              public List<String> createDataTableStatements(String schemaPrefix) {
+              public List<String> createTableStatements(Optional<String> schemaPrefix) {
                 return Collections.singletonList(
                     "CREATE TABLE "
-                        + getTable(schemaPrefix)
+                        + getFullTableName(schemaPrefix)
                         + "("
                         + ACCOUNT_ID
                         + " INT,"
@@ -137,10 +135,11 @@ public class JDBCTransactionIntegrationTest {
                         + ACCOUNT_TYPE
                         + "))");
               }
-            });
+            },
+            NAMESPACE_PREFIX);
     testEnv.createMetadataTableAndInsertMetadata();
-    testEnv.createDataTable();
-    manager = new JDBCTransactionManager(testEnv.getDatabaseConfig());
+    testEnv.createTables();
+    manager = new JdbcTransactionManager(testEnv.getDatabaseConfig());
   }
 
   @After

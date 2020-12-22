@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -22,11 +23,17 @@ public class ScannerImpl implements Scanner {
 
   private final SelectQuery selectQuery;
   private final Connection connection;
+  private final PreparedStatement preparedStatement;
   private final ResultSet resultSet;
 
-  public ScannerImpl(SelectQuery selectQuery, Connection connection, ResultSet resultSet) {
+  public ScannerImpl(
+      SelectQuery selectQuery,
+      Connection connection,
+      PreparedStatement preparedStatement,
+      ResultSet resultSet) {
     this.selectQuery = Objects.requireNonNull(selectQuery);
     this.connection = Objects.requireNonNull(connection);
+    this.preparedStatement = Objects.requireNonNull(preparedStatement);
     this.resultSet = Objects.requireNonNull(resultSet);
   }
 
@@ -68,7 +75,11 @@ public class ScannerImpl implements Scanner {
       try {
         resultSet.close();
       } finally {
-        connection.close();
+        try {
+          preparedStatement.close();
+        } finally {
+          connection.close();
+        }
       }
     } catch (SQLException e) {
       throw new IOException("An error occurred", e);

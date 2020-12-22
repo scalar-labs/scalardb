@@ -12,11 +12,10 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.storage.jdbc.JDBCService;
+import com.scalar.db.storage.jdbc.JdbcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -32,23 +31,23 @@ import java.util.Optional;
  * @author Toshihiro Suzuki
  */
 @NotThreadSafe
-public class JDBCTransaction implements DistributedTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JDBCTransaction.class);
+public class JdbcTransaction implements DistributedTransaction {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransaction.class);
 
-  private final JDBCService jdbcService;
+  private final JdbcService jdbcService;
   private final Connection connection;
-  @Nullable private String defaultSchema;
-  @Nullable private String defaultTable;
+  private Optional<String> namespace;
+  private Optional<String> tableName;
 
-  JDBCTransaction(
-      JDBCService jdbcService,
+  JdbcTransaction(
+      JdbcService jdbcService,
       Connection connection,
-      @Nullable String defaultSchema,
-      @Nullable String defaultTable) {
+      Optional<String> namespace,
+      Optional<String> tableName) {
     this.jdbcService = jdbcService;
     this.connection = connection;
-    this.defaultSchema = defaultSchema;
-    this.defaultTable = defaultTable;
+    this.namespace = namespace;
+    this.tableName = tableName;
   }
 
   @Override
@@ -58,34 +57,34 @@ public class JDBCTransaction implements DistributedTransaction {
 
   @Override
   public void with(String namespace, String tableName) {
-    defaultSchema = namespace;
-    defaultTable = tableName;
+    this.namespace = Optional.ofNullable(namespace);
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public void withNamespace(String namespace) {
-    defaultSchema = namespace;
+    this.namespace = Optional.ofNullable(namespace);
   }
 
   @Override
   public Optional<String> getNamespace() {
-    return Optional.ofNullable(defaultSchema);
+    return namespace;
   }
 
   @Override
   public void withTable(String tableName) {
-    defaultTable = tableName;
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public Optional<String> getTable() {
-    return Optional.ofNullable(defaultTable);
+    return tableName;
   }
 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     try {
-      return jdbcService.get(get, connection, defaultSchema, defaultTable);
+      return jdbcService.get(get, connection, namespace, tableName);
     } catch (SQLException e) {
       throw new CrudException("An error occurred", e);
     }
@@ -94,7 +93,7 @@ public class JDBCTransaction implements DistributedTransaction {
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     try {
-      return jdbcService.scan(scan, connection, defaultSchema, defaultTable).all();
+      return jdbcService.scan(scan, connection, namespace, tableName).all();
     } catch (SQLException | ExecutionException e) {
       throw new CrudException("An error occurred", e);
     }
@@ -109,7 +108,7 @@ public class JDBCTransaction implements DistributedTransaction {
     }
 
     try {
-      jdbcService.put(put, connection, defaultSchema, defaultTable);
+      jdbcService.put(put, connection, namespace, tableName);
     } catch (SQLException e) {
       throw new CrudException("An error occurred", e);
     }
@@ -129,7 +128,7 @@ public class JDBCTransaction implements DistributedTransaction {
     }
 
     try {
-      jdbcService.delete(delete, connection, defaultSchema, defaultTable);
+      jdbcService.delete(delete, connection, namespace, tableName);
     } catch (SQLException e) {
       throw new CrudException("An error occurred", e);
     }
@@ -151,7 +150,7 @@ public class JDBCTransaction implements DistributedTransaction {
     }
 
     try {
-      jdbcService.mutate(mutations, connection, defaultSchema, defaultTable);
+      jdbcService.mutate(mutations, connection, namespace, tableName);
     } catch (SQLException e) {
       throw new CrudException("An error occurred", e);
     }

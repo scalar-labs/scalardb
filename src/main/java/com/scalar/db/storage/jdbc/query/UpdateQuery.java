@@ -3,14 +3,14 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.Table;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
@@ -18,14 +18,14 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 public class UpdateQuery extends AbstractQuery {
 
   public static class Builder {
-    private final Table table;
+    private final String fullTableName;
     private Key partitionKey;
-    @Nullable private Key clusteringKey;
+    private Optional<Key> clusteringKey;
     private Map<String, Value> values;
-    @Nullable List<ConditionalExpression> otherConditions;
+    List<ConditionalExpression> otherConditions;
 
-    Builder(Table table) {
-      this.table = table;
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
     }
 
     public Builder set(Map<String, Value> values) {
@@ -33,14 +33,14 @@ public class UpdateQuery extends AbstractQuery {
       return this;
     }
 
-    public Builder where(Key partitionKey, @Nullable Key clusteringKey) {
-      return where(partitionKey, clusteringKey, null);
+    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
+      return where(partitionKey, clusteringKey, Collections.emptyList());
     }
 
     public Builder where(
         Key partitionKey,
-        @Nullable Key clusteringKey,
-        @Nullable List<ConditionalExpression> otherConditions) {
+        Optional<Key> clusteringKey,
+        List<ConditionalExpression> otherConditions) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.otherConditions = otherConditions;
@@ -48,21 +48,18 @@ public class UpdateQuery extends AbstractQuery {
     }
 
     public UpdateQuery build() {
-      if (partitionKey == null || values == null) {
-        throw new IllegalStateException("partitionKey or values is null.");
-      }
       return new UpdateQuery(this);
     }
   }
 
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
+  private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
-  @Nullable private final List<ConditionalExpression> otherConditions;
+  private final List<ConditionalExpression> otherConditions;
 
   private UpdateQuery(Builder builder) {
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -71,25 +68,26 @@ public class UpdateQuery extends AbstractQuery {
 
   @Override
   protected String sql() {
-    return "UPDATE " + table + " SET " + makeSetSQLString() + " WHERE " + makeConditionSQLString();
+    return "UPDATE "
+        + fullTableName
+        + " SET "
+        + makeSetSqlString()
+        + " WHERE "
+        + makeConditionSqlString();
   }
 
-  private String makeSetSQLString() {
+  private String makeSetSqlString() {
     return values.keySet().stream().map(n -> n + "=?").collect(Collectors.joining(","));
   }
 
-  private String makeConditionSQLString() {
+  private String makeConditionSqlString() {
     List<String> conditions = new ArrayList<>();
 
     for (Value value : partitionKey) {
       conditions.add(value.getName() + "=?");
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        conditions.add(value.getName() + "=?");
-      }
-    }
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
 
     if (otherConditions != null) {
       for (ConditionalExpression condition : otherConditions) {
@@ -114,8 +112,8 @@ public class UpdateQuery extends AbstractQuery {
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

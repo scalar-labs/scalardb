@@ -10,7 +10,7 @@ import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
-import com.scalar.db.storage.jdbc.JDBC;
+import com.scalar.db.storage.jdbc.JdbcDatabase;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -88,7 +88,7 @@ public class DatabaseConfig {
           storageClass = Dynamo.class;
           break;
         case "jdbc":
-          storageClass = JDBC.class;
+          storageClass = JdbcDatabase.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");

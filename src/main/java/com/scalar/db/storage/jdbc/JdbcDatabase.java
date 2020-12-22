@@ -12,13 +12,13 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.storage.jdbc.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import java.sql.Connection;
@@ -35,64 +35,65 @@ import java.util.Optional;
  * @author Toshihiro Suzuki
  */
 @ThreadSafe
-public class JDBC implements DistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JDBC.class);
+public class JdbcDatabase implements DistributedStorage {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final BasicDataSource dataSource;
-  private final JDBCService jdbcService;
-  @Nullable private String defaultSchema;
-  @Nullable private String defaultTable;
+  private final JdbcService jdbcService;
+  private Optional<String> namespace;
+  private Optional<String> tableName;
 
   @Inject
-  public JDBC(DatabaseConfig config) {
-    dataSource = JDBCUtils.initDataSource(config);
-
-    String schemaPrefix = config.getNamespacePrefix().orElse("");
-
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(dataSource, schemaPrefix);
+  public JdbcDatabase(DatabaseConfig config) {
+    dataSource = JdbcUtils.initDataSource(config);
+    Optional<String> namespacePrefix = config.getNamespacePrefix();
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(dataSource, namespacePrefix);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder =
         new QueryBuilder(
-            tableMetadataManager, JDBCUtils.getRDBType(config.getContactPoints().get(0)));
-    jdbcService = new JDBCService(operationChecker, queryBuilder, schemaPrefix);
+            tableMetadataManager, JdbcUtils.getRdbEngine(config.getContactPoints().get(0)));
+    jdbcService = new JdbcService(operationChecker, queryBuilder, namespacePrefix);
+    namespace = Optional.empty();
+    tableName = Optional.empty();
   }
 
   @VisibleForTesting
-  JDBC(BasicDataSource dataSource, JDBCService jdbcService) {
+  JdbcDatabase(BasicDataSource dataSource, JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.jdbcService = jdbcService;
   }
 
   @Override
   public void with(String namespace, String tableName) {
-    defaultSchema = namespace;
-    defaultTable = tableName;
+    this.namespace = Optional.ofNullable(namespace);
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public void withNamespace(String namespace) {
-    defaultSchema = namespace;
+    this.namespace = Optional.ofNullable(namespace);
   }
 
   @Override
   public Optional<String> getNamespace() {
-    return Optional.ofNullable(defaultSchema);
+    return namespace;
   }
 
   @Override
   public void withTable(String tableName) {
-    defaultTable = tableName;
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public Optional<String> getTable() {
-    return Optional.ofNullable(defaultTable);
+    return tableName;
   }
 
   @Override
   public Optional<Result> get(Get get) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      return jdbcService.get(get, connection, defaultSchema, defaultTable);
+      return jdbcService.get(get, connection, namespace, tableName);
     } catch (SQLException e) {
       throw new ExecutionException("An error occurred", e);
     }
@@ -103,7 +104,7 @@ public class JDBC implements DistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      return jdbcService.scan(scan, connection, defaultSchema, defaultTable);
+      return jdbcService.scan(scan, connection, namespace, tableName);
     } catch (SQLException e) {
       try {
         if (connection != null) {
@@ -119,7 +120,7 @@ public class JDBC implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      if (!jdbcService.put(put, connection, defaultSchema, defaultTable)) {
+      if (!jdbcService.put(put, connection, namespace, tableName)) {
         throw new NoMutationException("no mutation was applied");
       }
     } catch (SQLException e) {
@@ -135,7 +136,7 @@ public class JDBC implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      if (!jdbcService.delete(delete, connection, defaultSchema, defaultTable)) {
+      if (!jdbcService.delete(delete, connection, namespace, tableName)) {
         throw new NoMutationException("no mutation was applied");
       }
     } catch (SQLException e) {
@@ -155,7 +156,7 @@ public class JDBC implements DistributedStorage {
       try {
         connection = dataSource.getConnection();
         connection.setAutoCommit(false);
-        if (!jdbcService.mutate(mutations, connection, defaultSchema, defaultTable)) {
+        if (!jdbcService.mutate(mutations, connection, namespace, tableName)) {
           connection.rollback();
           throw new NoMutationException("no mutation was applied");
         } else {

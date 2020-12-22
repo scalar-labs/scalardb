@@ -2,25 +2,24 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.Table;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
 
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
+  private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
 
   public MergeIntoQuery(Builder builder) {
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -32,37 +31,34 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
     for (Value value : partitionKey) {
       keyNames.add(value.getName());
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        keyNames.add(value.getName());
-      }
-    }
+
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> keyNames.add(v.getName())));
 
     return "MERGE INTO "
-        + table
+        + fullTableName
         + " t1 USING (SELECT "
-        + makeUsingSelectSQLString(keyNames)
+        + makeUsingSelectSqlString(keyNames)
         + " FROM DUAL) t2 ON ("
-        + makePrimaryKeyConditionsSQLString(keyNames)
+        + makePrimaryKeyConditionsSqlString(keyNames)
         + ") WHEN MATCHED THEN UPDATE SET "
-        + makeUpdateSetSQLString()
+        + makeUpdateSetSqlString()
         + " WHEN NOT MATCHED THEN INSERT "
-        + makeInsertSQLString(keyNames);
+        + makeInsertSqlString(keyNames);
   }
 
-  private String makeUsingSelectSQLString(List<String> keyNames) {
+  private String makeUsingSelectSqlString(List<String> keyNames) {
     return keyNames.stream().map(n -> "? " + n).collect(Collectors.joining(","));
   }
 
-  private String makePrimaryKeyConditionsSQLString(List<String> keyNames) {
+  private String makePrimaryKeyConditionsSqlString(List<String> keyNames) {
     return keyNames.stream().map(n -> "t1." + n + "=t2." + n).collect(Collectors.joining(" AND "));
   }
 
-  private String makeUpdateSetSQLString() {
+  private String makeUpdateSetSqlString() {
     return values.keySet().stream().map(n -> n + "=?").collect(Collectors.joining(","));
   }
 
-  private String makeInsertSQLString(List<String> keyNames) {
+  private String makeInsertSqlString(List<String> keyNames) {
     List<String> names = new ArrayList<>(keyNames);
     names.addAll(values.keySet());
 
@@ -82,8 +78,8 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
@@ -100,8 +96,8 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

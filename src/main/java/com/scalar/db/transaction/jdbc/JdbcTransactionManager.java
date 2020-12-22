@@ -7,16 +7,15 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.storage.jdbc.JDBCService;
-import com.scalar.db.storage.jdbc.JDBCUtils;
-import com.scalar.db.storage.jdbc.OperationChecker;
+import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcUtils;
+import com.scalar.db.storage.jdbc.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import java.sql.SQLException;
@@ -31,109 +30,110 @@ import java.util.Optional;
  * @author Toshihiro Suzuki
  */
 @ThreadSafe
-public class JDBCTransactionManager implements DistributedTransactionManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JDBCTransactionManager.class);
+public class JdbcTransactionManager implements DistributedTransactionManager {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
-  private final JDBCService jdbcService;
-  @Nullable private String defaultSchema;
-  @Nullable private String defaultTable;
+  private final JdbcService jdbcService;
+  private Optional<String> namespace;
+  private Optional<String> tableName;
 
   @Inject
-  public JDBCTransactionManager(DatabaseConfig config) {
-    dataSource = JDBCUtils.initDataSource(config, false);
-
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(dataSource);
+  public JdbcTransactionManager(DatabaseConfig config) {
+    dataSource = JdbcUtils.initDataSource(config, true);
+    Optional<String> namespacePrefix = config.getNamespacePrefix();
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(dataSource, namespacePrefix);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder =
         new QueryBuilder(
-            tableMetadataManager, JDBCUtils.getRDBType(config.getContactPoints().get(0)));
-    String schemaPrefix = config.getNamespacePrefix().orElse("");
-    jdbcService = new JDBCService(operationChecker, queryBuilder, schemaPrefix);
+            tableMetadataManager, JdbcUtils.getRdbEngine(config.getContactPoints().get(0)));
+    jdbcService = new JdbcService(operationChecker, queryBuilder, namespacePrefix);
+    namespace = Optional.empty();
+    tableName = Optional.empty();
   }
 
   @VisibleForTesting
-  JDBCTransactionManager(BasicDataSource dataSource, JDBCService jdbcService) {
+  JdbcTransactionManager(BasicDataSource dataSource, JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.jdbcService = jdbcService;
   }
 
   @Override
   public void with(String namespace, String tableName) {
-    defaultSchema = namespace;
-    defaultTable = tableName;
+    this.namespace = Optional.ofNullable(namespace);
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public void withNamespace(String namespace) {
-    defaultSchema = namespace;
+    this.namespace = Optional.ofNullable(namespace);
   }
 
   @Override
   public Optional<String> getNamespace() {
-    return Optional.ofNullable(defaultSchema);
+    return namespace;
   }
 
   @Override
   public void withTable(String tableName) {
-    defaultTable = tableName;
+    this.tableName = Optional.ofNullable(tableName);
   }
 
   @Override
   public Optional<String> getTable() {
-    return Optional.ofNullable(defaultTable);
+    return tableName;
   }
 
   @Override
-  public JDBCTransaction start() throws TransactionException {
+  public JdbcTransaction start() throws TransactionException {
     try {
-      return new JDBCTransaction(
-          jdbcService, dataSource.getConnection(), defaultSchema, defaultTable);
+      return new JdbcTransaction(jdbcService, dataSource.getConnection(), namespace, tableName);
     } catch (SQLException e) {
       throw new TransactionException("Failed to start the transaction", e);
     }
   }
 
   @Override
-  public JDBCTransaction start(String txId) throws TransactionException {
+  public JdbcTransaction start(String txId) throws TransactionException {
     throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(Isolation isolation) throws TransactionException {
+  public JdbcTransaction start(Isolation isolation) throws TransactionException {
     return start();
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(String txId, Isolation isolation) throws TransactionException {
+  public JdbcTransaction start(String txId, Isolation isolation) throws TransactionException {
     throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(Isolation isolation, SerializableStrategy strategy)
+  public JdbcTransaction start(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     return start();
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(SerializableStrategy strategy) throws TransactionException {
+  public JdbcTransaction start(SerializableStrategy strategy) throws TransactionException {
     return start();
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(String txId, SerializableStrategy strategy)
+  public JdbcTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
     throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
   }
 
   @Deprecated
   @Override
-  public JDBCTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
+  public JdbcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
   }

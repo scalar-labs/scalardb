@@ -1,9 +1,10 @@
-package com.scalar.db.storage.jdbc;
+package com.scalar.db.storage.jdbc.checker;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.MutationCondition;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -17,21 +18,21 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.Utility;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.TableMetadata;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,7 +40,10 @@ import static org.mockito.Mockito.when;
 
 public class OperationCheckerTest {
 
-  private static final Table TABLE = new Table("s1", "t1");
+  private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
+  private static final Optional<String> NAMESPACE = Optional.of("s1");
+  private static final Optional<String> TABLE_NAME = Optional.of("t1");
+  private static final String TABLE_FULL_NAME = "s1.t1";
   private static final String PKEY1 = "p1";
   private static final String PKEY2 = "p2";
   private static final String CKEY1 = "c1";
@@ -57,9 +61,9 @@ public class OperationCheckerTest {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata
-    TableMetadata dummyTableMetadata =
-        new TableMetadata(
-            TABLE,
+    JdbcTableMetadata dummyTableMetadata =
+        new JdbcTableMetadata(
+            TABLE_FULL_NAME,
             new HashMap<String, DataType>() {
               {
                 put(PKEY1, DataType.INT);
@@ -85,7 +89,7 @@ public class OperationCheckerTest {
               }
             });
 
-    when(tableMetadataManager.getTableMetadata(TABLE)).thenReturn(dummyTableMetadata);
+    when(tableMetadataManager.getTableMetadata(TABLE_FULL_NAME)).thenReturn(dummyTableMetadata);
 
     operationChecker = new OperationChecker(tableMetadataManager);
   }
@@ -93,41 +97,41 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingGetOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingGetOperationWithInvalidTable_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = new Table("s1", "t2");
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, Optional.of("t2"));
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingGetOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -135,14 +139,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue("p3", "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -150,28 +154,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidPartitionKeyType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new TextValue(PKEY1, "1"), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void whenCheckingGetOperationWithoutAnyPartitionKey_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Table table = TABLE;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Key partitionKey = null;
-    Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -179,14 +169,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -194,14 +184,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidClusteringKeyType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new TextValue(CKEY1, "2"), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -209,255 +199,188 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingScanOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithoutAnyClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithPartialClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 1));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 9));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithoutAnyEndClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithReverseOrderings_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithPartialOrdering_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithEmptyOrdering_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings = Collections.emptyList();
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit);
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingScanOperationWithInvalidTable_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = new Table("s1", "t2");
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, Optional.of("t2"));
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -465,31 +388,23 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, "v4");
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -497,63 +412,23 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue("p3", "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
-    int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
-
-    // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      whenCheckingScanOperationWithoutAnyPartitionKey_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Table table = TABLE;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Key partitionKey = null;
-    Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -561,31 +436,23 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -593,31 +460,23 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidClusteringKeyRange_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -625,62 +484,46 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithNegativeLimitNumber_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingScanOperationWithInvalidOrderings_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -688,119 +531,72 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidPartialOrdering_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withEnd(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingPutOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingPutOperationWithoutAnyCondition_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = null;
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
   }
 
   @Test
   public void
       whenCheckingPutOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue("c3", "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void whenCheckingPutOperationWithoutAnyPartitionKey_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Table table = TABLE;
-    Key partitionKey = null;
-    Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
-    MutationCondition condition = new PutIfNotExists();
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -808,22 +604,17 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -831,66 +622,51 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = null;
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingPutOperationWithInvalidValues_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put("v4", new BooleanValue("v4", true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
     MutationCondition condition = new PutIfExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingPutOperationWithInvalidValueType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new TextValue(COL1, "1"));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -898,24 +674,19 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithInvalidPutIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition =
         new PutIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -923,89 +694,76 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithDeleteIfExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIfExists();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingPutOperationWithDeleteIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    Map<String, Value> values =
-        new HashMap<String, Value>() {
-          {
-            put(COL1, new IntValue(COL1, 1));
-            put(COL2, new DoubleValue(COL2, 0.1));
-            put(COL3, new BooleanValue(COL3, true));
-          }
-        };
+    List<Value> values =
+        Arrays.asList(
+            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIf();
+    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkPut(table, partitionKey, clusteringKey, values, condition))
+    assertThatThrownBy(() -> operationChecker.check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingDeleteOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new IntValue(1), ConditionalExpression.Operator.EQ));
-    ;
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingDeleteOperationWithoutAnyCondition_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = null;
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
   }
 
   @Test
   public void whenCheckingDeleteOperationWithInvalidTable_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = new Table("s1", "t2");
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = new DeleteIfExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, Optional.of("t2"));
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1013,29 +771,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue("p3", "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = new DeleteIfExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      whenCheckingDeleteOperationWithoutAnyPartitionKey_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Table table = TABLE;
-    Key partitionKey = null;
-    Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    MutationCondition condition = new DeleteIfExists();
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1043,14 +786,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val1"));
     MutationCondition condition = new DeleteIfExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1058,28 +801,28 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = null;
     MutationCondition condition = new DeleteIfExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void whenCheckingDeleteOperationWithPutIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = new PutIf();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1087,14 +830,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithPutIfExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = new PutIfExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1102,14 +845,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithPutIfNotExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition = new PutIfNotExists();
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1117,16 +860,16 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidDeleteIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
+    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkDelete(table, partitionKey, clusteringKey, condition))
+    assertThatThrownBy(() -> operationChecker.check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1136,7 +879,9 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
     Put put = new Put(partitionKey, clusteringKey).withValue(new IntValue(COL1, 1));
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey, clusteringKey);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.checkMutate(Arrays.asList(put, delete)))
@@ -1160,7 +905,9 @@ public class OperationCheckerTest {
     Key partitionKey2 = new Key(new IntValue(PKEY1, 2), new TextValue(PKEY2, "val2"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val3"));
     Put put = new Put(partitionKey1, clusteringKey).withValue(new IntValue(COL1, 1));
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey2, clusteringKey);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.checkMutate(Arrays.asList(put, delete)))
@@ -1170,28 +917,28 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingGetOperationWithIndexedColumnAsPartitionKey_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key clusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
   }
 
   @Test
   public void
       whenCheckingGetOperationWithNonIndexedColumnAsPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new DoubleValue(COL2, 0.1));
     Key clusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1199,14 +946,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithIndexedColumnAsPartitionKeyButWrongType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new TextValue(COL1, "1"));
     Key clusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1214,14 +961,14 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithIndexedColumnAsPartitionKeyWithClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val2"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
+    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
+    Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> operationChecker.checkGet(table, projections, partitionKey, clusteringKey))
+    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1229,78 +976,64 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKey_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings = Collections.emptyList();
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit);
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithValidOrderings_shouldNotThrowAnyException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        Collections.singletonList(new Scan.Ordering(COL1, Scan.Ordering.Order.DESC));
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(COL1, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
   }
 
   @Test
   public void
       whenCheckingScanOperationWithNonIndexedColumnAsPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new DoubleValue(COL2, 0.1));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings = Collections.emptyList();
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit);
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1308,25 +1041,21 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKeyButWrongType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new TextValue(COL1, "1"));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings = Collections.emptyList();
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit);
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1334,25 +1063,21 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key startClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val1"));
     Key endClusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val9"));
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings = Collections.emptyList();
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit);
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1360,31 +1085,23 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithInvalidOrderings_shouldThrowIllegalArgumentException() {
     // Arrange
-    Table table = TABLE;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key startClusteringKey = null;
     Key endClusteringKey = null;
+    List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
-    List<Scan.Ordering> orderings =
-        new ArrayList<Scan.Ordering>() {
-          {
-            add(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-            add(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-          }
-        };
+    Scan scan =
+        new Scan(partitionKey)
+            .withStart(startClusteringKey)
+            .withStart(endClusteringKey)
+            .withProjections(projections)
+            .withLimit(limit)
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () ->
-                operationChecker.checkScan(
-                    table,
-                    projections,
-                    partitionKey,
-                    startClusteringKey,
-                    endClusteringKey,
-                    limit,
-                    orderings))
+    assertThatThrownBy(() -> operationChecker.check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

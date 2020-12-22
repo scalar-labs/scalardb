@@ -4,46 +4,46 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.RDBType;
-import com.scalar.db.storage.jdbc.Table;
-import com.scalar.db.storage.jdbc.metadata.TableMetadata;
+import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
-import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public interface SelectQuery extends Query {
 
   class Builder {
     private final TableMetadataManager tableMetadataManager;
-    private final RDBType rdbType;
+    private final RdbEngine rdbEngine;
     final List<String> projections;
-    Table table;
-    TableMetadata tableMetadata;
+    String fullTableName;
+    JdbcTableMetadata tableMetadata;
     Key partitionKey;
-    @Nullable Key clusteringKey;
-    @Nullable Key commonClusteringKey;
-    @Nullable Value startValue;
+    Optional<Key> clusteringKey = Optional.empty();
+    Optional<Key> commonClusteringKey = Optional.empty();
+    Optional<Value> startValue = Optional.empty();
     boolean startInclusive;
-    @Nullable Value endValue;
+    Optional<Value> endValue = Optional.empty();
     boolean endInclusive;
     List<Scan.Ordering> orderings = Collections.emptyList();
     private int limit;
     boolean isRangeQuery;
 
-    Builder(TableMetadataManager tableMetadataManager, RDBType rdbType, List<String> projections) {
+    Builder(
+        TableMetadataManager tableMetadataManager, RdbEngine rdbEngine, List<String> projections) {
       this.tableMetadataManager = tableMetadataManager;
-      this.rdbType = rdbType;
+      this.rdbEngine = rdbEngine;
       this.projections = projections;
     }
 
-    public Builder from(Table table) {
-      this.table = table;
+    public Builder from(String fullTableName) {
+      this.fullTableName = fullTableName;
       try {
-        this.tableMetadata = tableMetadataManager.getTableMetadata(table);
+        this.tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
       } catch (SQLException e) {
         throw new RuntimeException("An error occurred", e);
       }
@@ -53,7 +53,7 @@ public interface SelectQuery extends Query {
     /*
      * Assumes this is called by get operations
      */
-    public Builder where(Key partitionKey, @Nullable Key clusteringKey) {
+    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       return this;
@@ -64,27 +64,35 @@ public interface SelectQuery extends Query {
      */
     public Builder where(
         Key partitionKey,
-        @Nullable Key startClusteringKey,
+        Optional<Key> startClusteringKey,
         boolean startInclusive,
-        @Nullable Key endClusteringKey,
+        Optional<Key> endClusteringKey,
         boolean endInclusive) {
       this.partitionKey = partitionKey;
 
-      if (startClusteringKey != null) {
+      if (startClusteringKey.isPresent()) {
         commonClusteringKey =
-            new Key(startClusteringKey.get().subList(0, startClusteringKey.size() - 1));
-      } else if (endClusteringKey != null) {
+            Optional.of(
+                new Key(
+                    startClusteringKey
+                        .get()
+                        .get()
+                        .subList(0, startClusteringKey.get().size() - 1)));
+      } else if (endClusteringKey.isPresent()) {
         commonClusteringKey =
-            new Key(endClusteringKey.get().subList(0, endClusteringKey.size() - 1));
+            Optional.of(
+                new Key(
+                    endClusteringKey.get().get().subList(0, endClusteringKey.get().size() - 1)));
       }
 
-      if (startClusteringKey != null) {
-        startValue = startClusteringKey.get().get(startClusteringKey.size() - 1);
+      if (startClusteringKey.isPresent()) {
+        startValue =
+            Optional.of(startClusteringKey.get().get().get(startClusteringKey.get().size() - 1));
         this.startInclusive = startInclusive;
       }
 
-      if (endClusteringKey != null) {
-        endValue = endClusteringKey.get().get(endClusteringKey.size() - 1);
+      if (endClusteringKey.isPresent()) {
+        endValue = Optional.of(endClusteringKey.get().get().get(endClusteringKey.get().size() - 1));
         this.endInclusive = endInclusive;
       }
 
@@ -104,21 +112,17 @@ public interface SelectQuery extends Query {
     }
 
     public SelectQuery build() {
-      if (table == null || partitionKey == null) {
-        throw new IllegalStateException("table or partitionKey is null.");
-      }
-
       if (limit > 0) {
-        switch (rdbType) {
-          case MYSQL:
-          case POSTGRESQL:
+        switch (rdbEngine) {
+          case MY_SQL:
+          case POSTGRE_SQL:
             return new SelectWithLimitQuery(this, limit);
           case ORACLE:
             return new SelectWithRowNumQuery(this, limit);
-          case SQLSERVER:
+          case SQL_SERVER:
             return new SelectWithOffsetFetchQuery(this, limit);
           default:
-            throw new AssertionError("Invalid rdb type: " + rdbType);
+            throw new AssertionError("Invalid rdb type: " + rdbEngine);
         }
       }
       return new SimpleSelectQuery(this);

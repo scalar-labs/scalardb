@@ -2,30 +2,29 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.Table;
 
-import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class InsertQuery extends AbstractQuery {
 
   public static class Builder {
-    private final Table table;
+    private final String fullTableName;
     private Key partitionKey;
-    @Nullable private Key clusteringKey;
+    private Optional<Key> clusteringKey;
     private Map<String, Value> values;
 
-    Builder(Table table) {
-      this.table = table;
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
     }
 
     public Builder values(
-        Key partitionKey, @Nullable Key clusteringKey, Map<String, Value> values) {
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.values = values;
@@ -33,39 +32,34 @@ public class InsertQuery extends AbstractQuery {
     }
 
     public InsertQuery build() {
-      if (table == null || partitionKey == null) {
-        throw new IllegalStateException("table or partitionKey is null.");
-      }
       return new InsertQuery(this);
     }
   }
 
-  private final Table table;
+  private final String fullTableName;
   private final Key partitionKey;
-  @Nullable private final Key clusteringKey;
+  private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
 
   private InsertQuery(Builder builder) {
-    table = builder.table;
+    fullTableName = builder.fullTableName;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
   }
 
   protected String sql() {
-    return "INSERT INTO " + table + " " + makeValuesSQLString();
+    return "INSERT INTO " + fullTableName + " " + makeValuesSqlString();
   }
 
-  private String makeValuesSQLString() {
+  private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
     for (Value value : partitionKey) {
       names.add(value.getName());
     }
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
-        names.add(value.getName());
-      }
-    }
+
+    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> names.add(v.getName())));
+
     names.addAll(values.keySet());
 
     return "("
@@ -84,8 +78,8 @@ public class InsertQuery extends AbstractQuery {
       binder.throwSQLExceptionIfOccurred();
     }
 
-    if (clusteringKey != null) {
-      for (Value value : clusteringKey) {
+    if (clusteringKey.isPresent()) {
+      for (Value value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

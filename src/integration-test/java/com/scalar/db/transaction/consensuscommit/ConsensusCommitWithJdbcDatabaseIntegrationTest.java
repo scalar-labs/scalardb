@@ -3,11 +3,11 @@ package com.scalar.db.transaction.consensuscommit;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JDBC;
+import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.test.RDBInfo;
-import com.scalar.db.storage.jdbc.test.StatementsStrategy;
+import com.scalar.db.storage.jdbc.test.BaseStatements;
+import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -20,12 +20,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
-import static com.scalar.db.storage.jdbc.test.StatementsStrategy.insertMetaColumnsTableStatement;
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_RDB_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.SQLSERVER_RDB_INFO;
+import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
+import static com.scalar.db.storage.jdbc.test.TestEnv.MY_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRE_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -47,14 +48,16 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrati
 import static org.mockito.Mockito.spy;
 
 @RunWith(Parameterized.class)
-public class ConsensusCommitWithJDBCIntegrationTest {
+public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
+
+  private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
 
   @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<RDBInfo> rdbInfos() {
-    return Arrays.asList(MYSQL_RDB_INFO, POSTGRESQL_RDB_INFO, ORACLE_RDB_INFO, SQLSERVER_RDB_INFO);
+  public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
+    return Arrays.asList(MY_SQL_INFO, POSTGRE_SQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
 
-  @Parameterized.Parameter public RDBInfo rdbInfo;
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   private TestEnv testEnv;
   private DistributedStorage storage;
@@ -64,18 +67,17 @@ public class ConsensusCommitWithJDBCIntegrationTest {
   public void setUp() throws SQLException {
     testEnv =
         new TestEnv(
-            rdbInfo,
-            new StatementsStrategy() {
+            jdbcConnectionInfo,
+            new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(String schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
                 List<String> ret = new ArrayList<>();
 
                 // The metadata for the coordinator table
                 ret.add(
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        Coordinator.NAMESPACE,
-                        Coordinator.TABLE,
+                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         ID,
                         DataType.TEXT,
                         KeyType.PARTITION,
@@ -83,10 +85,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                         false,
                         1));
                 ret.add(
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        Coordinator.NAMESPACE,
-                        Coordinator.TABLE,
+                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         STATE,
                         DataType.INT,
                         null,
@@ -94,10 +95,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                         false,
                         2));
                 ret.add(
-                    insertMetaColumnsTableStatement(
+                    insertMetadataStatement(
                         schemaPrefix,
-                        Coordinator.NAMESPACE,
-                        Coordinator.TABLE,
+                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         CREATED_AT,
                         DataType.BIGINT,
                         null,
@@ -105,14 +105,13 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                         false,
                         3));
 
-                // The metadata for the data tables
-                List<String> dataTables = Arrays.asList(TABLE_1, TABLE_2);
-                for (String table : dataTables) {
+                // The metadata for the tables
+                List<String> tables = Arrays.asList(TABLE_1, TABLE_2);
+                for (String table : tables) {
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           ACCOUNT_ID,
                           DataType.INT,
                           KeyType.PARTITION,
@@ -120,10 +119,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           1));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           ACCOUNT_TYPE,
                           DataType.INT,
                           KeyType.CLUSTERING,
@@ -131,10 +129,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           2));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BALANCE,
                           DataType.INT,
                           null,
@@ -142,13 +139,19 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           3));
                   ret.add(
-                      insertMetaColumnsTableStatement(
-                          schemaPrefix, NAMESPACE, table, ID, DataType.TEXT, null, null, false, 4));
-                  ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
+                          ID,
+                          DataType.TEXT,
+                          null,
+                          null,
+                          false,
+                          4));
+                  ret.add(
+                      insertMetadataStatement(
+                          schemaPrefix,
+                          NAMESPACE + "." + table,
                           VERSION,
                           DataType.INT,
                           null,
@@ -156,10 +159,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           5));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           STATE,
                           DataType.INT,
                           null,
@@ -167,10 +169,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           6));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           PREPARED_AT,
                           DataType.BIGINT,
                           null,
@@ -178,10 +179,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           7));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           COMMITTED_AT,
                           DataType.BIGINT,
                           null,
@@ -189,10 +189,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           8));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_PREFIX + BALANCE,
                           DataType.INT,
                           null,
@@ -200,10 +199,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           9));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_ID,
                           DataType.TEXT,
                           null,
@@ -211,10 +209,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           10));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_VERSION,
                           DataType.INT,
                           null,
@@ -222,10 +219,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           11));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_STATE,
                           DataType.INT,
                           null,
@@ -233,10 +229,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           12));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_PREPARED_AT,
                           DataType.BIGINT,
                           null,
@@ -244,10 +239,9 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                           false,
                           13));
                   ret.add(
-                      insertMetaColumnsTableStatement(
+                      insertMetadataStatement(
                           schemaPrefix,
-                          NAMESPACE,
-                          table,
+                          NAMESPACE + "." + table,
                           BEFORE_COMMITTED_AT,
                           DataType.BIGINT,
                           null,
@@ -259,12 +253,12 @@ public class ConsensusCommitWithJDBCIntegrationTest {
               }
 
               @Override
-              public List<String> dataSchemas(String schemaPrefix) {
+              public List<String> schemas(Optional<String> schemaPrefix) {
                 return Arrays.asList(Coordinator.NAMESPACE, NAMESPACE);
               }
 
               @Override
-              public List<String> dataTables(String schemaPrefix) {
+              public List<String> tables(Optional<String> schemaPrefix) {
                 return Arrays.asList(
                     Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                     NAMESPACE + "." + TABLE_1,
@@ -272,7 +266,7 @@ public class ConsensusCommitWithJDBCIntegrationTest {
               }
 
               @Override
-              public List<String> createDataTableStatements(String schemaPrefix) {
+              public List<String> createTableStatements(Optional<String> schemaPrefix) {
                 return Arrays.asList(
                     createCoordinatorTableStatement(),
                     createTableStatement(TABLE_1),
@@ -337,12 +331,13 @@ public class ConsensusCommitWithJDBCIntegrationTest {
                     + ACCOUNT_TYPE
                     + "))";
               }
-            });
+            },
+            NAMESPACE_PREFIX);
     testEnv.createMetadataTableAndInsertMetadata();
-    testEnv.createDataTable();
+    testEnv.createTables();
 
     DatabaseConfig config = testEnv.getDatabaseConfig();
-    storage = spy(new JDBC(config));
+    storage = spy(new JdbcDatabase(config));
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
