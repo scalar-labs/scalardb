@@ -120,7 +120,7 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalPutExecutor(put, connection, queryBuilder).update();
+      return new ConditionalUpdater(put, connection, queryBuilder).update();
     }
   }
 
@@ -142,7 +142,7 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalDeleteExecutor(delete, connection, queryBuilder).update();
+      return new ConditionalUpdater(delete, connection, queryBuilder).update();
     }
   }
 

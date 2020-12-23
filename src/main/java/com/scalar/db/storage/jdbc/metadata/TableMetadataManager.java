@@ -100,7 +100,7 @@ public class TableMetadataManager {
                   columnName, Scan.Ordering.Order.valueOf(resultSet.getString("clustering_order")));
               break;
             default:
-              throw new AssertionError("Invalid key type: " + keyType);
+              throw new AssertionError("invalid key type: " + keyType);
           }
         }
       }

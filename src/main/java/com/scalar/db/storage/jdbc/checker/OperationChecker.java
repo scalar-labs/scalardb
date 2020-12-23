@@ -41,14 +41,14 @@ public class OperationChecker {
     if (indexedColumnToBeUsed != null) {
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            "The clusteringKey should not be specified when using a index");
+            "the clusteringKey should not be specified when using a index");
       }
     } else {
       if (get.getClusteringKey().isPresent()) {
         checkClusteringKey(tableMetadata, get.getClusteringKey().get(), false);
       } else {
         if (tableMetadata.getClusteringKeys().size() > 0) {
-          throw new IllegalArgumentException("The clusteringKey is null");
+          throw new IllegalArgumentException("the clusteringKey should be specified");
         }
       }
     }
@@ -62,7 +62,7 @@ public class OperationChecker {
     if (indexedColumnToBeUsed != null) {
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            "The clusteringKey should not be specified when using a index");
+            "the clusteringKey should not be specified when using a index");
       }
     } else {
       scan.getStartClusteringKey()
@@ -79,7 +79,7 @@ public class OperationChecker {
     }
 
     if (scan.getLimit() < 0) {
-      throw new IllegalArgumentException("limit must not be negative");
+      throw new IllegalArgumentException("the limit should not be negative");
     }
 
     checkOrderings(tableMetadata, scan.getOrderings(), indexedColumnToBeUsed);
@@ -92,7 +92,7 @@ public class OperationChecker {
       checkClusteringKey(tableMetadata, put.getClusteringKey().get(), false);
     } else {
       if (tableMetadata.getClusteringKeys().size() > 0) {
-        throw new IllegalArgumentException("The clusteringKey is null");
+        throw new IllegalArgumentException("the clusteringKey should be specified");
       }
     }
     checkValues(tableMetadata, put.getValues());
@@ -107,7 +107,7 @@ public class OperationChecker {
       checkClusteringKey(tableMetadata, delete.getClusteringKey().get(), false);
     } else {
       if (tableMetadata.getClusteringKeys().size() > 0) {
-        throw new IllegalArgumentException("The clusteringKey is null");
+        throw new IllegalArgumentException("the clusteringKey should be specified");
       }
     }
     delete.getCondition().ifPresent(condition -> checkCondition(tableMetadata, condition, false));
@@ -115,7 +115,7 @@ public class OperationChecker {
 
   public void checkMutate(List<? extends Mutation> mutations) {
     if (mutations.isEmpty()) {
-      throw new IllegalArgumentException("mutation is empty");
+      throw new IllegalArgumentException("the mutations are empty");
     }
 
     Mutation first = mutations.get(0);
@@ -132,7 +132,7 @@ public class OperationChecker {
     JdbcTableMetadata tableMetadata =
         tableMetadataManager.getTableMetadata(operation.forFullTableName().get());
     if (tableMetadata == null) {
-      throw new IllegalArgumentException("The table is not found: " + operation.forFullTableName());
+      throw new IllegalArgumentException("the table is not found: " + operation.forFullTableName());
     }
     return tableMetadata;
   }
@@ -158,7 +158,7 @@ public class OperationChecker {
           return value.getName();
         }
       }
-      throw new IllegalArgumentException("The partitionKey is invalid: " + partitionKey);
+      throw new IllegalArgumentException("the partitionKey is invalid: " + partitionKey);
     }
     return null;
   }
@@ -166,7 +166,7 @@ public class OperationChecker {
   private void checkClusteringKey(
       JdbcTableMetadata tableMetadata, Key clusteringKey, boolean allowPartial) {
     if (!checkKey(tableMetadata, tableMetadata.getClusteringKeys(), clusteringKey, allowPartial)) {
-      throw new IllegalArgumentException("The clusteringKey is invalid: " + clusteringKey);
+      throw new IllegalArgumentException("the clusteringKey is invalid: " + clusteringKey);
     }
   }
 
@@ -202,14 +202,14 @@ public class OperationChecker {
 
   private void checkClusteringKeyRange(Key startClusteringKey, Key endClusteringKey) {
     if (startClusteringKey.size() != endClusteringKey.size()) {
-      throw new IllegalArgumentException("The clustering keys are invalid");
+      throw new IllegalArgumentException("the clustering keys are invalid");
     }
 
     for (int i = 0; i < startClusteringKey.size() - 1; i++) {
       Value startValue = startClusteringKey.get().get(i);
       Value endValue = endClusteringKey.get().get(i);
       if (!startValue.equals(endValue)) {
-        throw new IllegalArgumentException("The clustering keys are invalid");
+        throw new IllegalArgumentException("the clustering keys are invalid");
       }
     }
   }
@@ -217,7 +217,7 @@ public class OperationChecker {
   private void checkValues(JdbcTableMetadata tableMetadata, Map<String, Value> values) {
     for (Map.Entry<String, Value> entry : values.entrySet()) {
       if (!new ColumnDataTypeChecker(tableMetadata).check(entry.getValue())) {
-        throw new IllegalArgumentException("The type of the value is invalid: " + entry.getKey());
+        throw new IllegalArgumentException("the type of the value is invalid: " + entry.getKey());
       }
     }
   }
@@ -225,7 +225,7 @@ public class OperationChecker {
   private void checkCondition(
       JdbcTableMetadata tableMetadata, MutationCondition condition, boolean isPut) {
     if (!new ConditionChecker(tableMetadata).check(condition, isPut)) {
-      throw new IllegalArgumentException("The condition is invalid: " + condition);
+      throw new IllegalArgumentException("the condition is invalid: " + condition);
     }
   }
 
@@ -239,7 +239,7 @@ public class OperationChecker {
 
     if (indexedColumnToBeUsed != null) {
       if (orderings.size() != 1 || !orderings.get(0).getName().equals(indexedColumnToBeUsed)) {
-        throw new IllegalArgumentException("Invalid orderings: " + orderings);
+        throw new IllegalArgumentException("invalid orderings: " + orderings);
       }
       return;
     }
@@ -247,7 +247,7 @@ public class OperationChecker {
     List<String> clusteringKeys = tableMetadata.getClusteringKeys();
 
     if (orderings.size() > clusteringKeys.size()) {
-      throw new IllegalArgumentException("Invalid orderings: " + orderings);
+      throw new IllegalArgumentException("invalid orderings: " + orderings);
     }
 
     Boolean reverse = null;
@@ -255,7 +255,7 @@ public class OperationChecker {
       Scan.Ordering ordering = orderings.get(i);
       String clusteringKeyName = clusteringKeys.get(i);
       if (!ordering.getName().equals(clusteringKeyName)) {
-        throw new IllegalArgumentException("Invalid orderings: " + orderings);
+        throw new IllegalArgumentException("invalid orderings: " + orderings);
       }
 
       boolean rightOrder =
@@ -264,7 +264,7 @@ public class OperationChecker {
         reverse = rightOrder;
       } else {
         if (reverse != rightOrder) {
-          throw new IllegalArgumentException("Invalid orderings: " + orderings);
+          throw new IllegalArgumentException("invalid orderings: " + orderings);
         }
       }
     }

@@ -92,10 +92,20 @@ public class JdbcDatabase implements DistributedStorage {
 
   @Override
   public Optional<Result> get(Get get) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
+    Connection connection = null;
+    try {
+      connection = dataSource.getConnection();
       return jdbcService.get(get, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new ExecutionException("An error occurred", e);
+      throw new ExecutionException("get operation failed", e);
+    } finally {
+      if (connection != null) {
+        try {
+          connection.close();
+        } catch (SQLException e) {
+          LOGGER.warn("failed to close the connection", e);
+        }
+      }
     }
   }
 
@@ -111,20 +121,30 @@ public class JdbcDatabase implements DistributedStorage {
           connection.close();
         }
       } catch (SQLException sqlException) {
-        throw new ExecutionException("An error occurred", sqlException);
+        LOGGER.warn("failed to close the connection", e);
       }
-      throw new ExecutionException("An error occurred", e);
+      throw new ExecutionException("scan operation failed", e);
     }
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
+    Connection connection = null;
+    try {
+      connection = dataSource.getConnection();
       if (!jdbcService.put(put, connection, namespace, tableName)) {
         throw new NoMutationException("no mutation was applied");
       }
     } catch (SQLException e) {
-      throw new ExecutionException("An error occurred", e);
+      throw new ExecutionException("put operation failed", e);
+    } finally {
+      if (connection != null) {
+        try {
+          connection.close();
+        } catch (SQLException e) {
+          LOGGER.warn("failed to close the connection", e);
+        }
+      }
     }
   }
 
@@ -135,12 +155,22 @@ public class JdbcDatabase implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
+    Connection connection = null;
+    try {
+      connection = dataSource.getConnection();
       if (!jdbcService.delete(delete, connection, namespace, tableName)) {
         throw new NoMutationException("no mutation was applied");
       }
     } catch (SQLException e) {
-      throw new ExecutionException("An error occurred", e);
+      throw new ExecutionException("delete operation failed", e);
+    } finally {
+      if (connection != null) {
+        try {
+          connection.close();
+        } catch (SQLException e) {
+          LOGGER.warn("failed to close the connection", e);
+        }
+      }
     }
   }
 
@@ -153,27 +183,43 @@ public class JdbcDatabase implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     Connection connection = null;
     try {
-      try {
-        connection = dataSource.getConnection();
-        connection.setAutoCommit(false);
-        if (!jdbcService.mutate(mutations, connection, namespace, tableName)) {
-          connection.rollback();
-          throw new NoMutationException("no mutation was applied");
-        } else {
-          connection.commit();
-        }
-      } catch (SQLException e) {
-        if (connection != null) {
-          connection.rollback();
-        }
-        throw new ExecutionException("An error occurred", e);
-      } finally {
-        if (connection != null) {
+      connection = dataSource.getConnection();
+      connection.setAutoCommit(false);
+    } catch (SQLException e) {
+      if (connection != null) {
+        try {
           connection.close();
+        } catch (SQLException sqlException) {
+          LOGGER.warn("failed to close the connection", sqlException);
         }
       }
+      throw new ExecutionException("mutate operation failed", e);
+    }
+
+    try {
+      if (!jdbcService.mutate(mutations, connection, namespace, tableName)) {
+        try {
+          connection.rollback();
+        } catch (SQLException e) {
+          throw new ExecutionException("failed to rollback", e);
+        }
+        throw new NoMutationException("no mutation was applied");
+      } else {
+        connection.commit();
+      }
     } catch (SQLException e) {
-      throw new ExecutionException("An error occurred", e);
+      try {
+        connection.rollback();
+      } catch (SQLException sqlException) {
+        throw new ExecutionException("failed to rollback", sqlException);
+      }
+      throw new ExecutionException("mutate operation failed", e);
+    } finally {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        LOGGER.warn("failed to close the connection", e);
+      }
     }
   }
 
@@ -182,7 +228,7 @@ public class JdbcDatabase implements DistributedStorage {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      LOGGER.error("Failed to close the dataSource", e);
+      LOGGER.error("failed to close the dataSource", e);
     }
   }
 }

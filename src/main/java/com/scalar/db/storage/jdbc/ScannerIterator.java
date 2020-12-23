@@ -24,7 +24,7 @@ public class ScannerIterator implements Iterator<Result> {
     try {
       next = scanner.one().orElse(null);
     } catch (ExecutionException e) {
-      throw new RuntimeException("An error occurred", e);
+      throw new RuntimeException(e.getMessage(), e);
     }
   }
 

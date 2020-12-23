@@ -1,13 +1,17 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
+import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
 
@@ -22,26 +26,26 @@ import java.sql.SQLException;
  * @author Toshihiro Suzuki
  */
 @NotThreadSafe
-public class ConditionalPutExecutor implements MutationConditionVisitor {
+public class ConditionalUpdater implements MutationConditionVisitor {
 
-  private final Put put;
+  private final Mutation mutation;
   private final Connection connection;
   private final QueryBuilder queryBuilder;
 
-  private boolean result;
+  private boolean updated;
   private SQLException sqlException;
 
-  public ConditionalPutExecutor(Put put, Connection connection, QueryBuilder queryBuilder) {
-    assert put.getCondition().isPresent();
-    this.put = put;
+  public ConditionalUpdater(Mutation mutation, Connection connection, QueryBuilder queryBuilder) {
+    assert mutation.getCondition().isPresent();
+    this.mutation = mutation;
     this.connection = connection;
     this.queryBuilder = queryBuilder;
   }
 
   public boolean update() throws SQLException {
-    put.getCondition().ifPresent(condition -> condition.accept(this));
+    mutation.getCondition().ifPresent(condition -> condition.accept(this));
     throwSQLExceptionIfOccurred();
-    return result;
+    return updated;
   }
 
   private void throwSQLExceptionIfOccurred() throws SQLException {
@@ -52,42 +56,31 @@ public class ConditionalPutExecutor implements MutationConditionVisitor {
 
   @Override
   public void visit(PutIf condition) {
+    Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
             .update(put.forFullTableName().get())
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
             .build();
-    try (PreparedStatement preparedStatement = updateQuery.prepareAndBind(connection)) {
-      int res = preparedStatement.executeUpdate();
-      if (res > 0) {
-        result = true;
-      }
-    } catch (SQLException e) {
-      sqlException = e;
-    }
+    executeUpdate(updateQuery);
   }
 
   @Override
   public void visit(PutIfExists condition) {
+    Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
             .update(put.forFullTableName().get())
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey())
             .build();
-    try (PreparedStatement preparedStatement = updateQuery.prepareAndBind(connection)) {
-      int res = preparedStatement.executeUpdate();
-      if (res > 0) {
-        result = true;
-      }
-    } catch (SQLException e) {
-      sqlException = e;
-    }
+    executeUpdate(updateQuery);
   }
 
   @Override
   public void visit(PutIfNotExists condition) {
+    Put put = (Put) mutation;
     InsertQuery insertQuery =
         queryBuilder
             .insertInto(put.forFullTableName().get())
@@ -95,7 +88,7 @@ public class ConditionalPutExecutor implements MutationConditionVisitor {
             .build();
     try (PreparedStatement preparedStatement = insertQuery.prepareAndBind(connection)) {
       preparedStatement.executeUpdate();
-      result = true;
+      updated = true;
     } catch (SQLException e) {
       if (e.getSQLState().equals("23000") || e.getSQLState().equals("23505")) {
         // The duplicate key error
@@ -108,11 +101,34 @@ public class ConditionalPutExecutor implements MutationConditionVisitor {
 
   @Override
   public void visit(DeleteIf condition) {
-    assert false;
+    Delete delete = (Delete) mutation;
+    DeleteQuery deleteQuery =
+        queryBuilder
+            .deleteFrom(delete.forFullTableName().get())
+            .where(delete.getPartitionKey(), delete.getClusteringKey(), condition.getExpressions())
+            .build();
+    executeUpdate(deleteQuery);
   }
 
   @Override
   public void visit(DeleteIfExists condition) {
-    assert false;
+    Delete delete = (Delete) mutation;
+    DeleteQuery deleteQuery =
+        queryBuilder
+            .deleteFrom(delete.forFullTableName().get())
+            .where(delete.getPartitionKey(), delete.getClusteringKey())
+            .build();
+    executeUpdate(deleteQuery);
+  }
+
+  private void executeUpdate(Query query) {
+    try (PreparedStatement preparedStatement = query.prepareAndBind(connection)) {
+      int res = preparedStatement.executeUpdate();
+      if (res > 0) {
+        updated = true;
+      }
+    } catch (SQLException e) {
+      sqlException = e;
+    }
   }
 }

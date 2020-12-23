@@ -77,39 +77,38 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   }
 
   private String orderBySqlString() {
-    if (isRangeQuery) {
-      List<Scan.Ordering> orderingList = new ArrayList<>(orderings);
-
-      Boolean reverse = null;
-      for (int i = 0; i < tableMetadata.getClusteringKeys().size(); i++) {
-        if (i < orderings.size()) {
-          Scan.Ordering ordering = orderings.get(i);
-          if (reverse == null) {
-            reverse =
-                ordering.getOrder() != tableMetadata.getClusteringKeyOrder(ordering.getName());
-          }
-        } else {
-          String clusteringKeyName = tableMetadata.getClusteringKeys().get(i);
-          Scan.Ordering.Order order = tableMetadata.getClusteringKeyOrder(clusteringKeyName);
-
-          if (reverse != null && reverse) {
-            if (order == Scan.Ordering.Order.ASC) {
-              order = Scan.Ordering.Order.DESC;
-            } else {
-              order = Scan.Ordering.Order.ASC;
-            }
-          }
-          orderingList.add(new Scan.Ordering(clusteringKeyName, order));
-        }
-      }
-
-      return " ORDER BY "
-          + orderingList.stream()
-              .map(o -> o.getName() + " " + o.getOrder())
-              .collect(Collectors.joining(","));
+    if (!isRangeQuery) {
+      return "";
     }
 
-    return "";
+    List<Scan.Ordering> orderingList = new ArrayList<>(orderings);
+
+    Boolean reverse = null;
+    for (int i = 0; i < tableMetadata.getClusteringKeys().size(); i++) {
+      if (i < orderings.size()) {
+        Scan.Ordering ordering = orderings.get(i);
+        if (reverse == null) {
+          reverse = ordering.getOrder() != tableMetadata.getClusteringKeyOrder(ordering.getName());
+        }
+      } else {
+        String clusteringKeyName = tableMetadata.getClusteringKeys().get(i);
+        Scan.Ordering.Order order = tableMetadata.getClusteringKeyOrder(clusteringKeyName);
+
+        if (reverse != null && reverse) {
+          if (order == Scan.Ordering.Order.ASC) {
+            order = Scan.Ordering.Order.DESC;
+          } else {
+            order = Scan.Ordering.Order.ASC;
+          }
+        }
+        orderingList.add(new Scan.Ordering(clusteringKeyName, order));
+      }
+    }
+
+    return " ORDER BY "
+        + orderingList.stream()
+            .map(o -> o.getName() + " " + o.getOrder())
+            .collect(Collectors.joining(","));
   }
 
   @Override

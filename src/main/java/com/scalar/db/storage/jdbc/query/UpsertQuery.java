@@ -40,7 +40,7 @@ public interface UpsertQuery extends Query {
         case SQL_SERVER:
           return new MergeQuery(this);
         default:
-          throw new AssertionError("invalid rdb type: " + rdbEngine);
+          throw new AssertionError("invalid rdb engine: " + rdbEngine);
       }
     }
   }

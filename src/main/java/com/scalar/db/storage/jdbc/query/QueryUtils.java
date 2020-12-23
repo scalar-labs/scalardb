@@ -21,7 +21,7 @@ public final class QueryUtils {
       case LTE:
         return "<=";
       default:
-        throw new AssertionError("Invalid operator: " + operator);
+        throw new AssertionError("invalid operator: " + operator);
     }
   }
 }

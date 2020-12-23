@@ -90,13 +90,13 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     try {
       return new JdbcTransaction(jdbcService, dataSource.getConnection(), namespace, tableName);
     } catch (SQLException e) {
-      throw new TransactionException("Failed to start the transaction", e);
+      throw new TransactionException("failed to start the transaction", e);
     }
   }
 
   @Override
   public JdbcTransaction start(String txId) throws TransactionException {
-    throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
+    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
   }
 
   @Deprecated
@@ -108,7 +108,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation) throws TransactionException {
-    throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
+    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
   }
 
   @Deprecated
@@ -128,19 +128,19 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Override
   public JdbcTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
-    throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
+    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
   }
 
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    throw new UnsupportedOperationException("Doesn't support starting transaction with txId");
+    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
   }
 
   @Override
   public TransactionState getState(String txId) {
-    throw new UnsupportedOperationException("Doesn't support this operation");
+    throw new UnsupportedOperationException("doesn't support this operation");
   }
 
   @Override
@@ -148,7 +148,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     try {
       dataSource.close();
     } catch (SQLException e) {
-      LOGGER.warn("Failed to close the dataSource", e);
+      LOGGER.warn("failed to close the dataSource", e);
     }
   }
 }

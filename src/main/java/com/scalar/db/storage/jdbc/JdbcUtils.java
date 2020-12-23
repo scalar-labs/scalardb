@@ -18,7 +18,7 @@ public final class JdbcUtils {
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {
       return RdbEngine.SQL_SERVER;
     } else {
-      throw new IllegalArgumentException("the specified rdb engine is not supported.");
+      throw new IllegalArgumentException("the rdb engine is not supported: " + jdbcUrl);
     }
   }
 

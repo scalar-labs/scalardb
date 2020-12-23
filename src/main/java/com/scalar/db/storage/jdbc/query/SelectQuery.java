@@ -45,7 +45,7 @@ public interface SelectQuery extends Query {
       try {
         this.tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
       } catch (SQLException e) {
-        throw new RuntimeException("An error occurred", e);
+        throw new RuntimeException("failed to get the metadata of " + fullTableName, e);
       }
       return this;
     }
@@ -122,7 +122,7 @@ public interface SelectQuery extends Query {
           case SQL_SERVER:
             return new SelectWithOffsetFetchQuery(this, limit);
           default:
-            throw new AssertionError("Invalid rdb type: " + rdbEngine);
+            throw new AssertionError("invalid rdb engine: " + rdbEngine);
         }
       }
       return new SimpleSelectQuery(this);

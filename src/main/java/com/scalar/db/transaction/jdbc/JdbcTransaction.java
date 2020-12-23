@@ -52,7 +52,7 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public String getId() {
-    throw new UnsupportedOperationException("Doesn't support this operation");
+    throw new UnsupportedOperationException("doesn't support this operation");
   }
 
   @Override
@@ -86,7 +86,7 @@ public class JdbcTransaction implements DistributedTransaction {
     try {
       return jdbcService.get(get, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("An error occurred", e);
+      throw new CrudException("get operation failed", e);
     }
   }
 
@@ -95,22 +95,22 @@ public class JdbcTransaction implements DistributedTransaction {
     try {
       return jdbcService.scan(scan, connection, namespace, tableName).all();
     } catch (SQLException | ExecutionException e) {
-      throw new CrudException("An error occurred", e);
+      throw new CrudException("scan operation failed", e);
     }
   }
 
   @Override
   public void put(Put put) throws CrudException {
-    // Ignore the condition
+    // Ignore the condition in the put
     if (put.getCondition().isPresent()) {
-      LOGGER.warn("Ignoring the condition of the mutation: " + put);
+      LOGGER.warn("ignoring the condition of the mutation: " + put);
       put.withCondition(null);
     }
 
     try {
       jdbcService.put(put, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("An error occurred", e);
+      throw new CrudException("put operation failed", e);
     }
   }
 
@@ -121,16 +121,16 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void delete(Delete delete) throws CrudException {
-    // Ignore the condition
+    // Ignore the condition in the delete
     if (delete.getCondition().isPresent()) {
-      LOGGER.warn("Ignoring the condition of the mutation: " + delete);
+      LOGGER.warn("ignoring the condition of the mutation: " + delete);
       delete.withCondition(null);
     }
 
     try {
       jdbcService.delete(delete, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("An error occurred", e);
+      throw new CrudException("delete operation failed", e);
     }
   }
 
@@ -141,10 +141,10 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    // Ignore conditions for now
+    // Ignore the conditions in the mutations
     for (Mutation mutation : mutations) {
       if (mutation.getCondition().isPresent()) {
-        LOGGER.warn("Ignoring the condition of the mutation: " + mutation);
+        LOGGER.warn("ignoring the condition of the mutation: " + mutation);
         mutation.withCondition(null);
       }
     }
@@ -152,42 +152,42 @@ public class JdbcTransaction implements DistributedTransaction {
     try {
       jdbcService.mutate(mutations, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("An error occurred", e);
+      throw new CrudException("mutate operation failed", e);
     }
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     try {
-      try {
-        connection.commit();
-      } catch (SQLException e) {
-        try {
-          connection.rollback();
-        } catch (SQLException sqlException) {
-          throw new UnknownTransactionStatusException("Failed to rollback", sqlException);
-        }
-        throw new CommitException("Failed to commit", e);
-      } finally {
-        connection.close();
-      }
+      connection.commit();
     } catch (SQLException e) {
-      throw new CommitException("An error occurred", e);
+      try {
+        connection.rollback();
+      } catch (SQLException sqlException) {
+        throw new UnknownTransactionStatusException("failed to rollback", sqlException);
+      }
+      throw new CommitException("failed to commit", e);
+    } finally {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        LOGGER.warn("failed to close the connection", e);
+      }
     }
   }
 
   @Override
   public void abort() throws AbortException {
     try {
-      try {
-        connection.rollback();
-      } catch (SQLException e) {
-        throw new AbortException("Failed to rollback", e);
-      } finally {
-        connection.close();
-      }
+      connection.rollback();
     } catch (SQLException e) {
-      throw new AbortException("An error occurred", e);
+      throw new AbortException("failed to rollback", e);
+    } finally {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        LOGGER.warn("failed to close the connection", e);
+      }
     }
   }
 }

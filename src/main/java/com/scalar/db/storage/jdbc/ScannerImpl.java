@@ -4,6 +4,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -20,6 +22,7 @@ import java.util.Optional;
 
 @NotThreadSafe
 public class ScannerImpl implements Scanner {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ScannerImpl.class);
 
   private final SelectQuery selectQuery;
   private final Connection connection;
@@ -45,7 +48,7 @@ public class ScannerImpl implements Scanner {
       }
       return Optional.empty();
     } catch (SQLException e) {
-      throw new ExecutionException("An error occurred", e);
+      throw new ExecutionException("failed to fetch the next result", e);
     }
   }
 
@@ -72,17 +75,19 @@ public class ScannerImpl implements Scanner {
   @Override
   public void close() throws IOException {
     try {
-      try {
-        resultSet.close();
-      } finally {
-        try {
-          preparedStatement.close();
-        } finally {
-          connection.close();
-        }
-      }
+      resultSet.close();
     } catch (SQLException e) {
-      throw new IOException("An error occurred", e);
+      LOGGER.warn("failed to close the resultSet", e);
+    }
+    try {
+      preparedStatement.close();
+    } catch (SQLException e) {
+      LOGGER.warn("failed to close the preparedStatement", e);
+    }
+    try {
+      connection.close();
+    } catch (SQLException e) {
+      LOGGER.warn("failed to close the connection", e);
     }
   }
 }

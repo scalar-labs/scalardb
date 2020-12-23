@@ -28,7 +28,7 @@ import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Parameterized.class)
-public class TableMetadataIntegrationTest {
+public class JdbcMetadataIntegrationTest {
 
   private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
   private static final String NAMESPACE = "integration_testing";

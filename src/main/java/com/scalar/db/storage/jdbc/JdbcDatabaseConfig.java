@@ -69,7 +69,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
       return Integer.parseInt(value);
     } catch (NumberFormatException ignored) {
       LOGGER.warn(
-          "The specified value of '{}' is not a number. Using the default value: {}",
+          "the specified value of '{}' is not a number. using the default value: {}",
           name,
           defaultValue);
       return defaultValue;
