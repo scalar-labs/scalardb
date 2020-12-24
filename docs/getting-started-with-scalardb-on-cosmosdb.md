@@ -5,12 +5,15 @@ This document briefly explains how you can get started with Scalar DB on Cosmos 
 
 ## Install prerequisites
 
-Scalar DB is written in Java. So the following software is required to run it.
+Scalar DB is written in Java and uses Cosmos DB as an underlying storage implementation, so the following software and Azure Cosmos DB account are required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * Other libraries used from the above are automatically installed through gradle
+* [Cosmos DB setup](#cosmos-db-setup)
 
-### Cosmos DB setup
+From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB account is properly configured in Azure.
+
+## Cosmos DB setup
 You also need to set up a Cosmos DB account to get started with Scalar DB on Cosmos DB.
 
 This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) with Azure portal.
@@ -28,8 +31,6 @@ This section explains how to set up [Azure Cosmos DB](https://docs.microsoft.com
  5. Select **Default consistency** from the left navigation on your Azure Cosmos DB account page.
     * Change `Consistency Level` from `SESSION` to `STRONG`.
     * Select **Save**
-        
-From here, we assume Oracle JDK 8 is properly installed in your local environment and the Azure Cosmos DB account is properly configured in Azure.
 
 ## Configure Scalar DB
     
