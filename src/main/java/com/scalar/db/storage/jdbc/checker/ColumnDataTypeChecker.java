@@ -18,7 +18,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 class ColumnDataTypeChecker implements ValueVisitor {
   private final JdbcTableMetadata tableMetadata;
   private String name;
-  private boolean okay;
+  private boolean isValid;
 
   public ColumnDataTypeChecker(JdbcTableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
@@ -26,13 +26,13 @@ class ColumnDataTypeChecker implements ValueVisitor {
 
   public boolean check(Value value) {
     value.accept(this);
-    return okay;
+    return isValid;
   }
 
   public boolean check(String name, Value value) {
     this.name = name;
     value.accept(this);
-    return okay;
+    return isValid;
   }
 
   private String getName(Value value) {
@@ -41,36 +41,36 @@ class ColumnDataTypeChecker implements ValueVisitor {
 
   @Override
   public void visit(BooleanValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.BOOLEAN;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.BOOLEAN;
   }
 
   @Override
   public void visit(IntValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.INT;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.INT;
   }
 
   @Override
   public void visit(BigIntValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.BIGINT;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.BIGINT;
   }
 
   @Override
   public void visit(FloatValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.FLOAT;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.FLOAT;
   }
 
   @Override
   public void visit(DoubleValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.DOUBLE;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.DOUBLE;
   }
 
   @Override
   public void visit(TextValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.TEXT;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.TEXT;
   }
 
   @Override
   public void visit(BlobValue value) {
-    okay = tableMetadata.getDataType(getName(value)) == DataType.BLOB;
+    isValid = tableMetadata.getDataType(getName(value)) == DataType.BLOB;
   }
 }

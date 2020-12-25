@@ -16,7 +16,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 class ConditionChecker implements MutationConditionVisitor {
   private final JdbcTableMetadata tableMetadata;
   private boolean isPut;
-  private boolean okay;
+  private boolean isValid;
 
   public ConditionChecker(JdbcTableMetadata tableMetadata) {
     this.tableMetadata = tableMetadata;
@@ -25,22 +25,22 @@ class ConditionChecker implements MutationConditionVisitor {
   public boolean check(MutationCondition condition, boolean isPut) {
     this.isPut = isPut;
     condition.accept(this);
-    return okay;
+    return isValid;
   }
 
   @Override
   public void visit(PutIf condition) {
     if (!isPut) {
-      okay = false;
+      isValid = false;
       return;
     }
 
     // Check the values in the expressions
     for (ConditionalExpression expression : condition.getExpressions()) {
-      okay =
+      isValid =
           new ColumnDataTypeChecker(tableMetadata)
               .check(expression.getName(), expression.getValue());
-      if (!okay) {
+      if (!isValid) {
         break;
       }
     }
@@ -48,27 +48,27 @@ class ConditionChecker implements MutationConditionVisitor {
 
   @Override
   public void visit(PutIfExists condition) {
-    okay = isPut;
+    isValid = isPut;
   }
 
   @Override
   public void visit(PutIfNotExists condition) {
-    okay = isPut;
+    isValid = isPut;
   }
 
   @Override
   public void visit(DeleteIf condition) {
     if (isPut) {
-      okay = false;
+      isValid = false;
       return;
     }
 
     // Check the values in the expressions
     for (ConditionalExpression expression : condition.getExpressions()) {
-      okay =
+      isValid =
           new ColumnDataTypeChecker(tableMetadata)
               .check(expression.getName(), expression.getValue());
-      if (!okay) {
+      if (!isValid) {
         break;
       }
     }
@@ -76,6 +76,6 @@ class ConditionChecker implements MutationConditionVisitor {
 
   @Override
   public void visit(DeleteIfExists condition) {
-    okay = !isPut;
+    isValid = !isPut;
   }
 }

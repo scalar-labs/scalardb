@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
+
   private final JdbcTableMetadata tableMetadata;
   private final List<String> projections;
   private final String fullTableName;

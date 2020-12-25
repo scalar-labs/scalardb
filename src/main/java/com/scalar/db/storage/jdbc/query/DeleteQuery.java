@@ -15,35 +15,6 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 public class DeleteQuery extends AbstractQuery {
 
-  public static class Builder {
-    private final String fullTableName;
-    private Key partitionKey;
-    private Optional<Key> clusteringKey;
-    private List<ConditionalExpression> otherConditions;
-
-    Builder(String fullTableName) {
-      this.fullTableName = fullTableName;
-    }
-
-    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
-      return where(partitionKey, clusteringKey, Collections.emptyList());
-    }
-
-    public Builder where(
-        Key partitionKey,
-        Optional<Key> clusteringKey,
-        List<ConditionalExpression> otherConditions) {
-      this.partitionKey = partitionKey;
-      this.clusteringKey = clusteringKey;
-      this.otherConditions = otherConditions;
-      return this;
-    }
-
-    public DeleteQuery build() {
-      return new DeleteQuery(this);
-    }
-  }
-
   private final String fullTableName;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
@@ -99,6 +70,35 @@ public class DeleteQuery extends AbstractQuery {
         condition.getValue().accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
+    }
+  }
+
+  public static class Builder {
+    private final String fullTableName;
+    private Key partitionKey;
+    private Optional<Key> clusteringKey;
+    private List<ConditionalExpression> otherConditions;
+
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
+    }
+
+    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
+      return where(partitionKey, clusteringKey, Collections.emptyList());
+    }
+
+    public Builder where(
+        Key partitionKey,
+        Optional<Key> clusteringKey,
+        List<ConditionalExpression> otherConditions) {
+      this.partitionKey = partitionKey;
+      this.clusteringKey = clusteringKey;
+      this.otherConditions = otherConditions;
+      return this;
+    }
+
+    public DeleteQuery build() {
+      return new DeleteQuery(this);
     }
   }
 }

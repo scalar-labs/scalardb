@@ -17,41 +17,6 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 public class UpdateQuery extends AbstractQuery {
 
-  public static class Builder {
-    private final String fullTableName;
-    private Key partitionKey;
-    private Optional<Key> clusteringKey;
-    private Map<String, Value> values;
-    List<ConditionalExpression> otherConditions;
-
-    Builder(String fullTableName) {
-      this.fullTableName = fullTableName;
-    }
-
-    public Builder set(Map<String, Value> values) {
-      this.values = values;
-      return this;
-    }
-
-    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
-      return where(partitionKey, clusteringKey, Collections.emptyList());
-    }
-
-    public Builder where(
-        Key partitionKey,
-        Optional<Key> clusteringKey,
-        List<ConditionalExpression> otherConditions) {
-      this.partitionKey = partitionKey;
-      this.clusteringKey = clusteringKey;
-      this.otherConditions = otherConditions;
-      return this;
-    }
-
-    public UpdateQuery build() {
-      return new UpdateQuery(this);
-    }
-  }
-
   private final String fullTableName;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
@@ -124,6 +89,41 @@ public class UpdateQuery extends AbstractQuery {
         condition.getValue().accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
+    }
+  }
+
+  public static class Builder {
+    private final String fullTableName;
+    private Key partitionKey;
+    private Optional<Key> clusteringKey;
+    private Map<String, Value> values;
+    List<ConditionalExpression> otherConditions;
+
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
+    }
+
+    public Builder set(Map<String, Value> values) {
+      this.values = values;
+      return this;
+    }
+
+    public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
+      return where(partitionKey, clusteringKey, Collections.emptyList());
+    }
+
+    public Builder where(
+        Key partitionKey,
+        Optional<Key> clusteringKey,
+        List<ConditionalExpression> otherConditions) {
+      this.partitionKey = partitionKey;
+      this.clusteringKey = clusteringKey;
+      this.otherConditions = otherConditions;
+      return this;
+    }
+
+    public UpdateQuery build() {
+      return new UpdateQuery(this);
     }
   }
 }

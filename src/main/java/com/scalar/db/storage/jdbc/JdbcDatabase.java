@@ -99,13 +99,7 @@ public class JdbcDatabase implements DistributedStorage {
     } catch (SQLException e) {
       throw new ExecutionException("get operation failed", e);
     } finally {
-      if (connection != null) {
-        try {
-          connection.close();
-        } catch (SQLException e) {
-          LOGGER.warn("failed to close the connection", e);
-        }
-      }
+      close(connection);
     }
   }
 
@@ -116,13 +110,7 @@ public class JdbcDatabase implements DistributedStorage {
       connection = dataSource.getConnection();
       return jdbcService.scan(scan, connection, namespace, tableName);
     } catch (SQLException e) {
-      try {
-        if (connection != null) {
-          connection.close();
-        }
-      } catch (SQLException sqlException) {
-        LOGGER.warn("failed to close the connection", e);
-      }
+      close(connection);
       throw new ExecutionException("scan operation failed", e);
     }
   }
@@ -138,13 +126,7 @@ public class JdbcDatabase implements DistributedStorage {
     } catch (SQLException e) {
       throw new ExecutionException("put operation failed", e);
     } finally {
-      if (connection != null) {
-        try {
-          connection.close();
-        } catch (SQLException e) {
-          LOGGER.warn("failed to close the connection", e);
-        }
-      }
+      close(connection);
     }
   }
 
@@ -164,13 +146,7 @@ public class JdbcDatabase implements DistributedStorage {
     } catch (SQLException e) {
       throw new ExecutionException("delete operation failed", e);
     } finally {
-      if (connection != null) {
-        try {
-          connection.close();
-        } catch (SQLException e) {
-          LOGGER.warn("failed to close the connection", e);
-        }
-      }
+      close(connection);
     }
   }
 
@@ -186,13 +162,7 @@ public class JdbcDatabase implements DistributedStorage {
       connection = dataSource.getConnection();
       connection.setAutoCommit(false);
     } catch (SQLException e) {
-      if (connection != null) {
-        try {
-          connection.close();
-        } catch (SQLException sqlException) {
-          LOGGER.warn("failed to close the connection", sqlException);
-        }
-      }
+      close(connection);
       throw new ExecutionException("mutate operation failed", e);
     }
 
@@ -215,11 +185,17 @@ public class JdbcDatabase implements DistributedStorage {
       }
       throw new ExecutionException("mutate operation failed", e);
     } finally {
-      try {
+      close(connection);
+    }
+  }
+
+  private void close(Connection connection) {
+    try {
+      if (connection != null) {
         connection.close();
-      } catch (SQLException e) {
-        LOGGER.warn("failed to close the connection", e);
       }
+    } catch (SQLException e) {
+      LOGGER.warn("failed to close the connection", e);
     }
   }
 

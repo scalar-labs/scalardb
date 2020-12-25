@@ -21,31 +21,31 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * A visitor class to execute conditional put
+ * A visitor class to execute a conditional mutation
  *
  * @author Toshihiro Suzuki
  */
 @NotThreadSafe
-public class ConditionalUpdater implements MutationConditionVisitor {
+public class ConditionalMutator implements MutationConditionVisitor {
 
   private final Mutation mutation;
   private final Connection connection;
   private final QueryBuilder queryBuilder;
 
-  private boolean updated;
+  private boolean isMutated;
   private SQLException sqlException;
 
-  public ConditionalUpdater(Mutation mutation, Connection connection, QueryBuilder queryBuilder) {
+  public ConditionalMutator(Mutation mutation, Connection connection, QueryBuilder queryBuilder) {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;
     this.connection = connection;
     this.queryBuilder = queryBuilder;
   }
 
-  public boolean update() throws SQLException {
+  public boolean mutate() throws SQLException {
     mutation.getCondition().ifPresent(condition -> condition.accept(this));
     throwSQLExceptionIfOccurred();
-    return updated;
+    return isMutated;
   }
 
   private void throwSQLExceptionIfOccurred() throws SQLException {
@@ -63,7 +63,7 @@ public class ConditionalUpdater implements MutationConditionVisitor {
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
             .build();
-    executeUpdate(updateQuery);
+    executeMutate(updateQuery);
   }
 
   @Override
@@ -75,7 +75,7 @@ public class ConditionalUpdater implements MutationConditionVisitor {
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey())
             .build();
-    executeUpdate(updateQuery);
+    executeMutate(updateQuery);
   }
 
   @Override
@@ -88,7 +88,7 @@ public class ConditionalUpdater implements MutationConditionVisitor {
             .build();
     try (PreparedStatement preparedStatement = insertQuery.prepareAndBind(connection)) {
       preparedStatement.executeUpdate();
-      updated = true;
+      isMutated = true;
     } catch (SQLException e) {
       if (e.getSQLState().equals("23000") || e.getSQLState().equals("23505")) {
         // The duplicate key error
@@ -107,7 +107,7 @@ public class ConditionalUpdater implements MutationConditionVisitor {
             .deleteFrom(delete.forFullTableName().get())
             .where(delete.getPartitionKey(), delete.getClusteringKey(), condition.getExpressions())
             .build();
-    executeUpdate(deleteQuery);
+    executeMutate(deleteQuery);
   }
 
   @Override
@@ -118,14 +118,14 @@ public class ConditionalUpdater implements MutationConditionVisitor {
             .deleteFrom(delete.forFullTableName().get())
             .where(delete.getPartitionKey(), delete.getClusteringKey())
             .build();
-    executeUpdate(deleteQuery);
+    executeMutate(deleteQuery);
   }
 
-  private void executeUpdate(Query query) {
+  private void executeMutate(Query query) {
     try (PreparedStatement preparedStatement = query.prepareAndBind(connection)) {
       int res = preparedStatement.executeUpdate();
       if (res > 0) {
-        updated = true;
+        isMutated = true;
       }
     } catch (SQLException e) {
       sqlException = e;

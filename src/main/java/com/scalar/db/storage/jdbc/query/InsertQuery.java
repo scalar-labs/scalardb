@@ -13,29 +13,6 @@ import java.util.stream.Collectors;
 
 public class InsertQuery extends AbstractQuery {
 
-  public static class Builder {
-    private final String fullTableName;
-    private Key partitionKey;
-    private Optional<Key> clusteringKey;
-    private Map<String, Value> values;
-
-    Builder(String fullTableName) {
-      this.fullTableName = fullTableName;
-    }
-
-    public Builder values(
-        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
-      this.partitionKey = partitionKey;
-      this.clusteringKey = clusteringKey;
-      this.values = values;
-      return this;
-    }
-
-    public InsertQuery build() {
-      return new InsertQuery(this);
-    }
-  }
-
   private final String fullTableName;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
@@ -88,6 +65,29 @@ public class InsertQuery extends AbstractQuery {
     for (Value value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
+    }
+  }
+
+  public static class Builder {
+    private final String fullTableName;
+    private Key partitionKey;
+    private Optional<Key> clusteringKey;
+    private Map<String, Value> values;
+
+    Builder(String fullTableName) {
+      this.fullTableName = fullTableName;
+    }
+
+    public Builder values(
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
+      this.partitionKey = partitionKey;
+      this.clusteringKey = clusteringKey;
+      this.values = values;
+      return this;
+    }
+
+    public InsertQuery build() {
+      return new InsertQuery(this);
     }
   }
 }
