@@ -104,6 +104,7 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     Optional<TransactionResult> expected =
         Optional.of(prepareResult(true, TransactionState.COMMITTED));
+    when(snapshot.containsKey(new Snapshot.Key(get))).thenReturn(true);
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(expected);
 
     // Act
@@ -120,7 +121,7 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.COMMITTED));
-    when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
+    when(snapshot.containsKey(new Snapshot.Key(get))).thenReturn(false);
     doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
     when(storage.get(get)).thenReturn(expected);
 
@@ -270,9 +271,8 @@ public class CrudHandlerTest {
     when(snapshot.get(scan))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Arrays.asList(key)));
-    when(snapshot.get(key))
-        .thenReturn(Optional.empty())
-        .thenReturn(Optional.of((TransactionResult) result));
+    when(snapshot.containsKey(key)).thenReturn(false).thenReturn(true);
+    when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
     // Act
     List<Result> results1 = handler.scan(scan);
@@ -332,9 +332,8 @@ public class CrudHandlerTest {
             scan.getPartitionKey(),
             result.getClusteringKey().get());
     when(snapshot.get(scan)).thenReturn(Optional.empty());
-    when(snapshot.get(key))
-        .thenReturn(Optional.empty())
-        .thenReturn(Optional.of((TransactionResult) result));
+    when(snapshot.containsKey(key)).thenReturn(false).thenReturn(true);
+    when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
     // Act
     List<Result> results = handler.scan(scan);
