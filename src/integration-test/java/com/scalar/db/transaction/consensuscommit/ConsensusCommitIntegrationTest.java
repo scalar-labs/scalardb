@@ -114,11 +114,30 @@ public class ConsensusCommitIntegrationTest {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
 
     // Act
-    transaction.get(get);
-    transaction.get(get);
+    Optional<Result> result1 = transaction.get(get);
+    Optional<Result> result2 = transaction.get(get);
 
     // Assert
     verify(storage).get(any(Get.class));
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  public void
+      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
+          throws CrudException, ExecutionException, CommitException,
+              UnknownTransactionStatusException {
+    // Arrange
+    transaction = manager.start();
+    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
+
+    // Act
+    Optional<Result> result1 = transaction.get(get);
+    populateRecords();
+    Optional<Result> result2 = transaction.get(get);
+
+    // Assert
+    verify(storage).get(any(Get.class));
+    assertThat(result1).isEqualTo(result2);
   }
 
   public void get_GetGivenForNonExisting_ShouldReturnEmpty()

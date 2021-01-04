@@ -73,6 +73,14 @@ public class ConsensusCommitWithCassandraIntegrationTest {
   }
 
   @Test
+  public void
+      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
+          throws Exception {
+    test
+        .get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime();
+  }
+
+  @Test
   public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws Exception {
     test.get_GetGivenForNonExisting_ShouldReturnEmpty();
   }

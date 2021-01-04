@@ -39,9 +39,8 @@ public class CrudHandler {
     Optional<TransactionResult> result;
     Snapshot.Key key = new Snapshot.Key(get);
 
-    result = snapshot.get(key);
-    if (result.isPresent()) {
-      return Optional.of(result.get());
+    if (snapshot.containsKey(key)) {
+      return snapshot.get(key).map(r -> r);
     }
 
     result = getFromStorage(get);
@@ -80,11 +79,11 @@ public class CrudHandler {
             getSnapshotKey(r, scan)
                 .orElseThrow(() -> new CrudRuntimeException("can't get a snapshot key"));
 
-        if (snapshot.get(key).isPresent()) {
-          result = snapshot.get(key).get();
+        if (snapshot.containsKey(key)) {
+          result = snapshot.get(key).orElse(null);
         }
 
-        snapshot.put(key, Optional.of(result));
+        snapshot.put(key, Optional.ofNullable(result));
         keys.add(key);
         results.add(result);
       }
