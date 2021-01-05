@@ -1,8 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
 public enum RdbEngine {
-  MY_SQL,
-  POSTGRE_SQL,
+  MYSQL,
+  POSTGRESQL,
   ORACLE,
   SQL_SERVER
 }

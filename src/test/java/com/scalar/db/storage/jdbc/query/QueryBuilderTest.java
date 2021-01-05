@@ -66,7 +66,7 @@ public class QueryBuilderTest {
 
   @Test
   public void simpleSelectQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
 
     assertThat(
             queryBuilder
@@ -230,7 +230,7 @@ public class QueryBuilderTest {
 
   @Test
   public void selectQueryWithLimitForMySQLAndPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
@@ -293,7 +293,7 @@ public class QueryBuilderTest {
 
   @Test
   public void insertQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -335,7 +335,7 @@ public class QueryBuilderTest {
 
   @Test
   public void updateQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -405,7 +405,7 @@ public class QueryBuilderTest {
 
   @Test
   public void deleteQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
 
     assertThat(
             queryBuilder
@@ -464,7 +464,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryForMySQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MY_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
@@ -512,7 +512,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryForPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.POSTGRE_SQL);
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.POSTGRESQL);
 
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));

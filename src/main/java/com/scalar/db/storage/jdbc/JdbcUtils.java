@@ -10,9 +10,9 @@ public final class JdbcUtils {
 
   public static RdbEngine getRdbEngine(String jdbcUrl) {
     if (jdbcUrl.startsWith("jdbc:mysql:")) {
-      return RdbEngine.MY_SQL;
+      return RdbEngine.MYSQL;
     } else if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-      return RdbEngine.POSTGRE_SQL;
+      return RdbEngine.POSTGRESQL;
     } else if (jdbcUrl.startsWith("jdbc:oracle:")) {
       return RdbEngine.ORACLE;
     } else if (jdbcUrl.startsWith("jdbc:sqlserver:")) {

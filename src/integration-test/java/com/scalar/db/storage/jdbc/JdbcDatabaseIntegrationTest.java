@@ -39,9 +39,9 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
-import static com.scalar.db.storage.jdbc.test.TestEnv.MY_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRE_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -69,9 +69,9 @@ public class JdbcDatabaseIntegrationTest {
   @Parameterized.Parameters(name = "RDB={0}, namespace_prefix={1}")
   public static Collection<Object[]> jdbcConnectionInfos() {
     return Arrays.asList(
-        new Object[] {MY_SQL_INFO, null},
-        new Object[] {MY_SQL_INFO, "ns_prefix"},
-        new Object[] {POSTGRE_SQL_INFO, null},
+        new Object[] {MYSQL_INFO, null},
+        new Object[] {MYSQL_INFO, "ns_prefix"},
+        new Object[] {POSTGRESQL_INFO, null},
         new Object[] {ORACLE_INFO, null},
         new Object[] {SQL_SERVER_INFO, null});
   }

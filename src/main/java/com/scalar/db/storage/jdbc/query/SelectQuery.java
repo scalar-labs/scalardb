@@ -114,8 +114,8 @@ public interface SelectQuery extends Query {
     public SelectQuery build() {
       if (limit > 0) {
         switch (rdbEngine) {
-          case MY_SQL:
-          case POSTGRE_SQL:
+          case MYSQL:
+          case POSTGRESQL:
             return new SelectWithLimitQuery(this, limit);
           case ORACLE:
             return new SelectWithRowNumQuery(this, limit);

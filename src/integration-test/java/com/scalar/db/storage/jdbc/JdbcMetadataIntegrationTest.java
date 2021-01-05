@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
-import static com.scalar.db.storage.jdbc.test.TestEnv.MY_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRE_SQL_INFO;
+import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +49,7 @@ public class JdbcMetadataIntegrationTest {
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
-    return Arrays.asList(MY_SQL_INFO, POSTGRE_SQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
+    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
 
   @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;

@@ -31,9 +31,9 @@ public interface UpsertQuery extends Query {
 
     public UpsertQuery build() {
       switch (rdbEngine) {
-        case MY_SQL:
+        case MYSQL:
           return new InsertOnDuplicateKeyUpdateQuery(this);
-        case POSTGRE_SQL:
+        case POSTGRESQL:
           return new InsertOnConflictDoUpdateQuery(this);
         case ORACLE:
           return new MergeIntoQuery(this);

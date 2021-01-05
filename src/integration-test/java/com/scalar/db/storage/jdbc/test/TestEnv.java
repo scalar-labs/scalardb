@@ -16,9 +16,9 @@ import java.util.Optional;
 import java.util.Properties;
 
 public class TestEnv implements Closeable {
-  public static final JdbcConnectionInfo MY_SQL_INFO =
+  public static final JdbcConnectionInfo MYSQL_INFO =
       new JdbcConnectionInfo("jdbc:mysql://localhost:3306/", "root", "mysql");
-  public static final JdbcConnectionInfo POSTGRE_SQL_INFO =
+  public static final JdbcConnectionInfo POSTGRESQL_INFO =
       new JdbcConnectionInfo("jdbc:postgresql://localhost:5432/", "postgres", "postgres");
   public static final JdbcConnectionInfo ORACLE_INFO =
       new JdbcConnectionInfo("jdbc:oracle:thin:@localhost:1521/ORACLE", "SYSTEM", "Oracle19");
@@ -39,10 +39,10 @@ public class TestEnv implements Closeable {
 
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
     switch (rdbEngine) {
-      case MY_SQL:
+      case MYSQL:
         statements = new MySqlStatements(baseStatements);
         break;
-      case POSTGRE_SQL:
+      case POSTGRESQL:
         statements = new PostgreSqlStatements(baseStatements);
         break;
       case ORACLE:
