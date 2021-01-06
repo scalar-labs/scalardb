@@ -101,10 +101,7 @@ public class Snapshot {
   }
 
   public boolean containsKey(Snapshot.Key key) {
-    if (writeSet.containsKey(key) || readSet.containsKey(key)) {
-      return true;
-    }
-    return false;
+    return writeSet.containsKey(key) || readSet.containsKey(key);
   }
 
   public Optional<TransactionResult> get(Snapshot.Key key) {
