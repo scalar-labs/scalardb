@@ -100,6 +100,10 @@ public class Snapshot {
     deleteSet.put(key, delete);
   }
 
+  public boolean containsKey(Snapshot.Key key) {
+    return writeSet.containsKey(key) || readSet.containsKey(key);
+  }
+
   public Optional<TransactionResult> get(Snapshot.Key key) {
     if (writeSet.containsKey(key)) {
       throw new CrudRuntimeException("reading already written data is not allowed");
