@@ -10,15 +10,17 @@ import java.util.Optional;
 public interface UpsertQuery extends Query {
 
   class Builder {
-    private final RdbEngine rdbEngine;
-    final String fullTableName;
+    final RdbEngine rdbEngine;
+    final String schema;
+    final String table;
     Key partitionKey;
     Optional<Key> clusteringKey;
     Map<String, Value> values;
 
-    Builder(RdbEngine rdbEngine, String fullTableName) {
+    Builder(RdbEngine rdbEngine, String schema, String table) {
       this.rdbEngine = rdbEngine;
-      this.fullTableName = fullTableName;
+      this.schema = schema;
+      this.table = table;
     }
 
     public Builder values(

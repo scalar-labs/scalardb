@@ -4,6 +4,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.ResultImpl;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 
@@ -15,11 +16,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
 
   private final JdbcTableMetadata tableMetadata;
   private final List<String> projections;
-  private final String fullTableName;
+  private final RdbEngine rdbEngine;
+  private final String schema;
+  private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Optional<Key> commonClusteringKey;
@@ -33,7 +39,9 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   SimpleSelectQuery(Builder builder) {
     tableMetadata = builder.tableMetadata;
     projections = builder.projections;
-    fullTableName = builder.fullTableName;
+    rdbEngine = builder.rdbEngine;
+    schema = builder.schema;
+    table = builder.table;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     commonClusteringKey = builder.commonClusteringKey;
@@ -49,7 +57,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     return "SELECT "
         + projectionSqlString()
         + " FROM "
-        + fullTableName
+        + enclosedFullTableName(schema, table, rdbEngine)
         + " WHERE "
         + conditionSqlString()
         + orderBySqlString();
@@ -59,21 +67,20 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     if (projections.isEmpty()) {
       return "*";
     }
-    return String.join(",", projections);
+    return projections.stream().map(p -> enclose(p, rdbEngine)).collect(Collectors.joining(","));
   }
 
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
-
-    for (Value value : partitionKey) {
-      conditions.add(value.getName() + "=?");
-    }
-
-    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
-    commonClusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
-    startValue.ifPresent(sv -> conditions.add(sv.getName() + (startInclusive ? ">=?" : ">?")));
-    endValue.ifPresent(ev -> conditions.add(ev.getName() + (endInclusive ? "<=?" : "<?")));
-
+    partitionKey.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?"));
+    clusteringKey.ifPresent(
+        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+    commonClusteringKey.ifPresent(
+        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+    startValue.ifPresent(
+        sv -> conditions.add(enclose(sv.getName(), rdbEngine) + (startInclusive ? ">=?" : ">?")));
+    endValue.ifPresent(
+        ev -> conditions.add(enclose(ev.getName(), rdbEngine) + (endInclusive ? "<=?" : "<?")));
     return String.join(" AND ", conditions);
   }
 
@@ -108,7 +115,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
 
     return " ORDER BY "
         + orderingList.stream()
-            .map(o -> o.getName() + " " + o.getOrder())
+            .map(o -> enclose(o.getName(), rdbEngine) + " " + o.getOrder())
             .collect(Collectors.joining(","));
   }
 

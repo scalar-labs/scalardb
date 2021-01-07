@@ -26,16 +26,16 @@ public class TestEnv implements Closeable {
       new JdbcConnectionInfo("jdbc:sqlserver://localhost:1433", "SA", "P@ssw0rd!");
 
   private final JdbcConnectionInfo jdbcConnectionInfo;
-  private final Optional<String> schemaPrefix;
+  private final Optional<String> namespacePrefix;
   private final Statements statements;
   private final BasicDataSource dataSource;
 
   public TestEnv(
       JdbcConnectionInfo jdbcConnectionInfo,
       BaseStatements baseStatements,
-      Optional<String> schemaPrefix) {
+      Optional<String> namespacePrefix) {
     this.jdbcConnectionInfo = jdbcConnectionInfo;
-    this.schemaPrefix = schemaPrefix;
+    this.namespacePrefix = namespacePrefix;
 
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
     switch (rdbEngine) {
@@ -63,42 +63,42 @@ public class TestEnv implements Closeable {
     dataSource.setMaxTotal(25);
   }
 
-  private Optional<String> schemaPrefix() {
-    return schemaPrefix.map(prefix -> prefix + "_");
+  private Optional<String> namespacePrefix() {
+    return namespacePrefix.map(prefix -> prefix + "_");
   }
 
   public void createMetadataTableAndInsertMetadata() throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
       executeAndIgnoreIfExceptionHappens(
-          stmt, statements.dropMetadataTableStatements(schemaPrefix()));
+          stmt, statements.dropMetadataTableStatements(namespacePrefix()));
       executeAndIgnoreIfExceptionHappens(
-          stmt, statements.dropMetadataSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createMetadataSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createMetadataTableStatements(schemaPrefix()));
-      execute(stmt, statements.insertMetadataStatements(schemaPrefix()));
+          stmt, statements.dropMetadataSchemaStatements(namespacePrefix()));
+      execute(stmt, statements.createMetadataSchemaStatements(namespacePrefix()));
+      execute(stmt, statements.createMetadataTableStatements(namespacePrefix()));
+      execute(stmt, statements.insertMetadataStatements(namespacePrefix()));
     }
   }
 
   public void createTables() throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(schemaPrefix()));
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createSchemaStatements(schemaPrefix()));
-      execute(stmt, statements.createTableStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(namespacePrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(namespacePrefix()));
+      execute(stmt, statements.createSchemaStatements(namespacePrefix()));
+      execute(stmt, statements.createTableStatements(namespacePrefix()));
     }
   }
 
   public void dropAllTablesAndSchemas() throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(schemaPrefix()));
-      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(schemaPrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropTableStatements(namespacePrefix()));
+      executeAndIgnoreIfExceptionHappens(stmt, statements.dropSchemaStatements(namespacePrefix()));
       executeAndIgnoreIfExceptionHappens(
-          stmt, statements.dropMetadataTableStatements(schemaPrefix()));
+          stmt, statements.dropMetadataTableStatements(namespacePrefix()));
       executeAndIgnoreIfExceptionHappens(
-          stmt, statements.dropMetadataSchemaStatements(schemaPrefix()));
+          stmt, statements.dropMetadataSchemaStatements(namespacePrefix()));
     }
   }
 
@@ -127,7 +127,7 @@ public class TestEnv implements Closeable {
     props.setProperty(DatabaseConfig.USERNAME, jdbcConnectionInfo.username);
     props.setProperty(DatabaseConfig.PASSWORD, jdbcConnectionInfo.password);
 
-    schemaPrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
+    namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
 
     return new DatabaseConfig(props);
   }

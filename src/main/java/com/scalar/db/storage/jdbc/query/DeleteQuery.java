@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -11,41 +12,44 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 public class DeleteQuery extends AbstractQuery {
 
-  private final String fullTableName;
+  private final RdbEngine rdbEngine;
+  private final String schema;
+  private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final List<ConditionalExpression> otherConditions;
 
   private DeleteQuery(Builder builder) {
-    fullTableName = builder.fullTableName;
+    rdbEngine = builder.rdbEngine;
+    schema = builder.schema;
+    table = builder.table;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     otherConditions = builder.otherConditions;
   }
 
   protected String sql() {
-    return "DELETE FROM " + fullTableName + " WHERE " + conditionSqlString();
+    return "DELETE FROM "
+        + enclosedFullTableName(schema, table, rdbEngine)
+        + " WHERE "
+        + conditionSqlString();
   }
 
   private String conditionSqlString() {
     List<String> conditions = new ArrayList<>();
-
-    for (Value value : partitionKey) {
-      conditions.add(value.getName() + "=?");
-    }
-
-    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> conditions.add(v.getName() + "=?")));
-
-    if (otherConditions != null) {
-      for (ConditionalExpression condition : otherConditions) {
-        conditions.add(condition.getName() + getOperatorString(condition.getOperator()) + "?");
-      }
-    }
-
+    partitionKey.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?"));
+    clusteringKey.ifPresent(
+        k -> k.forEach(v -> conditions.add(enclose(v.getName(), rdbEngine) + "=?")));
+    otherConditions.forEach(
+        c ->
+            conditions.add(
+                enclose(c.getName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
     return String.join(" AND ", conditions);
   }
 
@@ -65,22 +69,24 @@ public class DeleteQuery extends AbstractQuery {
       }
     }
 
-    if (!otherConditions.isEmpty()) {
-      for (ConditionalExpression condition : otherConditions) {
-        condition.getValue().accept(binder);
-        binder.throwSQLExceptionIfOccurred();
-      }
+    for (ConditionalExpression condition : otherConditions) {
+      condition.getValue().accept(binder);
+      binder.throwSQLExceptionIfOccurred();
     }
   }
 
   public static class Builder {
-    private final String fullTableName;
+    private final RdbEngine rdbEngine;
+    private final String schema;
+    private final String table;
     private Key partitionKey;
     private Optional<Key> clusteringKey;
     private List<ConditionalExpression> otherConditions;
 
-    Builder(String fullTableName) {
-      this.fullTableName = fullTableName;
+    Builder(RdbEngine rdbEngine, String schema, String table) {
+      this.rdbEngine = rdbEngine;
+      this.schema = schema;
+      this.table = table;
     }
 
     public Builder where(Key partitionKey, Optional<Key> clusteringKey) {

@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -11,15 +12,22 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 public class MergeQuery extends AbstractQuery implements UpsertQuery {
 
-  private final String fullTableName;
+  private final RdbEngine rdbEngine;
+  private final String schema;
+  private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
 
   public MergeQuery(Builder builder) {
-    fullTableName = builder.fullTableName;
+    rdbEngine = builder.rdbEngine;
+    schema = builder.schema;
+    table = builder.table;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -27,45 +35,48 @@ public class MergeQuery extends AbstractQuery implements UpsertQuery {
 
   @Override
   protected String sql() {
-    List<String> keyNames = new ArrayList<>();
-    for (Value value : partitionKey) {
-      keyNames.add(value.getName());
-    }
+    List<String> enclosedKeyNames = new ArrayList<>();
+    partitionKey.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine)));
+    clusteringKey.ifPresent(
+        k -> k.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine))));
 
-    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> keyNames.add(v.getName())));
+    List<String> enclosedValueNames =
+        values.keySet().stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.toList());
 
     return "MERGE "
-        + fullTableName
+        + enclosedFullTableName(schema, table, rdbEngine)
         + " t1 USING (SELECT "
-        + makeUsingSelectSqlString(keyNames)
+        + makeUsingSelectSqlString(enclosedKeyNames)
         + ") t2 ON ("
-        + makePrimaryKeyConditionsSqlString(keyNames)
+        + makePrimaryKeyConditionsSqlString(enclosedKeyNames)
         + ") WHEN MATCHED THEN UPDATE SET "
-        + makeUpdateSetSqlString()
+        + makeUpdateSetSqlString(enclosedValueNames)
         + " WHEN NOT MATCHED THEN INSERT "
-        + makeInsertSqlString(keyNames)
+        + makeInsertSqlString(enclosedKeyNames, enclosedValueNames)
         + ";";
   }
 
-  private String makeUsingSelectSqlString(List<String> keyNames) {
-    return keyNames.stream().map(n -> "? " + n).collect(Collectors.joining(","));
+  private String makeUsingSelectSqlString(List<String> enclosedKeyNames) {
+    return enclosedKeyNames.stream().map(n -> "? " + n).collect(Collectors.joining(","));
   }
 
-  private String makePrimaryKeyConditionsSqlString(List<String> keyNames) {
-    return keyNames.stream().map(n -> "t1." + n + "=t2." + n).collect(Collectors.joining(" AND "));
+  private String makePrimaryKeyConditionsSqlString(List<String> enclosedKeyNames) {
+    return enclosedKeyNames.stream()
+        .map(n -> "t1." + n + "=t2." + n)
+        .collect(Collectors.joining(" AND "));
   }
 
-  private String makeUpdateSetSqlString() {
-    return values.keySet().stream().map(n -> n + "=?").collect(Collectors.joining(","));
+  private String makeUpdateSetSqlString(List<String> enclosedValueNames) {
+    return enclosedValueNames.stream().map(n -> n + "=?").collect(Collectors.joining(","));
   }
 
-  private String makeInsertSqlString(List<String> keyNames) {
-    List<String> names = new ArrayList<>(keyNames);
-    names.addAll(values.keySet());
-
+  private String makeInsertSqlString(
+      List<String> enclosedKeyNames, List<String> enclosedValueNames) {
+    List<String> names = new ArrayList<>(enclosedKeyNames);
+    names.addAll(enclosedValueNames);
     return "("
         + String.join(",", names)
-        + ") VALUES("
+        + ") VALUES ("
         + names.stream().map(n -> "?").collect(Collectors.joining(","))
         + ")";
   }

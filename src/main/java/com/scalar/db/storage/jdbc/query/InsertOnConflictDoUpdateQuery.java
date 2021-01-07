@@ -2,6 +2,7 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -11,15 +12,22 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements UpsertQuery {
 
-  private final String fullTableName;
+  private final RdbEngine rdbEngine;
+  private final String schema;
+  private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Map<String, Value> values;
 
   InsertOnConflictDoUpdateQuery(Builder builder) {
-    fullTableName = builder.fullTableName;
+    rdbEngine = builder.rdbEngine;
+    schema = builder.schema;
+    table = builder.table;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -27,7 +35,7 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
 
   protected String sql() {
     return "INSERT INTO "
-        + fullTableName
+        + enclosedFullTableName(schema, table, rdbEngine)
         + " "
         + makeValuesSqlString()
         + " "
@@ -36,33 +44,28 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
 
   private String makeValuesSqlString() {
     List<String> names = new ArrayList<>();
-    for (Value value : partitionKey) {
-      names.add(value.getName());
-    }
-
-    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> names.add(v.getName())));
-
+    partitionKey.forEach(v -> names.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.forEach(v -> names.add(v.getName())));
     names.addAll(values.keySet());
 
     return "("
-        + String.join(",", names)
-        + ") VALUES("
+        + names.stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.joining(","))
+        + ") VALUES ("
         + names.stream().map(n -> "?").collect(Collectors.joining(","))
         + ")";
   }
 
   private String makeOnConflictDoUpdateSqlString() {
     List<String> primaryKeys = new ArrayList<>();
-    for (Value value : partitionKey) {
-      primaryKeys.add(value.getName());
-    }
-
-    clusteringKey.ifPresent(ckey -> ckey.forEach(v -> primaryKeys.add(v.getName())));
+    partitionKey.forEach(v -> primaryKeys.add(v.getName()));
+    clusteringKey.ifPresent(k -> k.forEach(v -> primaryKeys.add(v.getName())));
 
     return "ON CONFLICT ("
-        + String.join(",", primaryKeys)
+        + primaryKeys.stream().map(k -> enclose(k, rdbEngine)).collect(Collectors.joining(","))
         + ") DO UPDATE SET "
-        + values.keySet().stream().map(n -> n + "=?").collect(Collectors.joining(","));
+        + values.keySet().stream()
+            .map(n -> enclose(n, rdbEngine) + "=?")
+            .collect(Collectors.joining(","));
   }
 
   @Override

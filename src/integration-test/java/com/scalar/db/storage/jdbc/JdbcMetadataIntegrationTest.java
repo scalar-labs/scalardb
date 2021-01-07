@@ -38,23 +38,21 @@ public class JdbcMetadataIntegrationTest {
   private static final String COL_NAME3 = "c3";
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+  private TestEnv testEnv;
 
-  private static String getSchema(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + NAMESPACE;
+  private static String getFullNamespace(Optional<String> namespacePrefix) {
+    return namespacePrefix.orElse("") + NAMESPACE;
   }
 
-  private static String getFullTableName(Optional<String> schemaPrefix) {
-    return getSchema(schemaPrefix) + "." + TABLE;
+  private static String getFullTableName(Optional<String> namespacePrefix) {
+    return getFullNamespace(namespacePrefix) + "." + TABLE;
   }
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
     return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
-
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  private TestEnv testEnv;
 
   @Before
   public void setUp() throws Exception {
@@ -63,11 +61,11 @@ public class JdbcMetadataIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
                 return Arrays.asList(
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME1,
                         DataType.INT,
                         KeyType.PARTITION,
@@ -75,8 +73,8 @@ public class JdbcMetadataIntegrationTest {
                         false,
                         1),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME2,
                         DataType.TEXT,
                         null,
@@ -84,8 +82,8 @@ public class JdbcMetadataIntegrationTest {
                         false,
                         2),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME3,
                         DataType.INT,
                         null,
@@ -93,8 +91,8 @@ public class JdbcMetadataIntegrationTest {
                         true,
                         3),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME4,
                         DataType.INT,
                         KeyType.CLUSTERING,
@@ -102,8 +100,8 @@ public class JdbcMetadataIntegrationTest {
                         false,
                         4),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME5,
                         DataType.BOOLEAN,
                         null,
@@ -113,36 +111,19 @@ public class JdbcMetadataIntegrationTest {
               }
 
               @Override
-              public List<String> schemas(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getSchema(schemaPrefix));
+              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.emptyList();
               }
 
               @Override
-              public List<String> tables(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getFullTableName(schemaPrefix));
+              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.emptyList();
               }
 
               @Override
-              public List<String> createTableStatements(Optional<String> schemaPrefix) {
-                return Collections.singletonList(
-                    "CREATE TABLE "
-                        + getFullTableName(schemaPrefix)
-                        + " ("
-                        + COL_NAME1
-                        + " INT,"
-                        + COL_NAME2
-                        + " VARCHAR(100),"
-                        + COL_NAME3
-                        + " INT,"
-                        + COL_NAME4
-                        + " INT,"
-                        + COL_NAME5
-                        + " BOOLEAN,"
-                        + "PRIMARY KEY("
-                        + COL_NAME1
-                        + ","
-                        + COL_NAME4
-                        + "))");
+              public List<String> createTableStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.emptyList();
               }
             },
             NAMESPACE_PREFIX);

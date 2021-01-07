@@ -24,45 +24,45 @@ public class OracleStatements extends AbstractStatements {
   }
 
   @Override
-  public List<String> createMetadataSchemaStatements(Optional<String> schemaPrefix) {
-    return createSchema(TableMetadataManager.getSchema(schemaPrefix));
+  public List<String> createMetadataSchemaStatements(Optional<String> namespacePrefix) {
+    return createSchema(TableMetadataManager.getFullSchema(namespacePrefix));
   }
 
   @Override
-  public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
-    return super.insertMetadataStatements(schemaPrefix).stream()
+  public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+    return super.insertMetadataStatements(namespacePrefix).stream()
         .map(s -> s.replace("true", "1"))
         .map(s -> s.replace("false", "0"))
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> dropMetadataSchemaStatements(Optional<String> schemaPrefix) {
-    return dropSchema(TableMetadataManager.getSchema(schemaPrefix));
+  public List<String> dropMetadataSchemaStatements(Optional<String> namespacePrefix) {
+    return dropSchema(TableMetadataManager.getFullSchema(namespacePrefix));
   }
 
   @Override
-  public List<String> createMetadataTableStatements(Optional<String> schemaPrefix) {
-    return convertCreateTableStatements(super.createMetadataTableStatements(schemaPrefix));
+  public List<String> createMetadataTableStatements(Optional<String> namespacePrefix) {
+    return convertCreateTableStatements(super.createMetadataTableStatements(namespacePrefix));
   }
 
   @Override
-  public List<String> createSchemaStatements(Optional<String> schemaPrefix) {
-    return schemas(schemaPrefix).stream()
+  public List<String> createSchemaStatements(Optional<String> namespacePrefix) {
+    return schemas(namespacePrefix).stream()
         .flatMap(s -> createSchema(s).stream())
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> dropSchemaStatements(Optional<String> schemaPrefix) {
-    return schemas(schemaPrefix).stream()
+  public List<String> dropSchemaStatements(Optional<String> namespacePrefix) {
+    return schemas(namespacePrefix).stream()
         .flatMap(s -> dropSchema(s).stream())
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> createTableStatements(Optional<String> schemaPrefix) {
-    return convertCreateTableStatements(super.createTableStatements(schemaPrefix));
+  public List<String> createTableStatements(Optional<String> namespacePrefix) {
+    return convertCreateTableStatements(super.createTableStatements(namespacePrefix));
   }
 
   private List<String> convertCreateTableStatements(List<String> statements) {

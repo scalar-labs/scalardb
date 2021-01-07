@@ -4,6 +4,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
 import com.scalar.db.storage.jdbc.test.BaseStatements;
@@ -22,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
@@ -51,17 +54,19 @@ import static org.mockito.Mockito.spy;
 public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
 
   private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+  private TestEnv testEnv;
+  private DistributedStorage storage;
+  private ConsensusCommitIntegrationTest test;
+
+  private static String getFullNamespace(Optional<String> namespacePrefix) {
+    return namespacePrefix.orElse("") + NAMESPACE;
+  }
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
     return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
-
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  private TestEnv testEnv;
-  private DistributedStorage storage;
-  private ConsensusCommitIntegrationTest test;
 
   @Before
   public void setUp() throws SQLException {
@@ -70,13 +75,13 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
                 List<String> ret = new ArrayList<>();
 
                 // The metadata for the coordinator table
                 ret.add(
                     insertMetadataStatement(
-                        schemaPrefix,
+                        namespacePrefix,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         ID,
                         DataType.TEXT,
@@ -86,7 +91,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                         1));
                 ret.add(
                     insertMetadataStatement(
-                        schemaPrefix,
+                        namespacePrefix,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         STATE,
                         DataType.INT,
@@ -96,7 +101,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                         2));
                 ret.add(
                     insertMetadataStatement(
-                        schemaPrefix,
+                        namespacePrefix,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         CREATED_AT,
                         DataType.BIGINT,
@@ -110,7 +115,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                 for (String table : tables) {
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           ACCOUNT_ID,
                           DataType.INT,
@@ -120,7 +125,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           1));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           ACCOUNT_TYPE,
                           DataType.INT,
@@ -130,7 +135,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           2));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BALANCE,
                           DataType.INT,
@@ -140,7 +145,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           3));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           ID,
                           DataType.TEXT,
@@ -150,7 +155,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           4));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           VERSION,
                           DataType.INT,
@@ -160,7 +165,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           5));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           STATE,
                           DataType.INT,
@@ -170,7 +175,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           6));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           PREPARED_AT,
                           DataType.BIGINT,
@@ -180,7 +185,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           7));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           COMMITTED_AT,
                           DataType.BIGINT,
@@ -190,7 +195,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           8));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_PREFIX + BALANCE,
                           DataType.INT,
@@ -200,7 +205,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           9));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_ID,
                           DataType.TEXT,
@@ -210,7 +215,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           10));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_VERSION,
                           DataType.INT,
@@ -220,7 +225,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           11));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_STATE,
                           DataType.INT,
@@ -230,7 +235,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           12));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_PREPARED_AT,
                           DataType.BIGINT,
@@ -240,7 +245,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           13));
                   ret.add(
                       insertMetadataStatement(
-                          schemaPrefix,
+                          namespacePrefix,
                           NAMESPACE + "." + table,
                           BEFORE_COMMITTED_AT,
                           DataType.BIGINT,
@@ -253,82 +258,81 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
               }
 
               @Override
-              public List<String> schemas(Optional<String> schemaPrefix) {
-                return Arrays.asList(Coordinator.NAMESPACE, NAMESPACE);
+              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Arrays.asList(
+                    enclose(Coordinator.NAMESPACE, rdbEngine),
+                    enclose(getFullNamespace(namespacePrefix), rdbEngine));
               }
 
               @Override
-              public List<String> tables(Optional<String> schemaPrefix) {
+              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Arrays.asList(
-                    Coordinator.NAMESPACE + "." + Coordinator.TABLE,
-                    NAMESPACE + "." + TABLE_1,
-                    NAMESPACE + "." + TABLE_2);
+                    enclosedFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE, rdbEngine),
+                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE_1, rdbEngine),
+                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE_2, rdbEngine));
               }
 
               @Override
-              public List<String> createTableStatements(Optional<String> schemaPrefix) {
+              public List<String> createTableStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Arrays.asList(
-                    createCoordinatorTableStatement(),
-                    createTableStatement(TABLE_1),
-                    createTableStatement(TABLE_2));
+                    createCoordinatorTableStatement(rdbEngine),
+                    createTableStatement(namespacePrefix, TABLE_1, rdbEngine),
+                    createTableStatement(namespacePrefix, TABLE_2, rdbEngine));
               }
 
-              private String createCoordinatorTableStatement() {
+              private String createCoordinatorTableStatement(RdbEngine rdbEngine) {
                 return "CREATE TABLE "
-                    + Coordinator.NAMESPACE
-                    + "."
-                    + Coordinator.TABLE
+                    + enclosedFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE, rdbEngine)
                     + "("
-                    + ID
+                    + enclose(ID, rdbEngine)
                     + " VARCHAR(100),"
-                    + STATE
+                    + enclose(STATE, rdbEngine)
                     + " INT,"
-                    + CREATED_AT
+                    + enclose(CREATED_AT, rdbEngine)
                     + " BIGINT,"
                     + "PRIMARY KEY("
-                    + ID
+                    + enclose(ID, rdbEngine)
                     + "))";
               }
 
-              private String createTableStatement(String table) {
+              private String createTableStatement(
+                  Optional<String> namespacePrefix, String table, RdbEngine rdbEngine) {
                 return "CREATE TABLE "
-                    + NAMESPACE
-                    + "."
-                    + table
+                    + enclosedFullTableName(getFullNamespace(namespacePrefix), table, rdbEngine)
                     + "("
-                    + ACCOUNT_ID
+                    + enclose(ACCOUNT_ID, rdbEngine)
                     + " INT,"
-                    + ACCOUNT_TYPE
+                    + enclose(ACCOUNT_TYPE, rdbEngine)
                     + " INT,"
-                    + BALANCE
+                    + enclose(BALANCE, rdbEngine)
                     + " INT,"
-                    + ID
+                    + enclose(ID, rdbEngine)
                     + " VARCHAR(100),"
-                    + VERSION
+                    + enclose(VERSION, rdbEngine)
                     + " INT,"
-                    + STATE
+                    + enclose(STATE, rdbEngine)
                     + " INT,"
-                    + PREPARED_AT
+                    + enclose(PREPARED_AT, rdbEngine)
                     + " BIGINT,"
-                    + COMMITTED_AT
+                    + enclose(COMMITTED_AT, rdbEngine)
                     + " BIGINT,"
-                    + BEFORE_PREFIX
-                    + BALANCE
+                    + enclose(BEFORE_PREFIX + BALANCE, rdbEngine)
                     + " INT,"
-                    + BEFORE_ID
+                    + enclose(BEFORE_ID, rdbEngine)
                     + " VARCHAR(100),"
-                    + BEFORE_VERSION
+                    + enclose(BEFORE_VERSION, rdbEngine)
                     + " INT,"
-                    + BEFORE_STATE
+                    + enclose(BEFORE_STATE, rdbEngine)
                     + " INT,"
-                    + BEFORE_PREPARED_AT
+                    + enclose(BEFORE_PREPARED_AT, rdbEngine)
                     + " BIGINT,"
-                    + BEFORE_COMMITTED_AT
+                    + enclose(BEFORE_COMMITTED_AT, rdbEngine)
                     + " BIGINT,"
                     + "PRIMARY KEY("
-                    + ACCOUNT_ID
+                    + enclose(ACCOUNT_ID, rdbEngine)
                     + ","
-                    + ACCOUNT_TYPE
+                    + enclose(ACCOUNT_TYPE, rdbEngine)
                     + "))";
               }
             },

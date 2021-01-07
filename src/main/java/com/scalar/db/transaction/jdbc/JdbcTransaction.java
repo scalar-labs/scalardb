@@ -142,12 +142,14 @@ public class JdbcTransaction implements DistributedTransaction {
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
     // Ignore the conditions in the mutations
-    for (Mutation mutation : mutations) {
-      if (mutation.getCondition().isPresent()) {
-        LOGGER.warn("ignoring the condition of the mutation: " + mutation);
-        mutation.withCondition(null);
-      }
-    }
+    mutations.forEach(
+        m ->
+            m.getCondition()
+                .ifPresent(
+                    c -> {
+                      LOGGER.warn("ignoring the condition of the mutation: " + m);
+                      m.withCondition(null);
+                    }));
 
     try {
       jdbcService.mutate(mutations, connection, namespace, tableName);

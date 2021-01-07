@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc.test;
 
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
 import java.util.Collections;
@@ -10,35 +11,50 @@ import java.util.stream.Collectors;
 public abstract class AbstractStatements implements Statements {
 
   private final BaseStatements baseStatements;
+  private final RdbEngine rdbEngine;
 
   public AbstractStatements(BaseStatements baseStatements) {
     this.baseStatements = baseStatements;
+    rdbEngine = getRdbEngine();
   }
 
-  protected List<String> schemas(Optional<String> schemaPrefix) {
-    return baseStatements.schemas(schemaPrefix);
+  private RdbEngine getRdbEngine() {
+    if (this instanceof MySqlStatements) {
+      return RdbEngine.MYSQL;
+    } else if (this instanceof PostgreSqlStatements) {
+      return RdbEngine.POSTGRESQL;
+    } else if (this instanceof OracleStatements) {
+      return RdbEngine.ORACLE;
+    } else {
+      return RdbEngine.SQL_SERVER;
+    }
   }
 
-  protected List<String> tables(Optional<String> schemaPrefix) {
-    return baseStatements.tables(schemaPrefix);
+  protected List<String> schemas(Optional<String> namespacePrefix) {
+    return baseStatements.schemas(namespacePrefix, rdbEngine);
+  }
+
+  protected List<String> tables(Optional<String> namespacePrefix) {
+    return baseStatements.tables(namespacePrefix, rdbEngine);
   }
 
   @Override
-  public List<String> createMetadataSchemaStatements(Optional<String> schemaPrefix) {
+  public List<String> createMetadataSchemaStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
-        "CREATE SCHEMA " + TableMetadataManager.getSchema(schemaPrefix));
+        "CREATE SCHEMA " + TableMetadataManager.getFullSchema(namespacePrefix));
   }
 
   @Override
-  public List<String> dropMetadataSchemaStatements(Optional<String> schemaPrefix) {
-    return Collections.singletonList("DROP SCHEMA " + TableMetadataManager.getSchema(schemaPrefix));
+  public List<String> dropMetadataSchemaStatements(Optional<String> namespacePrefix) {
+    return Collections.singletonList(
+        "DROP SCHEMA " + TableMetadataManager.getFullSchema(namespacePrefix));
   }
 
   @Override
-  public List<String> createMetadataTableStatements(Optional<String> schemaPrefix) {
+  public List<String> createMetadataTableStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
         "CREATE TABLE "
-            + TableMetadataManager.getFullTableName(schemaPrefix)
+            + TableMetadataManager.getFullTableName(namespacePrefix)
             + "(full_table_name VARCHAR(128),"
             + "column_name VARCHAR(128),"
             + "data_type VARCHAR(20) NOT NULL,"
@@ -50,35 +66,39 @@ public abstract class AbstractStatements implements Statements {
   }
 
   @Override
-  public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
-    return baseStatements.insertMetadataStatements(schemaPrefix);
+  public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+    return baseStatements.insertMetadataStatements(namespacePrefix);
   }
 
   @Override
-  public List<String> dropMetadataTableStatements(Optional<String> schemaPrefix) {
+  public List<String> dropMetadataTableStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
-        "DROP TABLE " + TableMetadataManager.getFullTableName(schemaPrefix));
+        "DROP TABLE " + TableMetadataManager.getFullTableName(namespacePrefix));
   }
 
   @Override
-  public List<String> createSchemaStatements(Optional<String> schemaPrefix) {
-    return schemas(schemaPrefix).stream()
+  public List<String> createSchemaStatements(Optional<String> namespacePrefix) {
+    return schemas(namespacePrefix).stream()
         .map(s -> "CREATE SCHEMA " + s)
         .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> dropSchemaStatements(Optional<String> schemaPrefix) {
-    return schemas(schemaPrefix).stream().map(s -> "DROP SCHEMA " + s).collect(Collectors.toList());
+  public List<String> dropSchemaStatements(Optional<String> namespacePrefix) {
+    return schemas(namespacePrefix).stream()
+        .map(s -> "DROP SCHEMA " + s)
+        .collect(Collectors.toList());
   }
 
   @Override
-  public List<String> createTableStatements(Optional<String> schemaPrefix) {
-    return baseStatements.createTableStatements(schemaPrefix);
+  public List<String> createTableStatements(Optional<String> namespacePrefix) {
+    return baseStatements.createTableStatements(namespacePrefix, rdbEngine);
   }
 
   @Override
-  public List<String> dropTableStatements(Optional<String> schemaPrefix) {
-    return tables(schemaPrefix).stream().map(t -> "DROP TABLE " + t).collect(Collectors.toList());
+  public List<String> dropTableStatements(Optional<String> namespacePrefix) {
+    return tables(namespacePrefix).stream()
+        .map(t -> "DROP TABLE " + t)
+        .collect(Collectors.toList());
   }
 }

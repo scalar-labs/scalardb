@@ -16,11 +16,14 @@ import java.util.Optional;
 
 public interface SelectQuery extends Query {
 
+  Result getResult(ResultSet resultSet) throws SQLException;
+
   class Builder {
     private final TableMetadataManager tableMetadataManager;
-    private final RdbEngine rdbEngine;
+    final RdbEngine rdbEngine;
     final List<String> projections;
-    String fullTableName;
+    String schema;
+    String table;
     JdbcTableMetadata tableMetadata;
     Key partitionKey;
     Optional<Key> clusteringKey = Optional.empty();
@@ -40,8 +43,11 @@ public interface SelectQuery extends Query {
       this.projections = projections;
     }
 
-    public Builder from(String fullTableName) {
-      this.fullTableName = fullTableName;
+    public Builder from(String schema, String table) {
+      this.schema = schema;
+      this.table = table;
+
+      String fullTableName = schema + "." + table;
       try {
         this.tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
       } catch (SQLException e) {
@@ -128,6 +134,4 @@ public interface SelectQuery extends Query {
       return new SimpleSelectQuery(this);
     }
   }
-
-  Result getResult(ResultSet resultSet) throws SQLException;
 }

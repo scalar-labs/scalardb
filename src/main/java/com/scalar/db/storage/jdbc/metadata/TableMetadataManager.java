@@ -31,15 +31,6 @@ import java.util.concurrent.ExecutionException;
 public class TableMetadataManager {
   private static final String SCHEMA = "scalardb";
   private static final String TABLE = "metadata";
-
-  public static String getSchema(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + SCHEMA;
-  }
-
-  public static String getFullTableName(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + SCHEMA + "." + TABLE;
-  }
-
   private final LoadingCache<String, JdbcTableMetadata> tableMetadataCache;
 
   public TableMetadataManager(DataSource dataSource) {
@@ -57,6 +48,14 @@ public class TableMetadataManager {
                     return TableMetadataManager.this.load(dataSource, fullTableName, schemaPrefix);
                   }
                 });
+  }
+
+  public static String getFullSchema(Optional<String> schemaPrefix) {
+    return schemaPrefix.orElse("") + SCHEMA;
+  }
+
+  public static String getFullTableName(Optional<String> schemaPrefix) {
+    return schemaPrefix.orElse("") + SCHEMA + "." + TABLE;
   }
 
   private JdbcTableMetadata load(

@@ -12,6 +12,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
 import com.scalar.db.storage.jdbc.test.BaseStatements;
@@ -31,6 +32,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
@@ -50,24 +53,22 @@ public class JdbcTransactionIntegrationTest {
   private static final int INITIAL_BALANCE = 1000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+  private TestEnv testEnv;
+  private JdbcTransactionManager manager;
 
-  private static String getSchema(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + NAMESPACE;
+  private static String getFullNamespace(Optional<String> namespacePrefix) {
+    return namespacePrefix.orElse("") + NAMESPACE;
   }
 
-  private static String getFullTableName(Optional<String> schemaPrefix) {
-    return getSchema(schemaPrefix) + "." + TABLE;
+  private static String getFullTableName(Optional<String> namespacePrefix) {
+    return getFullNamespace(namespacePrefix) + "." + TABLE;
   }
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
     return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
   }
-
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  private TestEnv testEnv;
-  private JdbcTransactionManager manager;
 
   @Before
   public void setUp() throws Exception {
@@ -76,11 +77,11 @@ public class JdbcTransactionIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
                 return Arrays.asList(
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         ACCOUNT_ID,
                         DataType.INT,
                         KeyType.PARTITION,
@@ -88,8 +89,8 @@ public class JdbcTransactionIntegrationTest {
                         false,
                         1),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         ACCOUNT_TYPE,
                         DataType.INT,
                         KeyType.CLUSTERING,
@@ -97,8 +98,8 @@ public class JdbcTransactionIntegrationTest {
                         false,
                         2),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         BALANCE,
                         DataType.INT,
                         null,
@@ -108,31 +109,34 @@ public class JdbcTransactionIntegrationTest {
               }
 
               @Override
-              public List<String> schemas(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getSchema(schemaPrefix));
+              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.singletonList(
+                    enclose(getFullNamespace(namespacePrefix), rdbEngine));
               }
 
               @Override
-              public List<String> tables(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getFullTableName(schemaPrefix));
+              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.singletonList(
+                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine));
               }
 
               @Override
-              public List<String> createTableStatements(Optional<String> schemaPrefix) {
+              public List<String> createTableStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Collections.singletonList(
                     "CREATE TABLE "
-                        + getFullTableName(schemaPrefix)
+                        + enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine)
                         + "("
-                        + ACCOUNT_ID
+                        + enclose(ACCOUNT_ID, rdbEngine)
                         + " INT,"
-                        + ACCOUNT_TYPE
+                        + enclose(ACCOUNT_TYPE, rdbEngine)
                         + " INT,"
-                        + BALANCE
+                        + enclose(BALANCE, rdbEngine)
                         + " INT,"
                         + "PRIMARY KEY("
-                        + ACCOUNT_ID
+                        + enclose(ACCOUNT_ID, rdbEngine)
                         + ","
-                        + ACCOUNT_TYPE
+                        + enclose(ACCOUNT_TYPE, rdbEngine)
                         + "))");
               }
             },

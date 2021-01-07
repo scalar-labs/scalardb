@@ -25,19 +25,19 @@ public final class QueryBuilder {
     return new SelectQuery.Builder(tableMetadataManager, rdbEngine, projections);
   }
 
-  public InsertQuery.Builder insertInto(String fullTableName) {
-    return new InsertQuery.Builder(fullTableName);
+  public InsertQuery.Builder insertInto(String schema, String table) {
+    return new InsertQuery.Builder(rdbEngine, schema, table);
   }
 
-  public UpdateQuery.Builder update(String fullTableName) {
-    return new UpdateQuery.Builder(fullTableName);
+  public UpdateQuery.Builder update(String schema, String table) {
+    return new UpdateQuery.Builder(rdbEngine, schema, table);
   }
 
-  public DeleteQuery.Builder deleteFrom(String fullTableName) {
-    return new DeleteQuery.Builder(fullTableName);
+  public DeleteQuery.Builder deleteFrom(String schema, String table) {
+    return new DeleteQuery.Builder(rdbEngine, schema, table);
   }
 
-  public UpsertQuery.Builder upsertInto(String fullTableName) {
-    return new UpsertQuery.Builder(rdbEngine, fullTableName);
+  public UpsertQuery.Builder upsertInto(String schema, String table) {
+    return new UpsertQuery.Builder(rdbEngine, schema, table);
   }
 }

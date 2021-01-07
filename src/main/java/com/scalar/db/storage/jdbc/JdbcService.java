@@ -32,27 +32,29 @@ public class JdbcService {
 
   private final OperationChecker operationChecker;
   private final QueryBuilder queryBuilder;
-  private final Optional<String> schemaPrefix;
+  private final Optional<String> namespacePrefix;
 
   public JdbcService(
-      OperationChecker operationChecker, QueryBuilder queryBuilder, Optional<String> schemaPrefix) {
+      OperationChecker operationChecker,
+      QueryBuilder queryBuilder,
+      Optional<String> namespacePrefix) {
     this.operationChecker = Objects.requireNonNull(operationChecker);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
-    this.schemaPrefix = Objects.requireNonNull(schemaPrefix);
+    this.namespacePrefix = Objects.requireNonNull(namespacePrefix);
   }
 
   public Optional<Result> get(
-      Get get, Connection connection, Optional<String> schema, Optional<String> tableName)
+      Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
     addProjectionsForKeys(get);
-    Utility.setTargetToIfNot(get, schemaPrefix, schema, tableName);
+    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
 
     operationChecker.check(get);
 
     SelectQuery selectQuery =
         queryBuilder
             .select(get.getProjections())
-            .from(get.forFullTableName().get())
+            .from(get.forFullNamespace().get(), get.forTable().get())
             .where(get.getPartitionKey(), get.getClusteringKey())
             .build();
 
@@ -66,17 +68,17 @@ public class JdbcService {
   }
 
   public Scanner scan(
-      Scan scan, Connection connection, Optional<String> schema, Optional<String> tableName)
+      Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
     addProjectionsForKeys(scan);
-    Utility.setTargetToIfNot(scan, schemaPrefix, schema, tableName);
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
 
     operationChecker.check(scan);
 
     SelectQuery selectQuery =
         queryBuilder
             .select(scan.getProjections())
-            .from(scan.forFullTableName().get())
+            .from(scan.forFullNamespace().get(), scan.forTable().get())
             .where(
                 scan.getPartitionKey(),
                 scan.getStartClusteringKey(),
@@ -103,16 +105,16 @@ public class JdbcService {
   }
 
   public boolean put(
-      Put put, Connection connection, Optional<String> schema, Optional<String> tableName)
+      Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
-    Utility.setTargetToIfNot(put, schemaPrefix, schema, tableName);
+    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
 
     operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
           queryBuilder
-              .upsertInto(put.forFullTableName().get())
+              .upsertInto(put.forFullNamespace().get(), put.forTable().get())
               .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
               .build()
               .prepareAndBind(connection)) {
@@ -125,16 +127,16 @@ public class JdbcService {
   }
 
   public boolean delete(
-      Delete delete, Connection connection, Optional<String> schema, Optional<String> tableName)
+      Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
-    Utility.setTargetToIfNot(delete, schemaPrefix, schema, tableName);
+    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
 
     operationChecker.check(delete);
 
     if (!delete.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
           queryBuilder
-              .deleteFrom(delete.forFullTableName().get())
+              .deleteFrom(delete.forFullNamespace().get(), delete.forTable().get())
               .where(delete.getPartitionKey(), delete.getClusteringKey())
               .build()
               .prepareAndBind(connection)) {
@@ -149,19 +151,19 @@ public class JdbcService {
   public boolean mutate(
       List<? extends Mutation> mutations,
       Connection connection,
-      Optional<String> schema,
+      Optional<String> namespace,
       Optional<String> tableName)
       throws SQLException {
-    mutations.forEach(m -> Utility.setTargetToIfNot(m, schemaPrefix, schema, tableName));
+    mutations.forEach(m -> Utility.setTargetToIfNot(m, namespacePrefix, namespace, tableName));
     operationChecker.checkMutate(mutations);
 
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        if (!put((Put) mutation, connection, schema, tableName)) {
+        if (!put((Put) mutation, connection, namespace, tableName)) {
           return false;
         }
       } else {
-        if (!delete((Delete) mutation, connection, schema, tableName)) {
+        if (!delete((Delete) mutation, connection, namespace, tableName)) {
           return false;
         }
       }

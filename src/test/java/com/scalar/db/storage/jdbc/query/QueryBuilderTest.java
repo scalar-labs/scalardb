@@ -12,25 +12,38 @@ import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+@RunWith(Parameterized.class)
 public class QueryBuilderTest {
 
-  private static final String TABLE_FULL_NAME = "s1.t1";
-
+  private static final String NAMESPACE = "n1";
+  private static final String TABLE = "t1";
+  @Parameterized.Parameter public RdbEngine rdbEngine;
   @Mock private TableMetadataManager tableMetadataManager;
+  private QueryBuilder queryBuilder;
+
+  @Parameterized.Parameters(name = "RDB={0}")
+  public static Collection<RdbEngine> jdbcConnectionInfos() {
+    return Arrays.asList(
+        RdbEngine.MYSQL, RdbEngine.POSTGRESQL, RdbEngine.ORACLE, RdbEngine.SQL_SERVER);
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -39,7 +52,7 @@ public class QueryBuilderTest {
     // Dummy metadata
     JdbcTableMetadata dummyTableMetadata =
         new JdbcTableMetadata(
-            TABLE_FULL_NAME,
+            NAMESPACE + "." + TABLE,
             new HashMap<String, DataType>() {
               {
                 put("p1", DataType.TEXT);
@@ -49,6 +62,7 @@ public class QueryBuilderTest {
                 put("v1", DataType.TEXT);
                 put("v2", DataType.TEXT);
                 put("v3", DataType.TEXT);
+                put("v4", DataType.TEXT);
               }
             },
             Arrays.asList("p1", "p2"),
@@ -62,58 +76,70 @@ public class QueryBuilderTest {
             new HashSet<>());
 
     when(tableMetadataManager.getTableMetadata(any(String.class))).thenReturn(dummyTableMetadata);
+
+    queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
+  }
+
+  private String encloseSql(String sql) {
+    return sql.replace("n1.t1", enclose("n1", rdbEngine) + "." + enclose("t1", rdbEngine))
+        .replace("p1", enclose("p1", rdbEngine))
+        .replace("p2", enclose("p2", rdbEngine))
+        .replace("c1", enclose("c1", rdbEngine))
+        .replace("c2", enclose("c2", rdbEngine))
+        .replace("v1", enclose("v1", rdbEngine))
+        .replace("v2", enclose("v2", rdbEngine))
+        .replace("v3", enclose("v3", rdbEngine))
+        .replace("v4", enclose("v4", rdbEngine));
   }
 
   @Test
   public void simpleSelectQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
-
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
-        .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=?");
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?"));
 
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "bbb")),
                     Optional.empty())
                 .build()
                 .toString())
-        .isEqualTo("SELECT * FROM s1.t1 WHERE p1=? AND p2=?");
+        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))))
                 .build()
                 .toString())
-        .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1=?");
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb"))))
                 .build()
                 .toString())
-        .isEqualTo("SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1=? AND c2=?");
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -123,12 +149,13 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC");
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
 
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -137,12 +164,13 @@ public class QueryBuilderTest {
                     false)
                 .build()
                 .toString())
-        .isEqualTo("SELECT * FROM s1.t1 WHERE p1=? AND c1>? AND c1<? ORDER BY c1 ASC,c2 DESC");
+        .isEqualTo(
+            encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND c1>? AND c1<? ORDER BY c1 ASC,c2 DESC"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "aaa"))),
@@ -152,13 +180,14 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1=? AND c2>=? AND c2<? "
-                + "ORDER BY c1 ASC,c2 DESC");
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2>=? AND c2<? "
+                    + "ORDER BY c1 ASC,c2 DESC"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -170,12 +199,13 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC");
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -189,12 +219,13 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC");
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -206,12 +237,13 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC");
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
 
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -225,16 +257,33 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC");
-  }
+            encloseSql(
+                "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
 
-  @Test
-  public void selectQueryWithLimitForMySQLAndPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
+    String expectedQuery;
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        expectedQuery =
+            "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC LIMIT 10";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "SELECT * FROM (SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC) WHERE ROWNUM <= 10";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY";
+        break;
+    }
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
+                .from(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "aaa"))),
@@ -244,57 +293,11 @@ public class QueryBuilderTest {
                 .limit(10)
                 .build()
                 .toString())
-        .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? "
-                + "ORDER BY c1 ASC,c2 DESC LIMIT 10");
-  }
-
-  @Test
-  public void selectQueryWithLimitForOracleTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.ORACLE);
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
-                .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
-                    true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    true)
-                .limit(10)
-                .build()
-                .toString())
-        .isEqualTo(
-            "SELECT * FROM (SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? "
-                + "ORDER BY c1 ASC,c2 DESC) WHERE ROWNUM <= 10");
-  }
-
-  @Test
-  public void selectQueryWithLimitForSQLServerTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.SQL_SERVER);
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(TABLE_FULL_NAME)
-                .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
-                    true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    true)
-                .limit(10)
-                .build()
-                .toString())
-        .isEqualTo(
-            "SELECT c1,c2 FROM s1.t1 WHERE p1=? AND c1>=? AND c1<=? "
-                + "ORDER BY c1 ASC,c2 DESC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY");
+        .isEqualTo(encloseSql(expectedQuery));
   }
 
   @Test
   public void insertQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
-
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
@@ -302,41 +305,40 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .insertInto(TABLE_FULL_NAME)
+                .insertInto(NAMESPACE, TABLE)
                 .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
                 .build()
                 .toString())
-        .isEqualTo("INSERT INTO s1.t1 (p1,v1,v2,v3) VALUES(?,?,?,?)");
+        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"));
 
     assertThat(
             queryBuilder
-                .insertInto(TABLE_FULL_NAME)
+                .insertInto(NAMESPACE, TABLE)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
-        .isEqualTo("INSERT INTO s1.t1 (p1,c1,v1,v2,v3) VALUES(?,?,?,?,?)");
+        .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"));
 
     values.put("v4", new TextValue("eee"));
 
     assertThat(
             queryBuilder
-                .insertInto(TABLE_FULL_NAME)
+                .insertInto(NAMESPACE, TABLE)
                 .values(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
                     Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
                 .build()
                 .toString())
-        .isEqualTo("INSERT INTO s1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES(?,?,?,?,?,?,?,?)");
+        .isEqualTo(
+            encloseSql("INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"));
   }
 
   @Test
   public void updateQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
-
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
@@ -344,38 +346,39 @@ public class QueryBuilderTest {
 
     assertThat(
             queryBuilder
-                .update(TABLE_FULL_NAME)
+                .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
-        .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=?");
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
 
     assertThat(
             queryBuilder
-                .update(TABLE_FULL_NAME)
+                .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))))
                 .build()
                 .toString())
-        .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?");
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?"));
 
     assertThat(
             queryBuilder
-                .update(TABLE_FULL_NAME)
+                .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
                     Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
                 .build()
                 .toString())
-        .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?");
+        .isEqualTo(
+            encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?"));
 
     assertThat(
             queryBuilder
-                .update(TABLE_FULL_NAME)
+                .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
@@ -384,11 +387,11 @@ public class QueryBuilderTest {
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
                 .toString())
-        .isEqualTo("UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1=?");
+        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1=?"));
 
     assertThat(
             queryBuilder
-                .update(TABLE_FULL_NAME)
+                .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
@@ -400,44 +403,43 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(
-            "UPDATE s1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1<>? AND v2>? AND v3<=?");
+            encloseSql(
+                "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1<>? AND v2>? AND v3<=?"));
   }
 
   @Test
   public void deleteQueryTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
-
     assertThat(
             queryBuilder
-                .deleteFrom(TABLE_FULL_NAME)
+                .deleteFrom(NAMESPACE, TABLE)
                 .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
                 .build()
                 .toString())
-        .isEqualTo("DELETE FROM s1.t1 WHERE p1=?");
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?"));
 
     assertThat(
             queryBuilder
-                .deleteFrom(TABLE_FULL_NAME)
+                .deleteFrom(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))))
                 .build()
                 .toString())
-        .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND c1=?");
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?"));
 
     assertThat(
             queryBuilder
-                .deleteFrom(TABLE_FULL_NAME)
+                .deleteFrom(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
                     Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
                 .build()
                 .toString())
-        .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?");
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?"));
 
     assertThat(
             queryBuilder
-                .deleteFrom(TABLE_FULL_NAME)
+                .deleteFrom(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))),
@@ -445,11 +447,11 @@ public class QueryBuilderTest {
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
                 .toString())
-        .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND c1=? AND v1=?");
+        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?"));
 
     assertThat(
             queryBuilder
-                .deleteFrom(TABLE_FULL_NAME)
+                .deleteFrom(NAMESPACE, TABLE)
                 .where(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))),
@@ -459,155 +461,128 @@ public class QueryBuilderTest {
                         new ConditionalExpression("v3", new TextValue("eee"), Operator.LT)))
                 .build()
                 .toString())
-        .isEqualTo("DELETE FROM s1.t1 WHERE p1=? AND c1=? AND v1<>? AND v2>=? AND v3<?");
+        .isEqualTo(
+            encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1<>? AND v2>=? AND v3<?"));
   }
 
   @Test
-  public void upsertQueryForMySQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.MYSQL);
-
+  public void upsertQueryTest() {
     Map<String, Value> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
     values.put("v3", new TextValue("ddd"));
 
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,v1,v2,v3) VALUES(?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?");
+    String expectedQuery;
 
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,c1,v1,v2,v3) VALUES(?,?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?");
-
-    values.put("v4", new TextValue("eee"));
-
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES(?,?,?,?,?,?,?,?)"
-                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?");
-  }
-
-  @Test
-  public void upsertQueryForPostgreSQLTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.POSTGRESQL);
-
-    Map<String, Value> values = new HashMap<>();
-    values.put("v1", new TextValue("aaa"));
-    values.put("v2", new TextValue("bbb"));
-    values.put("v3", new TextValue("ddd"));
-
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,v1,v2,v3) VALUES(?,?,?,?) "
-                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?");
-
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,c1,v1,v2,v3) VALUES(?,?,?,?,?) "
-                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?");
-
-    values.put("v4", new TextValue("eee"));
-
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "INSERT INTO s1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES(?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?");
-  }
-
-  @Test
-  public void upsertQueryForOracleAndSQLServerTest() {
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, RdbEngine.ORACLE);
-
-    Map<String, Value> values = new HashMap<>();
-    values.put("v1", new TextValue("aaa"));
-    values.put("v2", new TextValue("bbb"));
-    values.put("v3", new TextValue("ddd"));
-
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "MERGE INTO s1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"
+                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
+        break;
+      case POSTGRESQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1) DO UPDATE SET v1=?,v2=?,v3=?";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES(?,?,?,?)");
-
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
+        break;
+    }
     assertThat(
             queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
+                .upsertInto(NAMESPACE, TABLE)
+                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql(expectedQuery));
+
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"
+                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?";
+        break;
+      case POSTGRESQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?) "
+                + "ON CONFLICT (p1,c1) DO UPDATE SET v1=?,v2=?,v3=?";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
+        break;
+    }
+    assertThat(
+            queryBuilder
+                .upsertInto(NAMESPACE, TABLE)
                 .values(
                     new Key(new TextValue("p1", "aaa")),
                     Optional.of(new Key(new TextValue("c1", "bbb"))),
                     values)
                 .build()
                 .toString())
-        .isEqualTo(
-            "MERGE INTO s1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES(?,?,?,?,?)");
+        .isEqualTo(encloseSql(expectedQuery));
 
     values.put("v4", new TextValue("eee"));
 
-    assertThat(
-            queryBuilder
-                .upsertInto(TABLE_FULL_NAME)
-                .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(
-            "MERGE INTO s1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"
+                + " ON DUPLICATE KEY UPDATE v1=?,v2=?,v3=?,v4=?";
+        break;
+      case POSTGRESQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO UPDATE SET v1=?,v2=?,v3=?,v4=?";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
                 + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
                 + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
-                + "VALUES(?,?,?,?,?,?,?,?)");
+                + "VALUES (?,?,?,?,?,?,?,?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
+        break;
+    }
+    assertThat(
+            queryBuilder
+                .upsertInto(NAMESPACE, TABLE)
+                .values(
+                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
+                    values)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql(expectedQuery));
   }
 }

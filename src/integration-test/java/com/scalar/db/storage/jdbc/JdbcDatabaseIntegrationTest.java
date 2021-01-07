@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
@@ -58,12 +60,22 @@ public class JdbcDatabaseIntegrationTest {
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
 
-  private static String getSchema(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + NAMESPACE;
+  @Parameterized.Parameter() public JdbcConnectionInfo jdbcConnectionInfo;
+
+  @Parameterized.Parameter(1)
+  public String namespacePrefix;
+
+  private TestEnv testEnv;
+  private DistributedStorage storage;
+  private List<Put> puts;
+  private List<Delete> deletes;
+
+  private static String getFullNamespace(Optional<String> namespacePrefix) {
+    return namespacePrefix.orElse("") + NAMESPACE;
   }
 
-  private static String getFullTableName(Optional<String> schemaPrefix) {
-    return getSchema(schemaPrefix) + "." + TABLE;
+  private static String getFullTableName(Optional<String> namespacePrefix) {
+    return getFullNamespace(namespacePrefix) + "." + TABLE;
   }
 
   @Parameterized.Parameters(name = "RDB={0}, namespace_prefix={1}")
@@ -76,16 +88,6 @@ public class JdbcDatabaseIntegrationTest {
         new Object[] {SQL_SERVER_INFO, null});
   }
 
-  @Parameterized.Parameter() public JdbcConnectionInfo jdbcConnectionInfo;
-
-  @Parameterized.Parameter(1)
-  public String namespacePrefix;
-
-  private TestEnv testEnv;
-  private DistributedStorage storage;
-  private List<Put> puts;
-  private List<Delete> deletes;
-
   @Before
   public void setUp() throws Exception {
     testEnv =
@@ -93,11 +95,11 @@ public class JdbcDatabaseIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> schemaPrefix) {
+              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
                 return Arrays.asList(
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME1,
                         DataType.INT,
                         KeyType.PARTITION,
@@ -105,8 +107,8 @@ public class JdbcDatabaseIntegrationTest {
                         false,
                         1),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME2,
                         DataType.TEXT,
                         null,
@@ -114,8 +116,8 @@ public class JdbcDatabaseIntegrationTest {
                         false,
                         2),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME3,
                         DataType.INT,
                         null,
@@ -123,8 +125,8 @@ public class JdbcDatabaseIntegrationTest {
                         false,
                         3),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME4,
                         DataType.INT,
                         KeyType.CLUSTERING,
@@ -132,8 +134,8 @@ public class JdbcDatabaseIntegrationTest {
                         false,
                         4),
                     insertMetadataStatement(
-                        schemaPrefix,
-                        getFullTableName(schemaPrefix),
+                        namespacePrefix,
+                        getFullTableName(namespacePrefix),
                         COL_NAME5,
                         DataType.BOOLEAN,
                         null,
@@ -143,35 +145,38 @@ public class JdbcDatabaseIntegrationTest {
               }
 
               @Override
-              public List<String> schemas(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getSchema(schemaPrefix));
+              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.singletonList(
+                    enclose(getFullNamespace(namespacePrefix), rdbEngine));
               }
 
               @Override
-              public List<String> tables(Optional<String> schemaPrefix) {
-                return Collections.singletonList(getFullTableName(schemaPrefix));
+              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
+                return Collections.singletonList(
+                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine));
               }
 
               @Override
-              public List<String> createTableStatements(Optional<String> schemaPrefix) {
+              public List<String> createTableStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Collections.singletonList(
                     "CREATE TABLE "
-                        + getFullTableName(schemaPrefix)
+                        + enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine)
                         + " ("
-                        + COL_NAME1
+                        + enclose(COL_NAME1, rdbEngine)
                         + " INT,"
-                        + COL_NAME2
+                        + enclose(COL_NAME2, rdbEngine)
                         + " VARCHAR(100),"
-                        + COL_NAME3
+                        + enclose(COL_NAME3, rdbEngine)
                         + " INT,"
-                        + COL_NAME4
+                        + enclose(COL_NAME4, rdbEngine)
                         + " INT,"
-                        + COL_NAME5
+                        + enclose(COL_NAME5, rdbEngine)
                         + " BOOLEAN,"
                         + "PRIMARY KEY("
-                        + COL_NAME1
+                        + enclose(COL_NAME1, rdbEngine)
                         + ","
-                        + COL_NAME4
+                        + enclose(COL_NAME4, rdbEngine)
                         + "))");
               }
             },
@@ -495,7 +500,7 @@ public class JdbcDatabaseIntegrationTest {
     assertThat(actual.get().getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
     assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
   }
 
   @Test
@@ -530,7 +535,7 @@ public class JdbcDatabaseIntegrationTest {
     assertThat(actual.get().getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
     assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
   }
 
   @Test
@@ -1083,7 +1088,7 @@ public class JdbcDatabaseIntegrationTest {
     assertThat(actual.get().getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
     assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, (cKey % 2 == 0) ? true : false)));
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
   }
 
   @Test
@@ -1176,8 +1181,7 @@ public class JdbcDatabaseIntegrationTest {
                             new Put(partitionKey, clusteringKey)
                                 .withValue(new TextValue(COL_NAME2, Integer.toString(i + j)))
                                 .withValue(new IntValue(COL_NAME3, i + j))
-                                .withValue(
-                                    new BooleanValue(COL_NAME5, (j % 2 == 0) ? true : false));
+                                .withValue(new BooleanValue(COL_NAME5, j % 2 == 0));
                         puts.add(put);
                       });
             });

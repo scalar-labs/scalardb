@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
@@ -12,7 +13,7 @@ import java.util.Optional;
 public interface BaseStatements {
 
   static String insertMetadataStatement(
-      Optional<String> schemaPrefix,
+      Optional<String> namespacePrefix,
       String fullTableName,
       String columnName,
       DataType dataType,
@@ -22,7 +23,7 @@ public interface BaseStatements {
       int ordinalPosition) {
     return String.format(
         "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
-        TableMetadataManager.getFullTableName(schemaPrefix),
+        TableMetadataManager.getFullTableName(namespacePrefix),
         fullTableName,
         columnName,
         dataType,
@@ -32,11 +33,11 @@ public interface BaseStatements {
         ordinalPosition);
   }
 
-  List<String> insertMetadataStatements(Optional<String> schemaPrefix);
+  List<String> insertMetadataStatements(Optional<String> namespacePrefix);
 
-  List<String> schemas(Optional<String> schemaPrefix);
+  List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine);
 
-  List<String> tables(Optional<String> schemaPrefix);
+  List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine);
 
-  List<String> createTableStatements(Optional<String> schemaPrefix);
+  List<String> createTableStatements(Optional<String> namespacePrefix, RdbEngine rdbEngine);
 }
