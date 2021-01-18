@@ -20,7 +20,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -136,7 +135,7 @@ public class CassandraIntegrationTest {
             () -> {
               storage.get(get);
             })
-        .isInstanceOf(InvalidUsageException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -712,15 +711,17 @@ public class CassandraIntegrationTest {
   }
 
   @Test
-  public void delete_DeleteWithPartitionKeyGiven_ShouldDeleteRecordsProperly()
+  public void delete_DeleteWithPartitionKeyGiven_ShouldDeleteRecordProperly()
       throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
+    int cKey = 0;
 
     // Act
     Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Delete delete = new Delete(partitionKey);
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Delete delete = new Delete(partitionKey, clusteringKey);
     assertThatCode(
             () -> {
               storage.delete(delete);
@@ -729,7 +730,7 @@ public class CassandraIntegrationTest {
 
     // Assert
     List<Result> actual = storage.scan(new Scan(partitionKey)).all();
-    assertThat(actual.size()).isEqualTo(0);
+    assertThat(actual.size()).isEqualTo(2);
   }
 
   @Test
@@ -991,10 +992,12 @@ public class CassandraIntegrationTest {
     // Arrange
     populateRecords();
     int pKey = 0;
+    int cKey = 0;
 
     // Act
     Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Delete delete = new Delete(partitionKey);
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Delete delete = new Delete(partitionKey, clusteringKey);
     assertThatCode(
             () -> {
               storage.mutate(Arrays.asList(delete));
@@ -1003,7 +1006,7 @@ public class CassandraIntegrationTest {
 
     // Assert
     List<Result> actual = storage.scan(new Scan(partitionKey)).all();
-    assertThat(actual.size()).isEqualTo(0);
+    assertThat(actual.size()).isEqualTo(2);
   }
 
   @Test

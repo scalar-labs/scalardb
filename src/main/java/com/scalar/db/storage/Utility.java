@@ -1,6 +1,5 @@
 package com.scalar.db.storage;
 
-import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Key;
 import java.util.List;
@@ -41,13 +40,17 @@ public final class Utility {
     }
   }
 
-  public static void checkIfPrimaryKeyExists(Mutation mutation, TableMetadata metadata) {
-    throwIfNotMatched(Optional.of(mutation.getPartitionKey()), metadata.getPartitionKeyNames());
-    throwIfNotMatched(mutation.getClusteringKey(), metadata.getClusteringKeyNames());
+  public static void checkIfPrimaryKeyExists(Operation operation, TableMetadata metadata) {
+    throwIfNotMatched(Optional.of(operation.getPartitionKey()), metadata.getPartitionKeyNames());
+    throwIfNotMatched(operation.getClusteringKey(), metadata.getClusteringKeyNames());
+  }
+
+  public static void checkIfPartitionKeyExists(Operation operation, TableMetadata metadata) {
+    throwIfNotMatched(Optional.of(operation.getPartitionKey()), metadata.getPartitionKeyNames());
   }
 
   private static void throwIfNotMatched(Optional<Key> key, Set<String> names) {
-    String message = "The primary key is not properly specified.";
+    String message = "The required key (primary or partition) is not properly specified.";
     if ((!key.isPresent() && names.size() > 0)
         || (key.isPresent() && (key.get().size() != names.size()))) {
       throw new IllegalArgumentException(message);
