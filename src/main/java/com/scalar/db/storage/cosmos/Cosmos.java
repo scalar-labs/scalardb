@@ -17,6 +17,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Optional;
@@ -108,7 +109,9 @@ public class Cosmos implements DistributedStorage {
     Utility.checkGetOperation(get, metadata);
 
     List<Record> records = selectStatementHandler.handle(get);
-
+    if (records.size() > 1) {
+      throw new InvalidUsageException("please use scan() for non-exact match selection");
+    }
     if (records.isEmpty() || records.get(0) == null) {
       return Optional.empty();
     }
