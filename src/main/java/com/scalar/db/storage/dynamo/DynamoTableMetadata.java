@@ -21,9 +21,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class DynamoTableMetadata implements TableMetadata {
   private static final String PARTITION_KEY = "partitionKey";
   private static final String CLUSTERING_KEY = "clusteringKey";
+  private static final String SECONDARY_INDEX = "secondayIndex";
   private static final String COLUMNS = "columns";
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
+  private SortedSet<String> secondayIndexNames;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
@@ -41,6 +43,11 @@ public class DynamoTableMetadata implements TableMetadata {
     return clusteringKeyNames;
   }
 
+  @Override
+  public Set<String> getSecondaryIndexNames() {
+    return secondayIndexNames;
+  }
+
   public Map<String, String> getColumns() {
     return columns;
   }
@@ -56,6 +63,12 @@ public class DynamoTableMetadata implements TableMetadata {
     } else {
       this.clusteringKeyNames = ImmutableSortedSet.of();
     }
+    if (metadata.containsKey(SECONDARY_INDEX)) {
+      this.secondayIndexNames = ImmutableSortedSet.copyOf(metadata.get(SECONDARY_INDEX).ss());
+    } else {
+      this.secondayIndexNames = ImmutableSortedSet.of();
+    }
+
     this.keyNames =
         new ImmutableList.Builder<String>()
             .addAll(partitionKeyNames)

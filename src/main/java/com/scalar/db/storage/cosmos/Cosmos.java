@@ -104,6 +104,8 @@ public class Cosmos implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(get);
+    Utility.checkGetOperation(get, metadata);
 
     List<Record> records = selectStatementHandler.handle(get);
 
@@ -111,17 +113,17 @@ public class Cosmos implements DistributedStorage {
       return Optional.empty();
     }
 
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(records.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(scan);
+    Utility.checkScanOperation(scan, metadata);
 
     List<Record> records = selectStatementHandler.handle(scan);
 
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(records, scan, metadata);
   }
 
