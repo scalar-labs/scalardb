@@ -21,7 +21,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class DynamoTableMetadata implements TableMetadata {
   private static final String PARTITION_KEY = "partitionKey";
   private static final String CLUSTERING_KEY = "clusteringKey";
-  private static final String SECONDARY_INDEX = "secondayIndex";
+  private static final String SECONDARY_INDEX = "secondaryIndex";
   private static final String COLUMNS = "columns";
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
