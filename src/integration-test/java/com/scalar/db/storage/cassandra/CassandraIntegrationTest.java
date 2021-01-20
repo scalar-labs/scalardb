@@ -20,6 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
@@ -1051,6 +1052,34 @@ public class CassandraIntegrationTest {
               storage.put(put);
             })
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumn_ShouldGet() throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
   }
 
   @Test
