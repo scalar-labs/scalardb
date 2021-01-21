@@ -1,5 +1,6 @@
 (ns scalar-schema.cassandra
   (:require [clojure.tools.logging :as log]
+            [scalar-schema.common :as common]
             [scalar-schema.protocols :as proto]
             [qbits.alia :as alia]
             [qbits.hayt :refer [->raw]]
@@ -67,7 +68,16 @@
                           (clause/column-definitions
                            (make-column-definitions schema))
                           (clause/with
-                           {:compaction {:class cs}}))))))
+                           {:compaction {:class cs}}))))
+    (doseq [index (:secondary-index schema)]
+      (alia/execute session
+                    (->raw (statement/create-index
+                             table
+                             index
+                             (clause/index-name (str (name table) \_
+                                                     common/INDEX_NAME_PREFIX
+                                                     \_ index))
+                             (clause/if-exists false)))))))
 
 (defn- delete-table
   [session schema]
