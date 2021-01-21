@@ -23,7 +23,9 @@
 
 (def ^:private SCALABLE_DIMENSIONS
   {:read ScalableDimension/DYNAMODB_TABLE_READ_CAPACITY_UNITS
-   :write ScalableDimension/DYNAMODB_TABLE_WRITE_CAPACITY_UNITS})
+   :write ScalableDimension/DYNAMODB_TABLE_WRITE_CAPACITY_UNITS
+   :index-read ScalableDimension/DYNAMODB_INDEX_READ_CAPACITY_UNITS
+   :index-write ScalableDimension/DYNAMODB_INDEX_WRITE_CAPACITY_UNITS})
 
 (defn get-scaling-client
   [user password region]
@@ -32,23 +34,33 @@
       (.region (Region/of region))
       .build))
 
-(defn- make-scaling-request
-  [schema ru type]
-  (-> (RegisterScalableTargetRequest/builder)
-      (.serviceNamespace ServiceNamespace/DYNAMODB)
-      (.resourceId (str "table/" (dynamo/get-table-name schema)))
-      (.scalableDimension (get SCALABLE_DIMENSIONS type))
-      (.minCapacity (int (if (> ru 10) (/ ru 10) ru)))
-      (.maxCapacity ru)
-      .build))
+(defn- get-resource-id
+  [table index-table]
+  (str "table/" table (when index-table (str "/index/" index-table))))
 
-(defn- make-scaling-disable-request
-  [schema type]
-  (-> (DeregisterScalableTargetRequest/builder)
-      (.serviceNamespace ServiceNamespace/DYNAMODB)
-      (.resourceId (str "table/" (dynamo/get-table-name schema)))
-      (.scalableDimension (get SCALABLE_DIMENSIONS type))
-      .build))
+(defn- get-policy-name
+  [table index-table type]
+  (str table \- (when index-table (str index-table \-)) (name type)))
+
+(defn- scaling-request-fn
+  [ru]
+  (fn [table index-table type]
+    (-> (RegisterScalableTargetRequest/builder)
+        (.serviceNamespace ServiceNamespace/DYNAMODB)
+        (.resourceId (get-resource-id table index-table))
+        (.scalableDimension (get SCALABLE_DIMENSIONS type))
+        (.minCapacity (int (if (> ru 10) (/ ru 10) ru)))
+        (.maxCapacity ru)
+        .build)))
+
+(defn- scaling-disable-request-fn
+  []
+  (fn [table index-table type]
+    (-> (DeregisterScalableTargetRequest/builder)
+        (.serviceNamespace ServiceNamespace/DYNAMODB)
+        (.resourceId (get-resource-id table index-table))
+        (.scalableDimension (get SCALABLE_DIMENSIONS type))
+        .build)))
 
 (defn- make-scaling-policy-config
   [type]
@@ -56,7 +68,7 @@
       (.predefinedMetricSpecification
        (-> (PredefinedMetricSpecification/builder)
            (.predefinedMetricType
-            (if (= type :read)
+            (if (or (= type :read) (= type :index-read))
               MetricType/DYNAMO_DB_READ_CAPACITY_UTILIZATION
               MetricType/DYNAMO_DB_WRITE_CAPACITY_UTILIZATION))
            .build))
@@ -65,47 +77,70 @@
       (.targetValue TARGET_USAGE_RATE)
       .build))
 
-(defn- make-scaling-policy-request
-  [schema type]
-  (let [table (dynamo/get-table-name schema)]
+(defn- scaling-policy-request-fn
+  []
+  (fn [table index-table type]
     (-> (PutScalingPolicyRequest/builder)
         (.serviceNamespace ServiceNamespace/DYNAMODB)
-        (.resourceId (str "table/" table))
+        (.resourceId (get-resource-id table index-table))
         (.scalableDimension (get SCALABLE_DIMENSIONS type))
-        (.policyName (str table \- (name type)))
+        (.policyName (get-policy-name table index-table type))
         (.policyType PolicyType/TARGET_TRACKING_SCALING)
         (.targetTrackingScalingPolicyConfiguration
          (make-scaling-policy-config type))
         .build)))
 
-(defn- make-scaling-policy-delete-request
-  [schema type]
-  (let [table (dynamo/get-table-name schema)]
+(defn- scaling-policy-delete-request-fn
+  []
+  (fn
+    [table index-table type]
     (-> (DeleteScalingPolicyRequest/builder)
         (.serviceNamespace ServiceNamespace/DYNAMODB)
-        (.resourceId (str "table/" table))
+        (.resourceId (get-resource-id table index-table))
         (.scalableDimension (get SCALABLE_DIMENSIONS type))
-        (.policyName (str table \- (name type)))
+        (.policyName (get-policy-name table index-table type))
         .build)))
+
+(defn- make-requests
+  [f table global-index-tables]
+  (-> (map #(f table nil %) [:read :write])
+      (into (map #(f table % :index-read) global-index-tables))
+      (into (map #(f table % :index-write) global-index-tables))))
 
 (defn enable-auto-scaling
   [scaling-client schema {:keys [ru] :or {ru (int 10)}}]
-  (mapv (fn [type]
-          (doto scaling-client
-            (.registerScalableTarget (make-scaling-request schema ru type))
-            (.putScalingPolicy (make-scaling-policy-request schema type))))
-        [:read :write]))
+  (let [table (dynamo/get-table-name schema)
+        global-index-tables (map #(dynamo/get-global-index-name schema %)
+                                 (:secondary-index schema))
+        scaling-reqs (make-requests (scaling-request-fn ru)
+                                    table
+                                    global-index-tables)
+        policy-reqs (make-requests (scaling-policy-request-fn)
+                                   table
+                                   global-index-tables)]
+    (mapv (fn [scaling-req policy-req]
+            (doto scaling-client
+              (.registerScalableTarget scaling-req)
+              (.putScalingPolicy policy-req)))
+          scaling-reqs policy-reqs)))
 
 (defn disable-auto-scaling
   [scaling-client schema]
-  (mapv (fn [type]
-          (try
-            (doto scaling-client
-              (.deregisterScalableTarget
-               (make-scaling-disable-request schema type))
-              (.deleteScalingPolicy
-               (make-scaling-policy-delete-request schema type)))
-            (catch ObjectNotFoundException _
-              (log/info "No auto-scaling configuration for"
-                        (dynamo/get-table-name schema)))))
-        [:read :write]))
+  (let [table (dynamo/get-table-name schema)
+        global-index-tables (map #(dynamo/get-global-index-name schema %)
+                                 (:secondary-index schema))
+        scaling-reqs (make-requests (scaling-disable-request-fn)
+                                    table
+                                    global-index-tables)
+        policy-reqs (make-requests (scaling-policy-delete-request-fn)
+                                   table
+                                   global-index-tables)]
+    (mapv (fn [scaling-req policy-req]
+            (try
+              (doto scaling-client
+                (.deregisterScalableTarget scaling-req)
+                (.deleteScalingPolicy policy-req))
+              (catch ObjectNotFoundException _
+                (log/info "No auto-scaling configuration for"
+                          (dynamo/get-table-name schema)))))
+          scaling-reqs policy-reqs)))
