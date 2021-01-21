@@ -167,7 +167,7 @@ public class JdbcDatabase implements DistributedStorage {
     }
 
     try {
-      if (!jdbcService.mutate(mutations, connection, namespace, tableName)) {
+      if (!jdbcService.mutate(mutations, connection, namespace, tableName, false)) {
         try {
           connection.rollback();
         } catch (SQLException e) {

@@ -152,7 +152,7 @@ public class JdbcTransaction implements DistributedTransaction {
                     }));
 
     try {
-      jdbcService.mutate(mutations, connection, namespace, tableName);
+      jdbcService.mutate(mutations, connection, namespace, tableName, true);
     } catch (SQLException e) {
       throw new CrudException("mutate operation failed", e);
     }

@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -403,10 +404,12 @@ public class JdbcServiceTest {
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE_NAME);
+    boolean ret =
+        jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE_NAME, false);
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(anyList(), anyBoolean());
     verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).upsertInto(any(), any());
     verify(operationChecker).check(any(Delete.class));

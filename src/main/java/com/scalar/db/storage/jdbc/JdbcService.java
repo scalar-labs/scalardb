@@ -152,10 +152,11 @@ public class JdbcService {
       List<? extends Mutation> mutations,
       Connection connection,
       Optional<String> namespace,
-      Optional<String> tableName)
+      Optional<String> tableName,
+      boolean allowMultiPartitions)
       throws SQLException {
     mutations.forEach(m -> Utility.setTargetToIfNot(m, namespacePrefix, namespace, tableName));
-    operationChecker.checkMutate(mutations);
+    operationChecker.check(mutations, allowMultiPartitions);
 
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {

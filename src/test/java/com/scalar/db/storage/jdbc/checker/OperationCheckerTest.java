@@ -884,7 +884,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> operationChecker.checkMutate(Arrays.asList(put, delete)))
+    assertThatCode(() -> operationChecker.check(Arrays.asList(put, delete), false))
         .doesNotThrowAnyException();
   }
 
@@ -893,13 +893,13 @@ public class OperationCheckerTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> operationChecker.checkMutate(Collections.emptyList()))
+    assertThatThrownBy(() -> operationChecker.check(Collections.emptyList(), false))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeys_shouldThrowMultiPartitionException() {
+      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowMultiPartitionException() {
     // Arrange
     Key partitionKey1 = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key partitionKey2 = new Key(new IntValue(PKEY1, 2), new TextValue(PKEY2, "val2"));
@@ -910,8 +910,25 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> operationChecker.checkMutate(Arrays.asList(put, delete)))
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete), false))
         .isInstanceOf(MultiPartitionException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithAllowPartitions_shouldNotThrowAnyException() {
+    // Arrange
+    Key partitionKey1 = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
+    Key partitionKey2 = new Key(new IntValue(PKEY1, 2), new TextValue(PKEY2, "val2"));
+    Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val3"));
+    Put put = new Put(partitionKey1, clusteringKey).withValue(new IntValue(COL1, 1));
+    Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
+    Delete delete = new Delete(partitionKey2, clusteringKey);
+    Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(Arrays.asList(put, delete), true))
+        .doesNotThrowAnyException();
   }
 
   @Test

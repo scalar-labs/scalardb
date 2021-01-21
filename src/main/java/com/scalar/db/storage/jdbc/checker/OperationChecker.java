@@ -113,17 +113,19 @@ public class OperationChecker {
     delete.getCondition().ifPresent(condition -> checkCondition(tableMetadata, condition, false));
   }
 
-  public void checkMutate(List<? extends Mutation> mutations) {
+  public void check(List<? extends Mutation> mutations, boolean allowMultiPartitions) {
     if (mutations.isEmpty()) {
       throw new IllegalArgumentException("the mutations are empty");
     }
 
-    Mutation first = mutations.get(0);
-    for (Mutation mutation : mutations) {
-      if (!mutation.forTable().equals(first.forTable())
-          || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-        throw new MultiPartitionException(
-            "decided not to execute this batch since multi-partition batch is not recommended");
+    if (!allowMultiPartitions) {
+      Mutation first = mutations.get(0);
+      for (Mutation mutation : mutations) {
+        if (!mutation.forTable().equals(first.forTable())
+            || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
+          throw new MultiPartitionException(
+              "decided not to execute this batch since multi-partition batch is not recommended");
+        }
       }
     }
   }
