@@ -9,6 +9,8 @@ import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosStoredProcedureProperties;
+import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -18,10 +20,14 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,6 +48,8 @@ public class CosmosIntegrationTest {
   private static final String METADATA_TABLE = "metadata";
   private static final String KEYSPACE = "integration_testing";
   private static final String TABLE = "test_table";
+  private static final String STORED_PROCEDURE_PATH =
+      "tools/scalar-schema/stored_procedure/mutate.js";
   private static final String CONTACT_POINT = System.getenv("COSMOS_URI");
   private static final String USERNAME = "not_used";
   private static final String PASSWORD = System.getenv("COSMOS_PASSWORD");
@@ -59,6 +67,17 @@ public class CosmosIntegrationTest {
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(TABLE, PARTITION_KEY);
     client.getDatabase(KEYSPACE).createContainerIfNotExists(containerProperties);
+
+    String storedProcedure =
+        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
+            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
+    CosmosStoredProcedureProperties properties =
+        new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
+    client
+        .getDatabase(KEYSPACE)
+        .getContainer(TABLE)
+        .getScripts()
+        .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
 
     storage.with(KEYSPACE, TABLE);
   }
@@ -127,6 +146,50 @@ public class CosmosIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
     assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
     assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumn_ShouldGet() throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumnWithClusteringKey_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    int c3 = 0;
+    int c4 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)), new Key((new IntValue(COL_NAME4, c4))));
+
+    // Act
+    assertThatCode(
+            () -> {
+              storage.get(get);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -340,6 +403,56 @@ public class CosmosIntegrationTest {
   }
 
   @Test
+  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    List<Result> actual = storage.scan(scan).all();
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 1)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 3)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void scan_ScanGivenForIndexedColumnWithOrdering_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    int c3 = 0;
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME3, c3)))
+            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
+
+    // Act
+    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_ScanGivenForNonIndexedColumn_ShouldThrow() {
+    // Arrange
+    populateRecords();
+    String c2 = "test";
+    Scan scan = new Scan(new Key(new TextValue(COL_NAME2, c2)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
       throws ExecutionException {
     // Arrange
@@ -539,6 +652,7 @@ public class CosmosIntegrationTest {
     metadata.setId(KEYSPACE + "." + TABLE);
     metadata.setPartitionKeyNames(new HashSet<>(Arrays.asList(COL_NAME1)));
     metadata.setClusteringKeyNames(new HashSet<>(Arrays.asList(COL_NAME4)));
+    metadata.setSecondaryIndexNames(new HashSet<>(Arrays.asList(COL_NAME3)));
     Map<String, String> columns = new HashMap<>();
     columns.put(COL_NAME1, "int");
     columns.put(COL_NAME2, "text");
