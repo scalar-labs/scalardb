@@ -1109,7 +1109,7 @@ public class CassandraIntegrationTest {
   }
 
   @Test
-  public void scan_ScanGivenForNonIndexedColumn_ShouldThrow() {
+  public void scan_ScanGivenForNonIndexedColumn_ShouldThrowIllegalArgumentException() {
     // Arrange
     populateRecords();
     String c2 = "test";
