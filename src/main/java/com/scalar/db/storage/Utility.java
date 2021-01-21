@@ -48,10 +48,6 @@ public final class Utility {
     throwIfNotMatched(operation.getClusteringKey(), metadata.getClusteringKeyNames());
   }
 
-  public static void checkIfPartitionKeyExists(Operation operation, TableMetadata metadata) {
-    throwIfNotMatched(Optional.of(operation.getPartitionKey()), metadata.getPartitionKeyNames());
-  }
-
   public static void checkGetOperation(Get get, TableMetadata metadata) {
     if (isSecondaryIndexSpecified(get, metadata)) {
       if (get.getClusteringKey().isPresent()) {
