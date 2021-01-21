@@ -52,7 +52,7 @@ public final class Utility {
     if (isSecondaryIndexSpecified(get, metadata)) {
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
-            "The clusteringKey should not be specified when using an index");
+            "Clustering keys cannot be specified when using an index");
       }
       return;
     }
