@@ -424,6 +424,26 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
   }
 
+  @Test
+  public void get_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
+    test.get_DeleteCalledBefore_ShouldReturnEmpty();
+  }
+
+  @Test
+  public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
+    test.scan_DeleteCalledBefore_ShouldReturnEmpty();
+  }
+
+  @Test
+  public void delete_PutCalledBefore_ShouldDelete() throws Exception {
+    test.delete_PutCalledBefore_ShouldDelete();
+  }
+
+  @Test
+  public void put_DeleteCalledBefore_ShouldPut() throws Exception {
+    test.put_DeleteCalledBefore_ShouldPut();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
