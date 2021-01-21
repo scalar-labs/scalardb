@@ -96,9 +96,9 @@ public class Cassandra implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(get);
-    Utility.checkGetOperation(get, metadata);
+    checkIfPrimaryKeyExists(get);
     addProjectionsForKeys(get);
+    CassandraTableMetadata metadata = getTableMetadata(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -115,9 +115,9 @@ public class Cassandra implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(scan);
-    Utility.checkScanOperation(scan, metadata);
+    checkIfPartitionKeyExists(scan);
     addProjectionsForKeys(scan);
+    CassandraTableMetadata metadata = getTableMetadata(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -204,5 +204,11 @@ public class Cassandra implements DistributedStorage {
     CassandraTableMetadata metadata = getTableMetadata(operation);
 
     Utility.checkIfPrimaryKeyExists(operation, metadata);
+  }
+
+  private void checkIfPartitionKeyExists(Operation operation) {
+    CassandraTableMetadata metadata = getTableMetadata(operation);
+
+    Utility.checkIfPartitionKeyExists(operation, metadata);
   }
 }
