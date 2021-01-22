@@ -1,7 +1,10 @@
 package com.scalar.db.storage;
 
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.Value;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -45,8 +48,31 @@ public final class Utility {
     throwIfNotMatched(operation.getClusteringKey(), metadata.getClusteringKeyNames());
   }
 
-  public static void checkIfPartitionKeyExists(Operation operation, TableMetadata metadata) {
-    throwIfNotMatched(Optional.of(operation.getPartitionKey()), metadata.getPartitionKeyNames());
+  public static void checkGetOperation(Get get, TableMetadata metadata) {
+    if (isSecondaryIndexSpecified(get, metadata)) {
+      if (get.getClusteringKey().isPresent()) {
+        throw new IllegalArgumentException(
+            "Clustering keys cannot be specified when using an index");
+      }
+      return;
+    }
+    checkIfPrimaryKeyExists(get, metadata);
+  }
+
+  public static void checkScanOperation(Scan scan, TableMetadata metadata) {
+    if (isSecondaryIndexSpecified(scan, metadata)) {
+      if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
+        throw new IllegalArgumentException(
+            "The clusteringKey should not be specified when using an index");
+      }
+      if (!scan.getOrderings().isEmpty()) {
+        throw new IllegalArgumentException(
+            "The ordering should not be specified when using an index");
+      }
+      return;
+    }
+
+    throwIfNotMatched(Optional.of(scan.getPartitionKey()), metadata.getPartitionKeyNames());
   }
 
   private static void throwIfNotMatched(Optional<Key> key, Set<String> names) {
@@ -63,5 +89,15 @@ public final class Utility {
                     throw new IllegalArgumentException(message);
                   }
                 }));
+  }
+
+  public static boolean isSecondaryIndexSpecified(Operation operation, TableMetadata metadata) {
+    List<Value> keyValues = operation.getPartitionKey().get();
+    if (keyValues.size() == 1) {
+      String name = keyValues.get(0).getName();
+      return metadata.getSecondaryIndexNames().contains(name);
+    }
+
+    return false;
   }
 }
