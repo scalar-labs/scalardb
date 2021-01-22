@@ -70,6 +70,8 @@ public class SelectStatementHandlerTest {
     when(metadata.getPartitionKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    when(metadata.getSecondaryIndexNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_3)));
   }
 
   private Get prepareGet() {
@@ -105,6 +107,29 @@ public class SelectStatementHandlerTest {
 
     // Assert
     verify(container).readItem(id, cosmosPartitionKey, Record.class);
+  }
+
+  @Test
+  public void handle_GetOperationWithIndexGiven_ShouldCallQueryItems() {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    String query =
+        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(get);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
   }
 
   @Test
@@ -155,6 +180,30 @@ public class SelectStatementHandlerTest {
 
     Scan scan = prepareScan();
     String query = "select * from Record r where r.concatenatedPartitionKey = '" + ANY_TEXT_1 + "'";
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(scan);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void handle_ScanOperationWithIndexGiven_ShouldCallQueryItems() {
+    // Arrange
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+
+    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    String query =
+        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
     assertThatCode(
