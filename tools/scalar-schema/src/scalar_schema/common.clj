@@ -5,6 +5,7 @@
 
 (def ^:const ^String METADATA_DATABASE "scalardb")
 (def ^:const ^String METADATA_TABLE "metadata")
+(def ^:const ^String INDEX_NAME_PREFIX "index")
 
 (def COORDINATOR_SCHEMA {:database "coordinator"
                          :table "state"
@@ -34,6 +35,14 @@
                                                          (.toLowerCase t)))
                                                 {} (:columns v))})]
            (assoc v' :database db :table tbl)))
+       schema))
+
+(defn- filter-secondary-index
+  [schema]
+  (map (fn [table-schema]
+         (->> (filter #(not (.contains (:partition-key table-schema) %))
+                      (:secondary-index table-schema))
+              (assoc table-schema :secondary-index)))
        schema))
 
 (defn- make-transaction-columns
@@ -76,8 +85,10 @@
   [{:keys [schema-file prefix]}]
   (-> (cheshire/parse-stream (io/reader schema-file) true
                              #(when (or (= % "partition-key")
-                                        (= % "clustering-key")) []))
+                                        (= % "clustering-key")
+                                        (= % "secondary-index")) []))
       format-schema
+      filter-secondary-index
       apply-transaction
       add-coordinator
       (add-prefix prefix)))
