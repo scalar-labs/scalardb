@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.storage.Utility;
 import java.util.List;
 import java.util.Map;
@@ -99,24 +100,28 @@ public class Dynamo implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
+    Utility.checkGetOperation(get, metadata);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
-
+    if (items.size() > 1) {
+      throw new InvalidUsageException("please use scan() for non-exact match selection");
+    }
     if (items.isEmpty() || items.get(0) == null) {
       return Optional.empty();
     }
 
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(items.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
+    Utility.checkScanOperation(scan, metadata);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(items, scan, metadata);
   }
 
