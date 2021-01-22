@@ -21,4 +21,11 @@ public interface TableMetadata {
    * @return an {@code Set} of clustering key names
    */
   public Set<String> getClusteringKeyNames();
+
+  /**
+   * Returns the secondary index names
+   *
+   * @return an {@code Set} of secondary index names
+   */
+  public Set<String> getSecondaryIndexNames();
 }
