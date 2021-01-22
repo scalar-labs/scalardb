@@ -10,6 +10,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.Utility;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.jooq.Field;
 import org.jooq.OrderField;
 import org.jooq.SQLDialect;
 import org.jooq.SelectConditionStep;
+import org.jooq.SelectWhereStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 
@@ -53,6 +55,10 @@ public class SelectStatementHandler extends StatementHandler {
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
     cosmosOperation.checkArgument(Get.class);
 
+    if (Utility.isSecondaryIndexSpecified(operation, metadataManager.getTableMetadata(operation))) {
+      return executeReadWithIndex(operation);
+    }
+
     String id = cosmosOperation.getId();
     PartitionKey partitionKey = cosmosOperation.getCosmosPartitionKey();
 
@@ -61,31 +67,47 @@ public class SelectStatementHandler extends StatementHandler {
     return Arrays.asList(record);
   }
 
+  private List<Record> executeReadWithIndex(Operation operation) throws CosmosException {
+    String query = makeQueryWithIndex(operation);
+    CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
+    CosmosPagedIterable<Record> iterable =
+        getContainer(operation).queryItems(query, options, Record.class);
+
+    return Lists.newArrayList(iterable);
+  }
+
   private List<Record> executeQuery(Operation operation) throws CosmosException {
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
     cosmosOperation.checkArgument(Scan.class);
     Scan scan = (Scan) operation;
 
-    String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
-    SelectConditionStep<org.jooq.Record> select =
-        DSL.using(SQLDialect.DEFAULT)
-            .selectFrom("Record r")
-            .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
+    String query;
+    CosmosQueryRequestOptions options;
+    if (Utility.isSecondaryIndexSpecified(scan, metadataManager.getTableMetadata(operation))) {
+      query = makeQueryWithIndex(scan);
+      options = new CosmosQueryRequestOptions();
+    } else {
+      String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
+      SelectConditionStep<org.jooq.Record> select =
+          DSL.using(SQLDialect.DEFAULT)
+              .selectFrom("Record r")
+              .where(DSL.field("r.concatenatedPartitionKey").eq(concatenatedPartitionKey));
 
-    setStart(select, scan);
-    setEnd(select, scan);
+      setStart(select, scan);
+      setEnd(select, scan);
 
-    setOrderings(select, scan.getOrderings());
+      setOrderings(select, scan.getOrderings());
 
-    String query = select.getSQL(ParamType.INLINED);
+      query = select.getSQL(ParamType.INLINED);
+      options =
+          new CosmosQueryRequestOptions().setPartitionKey(cosmosOperation.getCosmosPartitionKey());
+    }
+
     if (scan.getLimit() > 0) {
       // Add limit as a string
       // because JOOQ doesn't support OFFSET LIMIT clause which Cosmos DB requires
       query += " offset 0 limit " + scan.getLimit();
     }
-
-    CosmosQueryRequestOptions options =
-        new CosmosQueryRequestOptions().setPartitionKey(cosmosOperation.getCosmosPartitionKey());
 
     CosmosPagedIterable<Record> iterable =
         getContainer(scan).queryItems(query, options, Record.class);
@@ -160,5 +182,24 @@ public class SelectStatementHandler extends StatementHandler {
               (o.getOrder() == Scan.Ordering.Order.ASC) ? field.asc() : field.desc();
           select.orderBy(orderField);
         });
+  }
+
+  private String makeQueryWithIndex(Operation operation) {
+    SelectWhereStep<org.jooq.Record> select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r");
+    Value keyValue = operation.getPartitionKey().get().get(0);
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(operation);
+    String fieldName;
+    if (metadata.getClusteringKeyNames().contains(keyValue.getName())) {
+      fieldName = "r.clusteringKey.";
+    } else {
+      fieldName = "r.values.";
+    }
+    Field<Object> field = DSL.field(fieldName + keyValue.getName());
+
+    ValueBinder binder = new ValueBinder();
+    binder.set(v -> select.where(field.eq(v)));
+    keyValue.accept(binder);
+
+    return select.getSQL(ParamType.INLINED);
   }
 }
