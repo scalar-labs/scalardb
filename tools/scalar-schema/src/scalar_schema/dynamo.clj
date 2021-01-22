@@ -10,6 +10,7 @@
                                                            AttributeValue
                                                            CreateTableRequest
                                                            DeleteTableRequest
+                                                           GlobalSecondaryIndex
                                                            KeySchemaElement
                                                            KeyType
                                                            LocalSecondaryIndex
@@ -23,13 +24,10 @@
 (def ^:const ^:private ^String METADATA_PARTITION_KEY "table")
 (def ^:const ^:private ^String PARTITION_KEY "concatenatedPartitionKey")
 (def ^:const ^:private ^String CLUSTERING_KEY "concatenatedClusteringKey")
-(def ^:const ^:private ^String INDEX_NAME_PREFIX "index")
 (def ^:const ^:private ^String PARTITION_KEY_COLUMN "partitionKey")
 (def ^:const ^:private ^String CLUSTERING_KEY_COLUMN "clusteringKey")
+(def ^:const ^:private ^String SECONDARY_INDEX_COLUMN "secondaryIndex")
 (def ^:const ^:private ^String COLUMNS_COLUMN "columns")
-(def ^:private META_TABLE (dynamo/get-table-name
-                           {:database common/METADATA_DATABASE
-                            :table common/METADATA_TABLE}))
 
 (def ^:private type-map
   {"int" ScalarAttributeType/N
@@ -55,6 +53,10 @@
   [schema]
   (not (empty? (:clustering-key schema))))
 
+(defn- secondary-index-exist?
+  [schema]
+  (not (empty? (:secondary-index schema))))
+
 (defn- make-attribute-definition
   [name type]
   (-> (AttributeDefinition/builder)
@@ -63,15 +65,14 @@
       .build))
 
 (defn- make-attribute-definitions
-  [schema]
-  (let [clustering-keys (:clustering-key schema)
-        clustering-key-types (map #((:columns schema) %) clustering-keys)
+  [{:keys [clustering-key secondary-index columns] :as schema}]
+  (let [key-names (into (set clustering-key) secondary-index)
+        key-types (map #(columns %) key-names)
         base [(make-attribute-definition PARTITION_KEY "text")]]
     (if (clustering-keys-exist? schema)
       (-> base
           (conj (make-attribute-definition CLUSTERING_KEY "text"))
-          (into (mapv #(make-attribute-definition %1 %2)
-                      clustering-keys clustering-key-types)))
+          (into (map #(make-attribute-definition %1 %2) key-names key-types)))
       base)))
 
 (defn- make-key-schema-element
@@ -88,14 +89,10 @@
      (make-key-schema-element CLUSTERING_KEY KeyType/RANGE)]
     [(make-key-schema-element PARTITION_KEY KeyType/HASH)]))
 
-(defn- get-index-name
-  [schema key-name]
-  (str (dynamo/get-table-name schema) \. INDEX_NAME_PREFIX \. key-name))
-
 (defn- make-local-secondary-index
   [schema index-key]
   (-> (LocalSecondaryIndex/builder)
-      (.indexName (get-index-name schema index-key))
+      (.indexName (dynamo/get-index-name schema index-key))
       (.keySchema [(make-key-schema-element PARTITION_KEY KeyType/HASH)
                    (make-key-schema-element index-key KeyType/RANGE)])
       (.projection (-> (Projection/builder)
@@ -114,6 +111,21 @@
       (.writeCapacityUnits (long ru))
       .build))
 
+(defn- make-global-secondary-index
+  [schema index-key ru]
+  (-> (GlobalSecondaryIndex/builder)
+      (.indexName (dynamo/get-global-index-name schema index-key))
+      (.keySchema [(make-key-schema-element index-key KeyType/HASH)])
+      (.projection (-> (Projection/builder)
+                       (.projectionType (ProjectionType/ALL))
+                       .build))
+      (.provisionedThroughput (make-throughput ru))
+      .build))
+
+(defn- make-global-secondary-indexes
+  [schema ru]
+  (map #(make-global-secondary-index schema % ru) (:secondary-index schema)))
+
 (defn- insert-metadata
   [client schema metadata-table]
   (let [table (dynamo/get-table-name schema)
@@ -128,11 +140,15 @@
                                             .build)
                    COLUMNS_COLUMN (-> (AttributeValue/builder)
                                       (.m columns) .build)}
-        item (if (clustering-keys-exist? schema)
-               (assoc base-item CLUSTERING_KEY_COLUMN
+        item (cond-> base-item
+               (clustering-keys-exist? schema)
+               (assoc CLUSTERING_KEY_COLUMN
                       (-> (AttributeValue/builder)
                           (.ss (:clustering-key schema)) .build))
-               base-item)
+               (secondary-index-exist? schema)
+               (assoc SECONDARY_INDEX_COLUMN
+                      (-> (AttributeValue/builder)
+                          (.ss (:secondary-index schema)) .build)))
         request (-> (PutItemRequest/builder)
                     (.tableName metadata-table)
                     (.item item) .build)]
@@ -173,6 +189,9 @@
         (when (clustering-keys-exist? schema)
           (.localSecondaryIndexes builder
                                   (make-local-secondary-indexes schema)))
+        (when (secondary-index-exist? schema)
+          (.globalSecondaryIndexes builder
+                                   (make-global-secondary-indexes schema ru)))
         (.createTable client (.build builder))))))
 
 (defn- delete-table
