@@ -21,6 +21,7 @@
 (def ^:const ^:private ^String
   PARTITION_KEY_PATH "/concatenatedPartitionKey/?")
 (def ^:const ^:private ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
+(def ^:const ^:private ^String SECONDARY_INDEX_PATH "/values/")
 
 (def ^:const ^:private REGISTERED_STORED_PROCEDURE "mutate.js")
 
@@ -39,10 +40,10 @@
     (catch Exception _ false)))
 
 (defn- container-exists?
-  [client database container]
+  [client {:keys [database table]}]
   (try
     (-> (.getDatabase client database)
-        (.getContainer container)
+        (.getContainer table)
         .read nil? not)
     (catch Exception _ false)))
 
@@ -65,45 +66,52 @@
       (.replaceThroughput db (make-throughput-properties ru no-scaling)))))
 
 (defn- make-container-properties
-  [container]
-  (if (= container common/METADATA_TABLE)
-    (CosmosContainerProperties. container METADATA_PARTITION_KEY)
+  [{:keys [table secondary-index]}]
+  (if (= table common/METADATA_TABLE)
+    (CosmosContainerProperties. table METADATA_PARTITION_KEY)
     (let [policy (doto (IndexingPolicy.)
                    (.setIncludedPaths
-                    [(IncludedPath. PARTITION_KEY_PATH)
-                     (IncludedPath. CLUSTERING_KEY_PATH)])
+                    (into [(IncludedPath. PARTITION_KEY_PATH)
+                           (IncludedPath. CLUSTERING_KEY_PATH)]
+                          (map #(IncludedPath.
+                                 (str SECONDARY_INDEX_PATH % "/?"))
+                               secondary-index)))
                    (.setExcludedPaths [(ExcludedPath. "/*")]))]
-      (doto (CosmosContainerProperties. container CONTAINER_PARTITION_KEY)
+      (doto (CosmosContainerProperties. table CONTAINER_PARTITION_KEY)
         (.setIndexingPolicy policy)))))
 
 (defn- create-container
-  [client database container]
-  (let [prop (make-container-properties container)]
+  [client {:keys [database] :as schema}]
+  (let [prop (make-container-properties schema)]
     (-> (.getDatabase client database)
         (.createContainerIfNotExists prop))))
 
 (defn- create-metadata
-  [client schema prefix]
+  [client
+   {:keys [database table partition-key clustering-key secondary-index columns]}
+   prefix]
   (let [prefixed-database (if prefix
                             (str prefix \_ common/METADATA_DATABASE)
                             common/METADATA_DATABASE)
         metadata (doto (CosmosTableMetadata.)
-                   (.setId (common/get-fullname (:database schema)
-                                                (:table schema)))
-                   (.setPartitionKeyNames (set (:partition-key schema)))
-                   (.setClusteringKeyNames (set (:clustering-key schema)))
-                   (.setColumns (:columns schema)))]
+                   (.setId (common/get-fullname database table))
+                   (.setPartitionKeyNames (set partition-key))
+                   (.setClusteringKeyNames (set clustering-key))
+                   (.setSecondaryIndexNames (set secondary-index))
+                   (.setColumns columns))]
     (when-not (database-exists? client prefixed-database)
       (create-database client prefixed-database 400 true))
-    (when-not (container-exists? client prefixed-database common/METADATA_TABLE)
-      (create-container client prefixed-database common/METADATA_TABLE))
+    (when-not (container-exists? client {:database prefixed-database
+                                         :table common/METADATA_TABLE})
+      (create-container client {:database prefixed-database
+                                :table common/METADATA_TABLE}))
     (-> (.getDatabase client prefixed-database)
         (.getContainer common/METADATA_TABLE)
         (.upsertItem metadata))))
 
 (defn- register-stored-procedure
-  [client database container]
-  (let [scripts (-> client (.getDatabase database) (.getContainer container)
+  [client {:keys [database table]}]
+  (let [scripts (-> client (.getDatabase database) (.getContainer table)
                     .getScripts)
         properties (CosmosStoredProcedureProperties.
                     REGISTERED_STORED_PROCEDURE
@@ -112,21 +120,20 @@
                             (CosmosStoredProcedureRequestOptions.))))
 
 (defn- create-table
-  [client schema {:keys [ru prefix no-scaling] :or {ru 400 no-scaling false}}]
-  (let [database (:database schema)
-        table (:table schema)
-        ru (if (:ru schema) (:ru schema) ru)]
+  [client {:keys [database table] :as schema}
+   {:keys [ru prefix no-scaling] :or {ru 400 no-scaling false}}]
+  (let [ru (if (:ru schema) (:ru schema) ru)]
     (create-metadata client schema prefix)
     (if (database-exists? client database)
       (do
         (update-throughput client database ru no-scaling)
         (log/warn database "already exists"))
       (create-database client database ru no-scaling))
-    (if (container-exists? client database table)
+    (if (container-exists? client schema)
       (log/warn (common/get-fullname database table) "already exists")
       (do
-        (create-container client database table)
-        (register-stored-procedure client database table)))))
+        (create-container client schema)
+        (register-stored-procedure client schema)))))
 
 (defn- delete-table
   [client {:keys [database]}]
