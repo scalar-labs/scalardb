@@ -4,8 +4,10 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.Utility;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,6 +52,12 @@ public class SelectStatementHandler extends StatementHandler {
     checkArgument(operation, Get.class, Scan.class);
 
     try {
+      if (Utility.isSecondaryIndexSpecified(
+          operation, metadataManager.getTableMetadata(operation))) {
+        // convert to a mutable list for the Scanner
+        return new ArrayList<>(executeQueryWithIndex((Selection) operation).items());
+      }
+
       if (operation instanceof Get) {
         GetItemResponse response = executeGet((Get) operation);
         if (response.hasItem()) {
@@ -83,6 +91,34 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     return client.getItem(builder.build());
+  }
+
+  private QueryResponse executeQueryWithIndex(Selection selection) {
+    DynamoOperation dynamoOperation = new DynamoOperation(selection, metadataManager);
+    Value keyValue = selection.getPartitionKey().get().get(0);
+    String column = keyValue.getName();
+    String indexTable = dynamoOperation.getGlobalIndexName(column);
+    QueryRequest.Builder builder =
+        QueryRequest.builder().tableName(dynamoOperation.getTableName()).indexName(indexTable);
+
+    String condition = column + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
+    keyValue.accept(binder);
+    Map<String, AttributeValue> bindMap = binder.build();
+    builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
+
+    if (!selection.getProjections().isEmpty()) {
+      builder.projectionExpression(String.join(",", selection.getProjections()));
+    }
+
+    if (selection instanceof Scan) {
+      Scan scan = (Scan) selection;
+      if (scan.getLimit() > 0) {
+        builder.limit(scan.getLimit());
+      }
+    }
+
+    return client.query(builder.build());
   }
 
   private QueryResponse executeQuery(Scan scan) {
