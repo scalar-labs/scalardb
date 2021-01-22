@@ -93,20 +93,24 @@ public class Snapshot {
   }
 
   public void put(Snapshot.Key key, Put put) {
+    deleteSet.remove(key);
     writeSet.put(key, put);
   }
 
   public void put(Snapshot.Key key, Delete delete) {
+    writeSet.remove(key);
     deleteSet.put(key, delete);
   }
 
   public boolean containsKey(Snapshot.Key key) {
-    return writeSet.containsKey(key) || readSet.containsKey(key);
+    return writeSet.containsKey(key) || deleteSet.containsKey(key) || readSet.containsKey(key);
   }
 
   public Optional<TransactionResult> get(Snapshot.Key key) {
     if (writeSet.containsKey(key)) {
       throw new CrudRuntimeException("reading already written data is not allowed");
+    } else if (deleteSet.containsKey(key)) {
+      return Optional.empty();
     } else if (readSet.containsKey(key)) {
       return readSet.get(key);
     }

@@ -50,6 +50,10 @@ public final class Utility {
 
   public static void checkGetOperation(Get get, TableMetadata metadata) {
     if (isSecondaryIndexSpecified(get, metadata)) {
+      if (get.getClusteringKey().isPresent()) {
+        throw new IllegalArgumentException(
+            "Clustering keys cannot be specified when using an index");
+      }
       return;
     }
     checkIfPrimaryKeyExists(get, metadata);
@@ -60,6 +64,10 @@ public final class Utility {
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             "The clusteringKey should not be specified when using an index");
+      }
+      if (!scan.getOrderings().isEmpty()) {
+        throw new IllegalArgumentException(
+            "The ordering should not be specified when using an index");
       }
       return;
     }
