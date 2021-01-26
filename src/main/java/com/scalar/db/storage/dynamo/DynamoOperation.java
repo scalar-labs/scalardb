@@ -24,6 +24,7 @@ public class DynamoOperation {
   static final String RANGE_KEY_ALIAS = ":sk";
   static final String RANGE_CONDITION = " BETWEEN :sk0 AND :sk1";
   static final String INDEX_NAME_PREFIX = "index";
+  static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
 
   private final Operation operation;
   private final DynamoTableMetadata metadata;
@@ -56,6 +57,11 @@ public class DynamoOperation {
   @Nonnull
   public String getIndexName(String clusteringKey) {
     return getTableName() + "." + INDEX_NAME_PREFIX + "." + clusteringKey;
+  }
+
+  @Nonnull
+  public String getGlobalIndexName(String column) {
+    return getTableName() + "." + GLOBAL_INDEX_NAME_PREFIX + "." + column;
   }
 
   @Nonnull

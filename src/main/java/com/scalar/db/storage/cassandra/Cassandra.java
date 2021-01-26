@@ -96,8 +96,9 @@ public class Cassandra implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-    addProjectionsForKeys(get);
     CassandraTableMetadata metadata = getTableMetadata(get);
+    Utility.checkGetOperation(get, metadata);
+    addProjectionsForKeys(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
     if (rows.size() > 1) {
@@ -114,8 +115,9 @@ public class Cassandra implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-    addProjectionsForKeys(scan);
     CassandraTableMetadata metadata = getTableMetadata(scan);
+    Utility.checkScanOperation(scan, metadata);
+    addProjectionsForKeys(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
     return new ScannerImpl(results, metadata);
@@ -139,6 +141,7 @@ public class Cassandra implements DistributedStorage {
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
+    checkIfPrimaryKeyExists(delete);
     handlers.delete().handle(delete);
   }
 
@@ -154,6 +157,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing batch-mutate operation with " + mutations);
     if (mutations.size() > 1) {
       Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+      mutations.forEach(m -> checkIfPrimaryKeyExists(m));
       batch.handle(mutations);
     } else if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
@@ -196,9 +200,9 @@ public class Cassandra implements DistributedStorage {
     return tableMetadataMap.get(fullName);
   }
 
-  private void checkIfPrimaryKeyExists(Put put) {
-    CassandraTableMetadata metadata = getTableMetadata(put);
+  private void checkIfPrimaryKeyExists(Operation operation) {
+    CassandraTableMetadata metadata = getTableMetadata(operation);
 
-    Utility.checkIfPrimaryKeyExists(put, metadata);
+    Utility.checkIfPrimaryKeyExists(operation, metadata);
   }
 }

@@ -142,6 +142,15 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Delete prepareAnotherDelete() {
+    Key partitionKey = new Key(new TextValue(ANY_NAME_5, ANY_TEXT_5));
+    Key clusteringKey = new Key(new TextValue(ANY_NAME_6, ANY_TEXT_6));
+    return new Delete(partitionKey, clusteringKey)
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
+  }
+
   private void configureBehavior() {
     doNothing().when(prepareComposer).add(any(Put.class), any(TransactionResult.class));
     doNothing().when(prepareComposer).add(any(Delete.class), any(TransactionResult.class));
@@ -275,8 +284,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Delete delete = prepareDelete();
+    Delete delete = prepareAnotherDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -300,7 +310,6 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
-    snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
 
     // Act
@@ -310,7 +319,6 @@ public class SnapshotTest {
     Put putFromGet = prepareAnotherPut();
     verify(prepareComposer).add(put, result);
     verify(prepareComposer).add(putFromGet, result);
-    verify(prepareComposer).add(delete, result);
     verify(snapshot).toSerializableWithExtraWrite(prepareComposer);
   }
 
@@ -320,8 +328,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Delete delete = prepareDelete();
+    Delete delete = prepareAnotherDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
 
@@ -340,8 +349,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
-    Delete delete = prepareDelete();
+    Delete delete = prepareAnotherDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -362,8 +372,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
-    Delete delete = prepareDelete();
+    Delete delete = prepareAnotherDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -383,8 +394,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
-    Delete delete = prepareDelete();
+    Delete delete = prepareAnotherDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
+    snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
     snapshot.put(new Snapshot.Key(delete), delete);
     configureBehavior();
@@ -621,5 +633,51 @@ public class SnapshotTest {
 
     // Assert
     verify(storage).scan(scan);
+  }
+
+  @Test
+  public void put_PutGivenAfterDelete_PutSupercedesDelete() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Snapshot.Key getKey = new Snapshot.Key(prepareGet());
+    snapshot.put(getKey, Optional.of(result));
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    snapshot.put(putKey, put);
+
+    // Act
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    snapshot.put(deleteKey, delete);
+
+    // Assert
+    assertThat(readSet.size()).isEqualTo(1);
+    assertThat(readSet.get(getKey)).isEqualTo(Optional.of(result));
+    assertThat(writeSet.size()).isEqualTo(0);
+    assertThat(deleteSet.size()).isEqualTo(1);
+    assertThat(deleteSet.get(deleteKey)).isEqualTo(delete);
+  }
+
+  @Test
+  public void put_DeleteGivenAfterPut_DeleteSupercedesPut() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Snapshot.Key getKey = new Snapshot.Key(prepareGet());
+    snapshot.put(getKey, Optional.of(result));
+    Delete delete = prepareDelete();
+    Snapshot.Key deleteKey = new Snapshot.Key(prepareDelete());
+    snapshot.put(deleteKey, delete);
+
+    // Act
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(preparePut());
+    snapshot.put(putKey, put);
+
+    // Assert
+    assertThat(readSet.size()).isEqualTo(1);
+    assertThat(readSet.get(getKey)).isEqualTo(Optional.of(result));
+    assertThat(deleteSet.size()).isEqualTo(0);
+    assertThat(writeSet.size()).isEqualTo(1);
+    assertThat(writeSet.get(putKey)).isEqualTo(put);
   }
 }

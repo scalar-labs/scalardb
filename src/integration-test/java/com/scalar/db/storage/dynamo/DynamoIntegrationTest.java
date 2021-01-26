@@ -20,6 +20,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
@@ -44,6 +45,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
@@ -152,6 +154,50 @@ public class DynamoIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
     assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
     assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumn_ShouldGet() throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumnWithClusteringKey_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    int c3 = 0;
+    int c4 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)), new Key((new IntValue(COL_NAME4, c4))));
+
+    // Act
+    assertThatCode(
+            () -> {
+              storage.get(get);
+            })
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -267,7 +313,8 @@ public class DynamoIntegrationTest {
   }
 
   @Test
-  public void scan_ScanWithStartExclusiveRangeGiven_ShouldReturnInclusiveResults() throws ExecutionException {
+  public void scan_ScanWithStartExclusiveRangeGiven_ShouldReturnInclusiveResults()
+      throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -359,6 +406,56 @@ public class DynamoIntegrationTest {
     assertThat(actual.size()).isEqualTo(1);
     assertThat(actual.get(0).getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    List<Result> actual = storage.scan(scan).all();
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3); // (3,0), (2,1), (1,2)
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 3)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scan_ScanGivenForIndexedColumnWithOrdering_ShouldThrowIllegalArgumentException()
+      throws ExecutionException {
+    // Arrange
+    int c3 = 0;
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME3, c3)))
+            .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
+
+    // Act
+    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_ScanGivenForNonIndexedColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    populateRecords();
+    String c2 = "test";
+    Scan scan = new Scan(new Key(new TextValue(COL_NAME2, c2)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -1121,7 +1218,7 @@ public class DynamoIntegrationTest {
 
     // wait for the creation
     try {
-      Thread.sleep(10000);
+      Thread.sleep(15000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -1174,6 +1271,11 @@ public class DynamoIntegrationTest {
             .attributeName(COL_NAME4)
             .attributeType(ScalarAttributeType.N)
             .build());
+    attributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(COL_NAME3)
+            .attributeType(ScalarAttributeType.N)
+            .build());
     builder.attributeDefinitions(attributeDefinitions);
 
     List<KeySchemaElement> keySchemaElements = new ArrayList<>();
@@ -1192,13 +1294,25 @@ public class DynamoIntegrationTest {
         LocalSecondaryIndex.builder()
             .indexName(KEYSPACE + "." + TABLE + ".index." + COL_NAME4)
             .keySchema(indexKeys)
-            .projection(
-                Projection.builder()
-                    .projectionType(ProjectionType.INCLUDE)
-                    .nonKeyAttributes(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME5)
-                    .build())
+            .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
             .build();
     builder.localSecondaryIndexes(index);
+
+    List<KeySchemaElement> globalIndexKeys = new ArrayList<>();
+    globalIndexKeys.add(
+        KeySchemaElement.builder().attributeName(COL_NAME3).keyType(KeyType.HASH).build());
+    GlobalSecondaryIndex globalIndex =
+        GlobalSecondaryIndex.builder()
+            .indexName(KEYSPACE + "." + TABLE + ".global_index." + COL_NAME3)
+            .keySchema(globalIndexKeys)
+            .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+            .provisionedThroughput(
+                ProvisionedThroughput.builder()
+                    .readCapacityUnits(10L)
+                    .writeCapacityUnits(10L)
+                    .build())
+            .build();
+    builder.globalSecondaryIndexes(globalIndex);
 
     client.createTable(builder.build());
   }
@@ -1229,6 +1343,7 @@ public class DynamoIntegrationTest {
     values.put("table", AttributeValue.builder().s(KEYSPACE + "." + TABLE).build());
     values.put("partitionKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME1)).build());
     values.put("clusteringKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME4)).build());
+    values.put("secondaryIndex", AttributeValue.builder().ss(Arrays.asList(COL_NAME3)).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());

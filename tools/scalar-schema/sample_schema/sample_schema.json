@@ -14,7 +14,11 @@
       "c5": "BOOLEAN"
     },
     "ru": 5000,
-    "compaction-strategy": "LCS"
+    "compaction-strategy": "LCS",
+    "secondary-index": [
+      "c2",
+      "c4"
+    ]
   },
 
   "sample_db.sample_table1": {

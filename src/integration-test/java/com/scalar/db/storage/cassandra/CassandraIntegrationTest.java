@@ -44,6 +44,7 @@ import org.junit.Test;
 public class CassandraIntegrationTest {
   private static final String KEYSPACE = "integration_testing";
   private static final String TABLE = "test_table";
+  private static final String INDEX = "test_index";
   private static final String CONTACT_POINT = "localhost";
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";
@@ -57,6 +58,8 @@ public class CassandraIntegrationTest {
           + "."
           + TABLE
           + " (c1 int, c2 text, c3 int, c4 int, c5 boolean, PRIMARY KEY((c1), c4))";
+  private static final String CREATE_INDEX_STMT =
+      "CREATE INDEX " + INDEX + " ON " + KEYSPACE + "." + TABLE + " (c3)";
   private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + KEYSPACE;
   private static final String TRUNCATE_TABLE_STMT = "TRUNCATE " + KEYSPACE + "." + TABLE;
   private static final String COL_NAME1 = "c1";
@@ -136,7 +139,7 @@ public class CassandraIntegrationTest {
             () -> {
               storage.get(get);
             })
-        .isInstanceOf(InvalidUsageException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -712,15 +715,17 @@ public class CassandraIntegrationTest {
   }
 
   @Test
-  public void delete_DeleteWithPartitionKeyGiven_ShouldDeleteRecordsProperly()
+  public void delete_DeleteWithPartitionKeyGiven_ShouldDeleteRecordProperly()
       throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
+    int cKey = 0;
 
     // Act
     Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Delete delete = new Delete(partitionKey);
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Delete delete = new Delete(partitionKey, clusteringKey);
     assertThatCode(
             () -> {
               storage.delete(delete);
@@ -729,7 +734,7 @@ public class CassandraIntegrationTest {
 
     // Assert
     List<Result> actual = storage.scan(new Scan(partitionKey)).all();
-    assertThat(actual.size()).isEqualTo(0);
+    assertThat(actual.size()).isEqualTo(2);
   }
 
   @Test
@@ -991,10 +996,12 @@ public class CassandraIntegrationTest {
     // Arrange
     populateRecords();
     int pKey = 0;
+    int cKey = 0;
 
     // Act
     Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Delete delete = new Delete(partitionKey);
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Delete delete = new Delete(partitionKey, clusteringKey);
     assertThatCode(
             () -> {
               storage.mutate(Arrays.asList(delete));
@@ -1003,7 +1010,7 @@ public class CassandraIntegrationTest {
 
     // Assert
     List<Result> actual = storage.scan(new Scan(partitionKey)).all();
-    assertThat(actual.size()).isEqualTo(0);
+    assertThat(actual.size()).isEqualTo(2);
   }
 
   @Test
@@ -1045,6 +1052,71 @@ public class CassandraIntegrationTest {
               storage.put(put);
             })
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void get_GetGivenForIndexedColumn_ShouldGet() throws ExecutionException {
+    // Arrange
+    storage.put(preparePuts().get(0)); // (0,0)
+    int c3 = 0;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    Optional<Result> actual = storage.get(get);
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+  }
+
+  @Test
+  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int c3 = 3;
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME3, c3)));
+
+    // Act
+    List<Result> actual = storage.scan(scan).all();
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
+    assertThat(actual.get(0).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 1)));
+    assertThat(actual.get(0).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 2)));
+    assertThat(actual.get(1).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertThat(actual.get(2).getValue(COL_NAME1))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 3)));
+    assertThat(actual.get(2).getValue(COL_NAME4))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+  }
+
+  @Test
+  public void scan_ScanGivenForNonIndexedColumn_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    populateRecords();
+    String c2 = "test";
+    Scan scan = new Scan(new Key(new TextValue(COL_NAME2, c2)));
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 
   private void populateRecords() {
@@ -1133,6 +1205,13 @@ public class CassandraIntegrationTest {
     ret = process.waitFor();
     if (ret != 0) {
       Assert.fail("CREATE TABLE failed.");
+    }
+
+    builder = new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", CREATE_INDEX_STMT);
+    process = builder.start();
+    ret = process.waitFor();
+    if (ret != 0) {
+      Assert.fail("CREATE INDEX failed.");
     }
 
     // reuse this storage instance through the tests

@@ -114,11 +114,30 @@ public class ConsensusCommitIntegrationTest {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
 
     // Act
-    transaction.get(get);
-    transaction.get(get);
+    Optional<Result> result1 = transaction.get(get);
+    Optional<Result> result2 = transaction.get(get);
 
     // Assert
     verify(storage).get(any(Get.class));
+    assertThat(result1).isEqualTo(result2);
+  }
+
+  public void
+      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
+          throws CrudException, ExecutionException, CommitException,
+              UnknownTransactionStatusException {
+    // Arrange
+    transaction = manager.start();
+    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
+
+    // Act
+    Optional<Result> result1 = transaction.get(get);
+    populateRecords();
+    Optional<Result> result2 = transaction.get(get);
+
+    // Assert
+    verify(storage).get(any(Get.class));
+    assertThat(result1).isEqualTo(result2);
   }
 
   public void get_GetGivenForNonExisting_ShouldReturnEmpty()
@@ -1662,6 +1681,93 @@ public class ConsensusCommitIntegrationTest {
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, NAMESPACE, TABLE_1));
     assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+  }
+
+  public void get_DeleteCalledBefore_ShouldReturnEmpty()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> resultBefore = transaction1.get(get);
+    transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
+    Optional<Result> resultAfter = transaction1.get(get);
+    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(resultBefore.isPresent()).isTrue();
+    assertThat(resultAfter.isPresent()).isFalse();
+  }
+
+  public void scan_DeleteCalledBefore_ShouldReturnEmpty()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
+    List<Result> resultBefore = transaction1.scan(scan);
+    transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
+    List<Result> resultAfter = transaction1.scan(scan);
+    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(resultBefore.size()).isEqualTo(1);
+    assertThat(resultAfter.size()).isEqualTo(0);
+  }
+
+  public void delete_PutCalledBefore_ShouldDelete()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> resultBefore = transaction1.get(get);
+    transaction1.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
+    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+
+    // Assert
+    DistributedTransaction transaction2 = manager.start();
+    Optional<Result> resultAfter = transaction2.get(get);
+    transaction2.commit();
+    assertThat(resultBefore.isPresent()).isTrue();
+    assertThat(resultAfter.isPresent()).isFalse();
+  }
+
+  public void put_DeleteCalledBefore_ShouldPut()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.commit();
+
+    // Act
+    DistributedTransaction transaction1 = manager.start();
+    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
+    Optional<Result> resultBefore = transaction1.get(get);
+    transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
+    transaction1.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+
+    // Assert
+    DistributedTransaction transaction2 = manager.start();
+    Optional<Result> resultAfter = transaction2.get(get);
+    transaction2.commit();
+    assertThat(resultBefore.isPresent()).isTrue();
+    assertThat(resultAfter.isPresent()).isTrue();
+    assertThat(resultAfter.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
   }
 
   private ConsensusCommit prepareTransfer(int fromId, int toId, int amount) throws CrudException {

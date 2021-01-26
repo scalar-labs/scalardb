@@ -20,6 +20,7 @@ public class CosmosTableMetadata implements TableMetadata {
   private String id;
   private SortedSet<String> partitionKeyNames;
   private SortedSet<String> clusteringKeyNames;
+  private SortedSet<String> secondaryIndexNames;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
 
@@ -35,6 +36,10 @@ public class CosmosTableMetadata implements TableMetadata {
 
   public void setClusteringKeyNames(Set<String> clusteringKeyNames) {
     this.clusteringKeyNames = ImmutableSortedSet.copyOf(clusteringKeyNames);
+  }
+
+  public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
+    this.secondaryIndexNames = ImmutableSortedSet.copyOf(secondaryIndexNames);
   }
 
   public void setColumns(Map<String, String> columns) {
@@ -57,6 +62,11 @@ public class CosmosTableMetadata implements TableMetadata {
   @Override
   public Set<String> getClusteringKeyNames() {
     return ImmutableSortedSet.copyOf(clusteringKeyNames);
+  }
+
+  @Override
+  public Set<String> getSecondaryIndexNames() {
+    return ImmutableSortedSet.copyOf(secondaryIndexNames);
   }
 
   public Map<String, String> getColumns() {

@@ -65,6 +65,8 @@ public class SelectStatementHandlerTest {
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
         .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+    when(metadata.getSecondaryIndexNames())
+        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_3)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
@@ -123,6 +125,35 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
+  public void handle_GetOperationWithIndexGiven_ShouldCallQuery() {
+    // Arrange
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    Map<String, AttributeValue> expected = new HashMap<>();
+    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+
+    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(get);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
   public void handle_GetOperationDynamoDbExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     DynamoDbException toThrow = mock(DynamoDbException.class);
@@ -153,6 +184,35 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              handler.handle(scan);
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedKeyCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void handle_ScanOperationWithIndexGiven_ShouldCallQuery() {
+    // Arrange
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    Map<String, AttributeValue> expected = new HashMap<>();
+    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+
+    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
 
     // Act Assert
     assertThatCode(
