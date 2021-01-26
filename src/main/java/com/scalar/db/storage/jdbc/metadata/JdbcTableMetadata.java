@@ -81,4 +81,9 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
   public Set<String> getClusteringKeyNames() {
     return new LinkedHashSet<>(partitionKeys);
   }
+
+  @Override
+  public Set<String> getSecondaryIndexNames() {
+    return null;
+  }
 }
