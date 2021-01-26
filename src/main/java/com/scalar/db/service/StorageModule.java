@@ -5,10 +5,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.cassandra.Cassandra;
-import com.scalar.db.storage.cosmos.Cosmos;
-import com.scalar.db.storage.dynamo.Dynamo;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 
 public class StorageModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -22,23 +19,15 @@ public class StorageModule extends AbstractModule {
     bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
   }
 
+  @Singleton
   @Provides
-  Cassandra provideCassandra() {
-    return new Cassandra(config);
+  DatabaseConfig provideDatabaseConfig() {
+    return config;
   }
 
+  @Singleton
   @Provides
-  Cosmos provideCosmos() {
-    return new Cosmos(config);
-  }
-
-  @Provides
-  Dynamo provideDynamo() {
-    return new Dynamo(config);
-  }
-
-  @Provides
-  JdbcDatabase provideJdbc() {
-    return new JdbcDatabase(config);
+  JdbcDatabaseConfig provideJdbcDatabaseConfig() {
+    return new JdbcDatabaseConfig(config.getProperties());
   }
 }

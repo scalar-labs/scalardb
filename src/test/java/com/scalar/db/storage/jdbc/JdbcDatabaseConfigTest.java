@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class JdbcDatabaseConfigTest {
 
@@ -14,6 +15,7 @@ public class JdbcDatabaseConfigTest {
   private static final String ANY_USERNAME = "root";
   private static final String ANY_PASSWORD = "mysql";
   private static final String ANY_NAMESPACE_PREFIX = "prefix";
+  private static final String JDBC_STORAGE = "jdbc";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -22,6 +24,7 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MIN_IDLE, "1");
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_IDLE, "100");
@@ -60,6 +63,7 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
@@ -88,6 +92,21 @@ public class JdbcDatabaseConfigTest {
   }
 
   @Test
+  public void constructor_PropertiesWithWrongStorage_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "aaa");
+    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcDatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void
       constructor_PropertiesWithInvalidConnectionPoolPropertiesGiven_ShouldLoadWithoutErrorsAndUseDefaultValues() {
     // Arrange
@@ -95,6 +114,7 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MIN_IDLE, "aaa");
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_IDLE, "bbb");

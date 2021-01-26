@@ -184,7 +184,7 @@ public class JdbcDatabaseIntegrationTest {
 
     testEnv.createMetadataTableAndInsertMetadata();
     testEnv.createTables();
-    storage = new JdbcDatabase(testEnv.getDatabaseConfig());
+    storage = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
     storage.with(NAMESPACE, TABLE);
   }
 

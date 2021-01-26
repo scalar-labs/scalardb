@@ -9,8 +9,8 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
-import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -23,7 +23,7 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class DatabaseConfig {
-  protected final Properties props;
+  private final Properties props;
   private List<String> contactPoints;
   private int contactPort;
   private String username;
@@ -57,6 +57,10 @@ public class DatabaseConfig {
   public DatabaseConfig(Properties properties) {
     props = new Properties(properties);
     load();
+  }
+
+  public Properties getProperties() {
+    return props;
   }
 
   protected void load() {

@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -121,15 +122,13 @@ public class TestEnv implements Closeable {
     return dataSource;
   }
 
-  public DatabaseConfig getDatabaseConfig() {
+  public JdbcDatabaseConfig getJdbcDatabaseConfig() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcConnectionInfo.url);
     props.setProperty(DatabaseConfig.USERNAME, jdbcConnectionInfo.username);
     props.setProperty(DatabaseConfig.PASSWORD, jdbcConnectionInfo.password);
-
     namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
-
-    return new DatabaseConfig(props);
+    return new JdbcDatabaseConfig(props);
   }
 
   @Override

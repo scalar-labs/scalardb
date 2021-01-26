@@ -9,7 +9,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.storage.jdbc.checker.OperationChecker;
@@ -44,7 +43,7 @@ public class JdbcDatabase implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public JdbcDatabase(DatabaseConfig config) {
+  public JdbcDatabase(JdbcDatabaseConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
     TableMetadataManager tableMetadataManager =

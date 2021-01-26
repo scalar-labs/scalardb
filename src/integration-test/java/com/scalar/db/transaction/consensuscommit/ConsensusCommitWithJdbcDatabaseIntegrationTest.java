@@ -2,8 +2,8 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
@@ -340,7 +340,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
     testEnv.createMetadataTableAndInsertMetadata();
     testEnv.createTables();
 
-    DatabaseConfig config = testEnv.getDatabaseConfig();
+    JdbcDatabaseConfig config = testEnv.getJdbcDatabaseConfig();
     storage = spy(new JdbcDatabase(config));
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));

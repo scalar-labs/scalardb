@@ -56,7 +56,11 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
 
   @Override
   protected void load() {
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    String storage = getProperties().getProperty(DatabaseConfig.STORAGE);
+    if (storage == null || !storage.equals("jdbc")) {
+      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be jdbc");
+    }
+
     super.load();
 
     connectionPoolMinIdle = getInt(CONNECTION_POOL_MIN_IDLE, DEFAULT_CONNECTION_POOL_MIN_IDLE);
@@ -68,7 +72,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
         getInt(PREPARED_STATEMENTS_POOL_MAX_OPEN, DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
     transactionManagerType =
-        props.getProperty(TRANSACTION_MANAGER_TYPE, DEFAULT_TRANSACTION_MANAGER_TYPE);
+        getProperties().getProperty(TRANSACTION_MANAGER_TYPE, DEFAULT_TRANSACTION_MANAGER_TYPE);
     if (!transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_CONSENSUSCOMMIT)
         && !transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_JDBC)) {
       LOGGER.warn(
@@ -80,7 +84,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
   }
 
   private int getInt(String name, int defaultValue) {
-    String value = props.getProperty(name);
+    String value = getProperties().getProperty(name);
     if (value == null) {
       return defaultValue;
     }
@@ -96,7 +100,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
   }
 
   private boolean getBoolean(String name, boolean defaultValue) {
-    String value = props.getProperty(name);
+    String value = getProperties().getProperty(name);
     if (value == null) {
       return defaultValue;
     }

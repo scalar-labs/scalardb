@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.config.DatabaseConfig;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.Connection;
@@ -22,11 +21,11 @@ public final class JdbcUtils {
     }
   }
 
-  public static BasicDataSource initDataSource(DatabaseConfig config) {
+  public static BasicDataSource initDataSource(JdbcDatabaseConfig config) {
     return initDataSource(config, false);
   }
 
-  public static BasicDataSource initDataSource(DatabaseConfig config, boolean transactional) {
+  public static BasicDataSource initDataSource(JdbcDatabaseConfig config, boolean transactional) {
     BasicDataSource dataSource = new BasicDataSource();
     dataSource.setUrl(config.getContactPoints().get(0));
     dataSource.setUsername(config.getUsername());
@@ -38,19 +37,12 @@ public final class JdbcUtils {
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
-    if (config instanceof JdbcDatabaseConfig) {
-      JdbcDatabaseConfig jdbcDatabaseConfig = (JdbcDatabaseConfig) config;
-      dataSource.setMinIdle(jdbcDatabaseConfig.getConnectionPoolMinIdle());
-      dataSource.setMaxIdle(jdbcDatabaseConfig.getConnectionPoolMaxIdle());
-      dataSource.setMaxTotal(jdbcDatabaseConfig.getConnectionPoolMaxTotal());
-      dataSource.setPoolPreparedStatements(jdbcDatabaseConfig.isPreparedStatementsPoolEnabled());
-      dataSource.setMaxOpenPreparedStatements(
-          jdbcDatabaseConfig.getPreparedStatementsPoolMaxOpen());
-    } else {
-      dataSource.setMinIdle(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
-      dataSource.setMaxIdle(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
-      dataSource.setMaxTotal(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
-    }
+    dataSource.setMinIdle(config.getConnectionPoolMinIdle());
+    dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
+    dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
+    dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
+    dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
+
     return dataSource;
   }
 }

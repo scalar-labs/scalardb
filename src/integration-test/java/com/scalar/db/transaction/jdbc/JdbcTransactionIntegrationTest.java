@@ -143,7 +143,7 @@ public class JdbcTransactionIntegrationTest {
             NAMESPACE_PREFIX);
     testEnv.createMetadataTableAndInsertMetadata();
     testEnv.createTables();
-    manager = new JdbcTransactionManager(testEnv.getDatabaseConfig());
+    manager = new JdbcTransactionManager(testEnv.getJdbcDatabaseConfig());
   }
 
   @After
