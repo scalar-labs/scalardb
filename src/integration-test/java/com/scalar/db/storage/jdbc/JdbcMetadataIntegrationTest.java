@@ -71,6 +71,7 @@ public class JdbcMetadataIntegrationTest {
                         KeyType.PARTITION,
                         null,
                         false,
+                        null,
                         1),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -80,6 +81,7 @@ public class JdbcMetadataIntegrationTest {
                         null,
                         null,
                         false,
+                        null,
                         2),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -89,6 +91,7 @@ public class JdbcMetadataIntegrationTest {
                         null,
                         null,
                         true,
+                        Scan.Ordering.Order.ASC,
                         3),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -98,6 +101,7 @@ public class JdbcMetadataIntegrationTest {
                         KeyType.CLUSTERING,
                         Scan.Ordering.Order.ASC,
                         false,
+                        null,
                         4),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -107,6 +111,7 @@ public class JdbcMetadataIntegrationTest {
                         null,
                         null,
                         false,
+                        null,
                         5));
               }
 
@@ -171,10 +176,16 @@ public class JdbcMetadataIntegrationTest {
     assertThat(tableMetadata.getClusteringKeyOrder(COL_NAME4)).isEqualTo(Scan.Ordering.Order.ASC);
     assertThat(tableMetadata.getClusteringKeyOrder(COL_NAME5)).isNull();
 
-    assertThat(tableMetadata.indexedColumn(COL_NAME1)).isFalse();
-    assertThat(tableMetadata.indexedColumn(COL_NAME2)).isFalse();
-    assertThat(tableMetadata.indexedColumn(COL_NAME3)).isTrue();
-    assertThat(tableMetadata.indexedColumn(COL_NAME4)).isFalse();
-    assertThat(tableMetadata.indexedColumn(COL_NAME5)).isFalse();
+    assertThat(tableMetadata.isIndexedColumn(COL_NAME1)).isFalse();
+    assertThat(tableMetadata.isIndexedColumn(COL_NAME2)).isFalse();
+    assertThat(tableMetadata.isIndexedColumn(COL_NAME3)).isTrue();
+    assertThat(tableMetadata.isIndexedColumn(COL_NAME4)).isFalse();
+    assertThat(tableMetadata.isIndexedColumn(COL_NAME5)).isFalse();
+
+    assertThat(tableMetadata.getIndexOrder(COL_NAME1)).isNull();
+    assertThat(tableMetadata.getIndexOrder(COL_NAME2)).isNull();
+    assertThat(tableMetadata.getIndexOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getIndexOrder(COL_NAME4)).isNull();
+    assertThat(tableMetadata.getIndexOrder(COL_NAME5)).isNull();
   }
 }

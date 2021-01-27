@@ -37,8 +37,8 @@ public class OperationChecker {
   public void check(Get get) throws SQLException {
     JdbcTableMetadata tableMetadata = getTableMetadata(get);
     checkProjections(tableMetadata, get.getProjections());
-    String indexedColumnToBeUsed = checkPartitionKey(tableMetadata, get.getPartitionKey(), true);
-    if (indexedColumnToBeUsed != null) {
+    boolean isIndexUsed = checkPartitionKey(tableMetadata, get.getPartitionKey(), true);
+    if (isIndexUsed) {
       if (get.getClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             "the clusteringKey should not be specified when using a index");
@@ -58,8 +58,8 @@ public class OperationChecker {
     JdbcTableMetadata tableMetadata = getTableMetadata(scan);
     checkProjections(tableMetadata, scan.getProjections());
 
-    String indexedColumnToBeUsed = checkPartitionKey(tableMetadata, scan.getPartitionKey(), true);
-    if (indexedColumnToBeUsed != null) {
+    boolean isIndexUsed = checkPartitionKey(tableMetadata, scan.getPartitionKey(), true);
+    if (isIndexUsed) {
       if (scan.getStartClusteringKey().isPresent() || scan.getEndClusteringKey().isPresent()) {
         throw new IllegalArgumentException(
             "the clusteringKey should not be specified when using a index");
@@ -82,7 +82,7 @@ public class OperationChecker {
       throw new IllegalArgumentException("the limit should not be negative");
     }
 
-    checkOrderings(tableMetadata, scan.getOrderings(), indexedColumnToBeUsed);
+    checkOrderings(tableMetadata, scan.getOrderings(), isIndexUsed);
   }
 
   public void check(Put put) throws SQLException {
@@ -148,21 +148,23 @@ public class OperationChecker {
     }
   }
 
-  /** @return The indexed column name when using the index. Otherwise null */
-  private String checkPartitionKey(
+  /** @return whether or not an index is used */
+  private boolean checkPartitionKey(
       JdbcTableMetadata tableMetadata, Key partitionKey, boolean allowUsingIndex) {
-    if (!checkKey(tableMetadata, tableMetadata.getPartitionKeys(), partitionKey, false)) {
-      if (allowUsingIndex && partitionKey.get().size() == 1) {
-        Value value = partitionKey.get().get(0);
-        if (tableMetadata.indexedColumn(value.getName())
-            && new ColumnDataTypeChecker(tableMetadata).check(value)) {
-          // We use this index
-          return value.getName();
-        }
+    if (allowUsingIndex && partitionKey.get().size() == 1) {
+      Value value = partitionKey.get().get(0);
+      if (tableMetadata.isIndexedColumn(value.getName())
+          && new ColumnDataTypeChecker(tableMetadata).check(value)) {
+        // We use this index
+        return true;
       }
+    }
+
+    if (!checkKey(tableMetadata, tableMetadata.getPartitionKeys(), partitionKey, false)) {
       throw new IllegalArgumentException("the partitionKey is invalid: " + partitionKey);
     }
-    return null;
+
+    return false;
   }
 
   private void checkClusteringKey(
@@ -232,18 +234,14 @@ public class OperationChecker {
   }
 
   private void checkOrderings(
-      JdbcTableMetadata tableMetadata,
-      List<Scan.Ordering> orderings,
-      String indexedColumnToBeUsed) {
+      JdbcTableMetadata tableMetadata, List<Scan.Ordering> orderings, boolean isIndexUsed) {
     if (orderings.isEmpty()) {
       return;
     }
 
-    if (indexedColumnToBeUsed != null) {
-      if (orderings.size() != 1 || !orderings.get(0).getName().equals(indexedColumnToBeUsed)) {
-        throw new IllegalArgumentException("invalid orderings: " + orderings);
-      }
-      return;
+    if (isIndexUsed) {
+      throw new IllegalArgumentException(
+          "The ordering should not be specified when using an index");
     }
 
     List<String> clusteringKeys = tableMetadata.getClusteringKeys();

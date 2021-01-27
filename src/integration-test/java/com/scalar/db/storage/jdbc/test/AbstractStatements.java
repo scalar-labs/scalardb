@@ -60,7 +60,8 @@ public abstract class AbstractStatements implements Statements {
             + "data_type VARCHAR(20) NOT NULL,"
             + "key_type VARCHAR(20),"
             + "clustering_order VARCHAR(10),"
-            + "indexed BOOLEAN,"
+            + "indexed BOOLEAN NOT NULL,"
+            + "index_order VARCHAR(10),"
             + "ordinal_position INTEGER NOT NULL,"
             + "PRIMARY KEY (full_table_name, column_name))");
   }

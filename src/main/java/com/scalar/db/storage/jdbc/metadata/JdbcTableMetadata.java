@@ -22,6 +22,7 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
   private final ImmutableList<String> columns;
   private final ImmutableMap<String, Scan.Ordering.Order> clusteringKeyOrders;
   private final ImmutableSet<String> indexedColumns;
+  private final ImmutableMap<String, Scan.Ordering.Order> indexOrders;
 
   public JdbcTableMetadata(
       String fullTableName,
@@ -29,7 +30,8 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
       List<String> partitionKeys,
       List<String> clusteringKeys,
       Map<String, Scan.Ordering.Order> clusteringKeyOrders,
-      Set<String> indexedColumns) {
+      Set<String> indexedColumns,
+      Map<String, Scan.Ordering.Order> indexOrders) {
     this.fullTableName = Objects.requireNonNull(fullTableName);
     this.dataTypes = ImmutableMap.copyOf(Objects.requireNonNull(dataTypes));
     this.partitionKeys = ImmutableList.copyOf(Objects.requireNonNull(partitionKeys));
@@ -37,6 +39,7 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
     columns = ImmutableList.copyOf(dataTypes.keySet());
     this.clusteringKeyOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringKeyOrders));
     this.indexedColumns = ImmutableSet.copyOf(indexedColumns);
+    this.indexOrders = ImmutableMap.copyOf(indexOrders);
   }
 
   public String getfullTableName() {
@@ -68,8 +71,12 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
   }
 
   /** @return whether or not the specified column is indexed */
-  public boolean indexedColumn(String column) {
+  public boolean isIndexedColumn(String column) {
     return indexedColumns.contains(column);
+  }
+
+  public Scan.Ordering.Order getIndexOrder(String column) {
+    return indexOrders.get(column);
   }
 
   @Override
@@ -84,6 +91,6 @@ public class JdbcTableMetadata implements com.scalar.db.storage.TableMetadata {
 
   @Override
   public Set<String> getSecondaryIndexNames() {
-    return null;
+    return indexedColumns;
   }
 }

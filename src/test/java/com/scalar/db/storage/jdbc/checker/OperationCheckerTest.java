@@ -87,6 +87,11 @@ public class OperationCheckerTest {
               {
                 add(COL1);
               }
+            },
+            new HashMap<String, Scan.Ordering.Order>() {
+              {
+                put(COL1, Scan.Ordering.Order.ASC);
+              }
             });
 
     when(tableMetadataManager.getTableMetadata(TABLE_FULL_NAME)).thenReturn(dummyTableMetadata);
@@ -1012,28 +1017,6 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithValidOrderings_shouldNotThrowAnyException() {
-    // Arrange
-    Key partitionKey = new Key(new IntValue(COL1, 1));
-    Key startClusteringKey = null;
-    Key endClusteringKey = null;
-    List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    int limit = 10;
-    Scan scan =
-        new Scan(partitionKey)
-            .withStart(startClusteringKey)
-            .withStart(endClusteringKey)
-            .withProjections(projections)
-            .withLimit(limit)
-            .withOrdering(new Scan.Ordering(COL1, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
-
-    // Act Assert
-    assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
-  }
-
-  @Test
-  public void
       whenCheckingScanOperationWithNonIndexedColumnAsPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(new DoubleValue(COL2, 0.1));
@@ -1100,7 +1083,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithInvalidOrderings_shouldThrowIllegalArgumentException() {
+      whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithOrderings_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(new IntValue(COL1, 1));
     Key startClusteringKey = null;
@@ -1113,8 +1096,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert

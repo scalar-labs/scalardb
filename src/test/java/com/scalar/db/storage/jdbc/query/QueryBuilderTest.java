@@ -73,7 +73,18 @@ public class QueryBuilderTest {
                 put("c2", Scan.Ordering.Order.DESC);
               }
             },
-            new HashSet<>());
+            new HashSet<String>() {
+              {
+                add("v1");
+                add("v2");
+              }
+            },
+            new HashMap<String, Scan.Ordering.Order>() {
+              {
+                put("v1", Scan.Ordering.Order.ASC);
+                put("v2", Scan.Ordering.Order.DESC);
+              }
+            });
 
     when(tableMetadataManager.getTableMetadata(any(String.class))).thenReturn(dummyTableMetadata);
 
@@ -93,7 +104,7 @@ public class QueryBuilderTest {
   }
 
   @Test
-  public void simpleSelectQueryTest() {
+  public void selectQueryTest() {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
@@ -294,6 +305,55 @@ public class QueryBuilderTest {
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));
+  }
+
+  @Test
+  public void selectQueryWithIndexedColumnTest() {
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE)
+                .where(new Key(new TextValue("v1", "aaa")), Optional.empty())
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE)
+                .where(
+                    new Key(new TextValue("v1", "aaa")),
+                    Optional.empty(),
+                    false,
+                    Optional.empty(),
+                    false)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=? ORDER BY v1 ASC"));
+
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE)
+                .where(new Key(new TextValue("v2", "aaa")), Optional.empty())
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+
+    assertThat(
+            queryBuilder
+                .select(Arrays.asList("c1", "c2"))
+                .from(NAMESPACE, TABLE)
+                .where(
+                    new Key(new TextValue("v2", "aaa")),
+                    Optional.empty(),
+                    false,
+                    Optional.empty(),
+                    false)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=? ORDER BY v2 DESC"));
   }
 
   @Test

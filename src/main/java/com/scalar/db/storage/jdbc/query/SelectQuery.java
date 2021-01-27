@@ -35,6 +35,8 @@ public interface SelectQuery extends Query {
     List<Scan.Ordering> orderings = Collections.emptyList();
     private int limit;
     boolean isRangeQuery;
+    Optional<String> indexedColumn = Optional.empty();
+    Optional<Scan.Ordering.Order> indexedOrder = Optional.empty();
 
     Builder(
         TableMetadataManager tableMetadataManager, RdbEngine rdbEngine, List<String> projections) {
@@ -62,6 +64,7 @@ public interface SelectQuery extends Query {
     public Builder where(Key partitionKey, Optional<Key> clusteringKey) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
+      setIndexInfoIfUsed(partitionKey);
       return this;
     }
 
@@ -103,8 +106,27 @@ public interface SelectQuery extends Query {
       }
 
       isRangeQuery = true;
+      setIndexInfoIfUsed(partitionKey);
 
       return this;
+    }
+
+    private void setIndexInfoIfUsed(Key partitionKey) {
+      if (tableMetadata == null) {
+        throw new IllegalStateException("tableMetadata is null");
+      }
+
+      if (partitionKey.size() > 1) {
+        return;
+      }
+
+      String column = partitionKey.get().get(0).getName();
+      if (!tableMetadata.isIndexedColumn(column)) {
+        return;
+      }
+
+      indexedColumn = Optional.of(column);
+      indexedOrder = Optional.of(tableMetadata.getIndexOrder(column));
     }
 
     public Builder orderBy(List<Scan.Ordering> orderings) {

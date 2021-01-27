@@ -67,6 +67,7 @@ public class TableMetadataManager {
     List<String> clusteringKeys = new ArrayList<>();
     Map<String, Scan.Ordering.Order> clusteringKeyOrders = new HashMap<>();
     Set<String> indexedColumns = new HashSet<>();
+    Map<String, Scan.Ordering.Order> indexOrders = new HashMap<>();
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
@@ -82,6 +83,8 @@ public class TableMetadataManager {
           boolean indexed = resultSet.getBoolean("indexed");
           if (indexed) {
             indexedColumns.add(columnName);
+            indexOrders.put(
+                columnName, Scan.Ordering.Order.valueOf(resultSet.getString("index_order")));
           }
 
           String keyType = resultSet.getString("key_type");
@@ -111,11 +114,12 @@ public class TableMetadataManager {
         partitionKeys,
         clusteringKeys,
         clusteringKeyOrders,
-        indexedColumns);
+        indexedColumns,
+        indexOrders);
   }
 
   private String getSelectColumnsStatement(Optional<String> schemaPrefix) {
-    return "SELECT column_name, data_type, key_type, clustering_order, indexed FROM "
+    return "SELECT column_name, data_type, key_type, clustering_order, indexed, index_order FROM "
         + getFullTableName(schemaPrefix)
         + " WHERE full_table_name = ? ORDER BY ordinal_position ASC";
   }

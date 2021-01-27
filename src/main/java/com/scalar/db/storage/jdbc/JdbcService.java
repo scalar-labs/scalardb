@@ -61,7 +61,11 @@ public class JdbcService {
     try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
         ResultSet resultSet = preparedStatement.executeQuery()) {
       if (resultSet.next()) {
-        return Optional.of(selectQuery.getResult(resultSet));
+        Optional<Result> ret = Optional.of(selectQuery.getResult(resultSet));
+        if (resultSet.next()) {
+          throw new IllegalArgumentException("please use scan() for non-exact match selection");
+        }
+        return ret;
       }
       return Optional.empty();
     }

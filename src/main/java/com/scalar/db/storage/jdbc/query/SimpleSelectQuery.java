@@ -35,6 +35,8 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   private final boolean endInclusive;
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
+  private final Optional<String> indexedColumn;
+  private final Optional<Scan.Ordering.Order> indexedOrder;
 
   SimpleSelectQuery(Builder builder) {
     tableMetadata = builder.tableMetadata;
@@ -51,6 +53,8 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     endInclusive = builder.endInclusive;
     orderings = builder.orderings;
     isRangeQuery = builder.isRangeQuery;
+    indexedColumn = builder.indexedColumn;
+    indexedOrder = builder.indexedOrder;
   }
 
   protected String sql() {
@@ -87,6 +91,10 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   private String orderBySqlString() {
     if (!isRangeQuery) {
       return "";
+    }
+
+    if (indexedColumn.isPresent()) {
+      return " ORDER BY " + enclose(indexedColumn.get(), rdbEngine) + " " + indexedOrder.get();
     }
 
     List<Scan.Ordering> orderingList = new ArrayList<>(orderings);

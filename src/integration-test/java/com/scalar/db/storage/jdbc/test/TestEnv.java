@@ -127,6 +127,7 @@ public class TestEnv implements Closeable {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcConnectionInfo.url);
     props.setProperty(DatabaseConfig.USERNAME, jdbcConnectionInfo.username);
     props.setProperty(DatabaseConfig.PASSWORD, jdbcConnectionInfo.password);
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
     return new JdbcDatabaseConfig(props);
   }

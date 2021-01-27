@@ -87,6 +87,7 @@ public class JdbcTransactionIntegrationTest {
                         KeyType.PARTITION,
                         null,
                         false,
+                        null,
                         1),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -96,6 +97,7 @@ public class JdbcTransactionIntegrationTest {
                         KeyType.CLUSTERING,
                         Scan.Ordering.Order.ASC,
                         false,
+                        null,
                         2),
                     insertMetadataStatement(
                         namespacePrefix,
@@ -105,6 +107,7 @@ public class JdbcTransactionIntegrationTest {
                         null,
                         null,
                         false,
+                        null,
                         3));
               }
 

@@ -88,6 +88,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                         KeyType.PARTITION,
                         null,
                         false,
+                        null,
                         1));
                 ret.add(
                     insertMetadataStatement(
@@ -98,6 +99,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                         null,
                         null,
                         false,
+                        null,
                         2));
                 ret.add(
                     insertMetadataStatement(
@@ -108,6 +110,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                         null,
                         null,
                         false,
+                        null,
                         3));
 
                 // The metadata for the tables
@@ -122,6 +125,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           KeyType.PARTITION,
                           null,
                           false,
+                          null,
                           1));
                   ret.add(
                       insertMetadataStatement(
@@ -132,6 +136,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           KeyType.CLUSTERING,
                           Scan.Ordering.Order.ASC,
                           false,
+                          null,
                           2));
                   ret.add(
                       insertMetadataStatement(
@@ -142,6 +147,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           3));
                   ret.add(
                       insertMetadataStatement(
@@ -152,6 +158,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           4));
                   ret.add(
                       insertMetadataStatement(
@@ -162,6 +169,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           5));
                   ret.add(
                       insertMetadataStatement(
@@ -172,6 +180,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           6));
                   ret.add(
                       insertMetadataStatement(
@@ -182,6 +191,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           7));
                   ret.add(
                       insertMetadataStatement(
@@ -192,6 +202,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           8));
                   ret.add(
                       insertMetadataStatement(
@@ -202,6 +213,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           9));
                   ret.add(
                       insertMetadataStatement(
@@ -212,6 +224,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           10));
                   ret.add(
                       insertMetadataStatement(
@@ -222,6 +235,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           11));
                   ret.add(
                       insertMetadataStatement(
@@ -232,6 +246,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           12));
                   ret.add(
                       insertMetadataStatement(
@@ -242,6 +257,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           13));
                   ret.add(
                       insertMetadataStatement(
@@ -252,6 +268,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                           null,
                           null,
                           false,
+                          null,
                           14));
                 }
                 return ret;
@@ -372,6 +389,14 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
   @Test
   public void get_CalledTwice_ShouldReturnFromSnapshotInSecondTime() throws Exception {
     test.get_CalledTwice_ShouldReturnFromSnapshotInSecondTime();
+  }
+
+  @Test
+  public void
+      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
+          throws Exception {
+    test
+        .get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime();
   }
 
   @Test
@@ -716,5 +741,25 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
   public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws Exception {
     test.deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
+  }
+
+  @Test
+  public void get_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
+    test.get_DeleteCalledBefore_ShouldReturnEmpty();
+  }
+
+  @Test
+  public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
+    test.scan_DeleteCalledBefore_ShouldReturnEmpty();
+  }
+
+  @Test
+  public void delete_PutCalledBefore_ShouldDelete() throws Exception {
+    test.delete_PutCalledBefore_ShouldDelete();
+  }
+
+  @Test
+  public void put_DeleteCalledBefore_ShouldPut() throws Exception {
+    test.put_DeleteCalledBefore_ShouldPut();
   }
 }

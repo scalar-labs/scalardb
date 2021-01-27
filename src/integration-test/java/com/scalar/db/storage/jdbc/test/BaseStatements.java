@@ -20,9 +20,10 @@ public interface BaseStatements {
       @Nullable KeyType keyType,
       @Nullable Scan.Ordering.Order keyOrder,
       boolean indexed,
+      @Nullable Scan.Ordering.Order indexOrder,
       int ordinalPosition) {
     return String.format(
-        "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
+        "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%s,%d)",
         TableMetadataManager.getFullTableName(namespacePrefix),
         fullTableName,
         columnName,
@@ -30,6 +31,7 @@ public interface BaseStatements {
         keyType != null ? "'" + keyType + "'" : "NULL",
         keyOrder != null ? "'" + keyOrder + "'" : "NULL",
         indexed,
+        indexOrder != null ? "'" + indexOrder + "'" : "NULL",
         ordinalPosition);
   }
 
