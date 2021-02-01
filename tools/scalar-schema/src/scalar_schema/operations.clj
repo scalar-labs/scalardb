@@ -4,14 +4,16 @@
             [scalar-schema.cassandra :as cassandra]
             [scalar-schema.cosmos :as cosmos]
             [scalar-schema.dynamo :as dynamo]
+            [scalar-schema.jdbc :as jdbc]
             [scalar-schema.protocols :as proto]))
 
 (defn- make-operator
-  [{:keys [cassandra cosmos dynamo] :as opts}]
+  [{:keys [cassandra cosmos dynamo jdbc] :as opts}]
   (cond
     cassandra (cassandra/make-cassandra-operator opts)
     cosmos (cosmos/make-cosmos-operator opts)
     dynamo (dynamo/make-dynamo-operator opts)
+    jdbc (jdbc/make-jdbc-operator opts)
     :else (throw (ex-info "unknown data store" {}))))
 
 (defn create-tables

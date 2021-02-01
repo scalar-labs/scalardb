@@ -7,11 +7,12 @@
   [[nil "--cassandra" "Operate for Cassandra"]
    [nil "--cosmos" "Operate for Cosmos DB"]
    [nil "--dynamo" "Operate for DynamoDB"]
+   [nil "--jdbc" "Operate for JDBC database"]
    ["-h" "--host DB_HOST" "Address of Cassandra like IP or URI address of your Cosmos DB account"]
    ["-P" "--port DB_PORT" "Port of Cassandra. This option is ignored when Cosmos DB and DynamoDB."
     :parse-fn #(Integer/parseInt %)]
    ["-u" "--user USERNAME" "Username of the database. This option is ignored when Cosmos DB and DynamoDB."]
-   ["-p" "--password ACCOUNT_PASSWORD" "Password of Cassandra or Cosmos DB account"]
+   ["-p" "--password ACCOUNT_PASSWORD" "Password of Cassandra or Cosmos DB or JDBC database account"]
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
    ["-r" "--ru RESOURCE_UNIT" "Base RU for each table on Cosmos DB or DynamoDB. The RU of the coordinator for Scalar DB transaction is specified by this option. This option is ignored when Cassandra."
     :parse-fn #(Integer/parseInt %)]
@@ -24,6 +25,7 @@
    [nil "--region REGION" "Region where the tool creates tables for DynamoDB"]
    [nil "--prefix NAMESPACE_PREFIX" "Namespace prefix. The prefix is added to all the namespaces."]
    [nil "--no-scaling" "Disable auto-scaling"]
+   ["-j" "--jdbc-url JDBC_URL" "JDBC URL for JDBC database"]
    [nil "--help"]])
 
 (defn -main [& args]
