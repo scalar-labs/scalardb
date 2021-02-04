@@ -444,6 +444,16 @@ public class ConsensusCommitWithCassandraIntegrationTest {
     test.put_DeleteCalledBefore_ShouldPut();
   }
 
+  @Test
+  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() throws Exception {
+    test.scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException();
+  }
+
+  @Test
+  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws Exception {
+    test.scan_NonOverlappingPutGivenBefore_ShouldScan();
+  }
+
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
