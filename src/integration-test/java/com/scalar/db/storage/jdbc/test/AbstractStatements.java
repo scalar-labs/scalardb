@@ -1,12 +1,13 @@
 package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 
 public abstract class AbstractStatements implements Statements {
 
@@ -41,40 +42,53 @@ public abstract class AbstractStatements implements Statements {
   @Override
   public List<String> createMetadataSchemaStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
-        "CREATE SCHEMA " + TableMetadataManager.getFullSchema(namespacePrefix));
+        "CREATE SCHEMA " + TestUtils.getMetadataFullSchema(namespacePrefix, rdbEngine));
   }
 
   @Override
   public List<String> dropMetadataSchemaStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
-        "DROP SCHEMA " + TableMetadataManager.getFullSchema(namespacePrefix));
+        "DROP SCHEMA " + TestUtils.getMetadataFullSchema(namespacePrefix, rdbEngine));
   }
 
   @Override
   public List<String> createMetadataTableStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
         "CREATE TABLE "
-            + TableMetadataManager.getFullTableName(namespacePrefix)
-            + "(full_table_name VARCHAR(128),"
-            + "column_name VARCHAR(128),"
-            + "data_type VARCHAR(20) NOT NULL,"
-            + "key_type VARCHAR(20),"
-            + "clustering_order VARCHAR(10),"
-            + "indexed BOOLEAN NOT NULL,"
-            + "index_order VARCHAR(10),"
-            + "ordinal_position INTEGER NOT NULL,"
-            + "PRIMARY KEY (full_table_name, column_name))");
+            + TestUtils.getMetadataFullTableName(namespacePrefix, rdbEngine)
+            + "("
+            + enclose("full_table_name", rdbEngine)
+            + " VARCHAR(128),"
+            + enclose("column_name", rdbEngine)
+            + " VARCHAR(128),"
+            + enclose("data_type", rdbEngine)
+            + " VARCHAR(20) NOT NULL,"
+            + enclose("key_type", rdbEngine)
+            + " VARCHAR(20),"
+            + enclose("clustering_order", rdbEngine)
+            + " VARCHAR(10),"
+            + enclose("indexed", rdbEngine)
+            + " BOOLEAN NOT NULL,"
+            + enclose("index_order", rdbEngine)
+            + " VARCHAR(10),"
+            + enclose("ordinal_position", rdbEngine)
+            + " INTEGER NOT NULL,"
+            + "PRIMARY KEY ("
+            + enclose("full_table_name", rdbEngine)
+            + ", "
+            + enclose("column_name", rdbEngine)
+            + "))");
   }
 
   @Override
   public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
-    return baseStatements.insertMetadataStatements(namespacePrefix);
+    return baseStatements.insertMetadataStatements(namespacePrefix, rdbEngine);
   }
 
   @Override
   public List<String> dropMetadataTableStatements(Optional<String> namespacePrefix) {
     return Collections.singletonList(
-        "DROP TABLE " + TableMetadataManager.getFullTableName(namespacePrefix));
+        "DROP TABLE " + TestUtils.getMetadataFullTableName(namespacePrefix, rdbEngine));
   }
 
   @Override

@@ -46,12 +46,11 @@ public class JdbcDatabase implements DistributedStorage {
   public JdbcDatabase(JdbcDatabaseConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
+    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(dataSource, namespacePrefix);
+        new TableMetadataManager(dataSource, namespacePrefix, rdbEngine);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder =
-        new QueryBuilder(
-            tableMetadataManager, JdbcUtils.getRdbEngine(config.getContactPoints().get(0)));
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
     jdbcService = new JdbcService(operationChecker, queryBuilder, namespacePrefix);
     namespace = Optional.empty();
     tableName = Optional.empty();

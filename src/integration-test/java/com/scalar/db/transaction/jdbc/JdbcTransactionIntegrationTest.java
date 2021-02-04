@@ -53,9 +53,11 @@ public class JdbcTransactionIntegrationTest {
   private static final int INITIAL_BALANCE = 1000;
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+
   private TestEnv testEnv;
   private JdbcTransactionManager manager;
+
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   private static String getFullNamespace(Optional<String> namespacePrefix) {
     return namespacePrefix.orElse("") + NAMESPACE;
@@ -77,10 +79,12 @@ public class JdbcTransactionIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+              public List<String> insertMetadataStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Arrays.asList(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         ACCOUNT_ID,
                         DataType.INT,
@@ -91,6 +95,7 @@ public class JdbcTransactionIntegrationTest {
                         1),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         ACCOUNT_TYPE,
                         DataType.INT,
@@ -101,6 +106,7 @@ public class JdbcTransactionIntegrationTest {
                         2),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         BALANCE,
                         DataType.INT,

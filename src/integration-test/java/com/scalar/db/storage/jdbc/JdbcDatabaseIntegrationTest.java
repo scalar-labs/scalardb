@@ -60,7 +60,7 @@ public class JdbcDatabaseIntegrationTest {
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
 
-  @Parameterized.Parameter() public JdbcConnectionInfo jdbcConnectionInfo;
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   @Parameterized.Parameter(1)
   public String namespacePrefix;
@@ -95,10 +95,12 @@ public class JdbcDatabaseIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+              public List<String> insertMetadataStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Arrays.asList(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME1,
                         DataType.INT,
@@ -109,6 +111,7 @@ public class JdbcDatabaseIntegrationTest {
                         1),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME2,
                         DataType.TEXT,
@@ -119,6 +122,7 @@ public class JdbcDatabaseIntegrationTest {
                         2),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME3,
                         DataType.INT,
@@ -129,6 +133,7 @@ public class JdbcDatabaseIntegrationTest {
                         3),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME4,
                         DataType.INT,
@@ -139,6 +144,7 @@ public class JdbcDatabaseIntegrationTest {
                         4),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME5,
                         DataType.BOOLEAN,

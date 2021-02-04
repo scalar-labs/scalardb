@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.Scan;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -22,6 +23,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 /**
  * A manager to read and cache {@link JdbcTableMetadata}
  *
@@ -29,15 +33,12 @@ import java.util.concurrent.ExecutionException;
  */
 @ThreadSafe
 public class TableMetadataManager {
-  private static final String SCHEMA = "scalardb";
-  private static final String TABLE = "metadata";
+  public static final String SCHEMA = "scalardb";
+  public static final String TABLE = "metadata";
   private final LoadingCache<String, JdbcTableMetadata> tableMetadataCache;
 
-  public TableMetadataManager(DataSource dataSource) {
-    this(dataSource, Optional.empty());
-  }
-
-  public TableMetadataManager(DataSource dataSource, Optional<String> schemaPrefix) {
+  public TableMetadataManager(
+      DataSource dataSource, Optional<String> schemaPrefix, RdbEngine rdbEngine) {
     // TODO Need to add an expiration to handle the case of altering table
     tableMetadataCache =
         CacheBuilder.newBuilder()
@@ -45,21 +46,17 @@ public class TableMetadataManager {
                 new CacheLoader<String, JdbcTableMetadata>() {
                   @Override
                   public JdbcTableMetadata load(@Nonnull String fullTableName) throws SQLException {
-                    return TableMetadataManager.this.load(dataSource, fullTableName, schemaPrefix);
+                    return TableMetadataManager.this.load(
+                        dataSource, fullTableName, schemaPrefix, rdbEngine);
                   }
                 });
   }
 
-  public static String getFullSchema(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + SCHEMA;
-  }
-
-  public static String getFullTableName(Optional<String> schemaPrefix) {
-    return schemaPrefix.orElse("") + SCHEMA + "." + TABLE;
-  }
-
   private JdbcTableMetadata load(
-      DataSource dataSource, String fullTableName, Optional<String> schemaPrefix)
+      DataSource dataSource,
+      String fullTableName,
+      Optional<String> schemaPrefix,
+      RdbEngine rdbEngine)
       throws SQLException {
 
     Map<String, DataType> columnTypes = new LinkedHashMap<>();
@@ -71,7 +68,7 @@ public class TableMetadataManager {
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement(schemaPrefix))) {
+            connection.prepareStatement(getSelectColumnsStatement(schemaPrefix, rdbEngine))) {
       preparedStatement.setString(1, fullTableName);
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -118,10 +115,26 @@ public class TableMetadataManager {
         indexOrders);
   }
 
-  private String getSelectColumnsStatement(Optional<String> schemaPrefix) {
-    return "SELECT column_name, data_type, key_type, clustering_order, indexed, index_order FROM "
-        + getFullTableName(schemaPrefix)
-        + " WHERE full_table_name = ? ORDER BY ordinal_position ASC";
+  private String getSelectColumnsStatement(Optional<String> schemaPrefix, RdbEngine rdbEngine) {
+    return "SELECT "
+        + enclose("column_name", rdbEngine)
+        + ", "
+        + enclose("data_type", rdbEngine)
+        + ", "
+        + enclose("key_type", rdbEngine)
+        + ", "
+        + enclose("clustering_order", rdbEngine)
+        + ", "
+        + enclose("indexed", rdbEngine)
+        + ", "
+        + enclose("index_order", rdbEngine)
+        + " FROM "
+        + enclosedFullTableName(schemaPrefix.orElse("") + SCHEMA, TABLE, rdbEngine)
+        + " WHERE "
+        + enclose("full_table_name", rdbEngine)
+        + " = ? ORDER BY "
+        + enclose("ordinal_position", rdbEngine)
+        + " ASC";
   }
 
   public JdbcTableMetadata getTableMetadata(String fullTableName) throws SQLException {

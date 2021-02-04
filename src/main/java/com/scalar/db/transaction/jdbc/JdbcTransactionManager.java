@@ -9,6 +9,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -42,12 +43,11 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   public JdbcTransactionManager(JdbcDatabaseConfig config) {
     dataSource = JdbcUtils.initDataSource(config, true);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
+    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(dataSource, namespacePrefix);
+        new TableMetadataManager(dataSource, namespacePrefix, rdbEngine);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder =
-        new QueryBuilder(
-            tableMetadataManager, JdbcUtils.getRdbEngine(config.getContactPoints().get(0)));
+    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
     jdbcService = new JdbcService(operationChecker, queryBuilder, namespacePrefix);
     namespace = Optional.empty();
     tableName = Optional.empty();

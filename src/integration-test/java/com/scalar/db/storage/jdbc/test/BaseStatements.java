@@ -4,7 +4,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -14,6 +13,7 @@ public interface BaseStatements {
 
   static String insertMetadataStatement(
       Optional<String> namespacePrefix,
+      RdbEngine rdbEngine,
       String fullTableName,
       String columnName,
       DataType dataType,
@@ -24,7 +24,7 @@ public interface BaseStatements {
       int ordinalPosition) {
     return String.format(
         "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%s,%d)",
-        TableMetadataManager.getFullTableName(namespacePrefix),
+        TestUtils.getMetadataFullTableName(namespacePrefix, rdbEngine),
         fullTableName,
         columnName,
         dataType,
@@ -35,7 +35,7 @@ public interface BaseStatements {
         ordinalPosition);
   }
 
-  List<String> insertMetadataStatements(Optional<String> namespacePrefix);
+  List<String> insertMetadataStatements(Optional<String> namespacePrefix, RdbEngine rdbEngine);
 
   List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine);
 

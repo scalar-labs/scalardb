@@ -1,6 +1,6 @@
 package com.scalar.db.storage.jdbc.test;
 
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.RdbEngine;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,7 +25,7 @@ public class OracleStatements extends AbstractStatements {
 
   @Override
   public List<String> createMetadataSchemaStatements(Optional<String> namespacePrefix) {
-    return createSchema(TableMetadataManager.getFullSchema(namespacePrefix));
+    return createSchema(TestUtils.getMetadataFullSchema(namespacePrefix, RdbEngine.ORACLE));
   }
 
   @Override
@@ -38,7 +38,7 @@ public class OracleStatements extends AbstractStatements {
 
   @Override
   public List<String> dropMetadataSchemaStatements(Optional<String> namespacePrefix) {
-    return dropSchema(TableMetadataManager.getFullSchema(namespacePrefix));
+    return dropSchema(TestUtils.getMetadataFullSchema(namespacePrefix, RdbEngine.ORACLE));
   }
 
   @Override

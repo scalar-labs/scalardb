@@ -38,8 +38,10 @@ public class JdbcMetadataIntegrationTest {
   private static final String COL_NAME3 = "c3";
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+
   private TestEnv testEnv;
+
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   private static String getFullNamespace(Optional<String> namespacePrefix) {
     return namespacePrefix.orElse("") + NAMESPACE;
@@ -61,10 +63,12 @@ public class JdbcMetadataIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+              public List<String> insertMetadataStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 return Arrays.asList(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME1,
                         DataType.INT,
@@ -75,6 +79,7 @@ public class JdbcMetadataIntegrationTest {
                         1),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME2,
                         DataType.TEXT,
@@ -85,6 +90,7 @@ public class JdbcMetadataIntegrationTest {
                         2),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME3,
                         DataType.INT,
@@ -95,6 +101,7 @@ public class JdbcMetadataIntegrationTest {
                         3),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME4,
                         DataType.INT,
@@ -105,6 +112,7 @@ public class JdbcMetadataIntegrationTest {
                         4),
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         getFullTableName(namespacePrefix),
                         COL_NAME5,
                         DataType.BOOLEAN,
@@ -143,7 +151,8 @@ public class JdbcMetadataIntegrationTest {
 
   @Test
   public void testMetadata() throws Exception {
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(testEnv.getDataSource());
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(testEnv.getDataSource(), Optional.empty(), testEnv.getRdbEngine());
     JdbcTableMetadata tableMetadata =
         tableMetadataManager.getTableMetadata(getFullTableName(NAMESPACE_PREFIX));
 

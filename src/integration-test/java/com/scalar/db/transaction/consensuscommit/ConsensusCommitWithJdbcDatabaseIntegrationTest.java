@@ -54,10 +54,12 @@ import static org.mockito.Mockito.spy;
 public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
 
   private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
+
   private TestEnv testEnv;
   private DistributedStorage storage;
   private ConsensusCommitIntegrationTest test;
+
+  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
   private static String getFullNamespace(Optional<String> namespacePrefix) {
     return namespacePrefix.orElse("") + NAMESPACE;
@@ -75,13 +77,15 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
             jdbcConnectionInfo,
             new BaseStatements() {
               @Override
-              public List<String> insertMetadataStatements(Optional<String> namespacePrefix) {
+              public List<String> insertMetadataStatements(
+                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
                 List<String> ret = new ArrayList<>();
 
                 // The metadata for the coordinator table
                 ret.add(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         ID,
                         DataType.TEXT,
@@ -93,6 +97,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                 ret.add(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         STATE,
                         DataType.INT,
@@ -104,6 +109,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                 ret.add(
                     insertMetadataStatement(
                         namespacePrefix,
+                        rdbEngine,
                         Coordinator.NAMESPACE + "." + Coordinator.TABLE,
                         CREATED_AT,
                         DataType.BIGINT,
@@ -119,6 +125,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           ACCOUNT_ID,
                           DataType.INT,
@@ -130,6 +137,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           ACCOUNT_TYPE,
                           DataType.INT,
@@ -141,6 +149,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BALANCE,
                           DataType.INT,
@@ -152,6 +161,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           ID,
                           DataType.TEXT,
@@ -163,6 +173,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           VERSION,
                           DataType.INT,
@@ -174,6 +185,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           STATE,
                           DataType.INT,
@@ -185,6 +197,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           PREPARED_AT,
                           DataType.BIGINT,
@@ -196,6 +209,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           COMMITTED_AT,
                           DataType.BIGINT,
@@ -207,6 +221,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_PREFIX + BALANCE,
                           DataType.INT,
@@ -218,6 +233,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_ID,
                           DataType.TEXT,
@@ -229,6 +245,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_VERSION,
                           DataType.INT,
@@ -240,6 +257,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_STATE,
                           DataType.INT,
@@ -251,6 +269,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_PREPARED_AT,
                           DataType.BIGINT,
@@ -262,6 +281,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
                   ret.add(
                       insertMetadataStatement(
                           namespacePrefix,
+                          rdbEngine,
                           NAMESPACE + "." + table,
                           BEFORE_COMMITTED_AT,
                           DataType.BIGINT,

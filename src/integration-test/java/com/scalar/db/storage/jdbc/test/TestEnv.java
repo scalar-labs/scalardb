@@ -30,6 +30,7 @@ public class TestEnv implements Closeable {
   private final Optional<String> namespacePrefix;
   private final Statements statements;
   private final BasicDataSource dataSource;
+  private final RdbEngine rdbEngine;
 
   public TestEnv(
       JdbcConnectionInfo jdbcConnectionInfo,
@@ -38,7 +39,7 @@ public class TestEnv implements Closeable {
     this.jdbcConnectionInfo = jdbcConnectionInfo;
     this.namespacePrefix = namespacePrefix;
 
-    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
+    rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
     switch (rdbEngine) {
       case MYSQL:
         statements = new MySqlStatements(baseStatements);
@@ -130,6 +131,10 @@ public class TestEnv implements Closeable {
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
     return new JdbcDatabaseConfig(props);
+  }
+
+  public RdbEngine getRdbEngine() {
+    return rdbEngine;
   }
 
   @Override
