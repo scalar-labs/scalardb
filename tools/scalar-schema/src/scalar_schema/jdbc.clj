@@ -248,11 +248,10 @@
 
 (defn- make-delete-metadata-statement
   [rdb-engine prefix schema table]
-  (let [full_table_name (get-table-name schema table)]
-    (str "DELETE FROM "
-         (get-metadata-table-name rdb-engine prefix)
-         " WHERE " (enclose rdb-engine "full_table_name") " = "
-         "'" full_table_name "'")))
+  (str "DELETE FROM "
+       (get-metadata-table-name rdb-engine prefix)
+       " WHERE " (enclose rdb-engine "full_table_name") " = "
+       "'" (get-table-name schema table) "'"))
 
 (defn- delete-metadata
   [db-spec rdb-engine prefix schema table]
