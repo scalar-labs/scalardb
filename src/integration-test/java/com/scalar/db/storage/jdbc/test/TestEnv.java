@@ -91,7 +91,7 @@ public class TestEnv implements Closeable {
                   put(DataType.FLOAT, "FLOAT(24)");
                   put(DataType.DOUBLE, "FLOAT");
                   put(DataType.BOOLEAN, "BIT");
-                  put(DataType.BLOB, "BLOB");
+                  put(DataType.BLOB, "VARBINARY(8000)");
                 }
               });
         }
@@ -122,13 +122,7 @@ public class TestEnv implements Closeable {
                   put(DataType.BLOB, "RAW(2000)");
                 }
               });
-          put(
-              RdbEngine.SQL_SERVER,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.BLOB, "VARBINARY(8000)");
-                }
-              });
+          put(RdbEngine.SQL_SERVER, new HashMap<DataType, String>() {});
         }
       };
 
