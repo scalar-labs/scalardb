@@ -22,26 +22,25 @@
                 "BLOB"    "BYTEA"}
    :oracle     {"INT"     "INT"
                 "BIGINT"  "NUMBER(19)"
-                "TEXT"    "CLOB"
+                "TEXT"    "VARCHAR(4000)"
                 "FLOAT"   "BINARY_FLOAT"
                 "DOUBLE"  "BINARY_DOUBLE"
                 "BOOLEAN" "NUMBER(1)"
                 "BLOB"    "BLOB"}
    :sql-server {"INT"     "INT"
                 "BIGINT"  "BIGINT"
-                "TEXT"    "TEXT"
+                "TEXT"    "VARCHAR(8000)"
                 "FLOAT"   "FLOAT(24)"
                 "DOUBLE"  "FLOAT"
                 "BOOLEAN" "BIT"
-                "BLOB"    "VARBINARY"}})
+                "BLOB"    "VARBINARY(8000)"}})
 
 (def ^:private data-type-mapping-for-key
   {:mysql      {"TEXT"    "VARCHAR(256)"
                 "BLOB"    "VARBINARY(256)"}
-   :postgresql {"TEXT"    "VARCHAR"}
-   :oracle     {"TEXT"    "VARCHAR(4000)"
-                "BLOB"    "RAW(2000)"}
-   :sql-server {"TEXT"    "VARCHAR"}})
+   :postgresql {"TEXT"    "VARCHAR(10485760)"}
+   :oracle     {"BLOB"    "RAW(2000)"}
+   :sql-server {}})
 
 (defn- get-db-spec
   [jdbc-url user password]
