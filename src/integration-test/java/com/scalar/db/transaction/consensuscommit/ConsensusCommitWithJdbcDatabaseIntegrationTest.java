@@ -4,10 +4,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
-import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.test.BaseStatements;
 import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
@@ -17,15 +14,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
@@ -53,17 +48,11 @@ import static org.mockito.Mockito.spy;
 @RunWith(Parameterized.class)
 public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
 
-  private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
-
   private TestEnv testEnv;
   private DistributedStorage storage;
   private ConsensusCommitIntegrationTest test;
 
   @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  private static String getFullNamespace(Optional<String> namespacePrefix) {
-    return namespacePrefix.orElse("") + NAMESPACE;
-  }
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
@@ -72,309 +61,55 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
 
   @Before
   public void setUp() throws SQLException {
-    testEnv =
-        new TestEnv(
-            jdbcConnectionInfo,
-            new BaseStatements() {
-              @Override
-              public List<String> insertMetadataStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                List<String> ret = new ArrayList<>();
+    testEnv = new TestEnv(jdbcConnectionInfo, Optional.empty());
 
-                // The metadata for the coordinator table
-                ret.add(
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
-                        ID,
-                        DataType.TEXT,
-                        KeyType.PARTITION,
-                        null,
-                        false,
-                        null,
-                        1));
-                ret.add(
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
-                        STATE,
-                        DataType.INT,
-                        null,
-                        null,
-                        false,
-                        null,
-                        2));
-                ret.add(
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        Coordinator.NAMESPACE + "." + Coordinator.TABLE,
-                        CREATED_AT,
-                        DataType.BIGINT,
-                        null,
-                        null,
-                        false,
-                        null,
-                        3));
+    // For the coordinator table
+    testEnv.register(
+        Coordinator.NAMESPACE,
+        Coordinator.TABLE,
+        new LinkedHashMap<String, DataType>() {
+          {
+            put(ID, DataType.TEXT);
+            put(STATE, DataType.INT);
+            put(CREATED_AT, DataType.BIGINT);
+          }
+        },
+        Collections.singletonList(ID),
+        Collections.emptyList(),
+        new HashMap<String, Scan.Ordering.Order>() {});
 
-                // The metadata for the tables
-                List<String> tables = Arrays.asList(TABLE_1, TABLE_2);
-                for (String table : tables) {
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          ACCOUNT_ID,
-                          DataType.INT,
-                          KeyType.PARTITION,
-                          null,
-                          false,
-                          null,
-                          1));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          ACCOUNT_TYPE,
-                          DataType.INT,
-                          KeyType.CLUSTERING,
-                          Scan.Ordering.Order.ASC,
-                          false,
-                          null,
-                          2));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BALANCE,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          3));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          ID,
-                          DataType.TEXT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          4));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          VERSION,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          5));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          STATE,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          6));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          PREPARED_AT,
-                          DataType.BIGINT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          7));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          COMMITTED_AT,
-                          DataType.BIGINT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          8));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_PREFIX + BALANCE,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          9));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_ID,
-                          DataType.TEXT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          10));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_VERSION,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          11));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_STATE,
-                          DataType.INT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          12));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_PREPARED_AT,
-                          DataType.BIGINT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          13));
-                  ret.add(
-                      insertMetadataStatement(
-                          namespacePrefix,
-                          rdbEngine,
-                          NAMESPACE + "." + table,
-                          BEFORE_COMMITTED_AT,
-                          DataType.BIGINT,
-                          null,
-                          null,
-                          false,
-                          null,
-                          14));
-                }
-                return ret;
-              }
+    // For the test tables
+    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
+      testEnv.register(
+          NAMESPACE,
+          table,
+          new LinkedHashMap<String, DataType>() {
+            {
+              put(ACCOUNT_ID, DataType.INT);
+              put(ACCOUNT_TYPE, DataType.INT);
+              put(BALANCE, DataType.INT);
+              put(ID, DataType.TEXT);
+              put(STATE, DataType.INT);
+              put(VERSION, DataType.INT);
+              put(PREPARED_AT, DataType.BIGINT);
+              put(COMMITTED_AT, DataType.BIGINT);
+              put(BEFORE_PREFIX + BALANCE, DataType.INT);
+              put(BEFORE_ID, DataType.TEXT);
+              put(BEFORE_STATE, DataType.INT);
+              put(BEFORE_VERSION, DataType.INT);
+              put(BEFORE_PREPARED_AT, DataType.BIGINT);
+              put(BEFORE_COMMITTED_AT, DataType.BIGINT);
+            }
+          },
+          Collections.singletonList(ACCOUNT_ID),
+          Collections.singletonList(ACCOUNT_TYPE),
+          new HashMap<String, Scan.Ordering.Order>() {
+            {
+              put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
+            }
+          });
+    }
 
-              @Override
-              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    enclose(Coordinator.NAMESPACE, rdbEngine),
-                    enclose(getFullNamespace(namespacePrefix), rdbEngine));
-              }
-
-              @Override
-              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    enclosedFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE, rdbEngine),
-                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE_1, rdbEngine),
-                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE_2, rdbEngine));
-              }
-
-              @Override
-              public List<String> createTableStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    createCoordinatorTableStatement(rdbEngine),
-                    createTableStatement(namespacePrefix, TABLE_1, rdbEngine),
-                    createTableStatement(namespacePrefix, TABLE_2, rdbEngine));
-              }
-
-              private String createCoordinatorTableStatement(RdbEngine rdbEngine) {
-                return "CREATE TABLE "
-                    + enclosedFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE, rdbEngine)
-                    + "("
-                    + enclose(ID, rdbEngine)
-                    + " VARCHAR(100),"
-                    + enclose(STATE, rdbEngine)
-                    + " INT,"
-                    + enclose(CREATED_AT, rdbEngine)
-                    + " BIGINT,"
-                    + "PRIMARY KEY("
-                    + enclose(ID, rdbEngine)
-                    + "))";
-              }
-
-              private String createTableStatement(
-                  Optional<String> namespacePrefix, String table, RdbEngine rdbEngine) {
-                return "CREATE TABLE "
-                    + enclosedFullTableName(getFullNamespace(namespacePrefix), table, rdbEngine)
-                    + "("
-                    + enclose(ACCOUNT_ID, rdbEngine)
-                    + " INT,"
-                    + enclose(ACCOUNT_TYPE, rdbEngine)
-                    + " INT,"
-                    + enclose(BALANCE, rdbEngine)
-                    + " INT,"
-                    + enclose(ID, rdbEngine)
-                    + " VARCHAR(100),"
-                    + enclose(VERSION, rdbEngine)
-                    + " INT,"
-                    + enclose(STATE, rdbEngine)
-                    + " INT,"
-                    + enclose(PREPARED_AT, rdbEngine)
-                    + " BIGINT,"
-                    + enclose(COMMITTED_AT, rdbEngine)
-                    + " BIGINT,"
-                    + enclose(BEFORE_PREFIX + BALANCE, rdbEngine)
-                    + " INT,"
-                    + enclose(BEFORE_ID, rdbEngine)
-                    + " VARCHAR(100),"
-                    + enclose(BEFORE_VERSION, rdbEngine)
-                    + " INT,"
-                    + enclose(BEFORE_STATE, rdbEngine)
-                    + " INT,"
-                    + enclose(BEFORE_PREPARED_AT, rdbEngine)
-                    + " BIGINT,"
-                    + enclose(BEFORE_COMMITTED_AT, rdbEngine)
-                    + " BIGINT,"
-                    + "PRIMARY KEY("
-                    + enclose(ACCOUNT_ID, rdbEngine)
-                    + ","
-                    + enclose(ACCOUNT_TYPE, rdbEngine)
-                    + "))";
-              }
-            },
-            NAMESPACE_PREFIX);
-    testEnv.createMetadataTableAndInsertMetadata();
     testEnv.createTables();
 
     JdbcDatabaseConfig config = testEnv.getJdbcDatabaseConfig();
@@ -392,7 +127,8 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
   @After
   public void tearDown() throws Exception {
     storage.close();
-    testEnv.dropAllTablesAndSchemas();
+
+    testEnv.dropTables();
     testEnv.close();
   }
 

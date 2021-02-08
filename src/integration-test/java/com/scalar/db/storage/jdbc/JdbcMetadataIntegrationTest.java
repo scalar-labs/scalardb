@@ -3,9 +3,7 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.KeyType;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
-import com.scalar.db.storage.jdbc.test.BaseStatements;
 import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
@@ -17,10 +15,11 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 
-import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
@@ -30,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RunWith(Parameterized.class)
 public class JdbcMetadataIntegrationTest {
 
-  private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
   private static final String NAMESPACE = "integration_testing";
   private static final String TABLE = "test_table";
   private static final String COL_NAME1 = "c1";
@@ -43,14 +41,6 @@ public class JdbcMetadataIntegrationTest {
 
   @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
 
-  private static String getFullNamespace(Optional<String> namespacePrefix) {
-    return namespacePrefix.orElse("") + NAMESPACE;
-  }
-
-  private static String getFullTableName(Optional<String> namespacePrefix) {
-    return getFullNamespace(namespacePrefix) + "." + TABLE;
-  }
-
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
     return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
@@ -58,107 +48,56 @@ public class JdbcMetadataIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-    testEnv =
-        new TestEnv(
-            jdbcConnectionInfo,
-            new BaseStatements() {
-              @Override
-              public List<String> insertMetadataStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME1,
-                        DataType.INT,
-                        KeyType.PARTITION,
-                        null,
-                        false,
-                        null,
-                        1),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME2,
-                        DataType.TEXT,
-                        null,
-                        null,
-                        false,
-                        null,
-                        2),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME3,
-                        DataType.INT,
-                        null,
-                        null,
-                        true,
-                        Scan.Ordering.Order.ASC,
-                        3),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME4,
-                        DataType.INT,
-                        KeyType.CLUSTERING,
-                        Scan.Ordering.Order.ASC,
-                        false,
-                        null,
-                        4),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME5,
-                        DataType.BOOLEAN,
-                        null,
-                        null,
-                        false,
-                        null,
-                        5));
-              }
-
-              @Override
-              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Collections.emptyList();
-              }
-
-              @Override
-              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Collections.emptyList();
-              }
-
-              @Override
-              public List<String> createTableStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Collections.emptyList();
-              }
-            },
-            NAMESPACE_PREFIX);
-    testEnv.createMetadataTableAndInsertMetadata();
+    testEnv = new TestEnv(jdbcConnectionInfo, Optional.empty());
+    testEnv.register(
+        NAMESPACE,
+        TABLE,
+        new LinkedHashMap<String, DataType>() {
+          {
+            put(COL_NAME1, DataType.INT);
+            put(COL_NAME2, DataType.TEXT);
+            put(COL_NAME3, DataType.INT);
+            put(COL_NAME4, DataType.INT);
+            put(COL_NAME5, DataType.BOOLEAN);
+          }
+        },
+        Collections.singletonList(COL_NAME1),
+        Collections.singletonList(COL_NAME4),
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(COL_NAME4, Scan.Ordering.Order.ASC);
+          }
+        },
+        new HashSet<String>() {
+          {
+            add(COL_NAME3);
+          }
+        },
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(COL_NAME3, Scan.Ordering.Order.ASC);
+          }
+        });
+    testEnv.createTables();
   }
 
   @After
   public void tearDown() throws Exception {
-    testEnv.dropAllTablesAndSchemas();
+    testEnv.dropTables();
     testEnv.close();
   }
 
   @Test
   public void testMetadata() throws Exception {
+    String fullTableName = NAMESPACE + "." + TABLE;
+
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(testEnv.getDataSource(), Optional.empty(), testEnv.getRdbEngine());
-    JdbcTableMetadata tableMetadata =
-        tableMetadataManager.getTableMetadata(getFullTableName(NAMESPACE_PREFIX));
+    JdbcTableMetadata tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
 
     assertThat(tableMetadata).isNotNull();
 
-    assertThat(tableMetadata.getfullTableName()).isEqualTo(getFullTableName(NAMESPACE_PREFIX));
+    assertThat(tableMetadata.getFullTableName()).isEqualTo(fullTableName);
 
     assertThat(tableMetadata.getPartitionKeys().size()).isEqualTo(1);
     assertThat(tableMetadata.getPartitionKeys().get(0)).isEqualTo(COL_NAME1);

@@ -59,7 +59,7 @@ public class TableMetadataManager {
       RdbEngine rdbEngine)
       throws SQLException {
 
-    Map<String, DataType> columnTypes = new LinkedHashMap<>();
+    LinkedHashMap<String, DataType> columnsAndDataTypes = new LinkedHashMap<>();
     List<String> partitionKeys = new ArrayList<>();
     List<String> clusteringKeys = new ArrayList<>();
     Map<String, Scan.Ordering.Order> clusteringKeyOrders = new HashMap<>();
@@ -75,7 +75,7 @@ public class TableMetadataManager {
         while (resultSet.next()) {
           String columnName = resultSet.getString("column_name");
           DataType dataType = DataType.valueOf(resultSet.getString("data_type"));
-          columnTypes.put(columnName, dataType);
+          columnsAndDataTypes.put(columnName, dataType);
 
           boolean indexed = resultSet.getBoolean("indexed");
           if (indexed) {
@@ -107,7 +107,7 @@ public class TableMetadataManager {
 
     return new JdbcTableMetadata(
         fullTableName,
-        columnTypes,
+        columnsAndDataTypes,
         partitionKeys,
         clusteringKeys,
         clusteringKeyOrders,

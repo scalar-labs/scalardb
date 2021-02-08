@@ -20,8 +20,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.KeyType;
-import com.scalar.db.storage.jdbc.test.BaseStatements;
 import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
@@ -34,13 +32,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.storage.jdbc.test.BaseStatements.insertMetadataStatement;
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
@@ -70,14 +68,6 @@ public class JdbcDatabaseIntegrationTest {
   private List<Put> puts;
   private List<Delete> deletes;
 
-  private static String getFullNamespace(Optional<String> namespacePrefix) {
-    return namespacePrefix.orElse("") + NAMESPACE;
-  }
-
-  private static String getFullTableName(Optional<String> namespacePrefix) {
-    return getFullNamespace(namespacePrefix) + "." + TABLE;
-  }
-
   @Parameterized.Parameters(name = "RDB={0}, namespace_prefix={1}")
   public static Collection<Object[]> jdbcConnectionInfos() {
     return Arrays.asList(
@@ -90,116 +80,38 @@ public class JdbcDatabaseIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-    testEnv =
-        new TestEnv(
-            jdbcConnectionInfo,
-            new BaseStatements() {
-              @Override
-              public List<String> insertMetadataStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME1,
-                        DataType.INT,
-                        KeyType.PARTITION,
-                        null,
-                        false,
-                        null,
-                        1),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME2,
-                        DataType.TEXT,
-                        null,
-                        null,
-                        false,
-                        null,
-                        2),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME3,
-                        DataType.INT,
-                        null,
-                        null,
-                        true,
-                        Scan.Ordering.Order.ASC,
-                        3),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME4,
-                        DataType.INT,
-                        KeyType.CLUSTERING,
-                        Scan.Ordering.Order.ASC,
-                        false,
-                        null,
-                        4),
-                    insertMetadataStatement(
-                        namespacePrefix,
-                        rdbEngine,
-                        getFullTableName(namespacePrefix),
-                        COL_NAME5,
-                        DataType.BOOLEAN,
-                        null,
-                        null,
-                        false,
-                        null,
-                        5));
-              }
-
-              @Override
-              public List<String> schemas(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Collections.singletonList(
-                    enclose(getFullNamespace(namespacePrefix), rdbEngine));
-              }
-
-              @Override
-              public List<String> tables(Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Collections.singletonList(
-                    enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine));
-              }
-
-              @Override
-              public List<String> createTableStatements(
-                  Optional<String> namespacePrefix, RdbEngine rdbEngine) {
-                return Arrays.asList(
-                    "CREATE TABLE "
-                        + enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine)
-                        + " ("
-                        + enclose(COL_NAME1, rdbEngine)
-                        + " INT,"
-                        + enclose(COL_NAME2, rdbEngine)
-                        + " VARCHAR(100),"
-                        + enclose(COL_NAME3, rdbEngine)
-                        + " INT,"
-                        + enclose(COL_NAME4, rdbEngine)
-                        + " INT,"
-                        + enclose(COL_NAME5, rdbEngine)
-                        + " BOOLEAN,"
-                        + "PRIMARY KEY("
-                        + enclose(COL_NAME1, rdbEngine)
-                        + ","
-                        + enclose(COL_NAME4, rdbEngine)
-                        + "))",
-                    "CREATE INDEX idx ON "
-                        + enclosedFullTableName(getFullNamespace(namespacePrefix), TABLE, rdbEngine)
-                        + " ("
-                        + enclose(COL_NAME3, rdbEngine)
-                        + ")");
-              }
-            },
-            Optional.ofNullable(namespacePrefix));
-
-    testEnv.createMetadataTableAndInsertMetadata();
+    testEnv = new TestEnv(jdbcConnectionInfo, Optional.ofNullable(namespacePrefix));
+    testEnv.register(
+        NAMESPACE,
+        TABLE,
+        new LinkedHashMap<String, DataType>() {
+          {
+            put(COL_NAME1, DataType.INT);
+            put(COL_NAME2, DataType.TEXT);
+            put(COL_NAME3, DataType.INT);
+            put(COL_NAME4, DataType.INT);
+            put(COL_NAME5, DataType.BOOLEAN);
+          }
+        },
+        Collections.singletonList(COL_NAME1),
+        Collections.singletonList(COL_NAME4),
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(COL_NAME4, Scan.Ordering.Order.ASC);
+          }
+        },
+        new HashSet<String>() {
+          {
+            add(COL_NAME3);
+          }
+        },
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(COL_NAME3, Scan.Ordering.Order.ASC);
+          }
+        });
     testEnv.createTables();
+
     storage = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
     storage.with(NAMESPACE, TABLE);
   }
@@ -207,7 +119,8 @@ public class JdbcDatabaseIntegrationTest {
   @After
   public void tearDown() throws Exception {
     storage.close();
-    testEnv.dropAllTablesAndSchemas();
+
+    testEnv.dropTables();
     testEnv.close();
   }
 

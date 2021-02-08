@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,7 +65,7 @@ public class OperationCheckerTest {
     JdbcTableMetadata dummyTableMetadata =
         new JdbcTableMetadata(
             TABLE_FULL_NAME,
-            new HashMap<String, DataType>() {
+            new LinkedHashMap<String, DataType>() {
               {
                 put(PKEY1, DataType.INT);
                 put(PKEY2, DataType.TEXT);

@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -53,7 +54,7 @@ public class QueryBuilderTest {
     JdbcTableMetadata dummyTableMetadata =
         new JdbcTableMetadata(
             NAMESPACE + "." + TABLE,
-            new HashMap<String, DataType>() {
+            new LinkedHashMap<String, DataType>() {
               {
                 put("p1", DataType.TEXT);
                 put("p2", DataType.TEXT);
