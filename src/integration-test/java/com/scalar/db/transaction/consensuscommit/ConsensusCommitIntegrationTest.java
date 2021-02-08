@@ -26,6 +26,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.InvalidUsageException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -1768,6 +1769,35 @@ public class ConsensusCommitIntegrationTest {
     assertThat(resultBefore.isPresent()).isTrue();
     assertThat(resultAfter.isPresent()).isTrue();
     assertThat(resultAfter.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+  }
+
+  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+
+    // Act
+    Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.abort();
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+  }
+
+  public void scan_NonOverlappingPutGivenBefore_ShouldScan()
+      throws CommitException, UnknownTransactionStatusException {
+    // Arrange
+    DistributedTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+
+    // Act
+    Scan scan = prepareScan(0, 1, 1, NAMESPACE, TABLE_1);
+    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
+    transaction.commit();
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
   }
 
   private ConsensusCommit prepareTransfer(int fromId, int toId, int amount) throws CrudException {
