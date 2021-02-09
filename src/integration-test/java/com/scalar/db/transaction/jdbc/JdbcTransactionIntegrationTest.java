@@ -32,9 +32,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @RunWith(Parameterized.class)
@@ -56,7 +54,7 @@ public class JdbcTransactionIntegrationTest {
 
   @Parameterized.Parameters(name = "RDB={0}")
   public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
-    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO, ORACLE_INFO, SQL_SERVER_INFO);
+    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO);
   }
 
   @Before

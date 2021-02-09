@@ -40,9 +40,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.ORACLE_INFO;
 import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.SQL_SERVER_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -74,8 +72,7 @@ public class JdbcDatabaseIntegrationTest {
         new Object[] {MYSQL_INFO, null},
         new Object[] {MYSQL_INFO, "ns_prefix"},
         new Object[] {POSTGRESQL_INFO, null},
-        new Object[] {ORACLE_INFO, null},
-        new Object[] {SQL_SERVER_INFO, null});
+        new Object[] {POSTGRESQL_INFO, "ns_prefix"});
   }
 
   @Before

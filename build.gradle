@@ -16,10 +16,6 @@ sourceSets {
             srcDir file('src/integration-test/java')
             exclude '**/com/scalar/db/storage/cosmos/CosmosIntegrationTest.java'
             exclude '**/com/scalar/db/storage/dynamo/DynamoIntegrationTest.java'
-            exclude '**/com/scalar/db/storage/jdbc/JdbcDatabaseIntegrationTest.java'
-            exclude '**/com/scalar/db/storage/jdbc/JdbcMetadataIntegrationTest.java'
-            exclude '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
-            exclude '**/com/scalar/db/transaction/jdbc/JdbcTransactionIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }

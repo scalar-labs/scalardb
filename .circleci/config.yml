@@ -12,6 +12,13 @@ jobs:
         environment:
           MAX_HEAP_SIZE: 2048m
           HEAP_NEWSIZE: 512m
+      - image: circleci/mysql:8.0.23
+        environment:
+          MYSQL_ROOT_PASSWORD: mysql
+      - image: circleci/postgres:9.6.9-alpine
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
