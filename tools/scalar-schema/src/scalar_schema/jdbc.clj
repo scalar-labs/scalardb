@@ -1,5 +1,6 @@
 (ns scalar-schema.jdbc
-  (:require [clojure.string :as string]
+  (:require [clojure.tools.logging :as log]
+            [clojure.string :as string]
             [scalar-schema.common :as common]
             [scalar-schema.protocols :as proto]
             [clojure.java.jdbc :as jdbc])
@@ -42,170 +43,106 @@
    :oracle     {"BLOB"    "RAW(2000)"}
    :sql-server {}})
 
-(defn- get-db-spec
-  [jdbc-url user password]
-  {:connection-uri jdbc-url
-   :user user
-   :password password})
-
-(defn- execute!
-  [db-spec sql]
-  (println (str "Executing " sql))
-  (jdbc/execute! db-spec [sql]))
-
-(defn- get-rdb-engine
-  [jdbc-url]
-  (cond
-    (string/starts-with? jdbc-url "jdbc:mysql:") :mysql
-    (string/starts-with? jdbc-url "jdbc:postgresql:") :postgresql
-    (string/starts-with? jdbc-url "jdbc:oracle:") :oracle
-    (string/starts-with? jdbc-url "jdbc:sqlserver:") :sql-server
-    :else (throw (ex-info "unknown rdb engine" {}))))
-
-(defn- enclose
-  [rdb-engine name]
-  (cond
-    (= rdb-engine :mysql) (str "`" name "`")
-    (= rdb-engine :sql-server) (str "[" name "]")
-    :else (str "\"" name "\"")))
-
-(defn- get-table-name
-  ([schema table] (str schema \. table))
-  ([rdb-engine schema table] (str (enclose rdb-engine schema) \. (enclose rdb-engine table))))
-
-(defn- get-metadata-table-name
-  [rdb-engine prefix]
-  (let [meta-schema common/METADATA_DATABASE
-        meta-table common/METADATA_TABLE]
-    (get-table-name rdb-engine (if prefix (str prefix \_ meta-schema) meta-schema) meta-table)))
-
-(defn- boolean-type
-  [rdb-engine]
-  (cond
-    (= rdb-engine :oracle) "NUMBER(1)"
-    (= rdb-engine :sql-server) "BIT"
-    :else "BOOLEAN"))
-
-(defn- boolean-value-true
-  [rdb-engine]
-  (cond
-    (= rdb-engine :oracle) "1"
-    (= rdb-engine :sql-server) "1"
-    :else "true"))
-
-(defn- boolean-value-false
-  [rdb-engine]
-  (cond
-    (= rdb-engine :oracle) "0"
-    (= rdb-engine :sql-server) "0"
-    :else "false"))
-
 (defn- key?
   [column key]
   (some #(= column %) key))
 
+(defn- get-table-name
+  ([database table] (str database \. table))
+  ([database table {:keys [enclosure-fn]}] (str (enclosure-fn database) \. (enclosure-fn table))))
+
+(defn- get-metadata-table-name
+  [{:keys [prefix] :as opts}]
+  (let [database common/METADATA_DATABASE
+        table common/METADATA_TABLE]
+    (get-table-name (if prefix (str prefix \_ database) database) table opts)))
+
+(defn- get-metadata-schema
+  [{:keys [boolean-type]}]
+  {"full_table_name" "VARCHAR(128)"
+   "column_name"     "VARCHAR(128)"
+   "data_type" "VARCHAR(20) NOT NULL"
+   "key_type" "VARCHAR(20)"
+   "clustering_order" "VARCHAR(10)"
+   "indexed" (str boolean-type \  "NOT NULL")
+   "index_order" "VARCHAR(10)"
+   "ordinal_position" "INTEGER NOT NULL"})
+
 (defn- make-create-metadata-statement
-  [rdb-engine prefix]
+  [{:keys [enclosure-fn] :as opts}]
   (str "CREATE TABLE "
-       (get-metadata-table-name rdb-engine prefix)
-       "(" (enclose rdb-engine "full_table_name") " VARCHAR(128),"
-       (enclose rdb-engine "column_name") " VARCHAR(128),"
-       (enclose rdb-engine "data_type") " VARCHAR(20) NOT NULL,"
-       (enclose rdb-engine "key_type") " VARCHAR(20),"
-       (enclose rdb-engine "clustering_order") " VARCHAR(10),"
-       (enclose rdb-engine "indexed") " " (boolean-type rdb-engine) " NOT NULL,"
-       (enclose rdb-engine "index_order") " VARCHAR(10),"
-       (enclose rdb-engine "ordinal_position") " INTEGER NOT NULL,"
-       "PRIMARY KEY (" (enclose rdb-engine "full_table_name") ", "
-       (enclose rdb-engine "column_name") "))"))
+       (get-metadata-table-name opts)
+       \(
+       (->> (map #(str (enclosure-fn (key %)) \  (val %))
+                 (get-metadata-schema opts))
+            (string/join \,))
+       ", PRIMARY KEY ("
+       (->> (map enclosure-fn ["full_table_name" "column_name"])
+            (string/join \,))
+       "))"))
 
 (defn- create-metadata-table
-  [db-spec rdb-engine prefix]
+  [{:keys [rdb-engine execution-fn] :as opts}]
   (try
-    (execute! db-spec (make-create-metadata-statement rdb-engine prefix))
-    (println "metatable table is created successfully.")
+    (execution-fn (make-create-metadata-statement opts))
+    (log/info "metatable table is created successfully.")
     (catch SQLException e (if (string/includes? (.getMessage e) "already") nil (throw e)))))
 
-(defn- make-create-schema-statement
-  [rdb-engine schema]
-  (str "CREATE SCHEMA " (enclose rdb-engine schema)))
+(defn- make-create-database-statement
+  [database {:keys [enclosure-fn]}]
+  (str "CREATE SCHEMA " (enclosure-fn database)))
 
-(defn- create-schema
-  [db-spec rdb-engine schema]
+(defn- create-database
+  [database {:keys [rdb-engine execution-fn] :as opts}]
   (cond
     (= rdb-engine :oracle) nil
     :else (try
-            (execute! db-spec (make-create-schema-statement rdb-engine schema))
-            (println "The schema" schema "is created successfully.")
+            (execution-fn (make-create-database-statement database opts))
+            (log/info "The database" database "is created successfully.")
             (catch SQLException e (if (or (string/includes? (.getMessage e) "already")
                                           (string/includes? (.getMessage e) "database exists"))
                                     nil (throw e))))))
 
-(defn- create-metadata-schema
-  [db-spec rdb-engine prefix]
-  (let [meta-schema common/METADATA_DATABASE
-        schema (if prefix (str prefix \_ meta-schema) meta-schema)]
-    (create-schema db-spec rdb-engine schema)))
-
-(defn- get-data-type
-  [rdb-engine column scalardb-data-type primary-key secondary-index]
-  (let [data-type (string/upper-case scalardb-data-type)
-        mapping (get data-type-mapping rdb-engine)
-        mapping-for-key (get data-type-mapping-for-key rdb-engine)]
-    (if (key? column (concat primary-key secondary-index))
-      (get mapping-for-key data-type (get mapping data-type))
-      (get mapping data-type))))
+(defn- create-metadata-database
+  [{:keys [prefix] :as opts}]
+  (let [meta-database common/METADATA_DATABASE
+        database (if prefix (str prefix \_ meta-database) meta-database)]
+    (create-database database opts)))
 
 (defn- make-create-table-statement
-  [rdb-engine schema table partition-key clustering-key columns secondary-index]
+  [{:keys [database table partition-key clustering-key reordered-columns secondary-index]}
+   {:keys [enclosure-fn data-type-fn] :as opts}]
   (let [primary-key (concat partition-key clustering-key)]
     (str "CREATE TABLE "
-         (get-table-name rdb-engine schema table)
-         "("
-         (string/join "," (map #(let [column (enclose rdb-engine (first %))
-                                      data-type (get-data-type rdb-engine (first %) (second %)
-                                                               primary-key secondary-index)]
-                                  (str column \  data-type)) columns))
+         (get-table-name database table opts)
+         \(
+         (->> (map #(let [column (enclosure-fn (first %))
+                          data-type (data-type-fn (first %) (second %))]
+                      (str column \  data-type)) reordered-columns)
+              (string/join \,))
          ", PRIMARY KEY ("
-         (string/join "," (map #(enclose rdb-engine %) primary-key))
+         (->> (map enclosure-fn primary-key)
+              (string/join \,))
          "))")))
 
 (defn- create-table
-  [db-spec rdb-engine schema table partition-key clustering-key columns secondary-index]
-  (execute! db-spec (make-create-table-statement rdb-engine schema table partition-key
-                                                 clustering-key columns secondary-index)))
+  [schema {:keys [execution-fn] :as opts}]
+  (execution-fn (make-create-table-statement schema opts)))
 
 (defn- make-create-index-statement
-  [rdb-engine schema table secondary-indexed-column]
-  (let [index-name (str common/INDEX_NAME_PREFIX \_ schema \_ table \_ secondary-indexed-column)]
+  [{:keys [database table]} {:keys [enclosure-fn] :as opts} indexed-column]
+  (let [index-name (str common/INDEX_NAME_PREFIX \_ database \_ table \_ indexed-column)]
     (str "CREATE INDEX "
-         (enclose rdb-engine index-name)
+         (enclosure-fn index-name)
          " ON "
-         (get-table-name rdb-engine schema table)
-         "("
-         (enclose rdb-engine secondary-indexed-column)
-         ")")))
+         (get-table-name database table opts)
+         \(
+         (enclosure-fn indexed-column)
+         \))))
 
 (defn- create-index
-  [db-spec rdb-engine schema table secondary-index]
-  (doall (map #(execute! db-spec (make-create-index-statement rdb-engine schema table %))
-              secondary-index)))
-
-(defn- make-insert-metadata-statement
-  [rdb-engine prefix schema table column data-type key-type key-order secondary-indexed index-order
-   ordinal-position]
-  (str "INSERT INTO "
-       (get-metadata-table-name rdb-engine prefix)
-       " VALUES ("
-       "'" (get-table-name schema table) "',"
-       "'" column "',"
-       "'" data-type "',"
-       (if key-type (str "'" key-type "'") "NULL") ","
-       (if key-order (str "'" key-order "'") "NULL") ","
-       secondary-indexed ","
-       (if index-order (str "'" index-order "'") "NULL") ","
-       ordinal-position
-       ")"))
+  [{:keys [secondary-index] :as schema} {:keys [execution-fn] :as opts}]
+  (doall (map #(execution-fn (make-create-index-statement schema opts %)) secondary-index)))
 
 (defn- get-key-type
   [column partition-key clustering-key]
@@ -214,83 +151,144 @@
     (key? column clustering-key) "CLUSTERING"
     :else nil))
 
-(defn- get-secondary-indexed [rdb-engine column secondary-index]
-  (if (key? column secondary-index) (boolean-value-true rdb-engine)
-      (boolean-value-false rdb-engine)))
+(defn- is-indexed [column secondary-index]
+  (if (key? column secondary-index) true false))
 
 (defn- zipseq
   ([coll] (partition 1 coll))
   ([c1 & colls] (let [c (cons c1 colls)] (partition (count c) (apply interleave c)))))
 
+(defn- make-insert-metadata-statement
+  [{:keys [database table partition-key clustering-key secondary-index]}
+   {:keys [boolean-value-fn] :as opts}
+   column data-type ordinal-position]
+  (let [key-type (get-key-type column partition-key clustering-key)
+        key-order (if (key? column clustering-key) "ASC" nil)
+        indexed (boolean-value-fn (is-indexed column secondary-index))
+        index-order (if (key? column secondary-index) "ASC" nil)]
+    (str "INSERT INTO "
+         (get-metadata-table-name opts)
+         " VALUES ("
+         "'" (get-table-name database table) "',"
+         "'" column "',"
+         "'" data-type "',"
+         (if key-type (str "'" key-type "'") "NULL") ","
+         (if key-order (str "'" key-order "'") "NULL") ","
+         indexed ","
+         (if index-order (str "'" index-order "'") "NULL") ","
+         ordinal-position
+         ")")))
+
 (defn- insert-metadata
-  [db-spec rdb-engine prefix schema table partition-key clustering-key columns secondary-index]
+  [{:keys [reordered-columns] :as schema}
+   {:keys [execution-fn] :as opts}]
   (doall (map #(let [column (first (first %))
                      data-type (string/upper-case (second (first %)))
-                     key-type (get-key-type column partition-key clustering-key)
-                     key-order (if (key? column clustering-key) "ASC" nil)
-                     secondary-indexed (get-secondary-indexed rdb-engine column secondary-index)
-                     index-order (if (key? column secondary-index) "ASC" nil)
                      ordinal-position (second %)]
-                 (execute! db-spec (make-insert-metadata-statement rdb-engine prefix schema table
-                                                                   column data-type key-type
-                                                                   key-order secondary-indexed
-                                                                   index-order ordinal-position)))
-              (zipseq columns (iterate inc 1)))))
+                 (execution-fn (make-insert-metadata-statement schema opts column data-type
+                                                               ordinal-position)))
+              (zipseq reordered-columns (iterate inc 1)))))
 
 (defn- make-drop-table-statement
-  [rdb-engine schema table]
-  (str "DROP TABLE " (get-table-name rdb-engine schema table)))
+  [{:keys [database table]} opts]
+  (str "DROP TABLE " (get-table-name database table opts)))
 
 (defn- drop-table
-  [db-spec rdb-engine schema table]
-  (execute! db-spec (make-drop-table-statement rdb-engine schema table)))
+  [schema {:keys [execution-fn] :as opts}]
+  (execution-fn (make-drop-table-statement schema opts)))
 
 (defn- make-delete-metadata-statement
-  [rdb-engine prefix schema table]
+  [{:keys [database table]} {:keys [enclosure-fn] :as opts}]
   (str "DELETE FROM "
-       (get-metadata-table-name rdb-engine prefix)
-       " WHERE " (enclose rdb-engine "full_table_name") " = "
-       "'" (get-table-name schema table) "'"))
+       (get-metadata-table-name opts)
+       " WHERE " (enclosure-fn "full_table_name") " = "
+       "'" (get-table-name database table) "'"))
 
 (defn- delete-metadata
-  [db-spec rdb-engine prefix schema table]
-  (execute! db-spec (make-delete-metadata-statement rdb-engine prefix schema table)))
+  [schema {:keys [execution-fn] :as opts}]
+  (execution-fn (make-delete-metadata-statement schema opts)))
 
 (defn- reorder-columns
-  [columns partition-key clustering-key]
+  [{:keys [columns partition-key clustering-key]}]
   (concat (map #(vector % (get columns %)) partition-key)
           (map #(vector % (get columns %)) clustering-key)
           (filter #(not (key? (first %) (concat partition-key clustering-key)))
                   (apply list columns))))
 
+(defn- get-execution-fn
+  [{:keys [jdbc-url user password]}]
+  (fn [statement]
+    (log/debug "Executing" statement)
+    (-> {:connection-uri jdbc-url :user user :password password}
+        (jdbc/execute! [statement]))))
+
+(defn- get-rdb-engine
+  [{:keys [jdbc-url]}]
+  (condp #(string/starts-with? %2 %1)  jdbc-url
+    "jdbc:mysql:" :mysql
+    "jdbc:postgresql:" :postgresql
+    "jdbc:oracle:" :oracle
+    "jdbc:sqlserver:" :sql-server
+    (throw (ex-info "unknown rdb engine" {}))))
+
+(defn- get-enclosure-fn
+  [rdb-engine]
+  #(cond
+     (= rdb-engine :mysql) (str "`" % "`")
+     (= rdb-engine :sql-server) (str "[" % "]")
+     :else (str "\"" % "\"")))
+
+(defn- get-boolean-type
+  [rdb-engine]
+  (get (get data-type-mapping rdb-engine) "BOOLEAN"))
+
+(defn- get-boolean-value-fn
+  [rdb-engine]
+  #(if (or (= rdb-engine :oracle) (= rdb-engine :sql-server))
+     (if % "1" "0") (if % "true" "false")))
+
+(defn- get-data-type-fn
+  [rdb-engine {:keys [partition-key clustering-key secondary-index]}]
+  #(let [data-type (string/upper-case %2)
+         mapping (get data-type-mapping rdb-engine)
+         mapping-for-key (get data-type-mapping-for-key rdb-engine)]
+     (if (key? %1 (concat partition-key clustering-key secondary-index))
+       (get mapping-for-key data-type (get mapping data-type))
+       (get mapping data-type))))
+
 (defn make-jdbc-operator
-  [{:keys [jdbc-url user password prefix]}]
-  (let [db-spec (get-db-spec jdbc-url user password)
-        rdb-engine (get-rdb-engine jdbc-url)]
-    (create-metadata-schema db-spec rdb-engine prefix)
-    (create-metadata-table db-spec rdb-engine prefix)
+  [opts]
+  (let [rdb-engine (get-rdb-engine opts)
+        opts (assoc opts
+                    :execution-fn (get-execution-fn opts)
+                    :rdb-engine rdb-engine
+                    :enclosure-fn (get-enclosure-fn rdb-engine)
+                    :boolean-type (get-boolean-type rdb-engine)
+                    :boolean-value-fn (get-boolean-value-fn rdb-engine))]
     (reify proto/IOperator
-      (create-table [_ {:keys [database table partition-key clustering-key columns
-                               secondary-index]} _]
-        (let [reordered-columns (reorder-columns columns partition-key clustering-key)
+      (create-table [_ {:keys [database table] :as schema} _]
+        (let [schema (assoc schema :reordered-columns (reorder-columns schema))
+              opts (assoc opts :data-type-fn (get-data-type-fn rdb-engine schema))
               table-name (get-table-name database table)]
           (try
-            (create-schema db-spec rdb-engine database)
-            (create-table db-spec rdb-engine database table partition-key clustering-key
-                          reordered-columns secondary-index)
-            (create-index db-spec rdb-engine database table secondary-index)
-            (insert-metadata db-spec rdb-engine prefix database table partition-key clustering-key
-                             reordered-columns secondary-index)
-            (println table-name "is created successfully.")
+            (create-metadata-database opts)
+            (create-metadata-table opts)
+            (create-database database opts)
+            (create-table schema opts)
+            (create-index schema opts)
+            (insert-metadata schema opts)
+            (log/info table-name "is created successfully.")
             (catch SQLException e (if (string/includes? (.getMessage e) "already")
-                                    (println table-name "already exists.") (throw e))))))
-      (delete-table [_ {:keys [database table]} _]
+                                    (log/warn table-name "already exists.") (throw e))))))
+      (delete-table [_ {:keys [database table] :as schema} _]
         (let [table-name (get-table-name database table)]
           (try
-            (delete-metadata db-spec rdb-engine prefix database table)
-            (drop-table db-spec rdb-engine database table)
-            (println table-name "is deleted successfully.")
+            (create-metadata-database opts)
+            (create-metadata-table opts)
+            (delete-metadata schema opts)
+            (drop-table schema opts)
+            (log/info table-name "is deleted successfully.")
             (catch SQLException e (if (or (string/includes? (.getMessage e) "Unknown table")
                                           (string/includes? (.getMessage e) "does not exist"))
-                                    (println table-name "does not exist.") (throw e))))))
+                                    (log/warn table-name "does not exist.") (throw e))))))
       (close [_ _] ()))))
