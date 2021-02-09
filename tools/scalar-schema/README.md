@@ -1,8 +1,9 @@
 # Schema Tool for Scalar DB
-This tool creates Scalar DB schemas on Cosmos DB, DynamoDB and Cassandra.
+This tool creates Scalar DB schemas on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
   - For Cosmos DB, this tool creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB.
   - For DynamoDB, this tool creates tables named with the database names and table names, also inserts metadata which is required by Scalar DB.
   - For Cassandra, this tool creates databases(keyspaces) and tables. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
+  - For a JDBC database, this tool creates databases(schemas, except Oracle) and tables, also inserts metadata which is required by Scalar DB.
   - You don't have to add Scalar DB metadata for transactions. This tool automatically adds them when you set the `transaction` parameter `true` in your schema file.
 
 # Usage
@@ -38,6 +39,11 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSAN
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
+```console
+# For a JDBC database
+$ java -jar target/scalar-schema-standalone-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
+```
+
 ### Delete tables
 ```console
 # For Cosmos DB
@@ -52,6 +58,11 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCES
 ```console
 # For Cassandra
 $ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+```
+
+```console
+# For a JDBC database
+$ java -jar target/scalar-schema-standalone-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
 ```
 
 ### Show help
@@ -113,3 +124,26 @@ So, please set an appropriate value depending on the database implementations. P
 
 ### Auto-scaling
 By default, the schema tool enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
+
+## Data type mapping for JDBC databases
+
+When creating tables for a JDBC database, data type mapping from the ScalarDB data types to the JDBC database's data types happens. This tool uses the following data type mapping table to do this:
+
+| ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
+| ---- | ---- |  ---- |  ---- |  ---- | 
+| INT | INT | INT | INT | INT |
+| BIGINT | BIGINT | BIGINT | NUMBER(19) | BIGINT |
+| TEXT | LONGTEXT | TEXT | VARCHAR(4000) | VARCHAR(8000) |
+| FLOAT | FLOAT | FLOAT | BINARY_FLOAT | FLOAT(24) |
+| DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | FLOAT |
+| BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1) | BIT |
+| BLOB | LONGBLOB | BYTEA | BLOB | VARBINARY(8000) |
+
+However, some data types cannot be used as a primary key and a secondary index key. So, the following data type mapping is used when the column is defined as a primary key or a secondary index key:
+
+| ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
+| ---- | ---- |  ---- |  ---- |  ---- |
+| TEXT | VARCHAR(256) | VARCHAR(10485760) | | |
+| BLOB | VARBINARY(256) | |  RAW(2000) | |
+
+If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
