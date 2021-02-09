@@ -44,6 +44,8 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSAN
 $ java -jar target/scalar-schema-standalone-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
 ```
 
+  - Note that this tool doesn't create schemas for the Oracle database. Please create the schemas manually for this case.
+
 ### Delete tables
 ```console
 # For Cosmos DB
