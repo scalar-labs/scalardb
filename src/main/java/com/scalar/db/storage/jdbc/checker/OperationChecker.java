@@ -118,14 +118,16 @@ public class OperationChecker {
       throw new IllegalArgumentException("the mutations are empty");
     }
 
-    if (!allowMultiPartitions) {
-      Mutation first = mutations.get(0);
-      for (Mutation mutation : mutations) {
-        if (!mutation.forTable().equals(first.forTable())
-            || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-          throw new MultiPartitionException(
-              "decided not to execute this batch since multi-partition batch is not recommended");
-        }
+    if (allowMultiPartitions) {
+      return;
+    }
+
+    Mutation first = mutations.get(0);
+    for (Mutation mutation : mutations) {
+      if (!mutation.forTable().equals(first.forTable())
+          || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
+        throw new MultiPartitionException(
+            "decided not to execute this batch since multi-partition batch is not recommended");
       }
     }
   }

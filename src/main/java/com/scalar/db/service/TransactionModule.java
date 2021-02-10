@@ -22,19 +22,24 @@ public class TransactionModule extends AbstractModule {
   protected void configure() {
     bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
 
-    if (config.getStorageClass() == JdbcDatabase.class) {
-      JdbcDatabaseConfig jdbcDatabaseConfig = provideJdbcDatabaseConfig();
-      if (jdbcDatabaseConfig
-          .getTransactionManagerType()
-          .equals(JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE_JDBC)) {
-        bind(DistributedTransactionManager.class)
-            .to(JdbcTransactionManager.class)
-            .in(Singleton.class);
-        return;
-      }
+    if (useJdbcTransaction()) {
+      bind(DistributedTransactionManager.class)
+          .to(JdbcTransactionManager.class)
+          .in(Singleton.class);
+      return;
     }
 
     bind(DistributedTransactionManager.class).to(ConsensusCommitManager.class).in(Singleton.class);
+  }
+
+  private boolean useJdbcTransaction() {
+    if (config.getStorageClass() == JdbcDatabase.class) {
+      JdbcDatabaseConfig jdbcDatabaseConfig = provideJdbcDatabaseConfig();
+      return jdbcDatabaseConfig
+          .getTransactionManagerType()
+          .equals(JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE_JDBC);
+    }
+    return false;
   }
 
   @Singleton

@@ -26,6 +26,14 @@ public final class QueryUtils {
     }
   }
 
+  /**
+   * Enclose the target (schema, table or column) to use reserved words and special characters.
+   *
+   * @param name The target name to enclose
+   * @param rdbEngine The RDB engine. The enclosing character is different depending on the RDB
+   *     engine
+   * @return An enclosed string of the target name
+   */
   public static String enclose(String name, RdbEngine rdbEngine) {
     switch (rdbEngine) {
       case MYSQL:

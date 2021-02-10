@@ -38,7 +38,6 @@ public class JdbcTransaction implements DistributedTransaction {
   private final Connection connection;
   private Optional<String> namespace;
   private Optional<String> tableName;
-  private boolean isCommitCalled;
 
   JdbcTransaction(
       JdbcService jdbcService,
@@ -176,18 +175,17 @@ public class JdbcTransaction implements DistributedTransaction {
       } catch (SQLException e) {
         LOGGER.warn("failed to close the connection", e);
       }
-      isCommitCalled = true;
     }
   }
 
   @Override
   public void abort() throws AbortException {
-    if (isCommitCalled) {
-      // If the commit method is already called, do nothing here
-      return;
-    }
-
     try {
+      if (connection.isClosed()) {
+        // If the connection is already closed, do nothing here
+        return;
+      }
+
       connection.rollback();
     } catch (SQLException e) {
       throw new AbortException("failed to rollback", e);
