@@ -89,7 +89,7 @@ jobs:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
@@ -147,7 +147,7 @@ jobs:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
@@ -202,7 +202,7 @@ jobs:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
