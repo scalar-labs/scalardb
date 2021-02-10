@@ -60,8 +60,7 @@ jobs:
 
       # run tests!
       - run: gradle test
-      - run: gradle integrationTest --tests "com.scalar.db.storage.cassandra.CassandraIntegrationTest"
-      - run: gradle integrationTest --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithCassandraIntegrationTest"
+      - run: gradle integrationTest --tests "com.scalar.db.storage.cassandra.CassandraIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithCassandraIntegrationTest"
 
       - run:
           name: Run short verification

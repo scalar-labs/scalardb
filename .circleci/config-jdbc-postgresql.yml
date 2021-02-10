@@ -43,16 +43,10 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-      - run: gradle integrationTest --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-      - run: gradle integrationTest --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       # run tests with the namespace prefix!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
-      - run: gradle integrationTest --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
-      - run: gradle integrationTest --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
+      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle test reports
