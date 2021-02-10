@@ -9,19 +9,38 @@ repositories {
 }
 
 sourceSets {
-    integrationTest {
+    integrationTestCassandra {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            exclude '**/com/scalar/db/storage/cosmos/*.java'
+            exclude '**/com/scalar/db/storage/dynamo/*.java'
+            exclude '**/com/scalar/db/storage/jdbc/*.java'
+            exclude '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
+            exclude '**/com/scalar/db/transaction/jdbc/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbc {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            exclude '**/com/scalar/db/storage/cassandra/*.java'
+            exclude '**/com/scalar/db/storage/cosmos/*.java'
+            exclude '**/com/scalar/db/storage/dynamo/*.java'
+            exclude '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCassandraIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestCassandraCompile.extendsFrom testCompile
+    integrationTestCassandraRuntime.extendsFrom testRuntime
+    integrationTestJdbcCompile.extendsFrom testCompile
+    integrationTestJdbcRuntime.extendsFrom testRuntime
 }
 
 def awssdkVersion = "2.14.24"
@@ -71,21 +90,30 @@ task testJar(type: Jar) {
   from sourceSets.test.output
 }
 
-task integrationTest(type: Test) {
-    description = 'Runs the integration tests.'
+task integrationTestCassandra(type: Test) {
+    description = 'Runs the integration tests for Cassandra.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
+    classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     shouldRunAfter test
+}
 
+task integrationTestJdbc(type: Test) {
+    description = 'Runs the integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    shouldRunAfter test
     options {
         systemProperties(System.getProperties())
     }
 }
 
 // build should not depend on the integration tests
-check.dependsOn -= integrationTest
+check.dependsOn -= integrationTestCassandra
+check.dependsOn -= integrationTestJdbc
 
 task copyTestJarsToTestLib(type: Copy) {
     from configurations.testCompile
