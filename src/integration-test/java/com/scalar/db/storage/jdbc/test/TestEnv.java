@@ -30,14 +30,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TestEnv implements Closeable {
-  public static final JdbcConnectionInfo MYSQL_INFO =
-      new JdbcConnectionInfo("jdbc:mysql://localhost:3306/", "root", "mysql");
-  public static final JdbcConnectionInfo POSTGRESQL_INFO =
-      new JdbcConnectionInfo("jdbc:postgresql://localhost:5432/", "postgres", "postgres");
-  public static final JdbcConnectionInfo ORACLE_INFO =
-      new JdbcConnectionInfo("jdbc:oracle:thin:@localhost:1521/ORACLE", "SYSTEM", "Oracle19");
-  public static final JdbcConnectionInfo SQL_SERVER_INFO =
-      new JdbcConnectionInfo("jdbc:sqlserver://localhost:1433", "SA", "P@ssw0rd!");
 
   private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING =
       new HashMap<RdbEngine, Map<DataType, String>>() {
@@ -126,26 +118,45 @@ public class TestEnv implements Closeable {
         }
       };
 
-  private final JdbcConnectionInfo jdbcConnectionInfo;
-  private final Optional<String> namespacePrefix;
-  private final BasicDataSource dataSource;
+  private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
+  private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
+  private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
+  private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
+
+  private final String jdbcUrl;
+  private final String username;
+  private final String password;
+
   private final RdbEngine rdbEngine;
+  private final BasicDataSource dataSource;
+  private JdbcDatabaseConfig config;
 
   private final List<JdbcTableMetadata> metadataList;
 
-  public TestEnv(JdbcConnectionInfo jdbcConnectionInfo, Optional<String> namespacePrefix) {
-    this.jdbcConnectionInfo = jdbcConnectionInfo;
-    this.namespacePrefix = namespacePrefix;
+  public TestEnv() {
+    jdbcUrl = System.getProperty(PROP_JDBC_URL);
+    username = System.getProperty(PROP_JDBC_USERNAME, "");
+    password = System.getProperty(PROP_JDBC_PASSWORD, "");
+    Optional<String> namespacePrefix =
+        Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
 
-    rdbEngine = JdbcUtils.getRdbEngine(jdbcConnectionInfo.url);
+    rdbEngine = JdbcUtils.getRdbEngine(jdbcUrl);
 
     dataSource = new BasicDataSource();
-    dataSource.setUrl(jdbcConnectionInfo.url);
-    dataSource.setUsername(jdbcConnectionInfo.username);
-    dataSource.setPassword(jdbcConnectionInfo.password);
+    dataSource.setUrl(jdbcUrl);
+    dataSource.setUsername(username);
+    dataSource.setPassword(password);
     dataSource.setMinIdle(5);
     dataSource.setMaxIdle(10);
     dataSource.setMaxTotal(25);
+
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
+    props.setProperty(DatabaseConfig.USERNAME, username);
+    props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
+    config = new JdbcDatabaseConfig(props);
 
     metadataList = new ArrayList<>();
   }
@@ -190,7 +201,7 @@ public class TestEnv implements Closeable {
   }
 
   private String namespacePrefix() {
-    return namespacePrefix.map(prefix -> prefix + "_").orElse("");
+    return config.getNamespacePrefix().orElse("");
   }
 
   private void execute(String sql) throws SQLException {
@@ -422,13 +433,7 @@ public class TestEnv implements Closeable {
   }
 
   public JdbcDatabaseConfig getJdbcDatabaseConfig() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcConnectionInfo.url);
-    props.setProperty(DatabaseConfig.USERNAME, jdbcConnectionInfo.username);
-    props.setProperty(DatabaseConfig.PASSWORD, jdbcConnectionInfo.password);
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
-    return new JdbcDatabaseConfig(props);
+    return config;
   }
 
   public RdbEngine getRdbEngine() {

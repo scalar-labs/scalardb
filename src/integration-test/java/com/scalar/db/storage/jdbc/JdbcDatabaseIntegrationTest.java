@@ -20,17 +20,13 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,13 +35,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@RunWith(Parameterized.class)
 public class JdbcDatabaseIntegrationTest {
 
   private static final String NAMESPACE = "integration_testing";
@@ -56,28 +49,14 @@ public class JdbcDatabaseIntegrationTest {
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
 
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  @Parameterized.Parameter(1)
-  public String namespacePrefix;
-
   private TestEnv testEnv;
   private DistributedStorage storage;
   private List<Put> puts;
   private List<Delete> deletes;
 
-  @Parameterized.Parameters(name = "RDB={0}, namespace_prefix={1}")
-  public static Collection<Object[]> jdbcConnectionInfos() {
-    return Arrays.asList(
-        new Object[] {MYSQL_INFO, null},
-        new Object[] {MYSQL_INFO, "ns_prefix"},
-        new Object[] {POSTGRESQL_INFO, null},
-        new Object[] {POSTGRESQL_INFO, "ns_prefix"});
-  }
-
   @Before
   public void setUp() throws Exception {
-    testEnv = new TestEnv(jdbcConnectionInfo, Optional.ofNullable(namespacePrefix));
+    testEnv = new TestEnv();
     testEnv.register(
         NAMESPACE,
         TABLE,

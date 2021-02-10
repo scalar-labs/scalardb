@@ -5,24 +5,17 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Optional;
 
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -43,23 +36,15 @@ import static com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrati
 import static com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTest.TABLE_2;
 import static org.mockito.Mockito.spy;
 
-@RunWith(Parameterized.class)
 public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
 
   private TestEnv testEnv;
   private DistributedStorage storage;
   private ConsensusCommitIntegrationTest test;
 
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
-    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO);
-  }
-
   @Before
   public void setUp() throws SQLException {
-    testEnv = new TestEnv(jdbcConnectionInfo, Optional.empty());
+    testEnv = new TestEnv();
 
     // For the coordinator table
     testEnv.register(

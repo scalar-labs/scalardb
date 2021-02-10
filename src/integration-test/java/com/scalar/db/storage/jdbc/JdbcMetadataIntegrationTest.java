@@ -4,27 +4,19 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
-import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Optional;
 
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Parameterized.class)
 public class JdbcMetadataIntegrationTest {
 
   private static final String NAMESPACE = "integration_testing";
@@ -37,16 +29,9 @@ public class JdbcMetadataIntegrationTest {
 
   private TestEnv testEnv;
 
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
-    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO);
-  }
-
   @Before
   public void setUp() throws Exception {
-    testEnv = new TestEnv(jdbcConnectionInfo, Optional.empty());
+    testEnv = new TestEnv();
     testEnv.register(
         NAMESPACE,
         TABLE,
@@ -87,10 +72,11 @@ public class JdbcMetadataIntegrationTest {
 
   @Test
   public void testMetadata() throws Exception {
-    String fullTableName = NAMESPACE + "." + TABLE;
-
+    Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(testEnv.getDataSource(), Optional.empty(), testEnv.getRdbEngine());
+        new TableMetadataManager(testEnv.getDataSource(), namespacePrefix, testEnv.getRdbEngine());
+
+    String fullTableName = namespacePrefix.orElse("") + NAMESPACE + "." + TABLE;
     JdbcTableMetadata tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
 
     assertThat(tableMetadata).isNotNull();

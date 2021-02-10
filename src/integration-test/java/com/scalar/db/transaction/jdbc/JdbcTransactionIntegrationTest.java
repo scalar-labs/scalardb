@@ -13,17 +13,12 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.metadata.DataType;
-import com.scalar.db.storage.jdbc.test.JdbcConnectionInfo;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,11 +26,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static com.scalar.db.storage.jdbc.test.TestEnv.MYSQL_INFO;
-import static com.scalar.db.storage.jdbc.test.TestEnv.POSTGRESQL_INFO;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Parameterized.class)
 public class JdbcTransactionIntegrationTest {
 
   private static final String NAMESPACE = "integration_testing";
@@ -50,16 +42,9 @@ public class JdbcTransactionIntegrationTest {
   private TestEnv testEnv;
   private JdbcTransactionManager manager;
 
-  @Parameterized.Parameter public JdbcConnectionInfo jdbcConnectionInfo;
-
-  @Parameterized.Parameters(name = "RDB={0}")
-  public static Collection<JdbcConnectionInfo> jdbcConnectionInfos() {
-    return Arrays.asList(MYSQL_INFO, POSTGRESQL_INFO);
-  }
-
   @Before
   public void setUp() throws Exception {
-    testEnv = new TestEnv(jdbcConnectionInfo, Optional.empty());
+    testEnv = new TestEnv();
     testEnv.register(
         NAMESPACE,
         TABLE,
