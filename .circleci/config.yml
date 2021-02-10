@@ -151,10 +151,6 @@ jobs:
           when: always
 
       - store_artifacts:
-          path: /tmp/gradle_test_reports
-          destination: gradle_test_reports
-
-      - store_artifacts:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
 
@@ -208,10 +204,6 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
           when: always
-
-      - store_artifacts:
-          path: /tmp/gradle_test_reports
-          destination: gradle_test_reports
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
