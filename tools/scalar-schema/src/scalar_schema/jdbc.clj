@@ -45,7 +45,7 @@
 
 (defn- key?
   [column key]
-  (some #(= column %) key))
+  (if key (.contains key column) false))
 
 (defn- get-table-name
   ([database table] (str database \. table))
@@ -82,11 +82,13 @@
        "))"))
 
 (defn- create-metadata-table
-  [{:keys [rdb-engine execution-fn] :as opts}]
+  [{:keys [execution-fn] :as opts}]
   (try
     (execution-fn (make-create-metadata-statement opts))
     (log/info "metatable table is created successfully.")
-    (catch SQLException e (if (string/includes? (.getMessage e) "already") nil (throw e)))))
+    (catch SQLException e
+      (when-not (string/includes? (.getMessage e) "already")
+        (throw e)))))
 
 (defn- make-create-database-statement
   [database {:keys [enclosure-fn]}]
@@ -94,14 +96,14 @@
 
 (defn- create-database
   [database {:keys [rdb-engine execution-fn] :as opts}]
-  (cond
-    (= rdb-engine :oracle) nil
-    :else (try
-            (execution-fn (make-create-database-statement database opts))
-            (log/info "The database" database "is created successfully.")
-            (catch SQLException e (if (or (string/includes? (.getMessage e) "already")
-                                          (string/includes? (.getMessage e) "database exists"))
-                                    nil (throw e))))))
+  (when-not (= rdb-engine :oracle)
+    (try
+      (execution-fn (make-create-database-statement database opts))
+      (log/info "The database" database "is created successfully.")
+      (catch SQLException e
+        (when-not (or (string/includes? (.getMessage e) "already")
+                      (string/includes? (.getMessage e) "database exists"))
+          (throw e))))))
 
 (defn- create-metadata-database
   [{:keys [prefix] :as opts}]
@@ -110,7 +112,7 @@
     (create-database database opts)))
 
 (defn- make-create-table-statement
-  [{:keys [database table partition-key clustering-key reordered-columns secondary-index]}
+  [{:keys [database table partition-key clustering-key reordered-columns]}
    {:keys [enclosure-fn data-type-fn] :as opts}]
   (let [primary-key (concat partition-key clustering-key)]
     (str "CREATE TABLE "
@@ -151,21 +153,17 @@
     (key? column clustering-key) "CLUSTERING"
     :else nil))
 
-(defn- is-indexed [column secondary-index]
-  (if (key? column secondary-index) true false))
-
-(defn- zipseq
-  ([coll] (partition 1 coll))
-  ([c1 & colls] (let [c (cons c1 colls)] (partition (count c) (apply interleave c)))))
+(defn- secondary-indexed? [column secondary-index]
+  (key? column secondary-index))
 
 (defn- make-insert-metadata-statement
   [{:keys [database table partition-key clustering-key secondary-index]}
    {:keys [boolean-value-fn] :as opts}
    column data-type ordinal-position]
   (let [key-type (get-key-type column partition-key clustering-key)
-        key-order (if (key? column clustering-key) "ASC" nil)
-        indexed (boolean-value-fn (is-indexed column secondary-index))
-        index-order (if (key? column secondary-index) "ASC" nil)]
+        key-order (if (key? column clustering-key) "'ASC'" "NULL")
+        indexed (boolean-value-fn (secondary-indexed? column secondary-index))
+        index-order (if (key? column secondary-index) "'ASC'" "NULL")]
     (str "INSERT INTO "
          (get-metadata-table-name opts)
          " VALUES ("
@@ -173,21 +171,20 @@
          "'" column "',"
          "'" data-type "',"
          (if key-type (str "'" key-type "'") "NULL") ","
-         (if key-order (str "'" key-order "'") "NULL") ","
+         key-order ","
          indexed ","
-         (if index-order (str "'" index-order "'") "NULL") ","
+         index-order ","
          ordinal-position
          ")")))
 
 (defn- insert-metadata
   [{:keys [reordered-columns] :as schema}
    {:keys [execution-fn] :as opts}]
-  (doall (map #(let [column (first (first %))
-                     data-type (string/upper-case (second (first %)))
-                     ordinal-position (second %)]
-                 (execution-fn (make-insert-metadata-statement schema opts column data-type
-                                                               ordinal-position)))
-              (zipseq reordered-columns (iterate inc 1)))))
+  (loop [[[column data-type] & rest] reordered-columns pos 1]
+    (when column
+      (execution-fn
+       (make-insert-metadata-statement schema opts column (string/upper-case data-type) pos))
+      (recur rest (inc pos)))))
 
 (defn- make-drop-table-statement
   [{:keys [database table]} opts]
