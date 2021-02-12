@@ -46,7 +46,7 @@ scalar.db.contact_points=<YOUR_ACCOUNT_URI>
 scalar.db.username=
 scalar.db.password=<YOUR_ACCOUNT_PASSWORD>
 
-# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
+# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
 scalar.db.storage=cosmos
 ```
 

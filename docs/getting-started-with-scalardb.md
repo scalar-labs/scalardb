@@ -64,6 +64,11 @@ For DynamoDB
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
 
+For JDBC databases
+```
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
+```
+
 ## Store & retrieve data with storage service
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
@@ -130,6 +135,14 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 }
 ```
 
+Note that you need to use `JdbcDatabaseConfig` when you use JDBC databases as follows.
+
+```java
+    Injector injector = Guice.createInjector(new StorageModule(new JdbcDatabaseConfig(props)));
+    service = injector.getInstance(StorageService.class);
+    service.with(NAMESPACE, TABLENAME);
+```
+
 Now we can run the application.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
@@ -178,6 +191,13 @@ For DynamoDB
 ```
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
+```
+
+For JDBC databases
+
+```
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json -D
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-transaction.json
 ```
 
 ## Store & retrieve data with transaction service
@@ -262,6 +282,14 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
 }
 ```
 
+Similar to the case of the storage service, when you use JDBC databases, you need to use `JdbcDatabaseConfig` as follows.
+
+```java
+    Injector injector = Guice.createInjector(new TransactionModule(new JdbcDatabaseConfig(props)));
+    service = injector.getInstance(TransactionService.class);
+    service.with(NAMESPACE, TABLENAME);
+```
+
 As you can see, it's not very different from the code with `StorageService`.
 This code instead uses `TransactionService` and all the CRUD operations are done through the `DistributedTransaction` object returned from `TransactionService.start()`.
 
@@ -270,6 +298,51 @@ Now let's run the application with transaction mode.
 $ ../../gradlew run --args="-mode transaction -action charge -amount 1000 -to user1"
 $ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merchant1"
 $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
+```
+
+## Using JDBC transaction
+
+When you use a JDBC database, you can choose the transaction manager type you use.
+There are two transaction manager types, `consensuscommit` and `jdbc`.
+`consensuscommit` is the default transaction manager type, which is also used in the other adapters (Cassandra, DynamoDB, and Cosmos DB).
+`jdbc` is a transaction manager type that can be used only in JDBC databases, and it uses the transaction implementation of the JDBC database you use.
+
+To use the `jdbc` transaction manager, you need to set the following property in **scalardb.properties**.
+
+```
+scalar.db.jdbc.transaction_manager.type=jdbc
+```
+
+You don't need to set a key `transaction` to `true` in Scalar DB scheme for the `jdbc` transaction manager.
+So you can use the same scheme file as **emoney-storage.json**.
+
+```json
+{
+  "emoney.account": {
+    "transaction": false,
+    "partition-key": [
+      "id"
+    ],
+    "clustering-key": [],
+    "columns": {
+      "id": "TEXT",
+      "balance": "INT"
+    }
+  }
+}
+```
+
+You can run the scalar schema standalone loader to load the schema as follows.
+
+```
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
+```
+
+You can get the instance of `TransactionService` in Java code as follows:
+
+```java
+    Injector injector = Guice.createInjector(new TransactionModule(new JdbcDatabaseConfig(props)));
+    TransactionService service = injector.getInstance(TransactionService.class);
 ```
 
 ## Further documentation
