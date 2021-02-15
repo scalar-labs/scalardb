@@ -13,6 +13,6 @@ Here are the requirements to make Scalar DB on Cassandra (or Cassandra compatibl
 For the first, it is required since Scalar DB only provides Atomicity and Isolation properties of ACID and requests the underlining databases to provide Durability.
 You can stil use `periodic`, but it is not recommended unless you know exactly what you are doing.
 
-For the second, Scalar DB does not work on some Cassandra compatible databases such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/) that don't support LWT since `ConsensusCommit` transaction manager relies on linearizable operations of underlining databases to make transactions Serializable. 
+For the second, Scalar DB does not work on some Cassandra compatible databases such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/) that don't support LWT since `ConsensusCommit` transaction manager relies on linearizable operations of underlining databases to make transactions serializable. 
 
-If the above requirements are met, storage operations with `LINEARIZABLE` can provide Linearizablity and transaction operations with `SERIALIZABLE` can provide strict Serializability.
+If the above requirements are met, storage operations with `LINEARIZABLE` can provide linearizablity and transaction operations with `SERIALIZABLE` can provide strict serializability.
