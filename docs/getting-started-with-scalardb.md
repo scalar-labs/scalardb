@@ -135,14 +135,6 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 }
 ```
 
-Note that you need to use `JdbcDatabaseConfig` when you use JDBC databases as follows.
-
-```java
-    Injector injector = Guice.createInjector(new StorageModule(new JdbcDatabaseConfig(props)));
-    service = injector.getInstance(StorageService.class);
-    service.with(NAMESPACE, TABLENAME);
-```
-
 Now we can run the application.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
@@ -282,14 +274,6 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
 }
 ```
 
-Similar to the case of the storage service, when you use JDBC databases, you need to use `JdbcDatabaseConfig` as follows.
-
-```java
-    Injector injector = Guice.createInjector(new TransactionModule(new JdbcDatabaseConfig(props)));
-    service = injector.getInstance(TransactionService.class);
-    service.with(NAMESPACE, TABLENAME);
-```
-
 As you can see, it's not very different from the code with `StorageService`.
 This code instead uses `TransactionService` and all the CRUD operations are done through the `DistributedTransaction` object returned from `TransactionService.start()`.
 
@@ -310,37 +294,8 @@ To use the native transaction manager, you need to set `jdbc` to a transaction m
 scalar.db.jdbc.transaction_manager.type=jdbc
 ```
 
-You don't need to set a key `transaction` to `true` in Scalar DB scheme for the `jdbc` transaction manager.
+You don't need to set a key `transaction` to `true` in Scalar DB scheme for the native transaction manager.
 So you can use the same scheme file as **emoney-storage.json**.
-
-```json
-{
-  "emoney.account": {
-    "transaction": false,
-    "partition-key": [
-      "id"
-    ],
-    "clustering-key": [],
-    "columns": {
-      "id": "TEXT",
-      "balance": "INT"
-    }
-  }
-}
-```
-
-You can run the scalar schema standalone loader to load the schema as follows.
-
-```
-$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
-```
-
-You can get the instance of `TransactionService` in Java code as follows:
-
-```java
-    Injector injector = Guice.createInjector(new TransactionModule(new JdbcDatabaseConfig(props)));
-    TransactionService service = injector.getInstance(TransactionService.class);
-```
 
 ## Further documentation
 

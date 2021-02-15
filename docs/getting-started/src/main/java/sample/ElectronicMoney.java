@@ -1,7 +1,6 @@
 package sample;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,7 +17,6 @@ public abstract class ElectronicMoney {
 
   public ElectronicMoney() throws IOException {
     dbConfig = new DatabaseConfig(new FileInputStream(SCALARDB_PROPERTIES));
-//    dbConfig = new JdbcDatabaseConfig(new FileInputStream(SCALARDB_PROPERTIES));
   }
 
   abstract void charge(String id, int amount) throws Exception;
