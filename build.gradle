@@ -95,7 +95,6 @@ task integrationTestCassandra(type: Test) {
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
     classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
-    shouldRunAfter test
 }
 
 task integrationTestJdbc(type: Test) {
@@ -104,7 +103,6 @@ task integrationTestJdbc(type: Test) {
     testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
     classpath = sourceSets.integrationTestJdbc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
-    shouldRunAfter test
     options {
         systemProperties(System.getProperties())
     }
