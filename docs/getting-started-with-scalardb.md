@@ -300,14 +300,11 @@ $ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merch
 $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
 ```
 
-## Using JDBC transaction
+## Use JDBC transaction
 
-When you use a JDBC database, you can choose the transaction manager type you use.
-There are two transaction manager types, `consensuscommit` and `jdbc`.
-`consensuscommit` is the default transaction manager type, which is also used in the other adapters (Cassandra, DynamoDB, and Cosmos DB).
-`jdbc` is a transaction manager type that can be used only in JDBC databases, and it uses the transaction implementation of the JDBC database you use.
+When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
 
-To use the `jdbc` transaction manager, you need to set the following property in **scalardb.properties**.
+To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
 
 ```
 scalar.db.jdbc.transaction_manager.type=jdbc
