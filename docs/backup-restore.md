@@ -10,8 +10,8 @@ Since Cassandra has a built-in replication mechanism, we don't always need a tra
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, we don't need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-The easiest way to take a transactionally-consistent backup for Scalar DB on Cassandra is to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy takes snapshots of a Cassandra cluster after it pauses the application cluster to make the resulting snapshots transactionally-consistent.
-Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
+The easiest way to take a transactionally-consistent backup for Scalar DB on Cassandra is to stop a cluster, take the snapshots of all the nodes of the cluster, and start the cluster. If you implement [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing on-going transactions.
 
-Note that we can simply use the snapshots when restoring a cluster because they are just snapshots of Cassandra. In any case, it is recommended to use Cassy for restoration as well to minimize operational mistakes.
+To minimize mistakes when doing backup and restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
+Cassy is also itegrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
+Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
