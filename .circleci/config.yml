@@ -67,7 +67,7 @@ jobs:
 
       # run tests!
       - run: gradle test
-      - run: gradle integrationTest --tests "com.scalar.db.storage.cassandra.CassandraIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithCassandraIntegrationTest"
+      - run: gradle integrationTestCassandra
 
       - run:
           name: Run short verification
@@ -89,7 +89,7 @@ jobs:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
@@ -138,16 +138,16 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       # run tests with the namespace prefix!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
@@ -193,16 +193,16 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       # run tests with the namespace prefix!
-      - run: gradle integrationTest --tests "com.scalar.db.storage.jdbc.JdbcMetadataIntegrationTest" --tests "com.scalar.db.storage.jdbc.JdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.consensuscommit.ConsensusCommitWithJdbcDatabaseIntegrationTest" --tests "com.scalar.db.transaction.jdbc.JdbcTransactionIntegrationTest" -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
