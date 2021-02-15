@@ -110,6 +110,7 @@
 (defn enable-auto-scaling
   [scaling-client schema {:keys [ru] :or {ru (int 10)}}]
   (let [table (dynamo/get-table-name schema)
+        ru (if (:ru schema) (:ru schema) ru)
         global-index-tables (map #(dynamo/get-global-index-name schema %)
                                  (:secondary-index schema))
         scaling-reqs (make-requests (scaling-request-fn ru)
