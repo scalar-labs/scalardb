@@ -501,4 +501,14 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
   public void put_DeleteCalledBefore_ShouldPut() throws Exception {
     test.put_DeleteCalledBefore_ShouldPut();
   }
+
+  @Test
+  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() throws Exception {
+    test.scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException();
+  }
+
+  @Test
+  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws Exception {
+    test.scan_NonOverlappingPutGivenBefore_ShouldScan();
+  }
 }
