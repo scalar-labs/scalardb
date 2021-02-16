@@ -280,3 +280,4 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
 * [Database schema in Scalar DB](schema.md)
 * [Schema tool](../tools/scalar-schema/README.md)
+* [How to Back up and Restore](backup-restore.md)

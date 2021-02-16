@@ -118,6 +118,9 @@ public class Snapshot {
   }
 
   public Optional<List<Key>> get(Scan scan) {
+    if (isWriteSetOverlappedWith(scan)) {
+      throw new CrudRuntimeException("reading already written data is not allowed");
+    }
     if (scanSet.containsKey(scan)) {
       return scanSet.get(scan);
     }
@@ -143,6 +146,61 @@ public class Snapshot {
                   readSet.get(e.getKey()) == null ? null : readSet.get(e.getKey()).orElse(null);
               composer.add(e.getValue(), result);
             });
+  }
+
+  private boolean isWriteSetOverlappedWith(Scan scan) {
+    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
+      Put put = entry.getValue();
+      if (!put.forNamespace().equals(scan.forNamespace())
+          || !put.forTable().equals(scan.forTable())
+          || !put.getPartitionKey().equals(scan.getPartitionKey())) {
+        continue;
+      }
+
+      // If partition keys match and a primary key does not have a clustering key
+      if (!put.getClusteringKey().isPresent()) {
+        return true;
+      }
+
+      com.scalar.db.io.Key writtenKey = put.getClusteringKey().get();
+      boolean isStartGiven = scan.getStartClusteringKey().isPresent();
+      boolean isEndGiven = scan.getEndClusteringKey().isPresent();
+
+      // If no range is specified, which means it scans the whole partition space
+      if (!isStartGiven && !isEndGiven) {
+        return true;
+      }
+
+      if (isStartGiven && isEndGiven) {
+        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
+        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
+        // If startKey <= writtenKey <= endKey
+        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
+            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
+            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
+          return true;
+        }
+      }
+
+      if (isStartGiven && !isEndGiven) {
+        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
+        // If startKey <= writtenKey
+        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
+            || writtenKey.compareTo(startKey) > 0) {
+          return true;
+        }
+      }
+
+      if (!isStartGiven && isEndGiven) {
+        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
+        // If writtenKey <= endKey
+        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
+            || writtenKey.compareTo(endKey) < 0) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @VisibleForTesting
