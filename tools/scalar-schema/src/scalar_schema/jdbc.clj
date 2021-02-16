@@ -37,8 +37,8 @@
                 "BLOB"    "VARBINARY(8000)"}})
 
 (def ^:private data-type-mapping-for-key
-  {:mysql      {"TEXT"    "VARCHAR(256)"
-                "BLOB"    "VARBINARY(256)"}
+  {:mysql      {"TEXT"    "VARCHAR(64)"
+                "BLOB"    "VARBINARY(64)"}
    :postgresql {"TEXT"    "VARCHAR(10485760)"}
    :oracle     {"BLOB"    "RAW(2000)"}
    :sql-server {}})
