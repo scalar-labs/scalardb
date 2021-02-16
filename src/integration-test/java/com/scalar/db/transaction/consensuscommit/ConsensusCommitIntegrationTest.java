@@ -22,6 +22,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
@@ -1771,7 +1772,8 @@ public class ConsensusCommitIntegrationTest {
     assertThat(resultAfter.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
   }
 
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException()
+      throws CrudException, AbortException {
     // Arrange
     DistributedTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
@@ -1786,7 +1788,7 @@ public class ConsensusCommitIntegrationTest {
   }
 
   public void scan_NonOverlappingPutGivenBefore_ShouldScan()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     DistributedTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
