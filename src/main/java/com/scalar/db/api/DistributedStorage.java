@@ -31,11 +31,8 @@ import java.util.Optional;
  * readability.)
  *
  * <pre>{@code
- * Config config = ConfigLoader.load(YAML_CONFIG);
- * Credential credential = new Credential(USERNAME, PASSWORD);
- *
- * // In case of Cassandra storage implementation.
- * DistributedStorage storage = new Cassandra(config, credential);
+ * Injector injector = Guice.createInjector(new StorageModule(new DatabaseConfig(props)));
+ * StorageService storage = injector.getInstance(StorageService.class);
  *
  * // Uses NAMESPACE and TABLE by default in this storage instance.
  * storage.with(NAMESPACE, TABLE);
