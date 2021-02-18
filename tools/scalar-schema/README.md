@@ -145,7 +145,7 @@ However, some data types cannot be used as a primary key and a secondary index k
 
 | ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
 | ---- | ---- |  ---- |  ---- |  ---- |
-| TEXT | VARCHAR(256) | VARCHAR(10485760) | | |
-| BLOB | VARBINARY(256) | |  RAW(2000) | |
+| TEXT | VARCHAR(64) | VARCHAR(10485760) | | |
+| BLOB | VARBINARY(64) | |  RAW(2000) | |
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
