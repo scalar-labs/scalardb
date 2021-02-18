@@ -288,4 +288,4 @@
             (catch SQLException e (if (or (string/includes? (.getMessage e) "Unknown table")
                                           (string/includes? (.getMessage e) "does not exist"))
                                     (log/warn table-name "does not exist.") (throw e))))))
-      (close [_ _] ()))))
+      (close [_ _]))))
