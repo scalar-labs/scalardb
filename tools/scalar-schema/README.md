@@ -129,7 +129,7 @@ By default, the schema tool enables auto-scaling of RU for all tables: RU is sca
 
 ## Data type mapping for JDBC databases
 
-When creating tables for a JDBC database, data type mapping from the ScalarDB data types to the JDBC database's data types happens. This tool uses the following data type mapping table to do this:
+When creating tables for a JDBC database with this tool, Scalar DB data types are converted to RDB-specific data types as shown below.
 
 | ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
 | ---- | ---- |  ---- |  ---- |  ---- | 
