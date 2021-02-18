@@ -141,7 +141,7 @@ When creating tables for a JDBC database with this tool, Scalar DB data types ar
 | BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1) | BIT |
 | BLOB | LONGBLOB | BYTEA | BLOB | VARBINARY(8000) |
 
-However, some data types cannot be used as a primary key and a secondary index key. So, the following data type mapping is used when the column is defined as a primary key or a secondary index key:
+However, the following types are converted differently when they are used as a primary key or a secondary index key due to the limitations of RDB data types.
 
 | ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
 | ---- | ---- |  ---- |  ---- |  ---- |
