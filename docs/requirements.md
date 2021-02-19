@@ -16,3 +16,13 @@ You can stil use `periodic`, but it is not recommended unless you know exactly w
 For the second, Scalar DB does not work on some Cassandra compatible databases such as [Amazon Keyspaces](https://aws.amazon.com/keyspaces/) that don't support LWT since `ConsensusCommit` transaction manager relies on linearizable operations of underlining databases to make transactions serializable. 
 
 If the above requirements are met, storage operations with `LINEARIZABLE` can provide linearizablity and transaction operations with `SERIALIZABLE` can provide strict serializability.
+
+## JDBC databases
+
+In Scalar DB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code with the `Operation.withConsistency()` method, and the consistency level depends on the setup of your JDBC database.
+For example, when you have asynchronous read replicas in your setup and perform read operations against them, the consistency level will be `EVENTUAL`, because you can read stale data from the read replicas.
+Or when you perform all operations against a single master instance, the consistency level will be `LINEARIZABLE`.
+We recommend performing all operations/transactions against a single master instance (`LINEARIZABLE`), because reading stale data is very confusing, which causes mistakes easily in your application.
+
+If you strongly want to use the read replica feature in your setup, you can use the setup where you perform read-write transactions against the master instance and read-only transactions against read replicas.
+You lose `LINEARIZABLE` consistency level in this setup, but it's still `SERIALIZABLE`.
