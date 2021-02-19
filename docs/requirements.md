@@ -22,7 +22,7 @@ If the above requirements are met, storage operations with `LINEARIZABLE` can pr
 In Scalar DB on JDBC databases, you can't choose a consistency level (`LINEARIZABLE`, `SEQUENTIAL` or `EVENTUAL`) in your code with the `Operation.withConsistency()` method, and the consistency level depends on the setup of your JDBC database.
 For example, when you have asynchronous read replicas in your setup and perform read operations against them, the consistency will be eventual because you can read stale data from the read replicas.
 On the other hand, when you perform all operations against a single master instance, the consistency will be linearizable.
-We recommend performing all operations/transactions against a single master instance (`LINEARIZABLE`), because reading stale data is very confusing, which causes mistakes easily in your application.
+We recommend performing all operations/transactions against a single master instance (so that you can achieve linearizable) if you want to avoid caring consistency issues in your applications. Note that you can still use a read replica as a backup and standby even if you follow the recommendation.
 
 If you strongly want to use the read replica feature in your setup, you can use the setup where you perform read-write transactions against the master instance and read-only transactions against read replicas.
 You lose `LINEARIZABLE` consistency level in this setup, but it's still `SERIALIZABLE`.
