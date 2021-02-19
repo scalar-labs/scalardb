@@ -56,7 +56,7 @@ $ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <
 
 For Cosmos DB
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-storage.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -f emoney-storage.json
 ```
 
 For DynamoDB
@@ -169,8 +169,8 @@ $ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <
 For Cosmos DB
 
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -D
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f emoney-transaction.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -D
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -f emoney-transaction.json
 ```
 
 For DynamoDB
