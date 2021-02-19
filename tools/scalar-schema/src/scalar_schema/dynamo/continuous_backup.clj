@@ -1,7 +1,7 @@
 (ns scalar-schema.dynamo.continuous-backup
   (:require [scalar-schema.dynamo.common :as dynamo])
   (:import (software.amazon.awssdk.services.dynamodb.model UpdateContinuousBackupsRequest
-                                                                                 PointInTimeRecoverySpecification)))
+                                                           PointInTimeRecoverySpecification)))
 
 (defn- get-pitr-spec
   []
