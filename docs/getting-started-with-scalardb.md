@@ -64,6 +64,11 @@ For DynamoDB
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
 
+For JDBC databases
+```
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
+```
+
 ## Store & retrieve data with storage service
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
@@ -180,6 +185,13 @@ $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_I
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
 ```
 
+For JDBC databases
+
+```
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json -D
+$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-transaction.json
+```
+
 ## Store & retrieve data with transaction service
 
 The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
@@ -271,6 +283,19 @@ $ ../../gradlew run --args="-mode transaction -action charge -amount 1000 -to us
 $ ../../gradlew run --args="-mode transaction -action charge -amount 0 -to merchant1"
 $ ../../gradlew run --args="-mode transaction -action pay -amount 100 -to merchant1 -from user1"
 ```
+
+## Use JDBC transaction
+
+When you use a JDBC database as a backend database, you can optionally use the native transaction manager of a JDBC database instead of the default `ConsensusCommit` transaction manager.
+
+To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
+
+```
+scalar.db.jdbc.transaction_manager.type=jdbc
+```
+
+You don't need to set a key `transaction` to `true` in Scalar DB scheme for the native transaction manager.
+So you can use the same scheme file as **emoney-storage.json**.
 
 ## Further documentation
 
