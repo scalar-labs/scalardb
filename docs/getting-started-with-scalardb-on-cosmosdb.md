@@ -37,14 +37,14 @@ The **scalardb.properties** (getting-started/scalardb.properties) file holds the
     
 ```
 # Comma separated contact points
-scalar.db.contact_points=<YOUR_ACCOUNT_URI>
+scalar.db.contact_points=<COSMOS_DB_ACCOUNT_URI>
 
 # Port number for all the contact points. Default port number for each database is used if empty.
 #scalar.db.contact_port=
 
 # Credential information to access the database
 scalar.db.username=
-scalar.db.password=<YOUR_ACCOUNT_PASSWORD>
+scalar.db.password=<COSMOS_DB_PRIMARY_KEY>
 
 # Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
 scalar.db.storage=cosmos
