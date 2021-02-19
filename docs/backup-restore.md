@@ -19,6 +19,6 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 ## JDBC databases
 
 You can take a backup with your favorite way for JDBC databases.
-One requirement for backup in Scalar DB for JDBC databases is that the backup for all the tables (including the coordinator table) needs to be a consistent snapshot, which means all the backup data need to be taken at the same time.
+One requirement for backup in Scalar DB for JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator table) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
 For example, when you use MySQL, you can use `mysqldump --single-transaction --all-databases` to achieve this.
 Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period, which satisfies the requirement.
