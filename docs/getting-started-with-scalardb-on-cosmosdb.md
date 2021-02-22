@@ -44,10 +44,11 @@ scalar.db.contact_points=<COSMOS_DB_ACCOUNT_URI>
 
 # Credential information to access the database
 scalar.db.username=
-scalar.db.password=<COSMOS_DB_PRIMARY_KEY>
+scalar.db.password=<COSMOS_DB_KEY>
 
 # Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
 scalar.db.storage=cosmos
 ```
+Note that you can use a primary key or a secondary key for `<COSMOS_DB_KEY>`.
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.

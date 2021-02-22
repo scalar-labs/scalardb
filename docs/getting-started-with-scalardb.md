@@ -56,14 +56,16 @@ $ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <
 
 For Cosmos DB
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -f emoney-storage.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f emoney-storage.json
 ```
+  - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
 
 For DynamoDB
 ```
 $ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
 ```
-
+  - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
+  
 ## Store & retrieve data with storage service
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
@@ -169,8 +171,8 @@ $ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <
 For Cosmos DB
 
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -D
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_PRIMARY_KEY> -f emoney-transaction.json
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -D
+$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f emoney-transaction.json
 ```
 
 For DynamoDB
