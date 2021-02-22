@@ -94,13 +94,28 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forFullTableName() {
+    return forFullTableName(true);
+  }
+
+  /**
+   * Returns the full table name without the prefix with the namespace for this operation
+   *
+   * @return an {@code Optional} with the returned the full table name
+   */
+  @Nonnull
+  public Optional<String> forFullTableNameWithoutPrefix() {
+    return forFullTableName(false);
+  }
+
+  @Nonnull
+  private Optional<String> forFullTableName(boolean withPrefix) {
     if (!namespace.isPresent() || !tableName.isPresent()) {
       LOGGER.warn("namespace or table name isn't specified");
       return Optional.empty();
     }
 
     StringBuilder builder = new StringBuilder();
-    if (namespacePrefix.isPresent()) {
+    if (withPrefix && namespacePrefix.isPresent()) {
       builder.append(namespacePrefix.get());
     }
     builder.append(namespace.get());

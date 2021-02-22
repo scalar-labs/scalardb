@@ -1,5 +1,6 @@
 (ns scalar-schema.dynamo.common
-  (:require [scalar-schema.common :as common])
+  (:require [clojure.string :as str]
+            [scalar-schema.common :as common])
   (:import (software.amazon.awssdk.auth.credentials AwsBasicCredentials
                                                     StaticCredentialsProvider)))
 
@@ -15,10 +16,17 @@
   [{:keys [database table]}]
   (common/get-fullname database table))
 
+(defn- get-table-name-without-prefix
+  [{:keys [prefix] :as schema}]
+  (str/replace-first (get-table-name schema)
+                     (java.util.regex.Pattern/compile (str prefix \_)) ""))
+
 (defn get-index-name
   [schema key-name]
-  (str (get-table-name schema) \. INDEX_NAME_PREFIX \. key-name))
+  (str (get-table-name-without-prefix schema)
+       \. INDEX_NAME_PREFIX \. key-name))
 
 (defn get-global-index-name
   [schema key-name]
-  (str (get-table-name schema) \. GLOBAL_INDEX_NAME_PREFIX \. key-name))
+  (str (get-table-name-without-prefix schema)
+       \. GLOBAL_INDEX_NAME_PREFIX \. key-name))
