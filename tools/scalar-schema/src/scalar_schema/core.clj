@@ -24,6 +24,7 @@
    [nil "--region REGION" "Region where the tool creates tables for DynamoDB"]
    [nil "--prefix NAMESPACE_PREFIX" "Namespace prefix. The prefix is added to all the namespaces."]
    [nil "--no-scaling" "Disable auto-scaling"]
+   [nil "--no-backup" "Disable continuous backup"]
    [nil "--help"]])
 
 (defn -main [& args]
