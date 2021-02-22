@@ -15,3 +15,11 @@ The easiest way to take a transactionally-consistent backup for Scalar DB on Cas
 To minimize mistakes when doing backup and restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Cassy is also itegrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
+
+## JDBC databases
+
+You can take a backup with your favorite way for JDBC databases.
+One requirement for backup in Scalar DB on JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator table) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
+That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
+For example, you can use `mysqldump` command with `--single-transaction` option in MySQL and `pg_dump` command in PostgreSQL to achieve that.
+Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
