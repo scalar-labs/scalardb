@@ -2,6 +2,7 @@
   (:require [clojure.tools.logging :as log]
             [scalar-schema.common :as common]
             [scalar-schema.dynamo.auto-scaling :as scaling]
+            [scalar-schema.dynamo.continuous-backup :as backup]
             [scalar-schema.dynamo.common :as dynamo]
             [scalar-schema.protocols :as proto])
   (:import (software.amazon.awssdk.regions Region)
@@ -203,15 +204,17 @@
       (log/warn table "doesn't exist"))))
 
 (defn make-dynamo-operator
-  [{:keys [user password region no-scaling]}]
+  [{:keys [user password region no-scaling no-backup]}]
   (let [client (get-client user password region)
         scaling-client (scaling/get-scaling-client user password region)]
     (reify proto/IOperator
       (create-table [_ schema opts]
         (create-table client schema opts)
-        (when (not no-scaling)
-          (Thread/sleep WAIT_FOR_CREATION)
-          (scaling/enable-auto-scaling scaling-client schema opts)))
+        (Thread/sleep WAIT_FOR_CREATION)
+        (when-not no-scaling
+          (scaling/enable-auto-scaling scaling-client schema opts))
+        (when-not no-backup
+          (backup/enable-continuous-backup client schema)))
       (delete-table [_ schema _]
         (scaling/disable-auto-scaling scaling-client schema)
         (delete-table client schema))
