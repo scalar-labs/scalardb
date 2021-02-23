@@ -13,12 +13,6 @@ Scalar DB is written in Java and uses a JDBC database as an underlining storage 
 
 From here, we assume Oracle JDK 8 and a JDBC database is properly installed in your local environment, and it is running in your localhost.
 
-### Setup of a JDBC database instance
-
-Scalar DB assumes that the underlining storage can perform linearizable reads/writes.
-This means that you can't use a JDBC database with the asynchronous read replica feature as an underlining storage, which is the typical setup in relational databases.
-You need to carefully consider it when you design the JDBC database instance setup.
-
 ## Configure Scalar DB
 
 The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. Basically, it describes the JDBC database installation that will be used.
