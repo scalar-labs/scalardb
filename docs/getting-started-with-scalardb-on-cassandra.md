@@ -5,7 +5,7 @@ This document briefly explains how you can get started with Scalar DB on Cassand
 
 ## Install prerequisites
 
-Scalar DB is written in Java and uses Cassandra as an underlying storage implementation, so the following software is required to run it.
+Scalar DB is written in Java and uses Cassandra as an underlining storage implementation, so the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
 * [Casssandra](http://cassandra.apache.org/) 3.11.x (the current stable version as of writing)
