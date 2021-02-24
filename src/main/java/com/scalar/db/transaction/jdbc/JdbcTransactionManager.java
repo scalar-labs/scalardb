@@ -22,14 +22,6 @@ import javax.inject.Inject;
 import java.sql.SQLException;
 import java.util.Optional;
 
-/**
- * JDBC transaction manager
- *
- * <p>Note that the condition of a mutation is ignored in this implementation. We can use the
- * transaction feature instead of the conditional update
- *
- * @author Toshihiro Suzuki
- */
 @ThreadSafe
 public class JdbcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);

@@ -70,7 +70,7 @@ For JDBC databases
 ```
 $ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
 ```
-  
+
 ## Store & retrieve data with storage service
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)

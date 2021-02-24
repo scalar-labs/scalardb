@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A query builder to build SQL
+ * A query builder to build SQL.
  *
  * @author Toshihiro Suzuki
  */

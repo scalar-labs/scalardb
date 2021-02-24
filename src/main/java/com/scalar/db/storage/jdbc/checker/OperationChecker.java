@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A class to check operations and throw exceptions if operations have any problems
+ * A class to check operations and throw exceptions if operations have any problems.
  *
  * @author Toshihiro Suzuki
  */

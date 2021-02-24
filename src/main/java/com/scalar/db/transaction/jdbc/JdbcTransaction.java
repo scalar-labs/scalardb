@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * This indicates a transaction session of JDBC
+ * This indicates a transaction session of JDBC.
  *
- * <p>Note that the condition of a mutation is ignored in this implementation. We can use the
- * transaction feature instead of the conditional update
+ * <p>Note that the isolation level in a transaction is always SERIALIZABLE in this implementation.
+ * Even if the isolation level is specified in the configuration, it will be ignored.
  *
  * @author Toshihiro Suzuki
  */

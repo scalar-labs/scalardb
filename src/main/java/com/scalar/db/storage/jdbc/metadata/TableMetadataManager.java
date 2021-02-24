@@ -27,7 +27,7 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 /**
- * A manager to read and cache {@link JdbcTableMetadata}
+ * A manager of the instances of {@link JdbcTableMetadata}.
  *
  * @author Toshihiro Suzuki
  */

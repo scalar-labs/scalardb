@@ -21,7 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * A visitor class to execute a conditional mutation
+ * A visitor class to execute a conditional mutation.
  *
  * @author Toshihiro Suzuki
  */

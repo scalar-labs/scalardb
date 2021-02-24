@@ -23,7 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * A service class to perform get/scan/put/delete/mutate operations
+ * A service class to perform get/scan/put/delete/mutate operations.
  *
  * @author Toshihiro Suzuki
  */
