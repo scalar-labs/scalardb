@@ -23,6 +23,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // TODO : make it thread-safe
+/**
+ * A transaction manager that implements a transaction protocol on the basis of two-phase commit on
+ * the consensus of an underlining storage.
+ *
+ * <p>When SERIALIZABLE is specified in {@link com.scalar.db.api.Isolation}, it makes schedule
+ * strict serializable or serializable depending on underlining database operations. If a
+ * transaction runs on linearizable operations, it makes it strict serializable. If a transaction
+ * runs on serializable operations, it makes it serializable.
+ *
+ * <p>When SNAPSHOT is specified in {@link com.scalar.db.api.Isolation}, it makes it a weaker
+ * variant of snapshot isolation (SI). This snapshot isolation could cause read skew anomalies in
+ * addition to write skew and read-only anomalies, which are known to be usual SI anomalies.
+ */
 public class ConsensusCommit implements DistributedTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;
@@ -74,6 +87,16 @@ public class ConsensusCommit implements DistributedTransaction {
     return tableName;
   }
 
+  /**
+   * Retrieves a result from the storage through a transaction with the specified {@link Get}
+   * command with a primary key and returns the result. Note that the current implementation clears
+   * the specified projections in {@link Get} to project all the values including metadata properly,
+   * but the behavior might be changed at some point.
+   *
+   * @param get a {@code Get} command
+   * @return an {@code Optional} with the returned result
+   * @throws CrudException if the operation failed
+   */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     setTargetToIfNot(get);
@@ -86,6 +109,17 @@ public class ConsensusCommit implements DistributedTransaction {
     }
   }
 
+  /**
+   * Retrieves results from the storage through a transaction with the specified {@link Scan}
+   * command with a partition key and returns a list of {@link Result}. Results can be filtered by
+   * specifying a range of clustering keys. Note that the current implementation clears the
+   * specified projections in {@link Scan} to project all the values including metadata properly,
+   * but the behavior might be changed at some point.
+   *
+   * @param scan a {@code Scan} command
+   * @return a list of {@link Result}
+   * @throws CrudException if the operation failed
+   */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     setTargetToIfNot(scan);
