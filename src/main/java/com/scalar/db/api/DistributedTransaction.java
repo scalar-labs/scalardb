@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface DistributedTransaction {
 
   /**
-   * Returns the ID of a transaction. Whether or not it can retunr the tranasctino ID is dependent
+   * Returns the ID of a transaction. Whether or not it can return the transaction ID is dependent
    * on underlining implementations.
    *
    * @return the ID of a transaction
