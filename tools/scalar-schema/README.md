@@ -18,8 +18,9 @@ $ lein uberjar
 ### Create tables
 ```console
 # For Cosmos DB
-$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
+  - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
 
 ```console
@@ -49,7 +50,7 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --jdbc -j <JDBC URL> -
 ### Delete tables
 ```console
 # For Cosmos DB
-$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json -D
+$ java -jar target/scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
 ```
 
 ```console

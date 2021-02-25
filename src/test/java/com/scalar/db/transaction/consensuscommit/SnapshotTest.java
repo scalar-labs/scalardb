@@ -133,6 +133,16 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Put preparePutWithPartitionKeyOnly() {
+    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    return new Put(partitionKey)
+        .withConsistency(Consistency.LINEARIZABLE)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME)
+        .withValue(new TextValue(ANY_NAME_3, ANY_TEXT_3))
+        .withValue(new TextValue(ANY_NAME_4, ANY_TEXT_4));
+  }
+
   private Delete prepareDelete() {
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
@@ -679,5 +689,203 @@ public class SnapshotTest {
     assertThat(deleteSet.size()).isEqualTo(0);
     assertThat(writeSet.size()).isEqualTo(1);
     assertThat(writeSet.get(putKey)).isEqualTo(put);
+  }
+
+  @Test
+  public void get_ScanGivenAndPutInWriteSetNotOverlappedWithScan_ShouldNotThrowException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // ["text3", "text4"]
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), true)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_4)), true)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
+
+    // Assert
+    assertThat(thrown).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    Put put = preparePutWithPartitionKeyOnly();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan = prepareScan();
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+  }
+
+  @Test
+  public void
+      get_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // (-infinite, infinite)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act Assert
+    Throwable thrown = catchThrowable(() -> snapshot.get(scan));
+
+    // Assert
+    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+  }
+
+  @Test
+  public void
+      get_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan1 =
+        prepareScan()
+            // ["text1", "text3"]
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1)), true)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), true);
+    Scan scan2 =
+        prepareScan()
+            // ["text2", "text3"]
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), true)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), true);
+    Scan scan3 =
+        prepareScan()
+            // ["text1", "text2"]
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1)), true)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), true);
+    Scan scan4 =
+        prepareScan()
+            // ("text2", "text3"]
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), true);
+    Scan scan5 =
+        prepareScan()
+            // ["text1", "text2")
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1)), true)
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false);
+
+    // Act Assert
+    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
+    Throwable thrown4 = catchThrowable(() -> snapshot.get(scan4));
+    Throwable thrown5 = catchThrowable(() -> snapshot.get(scan5));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown3).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown4).doesNotThrowAnyException();
+    assertThat(thrown5).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      get_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan1 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // (-infinite, "text3"]
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), true)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    Scan scan2 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // (-infinite, "text2"]
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), true)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    Scan scan3 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // (-infinite, "text2")
+            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act Assert
+    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown3).doesNotThrowAnyException();
+  }
+
+  @Test
+  public void
+      get_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SNAPSHOT);
+    // "text2"
+    Put put = preparePut();
+    Snapshot.Key putKey = new Snapshot.Key(put);
+    snapshot.put(putKey, put);
+    Scan scan1 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // ["text1", infinite)
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1)), true)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    Scan scan2 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // ["text2", infinite)
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), true)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    Scan scan3 =
+        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            // ("text2", infinite)
+            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act Assert
+    Throwable thrown1 = catchThrowable(() -> snapshot.get(scan1));
+    Throwable thrown2 = catchThrowable(() -> snapshot.get(scan2));
+    Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
+
+    // Assert
+    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown3).doesNotThrowAnyException();
   }
 }

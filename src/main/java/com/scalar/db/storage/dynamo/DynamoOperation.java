@@ -56,12 +56,20 @@ public class DynamoOperation {
 
   @Nonnull
   public String getIndexName(String clusteringKey) {
-    return getTableName() + "." + INDEX_NAME_PREFIX + "." + clusteringKey;
+    return operation.forUnprefixedFullTableName().get()
+        + "."
+        + INDEX_NAME_PREFIX
+        + "."
+        + clusteringKey;
   }
 
   @Nonnull
   public String getGlobalIndexName(String column) {
-    return getTableName() + "." + GLOBAL_INDEX_NAME_PREFIX + "." + column;
+    return operation.forUnprefixedFullTableName().get()
+        + "."
+        + GLOBAL_INDEX_NAME_PREFIX
+        + "."
+        + column;
   }
 
   @Nonnull
