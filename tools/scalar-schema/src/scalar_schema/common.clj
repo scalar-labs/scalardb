@@ -76,8 +76,8 @@
   (if prefix
     (map (fn [table-schema]
            (assoc table-schema
-                  :database
-                  (str prefix \_ (:database table-schema))))
+                  :prefix prefix
+                  :database (str prefix \_ (:database table-schema))))
          schema)
     schema))
 
