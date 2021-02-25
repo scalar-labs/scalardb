@@ -58,9 +58,7 @@ public interface DistributedTransaction {
 
   /**
    * Retrieves a result from the storage through a transaction with the specified {@link Get}
-   * command with a primary key and returns the result. The partition keys names and the clustering
-   * keys names of the storage should be automatically added to get's projections if it is not
-   * specified.
+   * command with a primary key and returns the result.
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
@@ -71,8 +69,7 @@ public interface DistributedTransaction {
   /**
    * Retrieves results from the storage through a transaction with the specified {@link Scan}
    * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys. The partition keys names and the clustering keys names
-   * of the storage should be automatically added to scan's projections if it is not specified.
+   * specifying a range of clustering keys.
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
