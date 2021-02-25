@@ -98,12 +98,12 @@ public abstract class Operation {
   }
 
   /**
-   * Returns the full table name without the prefix with the namespace for this operation
+   * Returns the full table name with the unprefixed namespace for this operation
    *
    * @return an {@code Optional} with the returned the full table name
    */
   @Nonnull
-  public Optional<String> forFullTableNameWithoutPrefix() {
+  public Optional<String> forUnprefixedFullTableName() {
     return forFullTableName(false);
   }
 
