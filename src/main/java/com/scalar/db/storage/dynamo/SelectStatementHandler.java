@@ -227,10 +227,10 @@ public class SelectStatementHandler extends StatementHandler {
     String endKeyName = end.get(end.size() - 1).getName();
 
     if (startKeyName.equals(endKeyName)) {
-      conditions.add(startKeyName + DynamoOperation.RANGE_CONDITION);
       if (!scan.getStartInclusive() || !scan.getEndInclusive()) {
-        LOGGER.warn("DynamoDB does NOT support the range scan with the exclusiving option");
+        throw new IllegalArgumentException("DynamoDB does NOT support scan with exclusive range.");
       }
+      conditions.add(startKeyName + DynamoOperation.RANGE_CONDITION);
       return true;
     } else {
       return false;
