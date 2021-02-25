@@ -31,11 +31,8 @@ import java.util.Optional;
  * readability.)
  *
  * <pre>{@code
- * Config config = ConfigLoader.load(YAML_CONFIG);
- * Credential credential = new Credential(USERNAME, PASSWORD);
- *
- * // In case of Cassandra storage implementation.
- * DistributedStorage storage = new Cassandra(config, credential);
+ * Injector injector = Guice.createInjector(new StorageModule(new DatabaseConfig(props)));
+ * StorageService storage = injector.getInstance(StorageService.class);
  *
  * // Uses NAMESPACE and TABLE by default in this storage instance.
  * storage.with(NAMESPACE, TABLE);
@@ -95,8 +92,7 @@ public interface DistributedStorage {
 
   /**
    * Retrieves a result from the storage with the specified {@link Get} command with a primary key
-   * and returns the result. The partition keys names and the clustering keys names of the storage
-   * should be automatically added to get's projections if it is not specified.
+   * and returns the result.
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
@@ -107,9 +103,7 @@ public interface DistributedStorage {
   /**
    * Retrieves results from the storage with the specified {@link Scan} command with a partition key
    * and returns {@link Scanner} to iterate the results within the partition. Results can be
-   * filtered by specifying a range of clustering keys. The partition keys names and the clustering
-   * keys names of the storage should be automatically added to scan's projections if it is not
-   * specified.
+   * filtered by specifying a range of clustering keys.
    *
    * @param scan a {@code Scan} command
    * @return {@link Scanner} to iterate results
