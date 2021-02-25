@@ -1,10 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -18,7 +13,6 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -26,20 +20,16 @@ import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.stream.IntStream;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -55,6 +45,21 @@ import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.IntStream;
+
+import static com.scalar.db.api.ConditionalExpression.Operator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class DynamoIntegrationTest {
   private static final String METADATA_KEYSPACE = "scalardb";
@@ -79,7 +84,7 @@ public class DynamoIntegrationTest {
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     // truncate the TABLE
     ScanRequest request =
         ScanRequest.builder().tableName(KEYSPACE + "." + TABLE).consistentRead(true).build();
@@ -1211,8 +1216,27 @@ public class DynamoIntegrationTest {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    client = DynamoDbClient.builder().build();
+  public static void setUpBeforeClass() {
+    String endpointOverride =
+        System.getProperty("scalardb.dynamo.endpoint_override", "http://localhost:8000");
+    String region = System.getProperty("scalardb.dynamo.region", "us-west-2");
+    String accessKeyId = System.getProperty("scalardb.dynamo.access_key_id", "fakeMyKeyId");
+    String secretAccessKey =
+        System.getProperty("scalardb.dynamo.secret_access_key", "fakeSecretAccessKey");
+
+    DynamoDbClientBuilder builder = DynamoDbClient.builder();
+
+    if (endpointOverride != null) {
+      builder.endpointOverride(URI.create(endpointOverride));
+    }
+
+    client =
+        builder
+            .region(Region.of(region))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+            .build();
     createMetadataTable();
     createUserTable();
 
@@ -1224,23 +1248,15 @@ public class DynamoIntegrationTest {
     }
     insertMetadata();
 
-    // reuse this storage instance through the tests
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, System.getenv("AWS_REGION"));
-    props.setProperty(DatabaseConfig.USERNAME, System.getenv("AWS_ACCESS_KEY_ID"));
-    props.setProperty(DatabaseConfig.PASSWORD, System.getenv("AWS_SECRET_ACCESS_KEY"));
-    storage = new Dynamo(new DatabaseConfig(props));
+    storage = new Dynamo(client);
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    DeleteTableRequest request =
-        DeleteTableRequest.builder().tableName(KEYSPACE + "." + TABLE).build();
-    client.deleteTable(request);
+  public static void tearDownAfterClass() {
+    client.deleteTable(DeleteTableRequest.builder().tableName(KEYSPACE + "." + TABLE).build());
 
-    request =
-        DeleteTableRequest.builder().tableName(METADATA_KEYSPACE + "." + METADATA_TABLE).build();
-    client.deleteTable(request);
+    client.deleteTable(
+        DeleteTableRequest.builder().tableName(METADATA_KEYSPACE + "." + METADATA_TABLE).build());
 
     client.close();
   }
@@ -1341,9 +1357,13 @@ public class DynamoIntegrationTest {
   private static void insertMetadata() {
     Map<String, AttributeValue> values = new HashMap<>();
     values.put("table", AttributeValue.builder().s(KEYSPACE + "." + TABLE).build());
-    values.put("partitionKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME1)).build());
-    values.put("clusteringKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME4)).build());
-    values.put("secondaryIndex", AttributeValue.builder().ss(Arrays.asList(COL_NAME3)).build());
+    values.put(
+        "partitionKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME1)).build());
+    values.put(
+        "clusteringKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME4)).build());
+    values.put(
+        "secondaryIndex",
+        AttributeValue.builder().ss(Collections.singletonList(COL_NAME3)).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());

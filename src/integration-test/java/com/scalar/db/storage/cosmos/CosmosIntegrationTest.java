@@ -1,12 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
-import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
@@ -25,11 +20,18 @@ import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,11 +39,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.IntStream;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class CosmosIntegrationTest {
   private static final String METADATA_KEYSPACE = "scalardb";
@@ -50,9 +51,6 @@ public class CosmosIntegrationTest {
   private static final String TABLE = "test_table";
   private static final String STORED_PROCEDURE_PATH =
       "tools/scalar-schema/stored_procedure/mutate.js";
-  private static final String CONTACT_POINT = System.getenv("COSMOS_URI");
-  private static final String USERNAME = "not_used";
-  private static final String PASSWORD = System.getenv("COSMOS_PASSWORD");
   private static final String COL_NAME1 = "c1";
   private static final String COL_NAME2 = "c2";
   private static final String COL_NAME3 = "c3";
@@ -83,10 +81,9 @@ public class CosmosIntegrationTest {
   }
 
   @After
-  public void tearDown() throws Exception {
-    // delete the TABLE
-    CosmosContainer container = client.getDatabase(KEYSPACE).getContainer(TABLE);
-    container.delete();
+  public void tearDown() {
+    // delete the table
+    client.getDatabase(KEYSPACE).getContainer(TABLE).delete();
   }
 
   @Test
@@ -620,39 +617,25 @@ public class CosmosIntegrationTest {
     return new Delete(partitionKey, clusteringKey);
   }
 
-  private List<Delete> prepareDeletes() {
-    List<Delete> deletes = new ArrayList<>();
-
-    IntStream.range(0, 5)
-        .forEach(
-            i -> {
-              IntStream.range(0, 3)
-                  .forEach(
-                      j -> {
-                        Key partitionKey = new Key(new IntValue(COL_NAME1, i));
-                        Key clusteringKey = new Key(new IntValue(COL_NAME4, j));
-                        Delete delete = new Delete(partitionKey, clusteringKey);
-                        deletes.add(delete);
-                      });
-            });
-
-    return deletes;
-  }
-
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setUpBeforeClass() {
+    String contactPoint = System.getProperty("scalardb.cosmos.uri");
+    String username = System.getProperty("scalardb.cosmos.username");
+    String password = System.getProperty("scalardb.cosmos.password");
+
     client =
-        new CosmosClientBuilder().endpoint(CONTACT_POINT).key(PASSWORD).directMode().buildClient();
+        new CosmosClientBuilder().endpoint(contactPoint).key(password).directMode().buildClient();
 
     client.createDatabaseIfNotExists(METADATA_KEYSPACE);
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(METADATA_TABLE, "/id");
     client.getDatabase(METADATA_KEYSPACE).createContainerIfNotExists(containerProperties);
+
     CosmosTableMetadata metadata = new CosmosTableMetadata();
     metadata.setId(KEYSPACE + "." + TABLE);
-    metadata.setPartitionKeyNames(new HashSet<>(Arrays.asList(COL_NAME1)));
-    metadata.setClusteringKeyNames(new HashSet<>(Arrays.asList(COL_NAME4)));
-    metadata.setSecondaryIndexNames(new HashSet<>(Arrays.asList(COL_NAME3)));
+    metadata.setPartitionKeyNames(new HashSet<>(Collections.singletonList(COL_NAME1)));
+    metadata.setClusteringKeyNames(new HashSet<>(Collections.singletonList(COL_NAME4)));
+    metadata.setSecondaryIndexNames(new HashSet<>(Collections.singletonList(COL_NAME3)));
     Map<String, String> columns = new HashMap<>();
     columns.put(COL_NAME1, "int");
     columns.put(COL_NAME2, "text");
@@ -664,26 +647,24 @@ public class CosmosIntegrationTest {
 
     client.createDatabaseIfNotExists(KEYSPACE);
 
-    client.close();
-
     // reuse this storage instance through the tests
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
+    props.setProperty(DatabaseConfig.USERNAME, username);
+    props.setProperty(DatabaseConfig.PASSWORD, password);
     storage = new Cosmos(new DatabaseConfig(props));
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass() {
     CosmosDatabase database = client.getDatabase(METADATA_KEYSPACE);
-    CosmosContainer container = database.getContainer(METADATA_TABLE);
-    container.delete();
+    database.getContainer(METADATA_TABLE).delete();
     database.delete();
 
-    database = client.getDatabase(KEYSPACE);
-    database.delete();
+    client.getDatabase(KEYSPACE).delete();
 
     client.close();
+
+    storage.close();
   }
 }
