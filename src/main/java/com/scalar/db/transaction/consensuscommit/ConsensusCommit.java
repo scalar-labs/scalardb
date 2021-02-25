@@ -87,6 +87,16 @@ public class ConsensusCommit implements DistributedTransaction {
     return tableName;
   }
 
+  /**
+   * Retrieves a result from the storage through a transaction with the specified {@link Get}
+   * command with a primary key and returns the result. Note that the current implementation clears
+   * the specified projections in {@link Get} to project all the values including metadata properly,
+   * but the behavior might be changed at some point.
+   *
+   * @param get a {@code Get} command
+   * @return an {@code Optional} with the returned result
+   * @throws CrudException if the operation failed
+   */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     setTargetToIfNot(get);
@@ -99,6 +109,17 @@ public class ConsensusCommit implements DistributedTransaction {
     }
   }
 
+  /**
+   * Retrieves results from the storage through a transaction with the specified {@link Scan}
+   * command with a partition key and returns a list of {@link Result}. Results can be filtered by
+   * specifying a range of clustering keys. Note that the current implementation clears the
+   * specified projections in {@link Scan} to project all the values including metadata properly,
+   * but the behavior might be changed at some point.
+   *
+   * @param scan a {@code Scan} command
+   * @return a list of {@link Result}
+   * @throws CrudException if the operation failed
+   */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     setTargetToIfNot(scan);
