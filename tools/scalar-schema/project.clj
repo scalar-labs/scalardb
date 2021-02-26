@@ -12,7 +12,12 @@
                  [software.amazon.awssdk/applicationautoscaling "2.14.24"]
                  [com.google.guava/guava "24.1-jre"]
                  [cc.qbits/alia "4.3.3"]
-                 [cc.qbits/hayt "4.1.0"]]
+                 [cc.qbits/hayt "4.1.0"]
+                 [org.clojure/java.jdbc "0.7.12"]
+                 [mysql/mysql-connector-java "8.0.22"]
+                 [org.postgresql/postgresql "42.2.18"]
+                 [com.oracle.database.jdbc/ojdbc8-production "19.8.0.0" :extension "pom"]
+                 [com.microsoft.sqlserver/mssql-jdbc "8.4.1.jre8"]]
   :resource-paths ["resources"
                    "stored_procedure"]
   :java-source-paths ["java/src"]
