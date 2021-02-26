@@ -13,6 +13,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -132,7 +133,7 @@ public class AccountBalanceTransferHandler {
     }
   }
 
-  private List<Result> readRecords() {
+  private List<Result> readRecords() throws TransactionException {
     List<Result> results = new ArrayList<>();
     DistributedTransaction transaction = manager.start();
     IntStream.range(0, context.getNumAccounts())
@@ -180,11 +181,15 @@ public class AccountBalanceTransferHandler {
               i -> {
                 int startId = start + NUM_PER_TX * i;
                 int endId = Math.min(start + NUM_PER_TX * (i + 1), end);
-                populateWithTx(startId, endId);
+                try {
+                  populateWithTx(startId, endId);
+                } catch (TransactionException e) {
+                  throw new RuntimeException(e);
+                }
               });
     }
 
-    private void populateWithTx(int startId, int endId) {
+    private void populateWithTx(int startId, int endId) throws TransactionException {
       int retries = 0;
       while (true) {
         if (retries++ > 10) {
@@ -203,7 +208,11 @@ public class AccountBalanceTransferHandler {
                                 new Put(partitionKey, clusteringKey)
                                     .withConsistency(Consistency.LINEARIZABLE)
                                     .withValue(new IntValue(BALANCE, DEFAULT_INITIAL_BALANCE));
-                            transaction.put(put);
+                            try {
+                              transaction.put(put);
+                            } catch (CrudException e) {
+                              throw new RuntimeException(e);
+                            }
                           });
                 });
         try {
@@ -252,8 +261,7 @@ public class AccountBalanceTransferHandler {
       }
     }
 
-    private void transfer(List<Integer> ids, int amount)
-        throws CrudException, CommitException, UnknownTransactionStatusException {
+    private void transfer(List<Integer> ids, int amount) throws TransactionException {
       DistributedTransaction transaction = manager.start();
       this.currentTxId = transaction.getId();
 

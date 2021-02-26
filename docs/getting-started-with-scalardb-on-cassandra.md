@@ -30,7 +30,7 @@ scalar.db.contact_port=9042
 scalar.db.username=cassandra
 scalar.db.password=cassandra
 
-# Storage implementation. Either cassandra or cosmos can be set. Default storage is cassandra.
+# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
 #scalar.db.storage=cassandra
 ```
 

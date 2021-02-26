@@ -9,6 +9,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,7 +59,11 @@ public class DatabaseConfig {
     load();
   }
 
-  private void load() {
+  public Properties getProperties() {
+    return props;
+  }
+
+  protected void load() {
     checkNotNull(props.getProperty(CONTACT_POINTS));
     checkNotNull(props.getProperty(USERNAME));
     checkNotNull(props.getProperty(PASSWORD));
@@ -85,6 +90,9 @@ public class DatabaseConfig {
           break;
         case "dynamo":
           storageClass = Dynamo.class;
+          break;
+        case "jdbc":
+          storageClass = JdbcDatabase.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");

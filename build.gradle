@@ -9,21 +9,37 @@ repositories {
 }
 
 sourceSets {
-    integrationTest {
+    integrationTestCassandra {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            exclude '**/com/scalar/db/storage/cosmos/CosmosIntegrationTest.java'
-            exclude '**/com/scalar/db/storage/dynamo/DynamoIntegrationTest.java'
+            include '**/com/scalar/db/storage/cassandra/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCassandraIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbc {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/jdbc/*.java'
+            include '**/com/scalar/db/storage/jdbc/test/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
+            include '**/com/scalar/db/transaction/jdbc/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
 }
 
 configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
+    integrationTestCassandraCompile.extendsFrom testCompile
+    integrationTestCassandraRuntime.extendsFrom testRuntime
+    integrationTestJdbcCompile.extendsFrom testCompile
+    integrationTestJdbcRuntime.extendsFrom testRuntime
 }
 
 def awssdkVersion = "2.14.24"
@@ -34,6 +50,12 @@ dependencies {
     compile group: 'org.jooq', name: 'jooq', version: '3.13.2'
     compile group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
     compile group: 'software.amazon.awssdk', name:'core', version: "${awssdkVersion}"
+
+    compile group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
+    compile group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
+    compile group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
+    compile group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
 
     compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     compile group: 'com.google.inject', name: 'guice', version: '4.2.0'
@@ -67,17 +89,28 @@ task testJar(type: Jar) {
   from sourceSets.test.output
 }
 
-task integrationTest(type: Test) {
-    description = 'Runs the integration tests.'
+task integrationTestCassandra(type: Test) {
+    description = 'Runs the integration tests for Cassandra.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
+    classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
-    shouldRunAfter test
+}
+
+task integrationTestJdbc(type: Test) {
+    description = 'Runs the integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
 }
 
 // build should not depend on the integration tests
-check.dependsOn -= integrationTest
+check.dependsOn -= integrationTestCassandra
+check.dependsOn -= integrationTestJdbc
 
 task copyTestJarsToTestLib(type: Copy) {
     from configurations.testCompile
