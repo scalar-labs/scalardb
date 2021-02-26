@@ -6,6 +6,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
+import com.azure.cosmos.models.ThroughputProperties;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cosmos.Cosmos;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.spy;
 
 public class ConsensusCommitWithCosmosIntegrationTest {
   private static final String METADATA_DATABASE = "scalardb";
-  private static final String METADATA_TABLE = "metadata";
+  private static final String METADATA_CONTAINER = "metadata";
   private static final String STORED_PROCEDURE_PATH =
       "tools/scalar-schema/stored_procedure/mutate.js";
   private static final String PARTITION_KEY = "/concatenatedPartitionKey";
@@ -54,7 +55,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
     CosmosStoredProcedureProperties properties =
         new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
 
-    // create the coordinator table
+    // create the coordinator container
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(Coordinator.TABLE, PARTITION_KEY);
     client
@@ -66,7 +67,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
         .getScripts()
         .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
 
-    // create the user table
+    // create the user containers
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
       containerProperties = new CosmosContainerProperties(table, PARTITION_KEY);
       client.getDatabase(database(NAMESPACE)).createContainerIfNotExists(containerProperties);
@@ -96,7 +97,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
 
   @After
   public void tearDown() {
-    // delete the tables
+    // delete the containers
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
       client.getDatabase(database(NAMESPACE)).getContainer(table).delete();
     }
@@ -523,17 +524,20 @@ public class ConsensusCommitWithCosmosIntegrationTest {
     client =
         new CosmosClientBuilder().endpoint(contactPoint).key(password).directMode().buildClient();
 
-    // create a database and a table for metadata
-    client.createDatabaseIfNotExists(database(METADATA_DATABASE));
+    ThroughputProperties autoscaledThroughput =
+        ThroughputProperties.createAutoscaledThroughput(1000);
+
+    // create the metadata database and container
+    client.createDatabaseIfNotExists(database(METADATA_DATABASE), autoscaledThroughput);
     CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(METADATA_TABLE, "/id");
+        new CosmosContainerProperties(METADATA_CONTAINER, "/id");
     client.getDatabase(database(METADATA_DATABASE)).createContainerIfNotExists(containerProperties);
 
-    // create a database for the coordinator table
-    client.createDatabaseIfNotExists(database(Coordinator.NAMESPACE));
+    // create the the coordinator database
+    client.createDatabaseIfNotExists(database(Coordinator.NAMESPACE), autoscaledThroughput);
 
-    // create a database for the user tables
-    client.createDatabaseIfNotExists(database(NAMESPACE));
+    // create the user database
+    client.createDatabaseIfNotExists(database(NAMESPACE), autoscaledThroughput);
 
     // insert metadata for the coordinator table
     CosmosTableMetadata metadata = new CosmosTableMetadata();
@@ -548,7 +552,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
     metadata.setColumns(columns);
     client
         .getDatabase(database(METADATA_DATABASE))
-        .getContainer(METADATA_TABLE)
+        .getContainer(METADATA_CONTAINER)
         .createItem(metadata);
 
     // insert metadata for the user tables
@@ -578,7 +582,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
       metadata.setColumns(columns);
       client
           .getDatabase(database(METADATA_DATABASE))
-          .getContainer(METADATA_TABLE)
+          .getContainer(METADATA_CONTAINER)
           .createItem(metadata);
     }
 
@@ -594,7 +598,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
   @AfterClass
   public static void tearDownAfterClass() {
     CosmosDatabase database = client.getDatabase(database(METADATA_DATABASE));
-    database.getContainer(METADATA_TABLE).delete();
+    database.getContainer(METADATA_CONTAINER).delete();
     database.delete();
 
     client.getDatabase(database(Coordinator.NAMESPACE)).delete();

@@ -6,6 +6,7 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
+import com.azure.cosmos.models.ThroughputProperties;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -46,9 +47,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class CosmosIntegrationTest {
   private static final String METADATA_DATABASE = "scalardb";
-  private static final String METADATA_TABLE = "metadata";
+  private static final String METADATA_CONTAINER = "metadata";
   private static final String DATABASE = "integration_testing";
-  private static final String TABLE = "test_table";
+  private static final String CONTAINER = "test_table";
   private static final String STORED_PROCEDURE_PATH =
       "tools/scalar-schema/stored_procedure/mutate.js";
   private static final String COL_NAME1 = "c1";
@@ -63,8 +64,9 @@ public class CosmosIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
+    // create the user container
     CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(TABLE, PARTITION_KEY);
+        new CosmosContainerProperties(CONTAINER, PARTITION_KEY);
     client.getDatabase(database(DATABASE)).createContainerIfNotExists(containerProperties);
 
     String storedProcedure =
@@ -74,23 +76,23 @@ public class CosmosIntegrationTest {
         new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
     client
         .getDatabase(database(DATABASE))
-        .getContainer(TABLE)
+        .getContainer(CONTAINER)
         .getScripts()
         .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
 
-    storage.with(DATABASE, TABLE);
+    storage.with(DATABASE, CONTAINER);
   }
 
   @After
   public void tearDown() {
-    // delete the table
-    client.getDatabase(database(DATABASE)).getContainer(TABLE).delete();
+    // delete the container
+    client.getDatabase(database(DATABASE)).getContainer(CONTAINER).delete();
   }
 
   @Test
   public void operation_NoTargetGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with(null, TABLE);
+    storage.with(null, CONTAINER);
     Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
     Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
     Get get = new Get(partitionKey, clusteringKey);
@@ -640,13 +642,18 @@ public class CosmosIntegrationTest {
     client =
         new CosmosClientBuilder().endpoint(contactPoint).key(password).directMode().buildClient();
 
-    client.createDatabaseIfNotExists(database(METADATA_DATABASE));
+    ThroughputProperties autoscaledThroughput =
+        ThroughputProperties.createAutoscaledThroughput(1000);
+
+    // create the metadata database and container
+    client.createDatabaseIfNotExists(database(METADATA_DATABASE), autoscaledThroughput);
     CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(METADATA_TABLE, "/id");
+        new CosmosContainerProperties(METADATA_CONTAINER, "/id");
     client.getDatabase(database(METADATA_DATABASE)).createContainerIfNotExists(containerProperties);
 
+    // insert metadata
     CosmosTableMetadata metadata = new CosmosTableMetadata();
-    metadata.setId(table(DATABASE, TABLE));
+    metadata.setId(table(DATABASE, CONTAINER));
     metadata.setPartitionKeyNames(new HashSet<>(Collections.singletonList(COL_NAME1)));
     metadata.setClusteringKeyNames(new HashSet<>(Collections.singletonList(COL_NAME4)));
     metadata.setSecondaryIndexNames(new HashSet<>(Collections.singletonList(COL_NAME3)));
@@ -659,10 +666,11 @@ public class CosmosIntegrationTest {
     metadata.setColumns(columns);
     client
         .getDatabase(database(METADATA_DATABASE))
-        .getContainer(METADATA_TABLE)
+        .getContainer(METADATA_CONTAINER)
         .createItem(metadata);
 
-    client.createDatabaseIfNotExists(database(DATABASE));
+    // create the user database
+    client.createDatabaseIfNotExists(database(DATABASE), autoscaledThroughput);
 
     // reuse this storage instance through the tests
     Properties props = new Properties();
@@ -676,7 +684,7 @@ public class CosmosIntegrationTest {
   @AfterClass
   public static void tearDownAfterClass() {
     CosmosDatabase database = client.getDatabase(database(METADATA_DATABASE));
-    database.getContainer(METADATA_TABLE).delete();
+    database.getContainer(METADATA_CONTAINER).delete();
     database.delete();
 
     client.getDatabase(database(DATABASE)).delete();
