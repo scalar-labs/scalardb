@@ -123,7 +123,9 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.username=${COSMOS_USERNAME} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
+      - run:
+          no_output_timeout: 30m
+          command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.username=${COSMOS_USERNAME} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
 
       - run:
           name: Save Gradle integration test reports
