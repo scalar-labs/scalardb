@@ -1,7 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -15,11 +14,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.storage.Utility;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -27,6 +21,14 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * A storage implementation with DynamoDB for {@link DistributedStorage}
@@ -42,7 +44,7 @@ public class Dynamo implements DistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
-  private Optional<String> namespacePrefix;
+  private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
@@ -68,6 +70,19 @@ public class Dynamo implements DistributedStorage {
     this.batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("DynamoDB object is created properly.");
+  }
+
+  @VisibleForTesting
+  public Dynamo(DynamoDbClient client, Optional<String> namespacePrefix) {
+    this.client = client;
+    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
+    namespace = Optional.empty();
+    tableName = Optional.empty();
+    metadataManager = new TableMetadataManager(client, this.namespacePrefix);
+    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
+    putStatementHandler = new PutStatementHandler(client, metadataManager);
+    deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
+    batchHandler = new BatchHandler(client, metadataManager);
   }
 
   @Override

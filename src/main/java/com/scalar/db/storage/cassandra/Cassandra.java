@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
@@ -18,14 +16,17 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.storage.Utility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * A storage implementation with Cassandra for {@link DistributedStorage}.
@@ -39,7 +40,7 @@ public class Cassandra implements DistributedStorage {
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
   private final Map<String, CassandraTableMetadata> tableMetadataMap;
-  private Optional<String> namespacePrefix;
+  private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 

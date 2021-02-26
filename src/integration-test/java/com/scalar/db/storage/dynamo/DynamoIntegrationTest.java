@@ -1,10 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -18,7 +13,6 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -26,20 +20,16 @@ import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.stream.IntStream;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -56,10 +46,25 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.IntStream;
+
+import static com.scalar.db.api.ConditionalExpression.Operator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 public class DynamoIntegrationTest {
-  private static final String METADATA_KEYSPACE = "scalardb";
+  private static final String METADATA_DATABASE = "scalardb";
   private static final String METADATA_TABLE = "metadata";
-  private static final String KEYSPACE = "integration_testing";
+  private static final String DATABASE = "integration_testing";
   private static final String TABLE = "test_table";
   private static final String PARTITION_KEY = "concatenatedPartitionKey";
   private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
@@ -68,6 +73,7 @@ public class DynamoIntegrationTest {
   private static final String COL_NAME3 = "c3";
   private static final String COL_NAME4 = "c4";
   private static final String COL_NAME5 = "c5";
+  private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
   private static DistributedStorage storage;
   private List<Put> puts;
@@ -75,14 +81,14 @@ public class DynamoIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-    storage.with(KEYSPACE, TABLE);
+    storage.with(DATABASE, TABLE);
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     // truncate the TABLE
     ScanRequest request =
-        ScanRequest.builder().tableName(KEYSPACE + "." + TABLE).consistentRead(true).build();
+        ScanRequest.builder().tableName(table(DATABASE, TABLE)).consistentRead(true).build();
     client
         .scan(request)
         .items()
@@ -92,7 +98,7 @@ public class DynamoIntegrationTest {
               key.put(PARTITION_KEY, i.get(PARTITION_KEY));
               key.put(CLUSTERING_KEY, i.get(CLUSTERING_KEY));
               DeleteItemRequest delRequest =
-                  DeleteItemRequest.builder().tableName(KEYSPACE + "." + TABLE).key(key).build();
+                  DeleteItemRequest.builder().tableName(table(DATABASE, TABLE)).key(key).build();
               client.deleteItem(delRequest);
             });
   }
@@ -310,36 +316,6 @@ public class DynamoIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
     assertThat(actual.get(1).getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-  }
-
-  @Test
-  public void scan_ScanWithStartExclusiveRangeGiven_ShouldReturnInclusiveResults()
-      throws ExecutionException {
-    // Arrange
-    populateRecords();
-    int pKey = 0;
-
-    // Act
-    Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
-            .withStart(new Key(new IntValue(COL_NAME4, 0)), false)
-            .withEnd(new Key(new IntValue(COL_NAME4, 2)), true);
-
-    List<Result> actual = storage.scan(scan).all();
-    // verify
-    assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(actual.get(1).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(2).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
   }
 
   @Test
@@ -1211,8 +1187,28 @@ public class DynamoIntegrationTest {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    client = DynamoDbClient.builder().build();
+  public static void setUpBeforeClass() {
+    String endpointOverride =
+        System.getProperty("scalardb.dynamo.endpoint_override", "http://localhost:8000");
+    String region = System.getProperty("scalardb.dynamo.region", "us-west-2");
+    String accessKeyId = System.getProperty("scalardb.dynamo.access_key_id", "fakeMyKeyId");
+    String secretAccessKey =
+        System.getProperty("scalardb.dynamo.secret_access_key", "fakeSecretAccessKey");
+    namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
+
+    DynamoDbClientBuilder builder = DynamoDbClient.builder();
+
+    if (endpointOverride != null) {
+      builder.endpointOverride(URI.create(endpointOverride));
+    }
+
+    client =
+        builder
+            .region(Region.of(region))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
+            .build();
     createMetadataTable();
     createUserTable();
 
@@ -1224,23 +1220,23 @@ public class DynamoIntegrationTest {
     }
     insertMetadata();
 
-    // reuse this storage instance through the tests
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, System.getenv("AWS_REGION"));
-    props.setProperty(DatabaseConfig.USERNAME, System.getenv("AWS_ACCESS_KEY_ID"));
-    props.setProperty(DatabaseConfig.PASSWORD, System.getenv("AWS_SECRET_ACCESS_KEY"));
-    storage = new Dynamo(new DatabaseConfig(props));
+    storage = new Dynamo(client, namespacePrefix);
+  }
+
+  private static String namespacePrefix() {
+    return namespacePrefix.map(n -> n + "_").orElse("");
+  }
+
+  private static String table(String database, String table) {
+    return namespacePrefix() + database + "." + table;
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    DeleteTableRequest request =
-        DeleteTableRequest.builder().tableName(KEYSPACE + "." + TABLE).build();
-    client.deleteTable(request);
+  public static void tearDownAfterClass() {
+    client.deleteTable(DeleteTableRequest.builder().tableName(table(DATABASE, TABLE)).build());
 
-    request =
-        DeleteTableRequest.builder().tableName(METADATA_KEYSPACE + "." + METADATA_TABLE).build();
-    client.deleteTable(request);
+    client.deleteTable(
+        DeleteTableRequest.builder().tableName(table(METADATA_DATABASE, METADATA_TABLE)).build());
 
     client.close();
   }
@@ -1253,7 +1249,7 @@ public class DynamoIntegrationTest {
                     .readCapacityUnits(10L)
                     .writeCapacityUnits(10L)
                     .build())
-            .tableName(KEYSPACE + "." + TABLE);
+            .tableName(table(DATABASE, TABLE));
 
     List<AttributeDefinition> attributeDefinitions = new ArrayList<>();
     attributeDefinitions.add(
@@ -1292,7 +1288,7 @@ public class DynamoIntegrationTest {
         KeySchemaElement.builder().attributeName(COL_NAME4).keyType(KeyType.RANGE).build());
     LocalSecondaryIndex index =
         LocalSecondaryIndex.builder()
-            .indexName(KEYSPACE + "." + TABLE + ".index." + COL_NAME4)
+            .indexName(DATABASE + "." + TABLE + ".index." + COL_NAME4)
             .keySchema(indexKeys)
             .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
             .build();
@@ -1303,7 +1299,7 @@ public class DynamoIntegrationTest {
         KeySchemaElement.builder().attributeName(COL_NAME3).keyType(KeyType.HASH).build());
     GlobalSecondaryIndex globalIndex =
         GlobalSecondaryIndex.builder()
-            .indexName(KEYSPACE + "." + TABLE + ".global_index." + COL_NAME3)
+            .indexName(DATABASE + "." + TABLE + ".global_index." + COL_NAME3)
             .keySchema(globalIndexKeys)
             .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
             .provisionedThroughput(
@@ -1332,7 +1328,7 @@ public class DynamoIntegrationTest {
                     .readCapacityUnits(10L)
                     .writeCapacityUnits(10L)
                     .build())
-            .tableName(METADATA_KEYSPACE + "." + METADATA_TABLE)
+            .tableName(table(METADATA_DATABASE, METADATA_TABLE))
             .build();
 
     client.createTable(request);
@@ -1340,10 +1336,14 @@ public class DynamoIntegrationTest {
 
   private static void insertMetadata() {
     Map<String, AttributeValue> values = new HashMap<>();
-    values.put("table", AttributeValue.builder().s(KEYSPACE + "." + TABLE).build());
-    values.put("partitionKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME1)).build());
-    values.put("clusteringKey", AttributeValue.builder().ss(Arrays.asList(COL_NAME4)).build());
-    values.put("secondaryIndex", AttributeValue.builder().ss(Arrays.asList(COL_NAME3)).build());
+    values.put("table", AttributeValue.builder().s(table(DATABASE, TABLE)).build());
+    values.put(
+        "partitionKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME1)).build());
+    values.put(
+        "clusteringKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME4)).build());
+    values.put(
+        "secondaryIndex",
+        AttributeValue.builder().ss(Collections.singletonList(COL_NAME3)).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());
@@ -1352,8 +1352,11 @@ public class DynamoIntegrationTest {
     columns.put(COL_NAME5, AttributeValue.builder().s("boolean").build());
     values.put("columns", AttributeValue.builder().m(columns).build());
 
-    String table = METADATA_KEYSPACE + "." + METADATA_TABLE;
-    PutItemRequest request = PutItemRequest.builder().tableName(table).item(values).build();
+    PutItemRequest request =
+        PutItemRequest.builder()
+            .tableName(table(METADATA_DATABASE, METADATA_TABLE))
+            .item(values)
+            .build();
 
     client.putItem(request);
   }

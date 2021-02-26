@@ -20,6 +20,28 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+    integrationTestCosmos {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/cosmos/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCosmosIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestDynamo {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/dynamo/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithDynamoIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
     integrationTestJdbc {
         java {
             compileClasspath += main.output + test.output
@@ -38,6 +60,10 @@ sourceSets {
 configurations {
     integrationTestCassandraCompile.extendsFrom testCompile
     integrationTestCassandraRuntime.extendsFrom testRuntime
+    integrationTestCosmosCompile.extendsFrom testCompile
+    integrationTestCosmosRuntime.extendsFrom testRuntime
+    integrationTestDynamoCompile.extendsFrom testCompile
+    integrationTestDynamoRuntime.extendsFrom testRuntime
     integrationTestJdbcCompile.extendsFrom testCompile
     integrationTestJdbcRuntime.extendsFrom testRuntime
 }
@@ -97,6 +123,28 @@ task integrationTestCassandra(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
+task integrationTestCosmos(type: Test) {
+    description = 'Runs the integration tests for Cosmos DB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
+    classpath = sourceSets.integrationTestCosmos.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
+task integrationTestDynamo(type: Test) {
+    description = 'Runs the integration tests for DynamoDB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
+    classpath = sourceSets.integrationTestDynamo.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
 task integrationTestJdbc(type: Test) {
     description = 'Runs the integration tests for a JDBC database.'
     group = 'verification'
@@ -110,6 +158,8 @@ task integrationTestJdbc(type: Test) {
 
 // build should not depend on the integration tests
 check.dependsOn -= integrationTestCassandra
+check.dependsOn -= integrationTestCosmos
+check.dependsOn -= integrationTestDynamo
 check.dependsOn -= integrationTestJdbc
 
 task copyTestJarsToTestLib(type: Copy) {
