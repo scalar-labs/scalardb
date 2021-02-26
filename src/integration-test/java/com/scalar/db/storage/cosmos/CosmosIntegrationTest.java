@@ -643,7 +643,7 @@ public class CosmosIntegrationTest {
         new CosmosClientBuilder().endpoint(contactPoint).key(password).directMode().buildClient();
 
     ThroughputProperties autoscaledThroughput =
-        ThroughputProperties.createAutoscaledThroughput(1000);
+        ThroughputProperties.createAutoscaledThroughput(4000);
 
     // create the metadata database and container
     client.createDatabaseIfNotExists(database(METADATA_DATABASE), autoscaledThroughput);
