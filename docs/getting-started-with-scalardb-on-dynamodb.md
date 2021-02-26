@@ -2,6 +2,7 @@
 
 ## Overview
 This document briefly explains how you can get started with Scalar DB on DynamoDB with a simple electronic money application.
+
 ## Install prerequisites
 
 Scalar DB is written in Java. So the following software is required to run it.
@@ -25,7 +26,7 @@ scalar.db.contact_points=<REGION>
 scalar.db.username=<AWS_ACCESS_KEY_ID>
 scalar.db.password=<AWS_ACCESS_SECRET_KEY>
 
-# Storage implementation. Either cassandra or cosmos or dynamo can be set. Default storage is cassandra.
+# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
 scalar.db.storage=dynamo
 ```
 

@@ -6,9 +6,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
-import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -21,15 +19,14 @@ import java.util.Optional;
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   private final TransactionService service;
 
-  public ElectronicMoneyWithTransaction() throws IOException  {
+  public ElectronicMoneyWithTransaction() throws IOException {
     Injector injector = Guice.createInjector(new TransactionModule(dbConfig));
     service = injector.getInstance(TransactionService.class);
     service.with(NAMESPACE, TABLENAME);
   }
 
   @Override
-  public void charge(String id, int amount)
-      throws CrudException, CommitException, UnknownTransactionStatusException {
+  public void charge(String id, int amount) throws TransactionException {
     // Start a transaction
     DistributedTransaction tx = service.start();
 
@@ -53,8 +50,7 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   }
 
   @Override
-  public void pay(String fromId, String toId, int amount)
-      throws CrudException, CommitException, UnknownTransactionStatusException {
+  public void pay(String fromId, String toId, int amount) throws TransactionException {
     // Start a transaction
     DistributedTransaction tx = service.start();
 

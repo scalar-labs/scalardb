@@ -1,5 +1,6 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -84,7 +85,7 @@ public interface DistributedTransaction {
    *
    * @param put a {@code Put} command
    */
-  void put(Put put);
+  void put(Put put) throws CrudException;
 
   /**
    * Inserts/Updates multiple entries to the storage through a transaction with the specified list
@@ -93,7 +94,7 @@ public interface DistributedTransaction {
    *
    * @param puts a list of {@code Put} commands
    */
-  void put(List<Put> puts);
+  void put(List<Put> puts) throws CrudException;
 
   /**
    * Deletes an entry from the storage through a transaction with the specified {@link Delete}
@@ -102,7 +103,7 @@ public interface DistributedTransaction {
    *
    * @param delete a {@code Delete} command
    */
-  void delete(Delete delete);
+  void delete(Delete delete) throws CrudException;
 
   /**
    * Deletes entries from the storage through a transaction with the specified list of {@link
@@ -111,7 +112,7 @@ public interface DistributedTransaction {
    *
    * @param deletes a list of {@code Delete} commands
    */
-  void delete(List<Delete> deletes);
+  void delete(List<Delete> deletes) throws CrudException;
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
@@ -119,7 +120,7 @@ public interface DistributedTransaction {
    *
    * @param mutations a list of {@code Mutation} commands
    */
-  void mutate(List<? extends Mutation> mutations);
+  void mutate(List<? extends Mutation> mutations) throws CrudException;
 
   /**
    * Commits a transaction.
@@ -130,5 +131,5 @@ public interface DistributedTransaction {
   void commit() throws CommitException, UnknownTransactionStatusException;
 
   /** Aborts a transaction. */
-  void abort();
+  void abort() throws AbortException;
 }

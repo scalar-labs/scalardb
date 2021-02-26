@@ -3,6 +3,13 @@
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
 version: 2
+workflows:
+  version: 2
+  build_and_tests:
+    jobs:
+      - build
+      - integration-test-for-jdbc-mysql
+      - integration-test-for-jdbc-postgresql
 jobs:
   build:
     docker:
@@ -60,7 +67,7 @@ jobs:
 
       # run tests!
       - run: gradle test
-      - run: gradle integrationTest
+      - run: gradle integrationTestCassandra
 
       - run:
           name: Run short verification
@@ -82,12 +89,121 @@ jobs:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTest /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
           path: /tmp/gradle_test_reports
           destination: gradle_test_reports
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-jdbc-mysql:
+    docker:
+      # specify the version you desire here
+      - image: circleci/openjdk:8-jdk
+      - image: circleci/mysql:8.0.23
+        environment:
+          MYSQL_ROOT_PASSWORD: mysql
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: gradle dependencies
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+
+      # run tests with the namespace prefix!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-jdbc-postgresql:
+    docker:
+      # specify the version you desire here
+      - image: circleci/openjdk:8-jdk
+      - image: circleci/postgres:9.6.9-alpine
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: gradle dependencies
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      # run tests with the namespace prefix!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+          when: always
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
