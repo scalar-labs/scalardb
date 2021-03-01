@@ -4,9 +4,12 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosItemRequestOptions;
+import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.ThroughputProperties;
+import com.azure.cosmos.util.CosmosPagedIterable;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -27,6 +30,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -64,29 +68,23 @@ public class CosmosIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-    // create the user container
-    CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(CONTAINER, PARTITION_KEY);
-    client.getDatabase(database(DATABASE)).createContainerIfNotExists(containerProperties);
-
-    String storedProcedure =
-        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
-            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
-    CosmosStoredProcedureProperties properties =
-        new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
-    client
-        .getDatabase(database(DATABASE))
-        .getContainer(CONTAINER)
-        .getScripts()
-        .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
-
     storage.with(DATABASE, CONTAINER);
   }
 
   @After
   public void tearDown() {
-    // delete the container
-    client.getDatabase(database(DATABASE)).getContainer(CONTAINER).delete();
+    // delete all the data of the container
+    CosmosPagedIterable<Record> records =
+        client
+            .getDatabase(database(DATABASE))
+            .getContainer(CONTAINER)
+            .queryItems("SELECT * FROM Record", new CosmosQueryRequestOptions(), Record.class);
+    for (Record record : records) {
+      client
+          .getDatabase(database(DATABASE))
+          .getContainer(CONTAINER)
+          .deleteItem(record, new CosmosItemRequestOptions());
+    }
   }
 
   @Test
@@ -633,7 +631,7 @@ public class CosmosIntegrationTest {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() {
+  public static void setUpBeforeClass() throws IOException {
     String contactPoint = System.getProperty("scalardb.cosmos.uri");
     String username = System.getProperty("scalardb.cosmos.username");
     String password = System.getProperty("scalardb.cosmos.password");
@@ -671,6 +669,21 @@ public class CosmosIntegrationTest {
 
     // create the user database
     client.createDatabaseIfNotExists(database(DATABASE), autoscaledThroughput);
+
+    // create the user container
+    containerProperties = new CosmosContainerProperties(CONTAINER, PARTITION_KEY);
+    client.getDatabase(database(DATABASE)).createContainerIfNotExists(containerProperties);
+
+    String storedProcedure =
+        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
+            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
+    CosmosStoredProcedureProperties properties =
+        new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
+    client
+        .getDatabase(database(DATABASE))
+        .getContainer(CONTAINER)
+        .getScripts()
+        .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
 
     // reuse this storage instance through the tests
     Properties props = new Properties();

@@ -4,13 +4,17 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosItemRequestOptions;
+import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.ThroughputProperties;
+import com.azure.cosmos.util.CosmosPagedIterable;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosTableMetadata;
+import com.scalar.db.storage.cosmos.Record;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -49,35 +53,6 @@ public class ConsensusCommitWithCosmosIntegrationTest {
 
   @Before
   public void setUp() throws IOException {
-    String storedProcedure =
-        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
-            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
-    CosmosStoredProcedureProperties properties =
-        new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
-
-    // create the coordinator container
-    CosmosContainerProperties containerProperties =
-        new CosmosContainerProperties(Coordinator.TABLE, PARTITION_KEY);
-    client
-        .getDatabase(database(Coordinator.NAMESPACE))
-        .createContainerIfNotExists(containerProperties);
-    client
-        .getDatabase(database(Coordinator.NAMESPACE))
-        .getContainer(Coordinator.TABLE)
-        .getScripts()
-        .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
-
-    // create the user containers
-    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      containerProperties = new CosmosContainerProperties(table, PARTITION_KEY);
-      client.getDatabase(database(NAMESPACE)).createContainerIfNotExists(containerProperties);
-      client
-          .getDatabase(database(NAMESPACE))
-          .getContainer(table)
-          .getScripts()
-          .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
-    }
-
     DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
@@ -99,10 +74,24 @@ public class ConsensusCommitWithCosmosIntegrationTest {
   public void tearDown() {
     // delete the containers
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      client.getDatabase(database(NAMESPACE)).getContainer(table).delete();
+      truncateContainer(database(NAMESPACE), table);
     }
 
-    client.getDatabase(database(Coordinator.NAMESPACE)).getContainer(Coordinator.TABLE).delete();
+    truncateContainer(database(Coordinator.NAMESPACE), Coordinator.TABLE);
+  }
+
+  private void truncateContainer(String database, String container) {
+    CosmosPagedIterable<Record> records =
+        client
+            .getDatabase(database)
+            .getContainer(container)
+            .queryItems("SELECT * FROM Record", new CosmosQueryRequestOptions(), Record.class);
+    for (Record record : records) {
+      client
+          .getDatabase(database)
+          .getContainer(container)
+          .deleteItem(record, new CosmosItemRequestOptions());
+    }
   }
 
   @Test
@@ -515,7 +504,7 @@ public class ConsensusCommitWithCosmosIntegrationTest {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() {
+  public static void setUpBeforeClass() throws IOException {
     String contactPoint = System.getProperty("scalardb.cosmos.uri");
     String username = System.getProperty("scalardb.cosmos.username");
     String password = System.getProperty("scalardb.cosmos.password");
@@ -533,11 +522,37 @@ public class ConsensusCommitWithCosmosIntegrationTest {
         new CosmosContainerProperties(METADATA_CONTAINER, "/id");
     client.getDatabase(database(METADATA_DATABASE)).createContainerIfNotExists(containerProperties);
 
-    // create the the coordinator database
+    String storedProcedure =
+        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
+            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
+    CosmosStoredProcedureProperties properties =
+        new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
+
+    // create the the coordinator database amd container
     client.createDatabaseIfNotExists(database(Coordinator.NAMESPACE), autoscaledThroughput);
 
-    // create the user database
+    containerProperties = new CosmosContainerProperties(Coordinator.TABLE, PARTITION_KEY);
+    client
+        .getDatabase(database(Coordinator.NAMESPACE))
+        .createContainerIfNotExists(containerProperties);
+    client
+        .getDatabase(database(Coordinator.NAMESPACE))
+        .getContainer(Coordinator.TABLE)
+        .getScripts()
+        .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
+
+    // create the user database and containers
     client.createDatabaseIfNotExists(database(NAMESPACE), autoscaledThroughput);
+
+    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
+      containerProperties = new CosmosContainerProperties(table, PARTITION_KEY);
+      client.getDatabase(database(NAMESPACE)).createContainerIfNotExists(containerProperties);
+      client
+          .getDatabase(database(NAMESPACE))
+          .getContainer(table)
+          .getScripts()
+          .createStoredProcedure(properties, new CosmosStoredProcedureRequestOptions());
+    }
 
     // insert metadata for the coordinator table
     CosmosTableMetadata metadata = new CosmosTableMetadata();
