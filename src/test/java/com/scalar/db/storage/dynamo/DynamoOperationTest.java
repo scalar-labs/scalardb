@@ -1,22 +1,24 @@
 package com.scalar.db.storage.dynamo;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.when;
-
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
 
 public class DynamoOperationTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -35,9 +37,9 @@ public class DynamoOperationTest {
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 

@@ -1,32 +1,33 @@
 package com.scalar.db.storage.cassandra;
 
+import com.datastax.driver.core.ColumnMetadata;
+import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.Row;
+import com.scalar.db.io.IntValue;
+import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
+import com.scalar.db.io.Value;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Row;
-import com.google.common.collect.ImmutableSet;
-import com.scalar.db.io.IntValue;
-import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 /** */
 public class ResultImplTest {
@@ -174,7 +175,7 @@ public class ResultImplTest {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
     when(CassandraTableMetadata.getPartitionKeyNames())
-        .thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_COLUMN_NAME_2)));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -191,7 +192,8 @@ public class ResultImplTest {
   public void getPartitionKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getPartitionKeyNames()).thenReturn(ImmutableSet.of("another"));
+    when(CassandraTableMetadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList("another")));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -207,7 +209,7 @@ public class ResultImplTest {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
     when(CassandraTableMetadata.getClusteringKeyNames())
-        .thenReturn(ImmutableSet.of(ANY_COLUMN_NAME_2));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_COLUMN_NAME_2)));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 
@@ -224,7 +226,8 @@ public class ResultImplTest {
   public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of("another"));
+    when(CassandraTableMetadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList("another")));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
 

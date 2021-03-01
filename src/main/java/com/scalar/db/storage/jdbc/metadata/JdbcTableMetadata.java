@@ -116,12 +116,12 @@ public class JdbcTableMetadata implements TableMetadata {
   }
 
   @Override
-  public Set<String> getPartitionKeyNames() {
+  public LinkedHashSet<String> getPartitionKeyNames() {
     return new LinkedHashSet<>(partitionKeys);
   }
 
   @Override
-  public Set<String> getClusteringKeyNames() {
+  public LinkedHashSet<String> getClusteringKeyNames() {
     return new LinkedHashSet<>(partitionKeys);
   }
 

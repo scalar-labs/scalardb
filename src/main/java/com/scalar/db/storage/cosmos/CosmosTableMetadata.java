@@ -1,15 +1,15 @@
 package com.scalar.db.storage.cosmos;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
+import com.scalar.db.storage.ImmutableLinkedHashSet;
 import com.scalar.db.storage.TableMetadata;
-import java.util.Collections;
+
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
 
 /**
  * A metadata class for a table of Scalar DB to know the type of each column
@@ -18,10 +18,10 @@ import java.util.SortedSet;
  */
 public class CosmosTableMetadata implements TableMetadata {
   private String id;
-  private SortedSet<String> partitionKeyNames;
-  private SortedSet<String> clusteringKeyNames;
-  private SortedSet<String> secondaryIndexNames;
-  private SortedMap<String, String> columns;
+  private LinkedHashSet<String> partitionKeyNames;
+  private LinkedHashSet<String> clusteringKeyNames;
+  private Set<String> secondaryIndexNames;
+  private Map<String, String> columns;
   private List<String> keyNames;
 
   public CosmosTableMetadata() {}
@@ -30,12 +30,12 @@ public class CosmosTableMetadata implements TableMetadata {
     this.id = id;
   }
 
-  public void setPartitionKeyNames(Set<String> partitionKeyNames) {
-    this.partitionKeyNames = ImmutableSortedSet.copyOf(partitionKeyNames);
+  public void setPartitionKeyNames(List<String> partitionKeyNames) {
+    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames).immutable();
   }
 
-  public void setClusteringKeyNames(Set<String> clusteringKeyNames) {
-    this.clusteringKeyNames = ImmutableSortedSet.copyOf(clusteringKeyNames);
+  public void setClusteringKeyNames(List<String> clusteringKeyNames) {
+    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames).immutable();
   }
 
   public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
@@ -43,7 +43,7 @@ public class CosmosTableMetadata implements TableMetadata {
   }
 
   public void setColumns(Map<String, String> columns) {
-    this.columns = ImmutableSortedMap.copyOf(columns);
+    this.columns = ImmutableMap.copyOf(columns);
   }
 
   public void setKeyNames(List<String> keyNames) {
@@ -55,22 +55,22 @@ public class CosmosTableMetadata implements TableMetadata {
   }
 
   @Override
-  public Set<String> getPartitionKeyNames() {
-    return ImmutableSortedSet.copyOf(partitionKeyNames);
+  public LinkedHashSet<String> getPartitionKeyNames() {
+    return partitionKeyNames;
   }
 
   @Override
-  public Set<String> getClusteringKeyNames() {
-    return ImmutableSortedSet.copyOf(clusteringKeyNames);
+  public LinkedHashSet<String> getClusteringKeyNames() {
+    return clusteringKeyNames;
   }
 
   @Override
   public Set<String> getSecondaryIndexNames() {
-    return ImmutableSortedSet.copyOf(secondaryIndexNames);
+    return secondaryIndexNames;
   }
 
   public Map<String, String> getColumns() {
-    return Collections.unmodifiableSortedMap(columns);
+    return columns;
   }
 
   public List<String> getKeyNames() {
