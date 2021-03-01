@@ -123,20 +123,16 @@ public class TestEnv implements Closeable {
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
   private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
 
-  private final String jdbcUrl;
-  private final String username;
-  private final String password;
-
   private final RdbEngine rdbEngine;
   private final BasicDataSource dataSource;
-  private JdbcDatabaseConfig config;
+  private final JdbcDatabaseConfig config;
 
   private final List<JdbcTableMetadata> metadataList;
 
   public TestEnv() {
-    jdbcUrl = System.getProperty(PROP_JDBC_URL);
-    username = System.getProperty(PROP_JDBC_USERNAME, "");
-    password = System.getProperty(PROP_JDBC_PASSWORD, "");
+    String jdbcUrl = System.getProperty(PROP_JDBC_URL);
+    String username = System.getProperty(PROP_JDBC_USERNAME, "");
+    String password = System.getProperty(PROP_JDBC_PASSWORD, "");
     Optional<String> namespacePrefix =
         Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
 

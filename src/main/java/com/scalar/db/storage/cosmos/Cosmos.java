@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
@@ -19,12 +17,15 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.storage.Utility;
-import java.util.List;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
+import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * A storage implementation with Cosmos DB for {@link DistributedStorage}
@@ -43,7 +44,7 @@ public class Cosmos implements DistributedStorage {
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
-  private Optional<String> namespacePrefix;
+  private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 

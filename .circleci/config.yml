@@ -8,22 +8,18 @@ workflows:
   build_and_tests:
     jobs:
       - build
+      - integration-test-for-cosmos
+      - integration-test-for-dynamo
       - integration-test-for-jdbc-mysql
       - integration-test-for-jdbc-postgresql
 jobs:
   build:
     docker:
-      # specify the version you desire here
       - image: circleci/openjdk:8-jdk
       - image: cassandra:3.11
         environment:
           MAX_HEAP_SIZE: 2048m
           HEAP_NEWSIZE: 512m
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
 
     working_directory: ~/repo
 
@@ -100,18 +96,9 @@ jobs:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
 
-  integration-test-for-jdbc-mysql:
+  integration-test-for-cosmos:
     docker:
-      # specify the version you desire here
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
-        environment:
-          MYSQL_ROOT_PASSWORD: mysql
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
 
     working_directory: ~/repo
 
@@ -130,7 +117,89 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 
-      - run: gradle dependencies
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.username=${COSMOS_USERNAME} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-dynamo:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: amazon/dynamodb-local:1.15.0
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestDynamo
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-jdbc-mysql:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: circleci/mysql:8.0.23
+        environment:
+          MYSQL_ROOT_PASSWORD: mysql
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
 
       - save_cache:
           paths:
@@ -156,17 +225,11 @@ jobs:
 
   integration-test-for-jdbc-postgresql:
     docker:
-      # specify the version you desire here
       - image: circleci/openjdk:8-jdk
       - image: circleci/postgres:9.6.9-alpine
         environment:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
 
     working_directory: ~/repo
 
@@ -184,8 +247,6 @@ jobs:
             - v1-dependencies-{{ checksum "build.gradle" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
-      - run: gradle dependencies
 
       - save_cache:
           paths:
