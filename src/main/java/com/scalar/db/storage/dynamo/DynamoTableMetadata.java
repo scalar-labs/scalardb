@@ -60,13 +60,11 @@ public class DynamoTableMetadata implements TableMetadata {
   }
 
   private void convert(Map<String, AttributeValue> metadata) {
-    this.partitionKeyNames =
-        new ImmutableLinkedHashSet<>(metadata.get(PARTITION_KEY).ss()).immutable();
+    this.partitionKeyNames = ImmutableLinkedHashSet.of(metadata.get(PARTITION_KEY).ss());
     if (metadata.containsKey(CLUSTERING_KEY)) {
-      this.clusteringKeyNames =
-          new ImmutableLinkedHashSet<>(metadata.get(CLUSTERING_KEY).ss()).immutable();
+      this.clusteringKeyNames = ImmutableLinkedHashSet.of(metadata.get(CLUSTERING_KEY).ss());
     } else {
-      this.clusteringKeyNames = new ImmutableLinkedHashSet<>();
+      this.clusteringKeyNames = ImmutableLinkedHashSet.of();
     }
     if (metadata.containsKey(SECONDARY_INDEX)) {
       this.secondayIndexNames = ImmutableSortedSet.copyOf(metadata.get(SECONDARY_INDEX).ss());

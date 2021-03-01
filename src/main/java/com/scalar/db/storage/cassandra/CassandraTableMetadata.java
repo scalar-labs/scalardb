@@ -19,17 +19,15 @@ public class CassandraTableMetadata implements TableMetadata {
 
   public CassandraTableMetadata(com.datastax.driver.core.TableMetadata tableMetadata) {
     this.partitionKeyNames =
-        new ImmutableLinkedHashSet<>(
-                tableMetadata.getPartitionKey().stream()
-                    .map(ColumnMetadata::getName)
-                    .collect(Collectors.toSet()))
-            .immutable();
+        ImmutableLinkedHashSet.of(
+            tableMetadata.getPartitionKey().stream()
+                .map(ColumnMetadata::getName)
+                .collect(Collectors.toList()));
     this.clusteringColumnNames =
-        new ImmutableLinkedHashSet<>(
-                tableMetadata.getClusteringColumns().stream()
-                    .map(ColumnMetadata::getName)
-                    .collect(Collectors.toSet()))
-            .immutable();
+        ImmutableLinkedHashSet.of(
+            tableMetadata.getClusteringColumns().stream()
+                .map(ColumnMetadata::getName)
+                .collect(Collectors.toList()));
     this.indexNames =
         ImmutableSet.copyOf(
             tableMetadata.getIndexes().stream()

@@ -7,23 +7,10 @@ public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
 
   private boolean immutable;
 
-  public ImmutableLinkedHashSet() {}
+  private ImmutableLinkedHashSet() {}
 
-  public ImmutableLinkedHashSet(Collection<E> c) {
+  private ImmutableLinkedHashSet(Collection<? extends E> c) {
     super(c);
-  }
-
-  public ImmutableLinkedHashSet(int initialCapacity, float loadFactor) {
-    super(initialCapacity, loadFactor);
-  }
-
-  public ImmutableLinkedHashSet(int initialCapacity) {
-    super(initialCapacity);
-  }
-
-  public ImmutableLinkedHashSet<E> immutable() {
-    immutable = true;
-    return this;
   }
 
   @Override
@@ -70,7 +57,24 @@ public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
   public void clear() {
     if (!immutable) {
       super.clear();
+      return;
     }
     throw new UnsupportedOperationException();
+  }
+
+  private void makeImmutable() {
+    immutable = true;
+  }
+
+  public static <E> ImmutableLinkedHashSet<E> of() {
+    ImmutableLinkedHashSet<E> ret = new ImmutableLinkedHashSet<>();
+    ret.makeImmutable();
+    return ret;
+  }
+
+  public static <E> ImmutableLinkedHashSet<E> of(Collection<? extends E> c) {
+    ImmutableLinkedHashSet<E> ret = new ImmutableLinkedHashSet<>(c);
+    ret.makeImmutable();
+    return ret;
   }
 }

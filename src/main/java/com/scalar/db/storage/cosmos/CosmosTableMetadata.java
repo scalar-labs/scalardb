@@ -31,11 +31,11 @@ public class CosmosTableMetadata implements TableMetadata {
   }
 
   public void setPartitionKeyNames(List<String> partitionKeyNames) {
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames).immutable();
+    this.partitionKeyNames = ImmutableLinkedHashSet.of(partitionKeyNames);
   }
 
   public void setClusteringKeyNames(List<String> clusteringKeyNames) {
-    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames).immutable();
+    this.clusteringKeyNames = ImmutableLinkedHashSet.of(clusteringKeyNames);
   }
 
   public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
