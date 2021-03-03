@@ -5,12 +5,15 @@ import java.util.LinkedHashSet;
 
 public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
 
-  private boolean immutable;
+  private final boolean immutable;
 
-  private ImmutableLinkedHashSet() {}
+  public ImmutableLinkedHashSet() {
+    immutable = true;
+  }
 
-  private ImmutableLinkedHashSet(Collection<? extends E> c) {
+  public ImmutableLinkedHashSet(Collection<? extends E> c) {
     super(c);
+    immutable = true;
   }
 
   @Override
@@ -60,21 +63,5 @@ public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
       return;
     }
     throw new UnsupportedOperationException();
-  }
-
-  private void makeImmutable() {
-    immutable = true;
-  }
-
-  public static <E> ImmutableLinkedHashSet<E> of() {
-    ImmutableLinkedHashSet<E> ret = new ImmutableLinkedHashSet<>();
-    ret.makeImmutable();
-    return ret;
-  }
-
-  public static <E> ImmutableLinkedHashSet<E> of(Collection<? extends E> c) {
-    ImmutableLinkedHashSet<E> ret = new ImmutableLinkedHashSet<>(c);
-    ret.makeImmutable();
-    return ret;
   }
 }
