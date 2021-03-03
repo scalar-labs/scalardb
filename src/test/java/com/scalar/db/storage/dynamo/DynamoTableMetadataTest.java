@@ -1,12 +1,13 @@
 package com.scalar.db.storage.dynamo;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Test;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.Test;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class DynamoTableMetadataTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -22,7 +23,13 @@ public class DynamoTableMetadataTest {
     metadata.put(
         "table", AttributeValue.builder().s(ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME).build());
     metadata.put(
-        "partitionKey", AttributeValue.builder().ss(Arrays.asList(ANY_NAME_1, ANY_NAME_2)).build());
+        "partitionKey",
+        AttributeValue.builder()
+            .l(
+                Arrays.asList(
+                    AttributeValue.builder().s(ANY_NAME_1).build(),
+                    AttributeValue.builder().s(ANY_NAME_2).build()))
+            .build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
     columns.put(ANY_NAME_2, AttributeValue.builder().s("int").build());
@@ -51,8 +58,12 @@ public class DynamoTableMetadataTest {
     Map<String, AttributeValue> metadata = new HashMap<>();
     metadata.put(
         "table", AttributeValue.builder().s(ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME).build());
-    metadata.put("partitionKey", AttributeValue.builder().ss(Arrays.asList(ANY_NAME_1)).build());
-    metadata.put("clusteringKey", AttributeValue.builder().ss(Arrays.asList(ANY_NAME_2)).build());
+    metadata.put(
+        "partitionKey",
+        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_1).build()).build());
+    metadata.put(
+        "clusteringKey",
+        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_2).build()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
     columns.put(ANY_NAME_2, AttributeValue.builder().s("int").build());

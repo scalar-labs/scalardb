@@ -28,7 +28,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -557,8 +556,8 @@ public class ConsensusCommitWithCosmosIntegrationTest {
     // insert metadata for the coordinator table
     CosmosTableMetadata metadata = new CosmosTableMetadata();
     metadata.setId(table(Coordinator.NAMESPACE, Coordinator.TABLE));
-    metadata.setPartitionKeyNames(new HashSet<>(Collections.singletonList(Attribute.ID)));
-    metadata.setClusteringKeyNames(Collections.emptySet());
+    metadata.setPartitionKeyNames(Collections.singletonList(Attribute.ID));
+    metadata.setClusteringKeyNames(Collections.emptyList());
     metadata.setSecondaryIndexNames(Collections.emptySet());
     Map<String, String> columns = new HashMap<>();
     columns.put(Attribute.ID, "text");
@@ -575,9 +574,9 @@ public class ConsensusCommitWithCosmosIntegrationTest {
       metadata = new CosmosTableMetadata();
       metadata.setId(table(NAMESPACE, table));
       metadata.setPartitionKeyNames(
-          new HashSet<>(Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_ID)));
+          Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_ID));
       metadata.setClusteringKeyNames(
-          new HashSet<>(Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_TYPE)));
+          Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_TYPE));
       metadata.setSecondaryIndexNames(Collections.emptySet());
       columns = new HashMap<>();
       columns.put(ConsensusCommitIntegrationTest.ACCOUNT_ID, "int");

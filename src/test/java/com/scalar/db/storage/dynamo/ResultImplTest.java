@@ -1,11 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
 import com.scalar.db.api.Get;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -16,15 +10,22 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import org.junit.Before;
+import org.junit.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class ResultImplTest {
   private static final String ANY_NAME_1 = "name1";
@@ -47,8 +48,12 @@ public class ResultImplTest {
   @Before
   public void setUp() throws Exception {
     Map<String, AttributeValue> metadataMap = new HashMap<>();
-    metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
-    metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2).build());
+    metadataMap.put(
+        "partitionKey",
+        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_1).build()).build());
+    metadataMap.put(
+        "clusteringKey",
+        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_2).build()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
     columns.put(ANY_NAME_2, AttributeValue.builder().s("text").build());

@@ -1,13 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Get;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -18,13 +11,21 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class ResultImplTest {
   private static final String ANY_ID_1 = "id1";
@@ -52,8 +53,8 @@ public class ResultImplTest {
   public void setUp() throws Exception {
     metadata = new CosmosTableMetadata();
     metadata.setId("ks.tbl");
-    metadata.setPartitionKeyNames(ImmutableSet.of(ANY_NAME_1));
-    metadata.setClusteringKeyNames(ImmutableSet.of(ANY_NAME_2));
+    metadata.setPartitionKeyNames(Collections.singletonList(ANY_NAME_1));
+    metadata.setClusteringKeyNames(Collections.singletonList(ANY_NAME_2));
     ImmutableMap<String, String> columns =
         ImmutableMap.<String, String>builder()
             .put(ANY_NAME_1, "text")

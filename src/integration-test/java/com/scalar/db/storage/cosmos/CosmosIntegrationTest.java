@@ -652,8 +652,8 @@ public class CosmosIntegrationTest {
     // insert metadata
     CosmosTableMetadata metadata = new CosmosTableMetadata();
     metadata.setId(table(DATABASE, CONTAINER));
-    metadata.setPartitionKeyNames(new HashSet<>(Collections.singletonList(COL_NAME1)));
-    metadata.setClusteringKeyNames(new HashSet<>(Collections.singletonList(COL_NAME4)));
+    metadata.setPartitionKeyNames(Collections.singletonList(COL_NAME1));
+    metadata.setClusteringKeyNames(Collections.singletonList(COL_NAME4));
     metadata.setSecondaryIndexNames(new HashSet<>(Collections.singletonList(COL_NAME3)));
     Map<String, String> columns = new HashMap<>();
     columns.put(COL_NAME1, "int");

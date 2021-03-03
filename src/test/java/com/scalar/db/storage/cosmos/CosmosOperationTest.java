@@ -1,15 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.azure.cosmos.models.PartitionKey;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
@@ -21,6 +13,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class CosmosOperationTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -60,7 +62,7 @@ public class CosmosOperationTest {
   @Test
   public void isPrimaryKeySpecified_PrimaryKeyWithoutClusteringKeyGiven_ShouldReturnTrue() {
     // Arrange
-    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of());
+    when(metadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
 
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
@@ -77,7 +79,8 @@ public class CosmosOperationTest {
   @Test
   public void isPrimaryKeySpecified_PrimaryKeyWithClusteringKeyGiven_ShouldReturnTrue() {
     // Arrange
-    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of(ANY_NAME_2));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
@@ -98,7 +101,8 @@ public class CosmosOperationTest {
   @Test
   public void isPrimaryKeySpecified_NoClusteringKeyGiven_ShouldReturnTrue() {
     // Arrange
-    when(metadata.getClusteringKeyNames()).thenReturn(ImmutableSet.of(ANY_NAME_2));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
@@ -117,7 +121,7 @@ public class CosmosOperationTest {
   public void getConcatenatedPartitionKey_MultipleKeysGiven_ShouldReturnConcatenatedPartitionKey() {
     // Arrange
     when(metadata.getPartitionKeyNames())
-        .thenReturn(ImmutableSortedSet.of(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3));
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
         new Key(
@@ -139,7 +143,7 @@ public class CosmosOperationTest {
       getConcatenatedPartitionKey_WrongPartitionKeyGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     when(metadata.getPartitionKeyNames())
-        .thenReturn(ImmutableSortedSet.of(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3));
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new TextValue(ANY_NAME_2, ANY_TEXT_2));
@@ -158,7 +162,7 @@ public class CosmosOperationTest {
   public void getCosmosPartitionKey_MultipleKeysGiven_ShouldReturnPartitionKey() {
     // Arrange
     when(metadata.getPartitionKeyNames())
-        .thenReturn(ImmutableSortedSet.of(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3));
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
         new Key(

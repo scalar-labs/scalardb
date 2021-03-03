@@ -16,8 +16,10 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
@@ -62,11 +64,11 @@ public class SelectStatementHandlerTest {
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getSecondaryIndexNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_3)));
+        .thenReturn(new HashSet<>(Collections.singletonList(ANY_NAME_3)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 

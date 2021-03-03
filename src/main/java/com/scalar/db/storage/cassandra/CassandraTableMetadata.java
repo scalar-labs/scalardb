@@ -3,28 +3,31 @@ package com.scalar.db.storage.cassandra;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.IndexMetadata;
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.storage.ImmutableLinkedHashSet;
 import com.scalar.db.storage.TableMetadata;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class CassandraTableMetadata implements TableMetadata {
-  private final Set<String> partitionKeyNames;
-  private final Set<String> clusteringColumnNames;
+  private final LinkedHashSet<String> partitionKeyNames;
+  private final LinkedHashSet<String> clusteringColumnNames;
   private final Set<String> indexNames;
 
   public CassandraTableMetadata(com.datastax.driver.core.TableMetadata tableMetadata) {
     this.partitionKeyNames =
-        ImmutableSet.copyOf(
+        new ImmutableLinkedHashSet<>(
             tableMetadata.getPartitionKey().stream()
                 .map(ColumnMetadata::getName)
-                .collect(Collectors.toSet()));
+                .collect(Collectors.toList()));
     this.clusteringColumnNames =
-        ImmutableSet.copyOf(
+        new ImmutableLinkedHashSet<>(
             tableMetadata.getClusteringColumns().stream()
                 .map(ColumnMetadata::getName)
-                .collect(Collectors.toSet()));
+                .collect(Collectors.toList()));
     this.indexNames =
         ImmutableSet.copyOf(
             tableMetadata.getIndexes().stream()
@@ -33,12 +36,12 @@ public class CassandraTableMetadata implements TableMetadata {
   }
 
   @Override
-  public Set<String> getPartitionKeyNames() {
+  public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
 
   @Override
-  public Set<String> getClusteringKeyNames() {
+  public LinkedHashSet<String> getClusteringKeyNames() {
     return clusteringColumnNames;
   }
 

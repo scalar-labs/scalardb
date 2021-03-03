@@ -1,5 +1,6 @@
 package com.scalar.db.storage;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -11,21 +12,21 @@ public interface TableMetadata {
   /**
    * Returns the partition key names
    *
-   * @return an {@code Set} of partition key names
+   * @return an {@code LinkedHashSet} of partition key names
    */
-  public Set<String> getPartitionKeyNames();
+  LinkedHashSet<String> getPartitionKeyNames();
 
   /**
    * Returns the clustering key names
    *
-   * @return an {@code Set} of clustering key names
+   * @return an {@code LinkedHashSet} of clustering key names
    */
-  public Set<String> getClusteringKeyNames();
+  LinkedHashSet<String> getClusteringKeyNames();
 
   /**
    * Returns the secondary index names
    *
    * @return an {@code Set} of secondary index names
    */
-  public Set<String> getSecondaryIndexNames();
+  Set<String> getSecondaryIndexNames();
 }

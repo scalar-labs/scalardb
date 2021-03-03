@@ -95,8 +95,8 @@
                             common/METADATA_DATABASE)
         metadata (doto (CosmosTableMetadata.)
                    (.setId (common/get-fullname database table))
-                   (.setPartitionKeyNames (set partition-key))
-                   (.setClusteringKeyNames (set clustering-key))
+                   (.setPartitionKeyNames partition-key)
+                   (.setClusteringKeyNames clustering-key)
                    (.setSecondaryIndexNames (set secondary-index))
                    (.setColumns columns))]
     (when-not (database-exists? client prefixed-database)

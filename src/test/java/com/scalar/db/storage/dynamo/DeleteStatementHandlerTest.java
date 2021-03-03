@@ -1,14 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
@@ -16,8 +7,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
-import java.util.HashSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +17,19 @@ import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedExce
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class DeleteStatementHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -52,7 +54,7 @@ public class DeleteStatementHandlerTest {
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_1)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
@@ -111,7 +113,7 @@ public class DeleteStatementHandlerTest {
   public void handle_DeleteWithoutClusteringKeyGiven_ShouldCallDeleteItem() {
     // Arrange
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
 
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
@@ -139,7 +141,7 @@ public class DeleteStatementHandlerTest {
   public void handle_DeleteWithConditionsGiven_ShouldCallDeleteItem() {
     // Arrange
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
@@ -166,7 +168,7 @@ public class DeleteStatementHandlerTest {
   public void handle_DynamoDbExceptionWithConditionalCheckFailed_ShouldThrowNoMutationException() {
     // Arrange
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
     ConditionalCheckFailedException toThrow = mock(ConditionalCheckFailedException.class);
     doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));
@@ -185,7 +187,7 @@ public class DeleteStatementHandlerTest {
   public void handle_DeleteWithConditionDynamoDbExceptionThrown_ShouldThrowExecutionException() {
     // Arrange
     when(metadata.getClusteringKeyNames())
-        .thenReturn(new HashSet<String>(Arrays.asList(ANY_NAME_2)));
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
     DynamoDbException toThrow = mock(DynamoDbException.class);
     doThrow(toThrow).when(client).deleteItem(any(DeleteItemRequest.class));

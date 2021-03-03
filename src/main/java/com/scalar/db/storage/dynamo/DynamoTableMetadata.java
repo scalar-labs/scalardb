@@ -2,8 +2,12 @@ package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.scalar.db.storage.ImmutableLinkedHashSet;
 import com.scalar.db.storage.TableMetadata;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +15,6 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /**
  * A metadata class for a table of Scalar DB to know the type of each column
@@ -23,8 +26,8 @@ public class DynamoTableMetadata implements TableMetadata {
   private static final String CLUSTERING_KEY = "clusteringKey";
   private static final String SECONDARY_INDEX = "secondaryIndex";
   private static final String COLUMNS = "columns";
-  private SortedSet<String> partitionKeyNames;
-  private SortedSet<String> clusteringKeyNames;
+  private LinkedHashSet<String> partitionKeyNames;
+  private LinkedHashSet<String> clusteringKeyNames;
   private SortedSet<String> secondayIndexNames;
   private SortedMap<String, String> columns;
   private List<String> keyNames;
@@ -34,12 +37,12 @@ public class DynamoTableMetadata implements TableMetadata {
   }
 
   @Override
-  public Set<String> getPartitionKeyNames() {
+  public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
 
   @Override
-  public Set<String> getClusteringKeyNames() {
+  public LinkedHashSet<String> getClusteringKeyNames() {
     return clusteringKeyNames;
   }
 
@@ -57,11 +60,19 @@ public class DynamoTableMetadata implements TableMetadata {
   }
 
   private void convert(Map<String, AttributeValue> metadata) {
-    this.partitionKeyNames = ImmutableSortedSet.copyOf(metadata.get(PARTITION_KEY).ss());
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(
+            metadata.get(PARTITION_KEY).l().stream()
+                .map(AttributeValue::s)
+                .collect(Collectors.toList()));
     if (metadata.containsKey(CLUSTERING_KEY)) {
-      this.clusteringKeyNames = ImmutableSortedSet.copyOf(metadata.get(CLUSTERING_KEY).ss());
+      this.clusteringKeyNames =
+          new ImmutableLinkedHashSet<>(
+              metadata.get(CLUSTERING_KEY).l().stream()
+                  .map(AttributeValue::s)
+                  .collect(Collectors.toList()));
     } else {
-      this.clusteringKeyNames = ImmutableSortedSet.of();
+      this.clusteringKeyNames = new ImmutableLinkedHashSet<>();
     }
     if (metadata.containsKey(SECONDARY_INDEX)) {
       this.secondayIndexNames = ImmutableSortedSet.copyOf(metadata.get(SECONDARY_INDEX).ss());
