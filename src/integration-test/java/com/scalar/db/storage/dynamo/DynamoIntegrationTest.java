@@ -1338,9 +1338,15 @@ public class DynamoIntegrationTest {
     Map<String, AttributeValue> values = new HashMap<>();
     values.put("table", AttributeValue.builder().s(table(DATABASE, TABLE)).build());
     values.put(
-        "partitionKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME1)).build());
+        "partitionKey",
+        AttributeValue.builder()
+            .l(Collections.singletonList(AttributeValue.builder().s(COL_NAME1).build()))
+            .build());
     values.put(
-        "clusteringKey", AttributeValue.builder().ss(Collections.singletonList(COL_NAME4)).build());
+        "clusteringKey",
+        AttributeValue.builder()
+            .l(Collections.singletonList(AttributeValue.builder().s(COL_NAME4).build()))
+            .build());
     values.put(
         "secondaryIndex",
         AttributeValue.builder().ss(Collections.singletonList(COL_NAME3)).build());

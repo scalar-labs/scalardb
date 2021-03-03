@@ -137,7 +137,8 @@
         base-item {METADATA_PARTITION_KEY (-> (AttributeValue/builder)
                                               (.s table) .build)
                    PARTITION_KEY_COLUMN (-> (AttributeValue/builder)
-                                            (.ss (:partition-key schema))
+                                            (.l (map #(.build (.s (AttributeValue/builder) %))
+                                                     (:partition-key schema)))
                                             .build)
                    COLUMNS_COLUMN (-> (AttributeValue/builder)
                                       (.m columns) .build)}
@@ -145,7 +146,9 @@
                (clustering-keys-exist? schema)
                (assoc CLUSTERING_KEY_COLUMN
                       (-> (AttributeValue/builder)
-                          (.ss (:clustering-key schema)) .build))
+                          (.l (map #(.build (.s (AttributeValue/builder) %))
+                                   (:clustering-key schema)))
+                          .build))
                (secondary-index-exist? schema)
                (assoc SECONDARY_INDEX_COLUMN
                       (-> (AttributeValue/builder)

@@ -60,9 +60,17 @@ public class DynamoTableMetadata implements TableMetadata {
   }
 
   private void convert(Map<String, AttributeValue> metadata) {
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(metadata.get(PARTITION_KEY).ss());
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(
+            metadata.get(PARTITION_KEY).l().stream()
+                .map(AttributeValue::s)
+                .collect(Collectors.toList()));
     if (metadata.containsKey(CLUSTERING_KEY)) {
-      this.clusteringKeyNames = new ImmutableLinkedHashSet<>(metadata.get(CLUSTERING_KEY).ss());
+      this.clusteringKeyNames =
+          new ImmutableLinkedHashSet<>(
+              metadata.get(CLUSTERING_KEY).l().stream()
+                  .map(AttributeValue::s)
+                  .collect(Collectors.toList()));
     } else {
       this.clusteringKeyNames = new ImmutableLinkedHashSet<>();
     }

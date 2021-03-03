@@ -668,7 +668,9 @@ public class ConsensusCommitWithDynamoIntegrationTest {
         AttributeValue.builder().s(table(Coordinator.NAMESPACE, Coordinator.TABLE)).build());
     values.put(
         "partitionKey",
-        AttributeValue.builder().ss(Collections.singletonList(Attribute.ID)).build());
+        AttributeValue.builder()
+            .l(Collections.singletonList(AttributeValue.builder().s(Attribute.ID).build()))
+            .build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(Attribute.ID, AttributeValue.builder().s("text").build());
     columns.put(Attribute.STATE, AttributeValue.builder().s("int").build());
@@ -684,12 +686,20 @@ public class ConsensusCommitWithDynamoIntegrationTest {
       values.put(
           "partitionKey",
           AttributeValue.builder()
-              .ss(Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_ID))
+              .l(
+                  Collections.singletonList(
+                      AttributeValue.builder()
+                          .s(ConsensusCommitIntegrationTest.ACCOUNT_ID)
+                          .build()))
               .build());
       values.put(
           "clusteringKey",
           AttributeValue.builder()
-              .ss(Collections.singletonList(ConsensusCommitIntegrationTest.ACCOUNT_TYPE))
+              .l(
+                  Collections.singletonList(
+                      AttributeValue.builder()
+                          .s(ConsensusCommitIntegrationTest.ACCOUNT_TYPE)
+                          .build()))
               .build());
       columns = new HashMap<>();
       columns.put(
