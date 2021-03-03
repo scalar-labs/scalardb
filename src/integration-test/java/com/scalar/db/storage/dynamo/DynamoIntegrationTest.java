@@ -1340,16 +1340,16 @@ public class DynamoIntegrationTest {
     values.put(
         "partitionKey",
         AttributeValue.builder()
-            .l(Collections.singletonList(AttributeValue.builder().s(COL_NAME1).build()))
+            .l(AttributeValue.builder().s(COL_NAME1).build())
             .build());
     values.put(
         "clusteringKey",
         AttributeValue.builder()
-            .l(Collections.singletonList(AttributeValue.builder().s(COL_NAME4).build()))
+            .l(AttributeValue.builder().s(COL_NAME4).build())
             .build());
     values.put(
         "secondaryIndex",
-        AttributeValue.builder().ss(Collections.singletonList(COL_NAME3)).build());
+        AttributeValue.builder().ss(COL_NAME3).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());

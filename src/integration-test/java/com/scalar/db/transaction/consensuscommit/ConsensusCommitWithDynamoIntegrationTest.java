@@ -31,7 +31,6 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -668,9 +667,7 @@ public class ConsensusCommitWithDynamoIntegrationTest {
         AttributeValue.builder().s(table(Coordinator.NAMESPACE, Coordinator.TABLE)).build());
     values.put(
         "partitionKey",
-        AttributeValue.builder()
-            .l(Collections.singletonList(AttributeValue.builder().s(Attribute.ID).build()))
-            .build());
+        AttributeValue.builder().l(AttributeValue.builder().s(Attribute.ID).build()).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(Attribute.ID, AttributeValue.builder().s("text").build());
     columns.put(Attribute.STATE, AttributeValue.builder().s("int").build());
@@ -686,20 +683,12 @@ public class ConsensusCommitWithDynamoIntegrationTest {
       values.put(
           "partitionKey",
           AttributeValue.builder()
-              .l(
-                  Collections.singletonList(
-                      AttributeValue.builder()
-                          .s(ConsensusCommitIntegrationTest.ACCOUNT_ID)
-                          .build()))
+              .l(AttributeValue.builder().s(ConsensusCommitIntegrationTest.ACCOUNT_ID).build())
               .build());
       values.put(
           "clusteringKey",
           AttributeValue.builder()
-              .l(
-                  Collections.singletonList(
-                      AttributeValue.builder()
-                          .s(ConsensusCommitIntegrationTest.ACCOUNT_TYPE)
-                          .build()))
+              .l(AttributeValue.builder().s(ConsensusCommitIntegrationTest.ACCOUNT_TYPE).build())
               .build());
       columns = new HashMap<>();
       columns.put(
