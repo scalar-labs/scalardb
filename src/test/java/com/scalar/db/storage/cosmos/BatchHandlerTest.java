@@ -14,7 +14,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -103,16 +102,6 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_EmptyOperationsGiven_ShouldThrowIllegalArgumentException() {
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList());
-            })
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   public void handle_MultipleMutationsGiven_ShouldCallStoredProcedure() {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
@@ -165,41 +154,6 @@ public class BatchHandlerTest {
     assertThat(captor.getValue().get(10)).isEqualTo(query2);
     assertThat(captor.getValue().get(11)).isEqualTo(query3);
     assertThat(captor.getValue().get(12)).isEqualTo(query4);
-  }
-
-  @Test
-  public void handle_MultiPartitionOperationsGiven_ShouldThrowMultiPartitionException() {
-    // Arrange
-    Put put1 = preparePut();
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_4));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_4));
-    Put put2 =
-        new Put(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
-        .isInstanceOf(MultiPartitionException.class);
-  }
-
-  @Test
-  public void handle_MultiTableOperationsGiven_ShouldThrowMultiPartitionException() {
-    // Arrange
-    Put put1 = preparePut();
-    Put put2 = preparePut().forTable(ANOTHER_TABLE_NAME);
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
-        .isInstanceOf(MultiPartitionException.class);
   }
 
   @Test

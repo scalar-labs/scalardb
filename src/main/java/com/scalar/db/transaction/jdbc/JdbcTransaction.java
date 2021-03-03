@@ -22,6 +22,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * This indicates a transaction session of JDBC.
  *
@@ -116,7 +118,10 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void put(List<Put> puts) throws CrudException {
-    mutate(puts);
+    checkArgument(puts.size() != 0);
+    for (Put put : puts) {
+      put(put);
+    }
   }
 
   @Override
@@ -136,25 +141,21 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void delete(List<Delete> deletes) throws CrudException {
-    mutate(deletes);
+    checkArgument(deletes.size() != 0);
+    for (Delete delete : deletes) {
+      delete(delete);
+    }
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
-    // Ignore the conditions in the mutations
-    mutations.forEach(
-        m ->
-            m.getCondition()
-                .ifPresent(
-                    c -> {
-                      LOGGER.warn("ignoring the condition of the mutation: " + m);
-                      m.withCondition(null);
-                    }));
-
-    try {
-      jdbcService.mutate(mutations, connection, namespace, tableName, true);
-    } catch (SQLException e) {
-      throw new CrudException("mutate operation failed", e);
+    checkArgument(mutations.size() != 0);
+    for (Mutation mutation : mutations) {
+      if (mutation instanceof Put) {
+        put((Put) mutation);
+      } else if (mutation instanceof Delete) {
+        delete((Delete) mutation);
+      }
     }
   }
 

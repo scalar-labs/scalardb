@@ -1,4 +1,4 @@
-package com.scalar.db.storage;
+package com.scalar.db.storage.common.util;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;

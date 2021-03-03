@@ -19,7 +19,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
@@ -164,14 +163,14 @@ public class CosmosIntegrationTest {
 
   @Test
   public void
-      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowIllegalArgumentException() {
     // Arrange
     populateRecords();
     int c3 = 3;
     Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
 
     // Act Assert
-    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

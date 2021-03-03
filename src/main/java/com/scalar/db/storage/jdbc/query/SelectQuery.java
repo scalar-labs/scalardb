@@ -121,12 +121,12 @@ public interface SelectQuery extends Query {
       }
 
       String column = partitionKey.get().get(0).getName();
-      if (!tableMetadata.isIndexedColumn(column)) {
+      if (!tableMetadata.getSecondaryIndexNames().contains(column)) {
         return;
       }
 
       indexedColumn = Optional.of(column);
-      indexedOrder = Optional.of(tableMetadata.getIndexOrder(column));
+      indexedOrder = Optional.of(tableMetadata.getSecondaryIndexOrder(column));
     }
 
     public Builder orderBy(List<Scan.Ordering> orderings) {

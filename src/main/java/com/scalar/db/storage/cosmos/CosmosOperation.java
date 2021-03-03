@@ -4,11 +4,12 @@ import com.azure.cosmos.models.PartitionKey;
 import com.google.common.base.Joiner;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Value;
+
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 
 /** A class to treating utilities for a operation */
 public class CosmosOperation {
@@ -52,16 +53,7 @@ public class CosmosOperation {
             });
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    metadata
-        .getPartitionKeyNames()
-        .forEach(
-            name -> {
-              if (keyMap.containsKey(name)) {
-                keyMap.get(name).accept(visitor);
-              } else {
-                throw new IllegalArgumentException("The partition key is not properly specified.");
-              }
-            });
+    metadata.getPartitionKeyNames().forEach(name -> keyMap.get(name).accept(visitor));
 
     return visitor.build();
   }
@@ -94,14 +86,7 @@ public class CosmosOperation {
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
     List<String> keyNames = metadata.getKeyNames();
-    keyNames.forEach(
-        name -> {
-          if (keyMap.containsKey(name)) {
-            keyMap.get(name).accept(visitor);
-          } else {
-            throw new IllegalArgumentException("The primary key is not properly specified.");
-          }
-        });
+    keyNames.forEach(name -> keyMap.get(name).accept(visitor));
 
     return visitor.build();
   }

@@ -1,7 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -17,18 +15,22 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.common.metadata.DataType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Immutable
 public class ResultImpl implements Result {
@@ -96,9 +98,9 @@ public class ResultImpl implements Result {
   void interpret(Map<String, AttributeValue> item, DynamoTableMetadata metadata) {
     if (selection.getProjections().isEmpty()) {
       metadata
-          .getColumns()
+          .getColumnNames()
           .forEach(
-              (name, type) -> {
+              name -> {
                 add(name, item.get(name));
               });
     } else {
@@ -115,10 +117,10 @@ public class ResultImpl implements Result {
   }
 
   private void add(String name, AttributeValue itemValue) {
-    values.put(name, convert(itemValue, name, metadata.getColumns().get(name)));
+    values.put(name, convert(itemValue, name, metadata.getColumnDataType(name)));
   }
 
-  private Optional<Key> getKey(Set<String> names) {
+  private Optional<Key> getKey(LinkedHashSet<String> names) {
     List<Value> list = new ArrayList<>();
     for (String name : names) {
       Value value = values.get(name);
@@ -127,29 +129,28 @@ public class ResultImpl implements Result {
     return Optional.of(new Key(list));
   }
 
-  private Value convert(AttributeValue itemValue, String name, String type)
+  private Value convert(AttributeValue itemValue, String name, DataType dataType)
       throws UnsupportedTypeException {
     // When itemValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver
     boolean isNull = itemValue == null || (itemValue.nul() != null && itemValue.nul());
-    switch (type) {
-      case "boolean":
+    switch (dataType) {
+      case BOOLEAN:
         return new BooleanValue(name, isNull ? false : itemValue.bool());
-      case "int":
+      case INT:
         return new IntValue(name, isNull ? 0 : Integer.valueOf(itemValue.n()));
-      case "bigint":
+      case BIGINT:
         return new BigIntValue(name, isNull ? 0L : Long.valueOf(itemValue.n()));
-      case "float":
+      case FLOAT:
         return new FloatValue(name, isNull ? 0.0f : Float.valueOf(itemValue.n()));
-      case "double":
+      case DOUBLE:
         return new DoubleValue(name, isNull ? 0.0 : Double.valueOf(itemValue.n()));
-      case "text": // for backwards compatibility
-      case "varchar":
+      case TEXT:
         return new TextValue(name, isNull ? (String) null : itemValue.s());
-      case "blob":
+      case BLOB:
         return new BlobValue(name, isNull ? null : itemValue.b().asByteArray());
       default:
-        throw new UnsupportedTypeException(type);
+        throw new AssertionError();
     }
   }
 }

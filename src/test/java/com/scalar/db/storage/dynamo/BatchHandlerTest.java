@@ -95,16 +95,6 @@ public class BatchHandlerTest {
   }
 
   @Test
-  public void handle_EmptyOperationsGiven_ShouldThrowIllegalArgumentException() {
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList());
-            })
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   public void handle_TooManyOperationsGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     List<Put> mutations = new ArrayList<>();

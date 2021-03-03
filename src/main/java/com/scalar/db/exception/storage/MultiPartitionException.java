@@ -1,6 +1,6 @@
 package com.scalar.db.exception.storage;
 
-public class MultiPartitionException extends InvalidUsageException {
+public class MultiPartitionException extends IllegalArgumentException {
 
   public MultiPartitionException(String message) {
     super(message);

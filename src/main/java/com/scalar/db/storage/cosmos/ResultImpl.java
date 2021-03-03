@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -17,19 +15,23 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.common.metadata.DataType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Immutable
 public class ResultImpl implements Result {
@@ -95,9 +97,9 @@ public class ResultImpl implements Result {
     Map<String, Object> recordValues = record.getValues();
     if (selection.getProjections().isEmpty()) {
       metadata
-          .getColumns()
+          .getColumnNames()
           .forEach(
-              (name, type) -> {
+              name -> {
                 add(name, recordValues.get(name));
               });
     } else {
@@ -117,10 +119,10 @@ public class ResultImpl implements Result {
   }
 
   private void add(String name, Object value) {
-    values.put(name, convert(value, name, metadata.getColumns().get(name)));
+    values.put(name, convert(value, name, metadata.getColumnDataType(name)));
   }
 
-  private Optional<Key> getKey(Set<String> names) {
+  private Optional<Key> getKey(LinkedHashSet<String> names) {
     List<Value> list = new ArrayList<>();
     for (String name : names) {
       Value value = values.get(name);
@@ -129,25 +131,24 @@ public class ResultImpl implements Result {
     return Optional.of(new Key(list));
   }
 
-  private Value convert(Object recordValue, String name, String type)
+  private Value convert(Object recordValue, String name, DataType dataType)
       throws UnsupportedTypeException {
     // When recordValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver
-    switch (type) {
-      case "boolean":
+    switch (dataType) {
+      case BOOLEAN:
         return new BooleanValue(name, recordValue == null ? false : (boolean) recordValue);
-      case "int":
+      case INT:
         return new IntValue(name, recordValue == null ? 0 : ((Number) recordValue).intValue());
-      case "bigint":
+      case BIGINT:
         return new BigIntValue(name, recordValue == null ? 0L : ((Number) recordValue).longValue());
-      case "float":
+      case FLOAT:
         return new FloatValue(
             name, recordValue == null ? 0.0f : ((Number) recordValue).floatValue());
-      case "double":
+      case DOUBLE:
         return new DoubleValue(
             name, recordValue == null ? 0.0 : ((Number) recordValue).doubleValue());
-      case "text": // for backwards compatibility
-      case "varchar":
+      case TEXT:
         return new TextValue(
             name,
             recordValue == null
@@ -155,7 +156,7 @@ public class ResultImpl implements Result {
                 : new String(
                     ((String) recordValue).getBytes(StandardCharsets.UTF_8),
                     StandardCharsets.UTF_8));
-      case "blob":
+      case BLOB:
         return new BlobValue(
             name,
             recordValue == null
@@ -163,7 +164,7 @@ public class ResultImpl implements Result {
                 : Base64.getDecoder()
                     .decode(((String) recordValue).getBytes(StandardCharsets.UTF_8)));
       default:
-        throw new UnsupportedTypeException(type);
+        throw new AssertionError();
     }
   }
 }

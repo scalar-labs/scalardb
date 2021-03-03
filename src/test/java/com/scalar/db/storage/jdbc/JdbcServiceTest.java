@@ -12,16 +12,20 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.storage.jdbc.checker.OperationChecker;
+import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.sql.Connection;
@@ -44,8 +48,8 @@ public class JdbcServiceTest {
   private static final Optional<String> NAMESPACE = Optional.of("s1");
   private static final Optional<String> TABLE_NAME = Optional.of("t1");
 
-  @Mock private OperationChecker operationChecker;
   @Mock private QueryBuilder queryBuilder;
+  @Mock private TableMetadataManager tableMetadataManager;
 
   @Mock private SelectQuery.Builder selectQueryBuilder;
   @Mock private SelectQuery selectQuery;
@@ -65,10 +69,19 @@ public class JdbcServiceTest {
 
   private JdbcService jdbcService;
 
+  private MockedStatic<OperationChecker> mockedStatic;
+
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
-    jdbcService = new JdbcService(operationChecker, queryBuilder, Optional.empty());
+    jdbcService = new JdbcService(tableMetadataManager, queryBuilder, Optional.empty());
+
+    mockedStatic = Mockito.mockStatic(OperationChecker.class);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    mockedStatic.close();
   }
 
   @Test
@@ -88,7 +101,7 @@ public class JdbcServiceTest {
     jdbcService.get(get, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
-    verify(operationChecker).check(any(Get.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Get.class), any()));
     verify(queryBuilder).select(any());
   }
 
@@ -114,7 +127,7 @@ public class JdbcServiceTest {
     jdbcService.scan(scan, connection, NAMESPACE, TABLE_NAME);
 
     // Assert
-    verify(operationChecker).check(any(Scan.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Scan.class), any()));
     verify(queryBuilder).select(any());
   }
 
@@ -133,7 +146,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Put.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Put.class), any()));
     verify(queryBuilder).upsertInto(any(), any());
   }
 
@@ -160,7 +173,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Put.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Put.class), any()));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -209,7 +222,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Put.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Put.class), any()));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -253,7 +266,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Put.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Put.class), any()));
     verify(queryBuilder).insertInto(any(), any());
   }
 
@@ -294,7 +307,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Delete.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Delete.class), any()));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -320,7 +333,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Delete.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Delete.class), any()));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -364,7 +377,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(any(Delete.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Delete.class), any()));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -404,15 +417,14 @@ public class JdbcServiceTest {
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
     Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
-    boolean ret =
-        jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE_NAME, false);
+    boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE_NAME);
 
     // Assert
     assertThat(ret).isTrue();
-    verify(operationChecker).check(anyList(), anyBoolean());
-    verify(operationChecker).check(any(Put.class));
+    mockedStatic.verify(() -> OperationChecker.check(anyList()));
+    mockedStatic.verify(() -> OperationChecker.check(any(Put.class), any()));
     verify(queryBuilder).upsertInto(any(), any());
-    verify(operationChecker).check(any(Delete.class));
+    mockedStatic.verify(() -> OperationChecker.check(any(Delete.class), any()));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 }

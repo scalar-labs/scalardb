@@ -15,8 +15,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
-import com.scalar.db.storage.Utility;
+import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.common.util.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,8 +24,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * A storage implementation with Cosmos DB for {@link DistributedStorage}
@@ -107,11 +105,11 @@ public class Cosmos implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     CosmosTableMetadata metadata = metadataManager.getTableMetadata(get);
-    Utility.checkGetOperation(get, metadata);
+    OperationChecker.check(get, metadata);
 
     List<Record> records = selectStatementHandler.handle(get);
     if (records.size() > 1) {
-      throw new InvalidUsageException("please use scan() for non-exact match selection");
+      throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
     if (records.isEmpty() || records.get(0) == null) {
       return Optional.empty();
@@ -124,7 +122,7 @@ public class Cosmos implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     CosmosTableMetadata metadata = metadataManager.getTableMetadata(scan);
-    Utility.checkScanOperation(scan, metadata);
+    OperationChecker.check(scan, metadata);
 
     List<Record> records = selectStatementHandler.handle(scan);
 
@@ -134,7 +132,8 @@ public class Cosmos implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    checkIfPrimaryKeyExists(put);
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(put);
+    OperationChecker.check(put, metadata);
 
     putStatementHandler.handle(put);
   }
@@ -147,6 +146,9 @@ public class Cosmos implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(delete);
+    OperationChecker.check(delete, metadata);
+
     deleteStatementHandler.handle(delete);
   }
 
@@ -157,28 +159,28 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    checkArgument(mutations.size() != 0);
-    if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-      batchHandler.handle(mutations);
-    } else if (mutations.size() == 1) {
+    if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
         put((Put) mutation);
       } else if (mutation instanceof Delete) {
         delete((Delete) mutation);
       }
+      return;
     }
+
+    Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+    OperationChecker.check(mutations);
+    mutations.forEach(
+        m -> {
+          CosmosTableMetadata metadata = metadataManager.getTableMetadata(m);
+          OperationChecker.check(m, metadata);
+        });
+    batchHandler.handle(mutations);
   }
 
   @Override
   public void close() {
     client.close();
-  }
-
-  private void checkIfPrimaryKeyExists(Put put) {
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(put);
-
-    Utility.checkIfPrimaryKeyExists(put, metadata);
   }
 }

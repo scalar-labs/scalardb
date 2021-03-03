@@ -1,15 +1,17 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
+import com.scalar.db.storage.common.metadata.DataType;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.concurrent.NotThreadSafe;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * A sorter for items retrieved from DynamoDB
@@ -50,7 +52,7 @@ public class ItemSorter {
         for (Scan.Ordering ordering : scan.getOrderings()) {
           String name = ordering.getName();
           compareResult =
-              compareAttributeValues(metadata.getColumns().get(name), o1.get(name), o2.get(name));
+              compareAttributeValues(metadata.getColumnDataType(name), o1.get(name), o2.get(name));
           compareResult *= ordering.getOrder() == Scan.Ordering.Order.ASC ? 1 : -1;
           if (compareResult != 0) {
             break;
@@ -62,7 +64,7 @@ public class ItemSorter {
     };
   }
 
-  private int compareAttributeValues(String type, AttributeValue a1, AttributeValue a2)
+  private int compareAttributeValues(DataType dataType, AttributeValue a1, AttributeValue a2)
       throws UnsupportedTypeException {
     if (a1 == null && a2 == null) {
       return 0;
@@ -72,23 +74,23 @@ public class ItemSorter {
       return 1;
     }
 
-    switch (type) {
-      case "boolean":
+    switch (dataType) {
+      case BOOLEAN:
         return a1.bool().compareTo(a2.bool());
-      case "int":
+      case INT:
         return Integer.valueOf(a1.n()).compareTo(Integer.valueOf(a2.n()));
-      case "bigint":
+      case BIGINT:
         return Long.valueOf(a1.n()).compareTo(Long.valueOf(a2.n()));
-      case "float":
+      case FLOAT:
         return Float.valueOf(a1.n()).compareTo(Float.valueOf(a2.n()));
-      case "double":
+      case DOUBLE:
         return Double.valueOf(a1.n()).compareTo(Double.valueOf(a2.n()));
-      case "text":
+      case TEXT:
         return a1.s().compareTo(a2.s());
-      case "blob":
+      case BLOB:
         return a1.b().asByteBuffer().compareTo(a2.b().asByteBuffer());
       default:
-        throw new UnsupportedTypeException(type);
+        throw new AssertionError();
     }
   }
 }

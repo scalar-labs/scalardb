@@ -6,8 +6,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import org.junit.Before;
@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +53,14 @@ public class QueryBuilderTest {
     JdbcTableMetadata dummyTableMetadata =
         new JdbcTableMetadata(
             NAMESPACE + "." + TABLE,
+            Arrays.asList("p1", "p2"),
+            Arrays.asList("c1", "c2"),
+            new HashMap<String, Scan.Ordering.Order>() {
+              {
+                put("c1", Scan.Ordering.Order.ASC);
+                put("c2", Scan.Ordering.Order.DESC);
+              }
+            },
             new LinkedHashMap<String, DataType>() {
               {
                 put("p1", DataType.TEXT);
@@ -66,20 +73,7 @@ public class QueryBuilderTest {
                 put("v4", DataType.TEXT);
               }
             },
-            Arrays.asList("p1", "p2"),
-            Arrays.asList("c1", "c2"),
-            new HashMap<String, Scan.Ordering.Order>() {
-              {
-                put("c1", Scan.Ordering.Order.ASC);
-                put("c2", Scan.Ordering.Order.DESC);
-              }
-            },
-            new HashSet<String>() {
-              {
-                add("v1");
-                add("v2");
-              }
-            },
+            Arrays.asList("v1", "v2"),
             new HashMap<String, Scan.Ordering.Order>() {
               {
                 put("v1", Scan.Ordering.Order.ASC);

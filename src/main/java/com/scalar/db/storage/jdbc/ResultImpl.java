@@ -11,7 +11,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.metadata.DataType;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 
 import javax.annotation.concurrent.Immutable;
@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,7 +38,7 @@ public class ResultImpl implements Result {
 
     values = new HashMap<>();
     if (projections.isEmpty()) {
-      for (String projection : tableMetadata.getColumns()) {
+      for (String projection : tableMetadata.getColumnNames()) {
         values.put(projection, getValue(tableMetadata, projection, resultSet));
       }
     } else {
@@ -49,7 +50,7 @@ public class ResultImpl implements Result {
 
   private Value getValue(JdbcTableMetadata tableMetadata, String name, ResultSet resultSet)
       throws SQLException {
-    DataType dataType = tableMetadata.getDataType(name);
+    DataType dataType = tableMetadata.getColumnDataType(name);
     switch (dataType) {
       case BOOLEAN:
         return new BooleanValue(name, resultSet.getBoolean(name));
@@ -72,15 +73,15 @@ public class ResultImpl implements Result {
 
   @Override
   public Optional<Key> getPartitionKey() {
-    return getKey(tableMetadata.getPartitionKeys());
+    return getKey(tableMetadata.getPartitionKeyNames());
   }
 
   @Override
   public Optional<Key> getClusteringKey() {
-    return getKey(tableMetadata.getClusteringKeys());
+    return getKey(tableMetadata.getClusteringKeyNames());
   }
 
-  private Optional<Key> getKey(List<String> names) {
+  private Optional<Key> getKey(LinkedHashSet<String> names) {
     List<Value> list = new ArrayList<>();
     for (String name : names) {
       Value value = values.get(name);

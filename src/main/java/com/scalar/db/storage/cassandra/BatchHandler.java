@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
@@ -10,13 +8,15 @@ import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.WriteTimeoutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import java.util.List;
-import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.List;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * An executor for a batch statement
@@ -43,7 +43,7 @@ public class BatchHandler {
 
   /**
    * Execute the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the list
-   * must be for the same partition. Otherwise, it throws a {@link MultiPartitionException}.
+   * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
    * @throws RetriableExecutionException if it failed, but it can be retried
@@ -52,11 +52,6 @@ public class BatchHandler {
    */
   public void handle(List<? extends Mutation> mutations)
       throws RetriableExecutionException, NoMutationException {
-    checkNotNull(mutations);
-    if (mutations.size() < 1) {
-      throw new IllegalArgumentException("please specify at least one mutation.");
-    }
-
     try {
       ResultSet results = execute(mutations);
       // it's for conditional update. non-conditional update always return true
@@ -85,16 +80,9 @@ public class BatchHandler {
     BatchComposer composer = new BatchComposer(batch, handlers);
 
     boolean conditional = false;
-    Mutation first = mutations.get(0);
     for (Mutation mutation : mutations) {
       if (mutation.getCondition().isPresent()) {
         conditional = true;
-      }
-      if (!mutation.forTable().equals(first.forTable())
-          || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-        throw new MultiPartitionException(
-            "decided not to execute this batch "
-                + "since multi-partition batch is not recommended.");
       }
       // appropriate statement handler is selected here
       mutation.accept(composer);
