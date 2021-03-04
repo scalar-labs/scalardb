@@ -39,12 +39,14 @@ public class JdbcTableMetadata implements TableMetadata {
     String[] schemaAndTable = fullTableName.split("\\.");
     schema = schemaAndTable[0];
     table = schemaAndTable[1];
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
-    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
-    this.clusteringOrders = ImmutableMap.copyOf(clusteringOrders);
-    this.columnDataTypes = ImmutableMap.copyOf(columnDataTypes);
-    this.secondaryIndexNames = ImmutableSet.copyOf(secondaryIndexNames);
-    this.secondaryIndexOrders = ImmutableMap.copyOf(secondaryIndexOrders);
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(partitionKeyNames));
+    this.clusteringKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(clusteringKeyNames));
+    this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
+    this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
+    this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
+    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public JdbcTableMetadata(
@@ -59,12 +61,14 @@ public class JdbcTableMetadata implements TableMetadata {
     this.schema = Objects.requireNonNull(schema);
     this.table = Objects.requireNonNull(table);
     this.fullTableName = schema + "." + table;
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
-    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
-    this.clusteringOrders = ImmutableMap.copyOf(clusteringOrders);
-    this.columnDataTypes = ImmutableMap.copyOf(columnDataTypes);
-    this.secondaryIndexNames = ImmutableSet.copyOf(secondaryIndexNames);
-    this.secondaryIndexOrders = ImmutableMap.copyOf(secondaryIndexOrders);
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(partitionKeyNames));
+    this.clusteringKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(clusteringKeyNames));
+    this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
+    this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
+    this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
+    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public String getFullTableName() {

@@ -49,7 +49,7 @@ public class CosmosTableMetadata implements TableMetadata {
   }
 
   public void setColumns(Map<String, String> columns) {
-    this.columns = columns;
+    this.columns = ImmutableMap.copyOf(columns);
     columnDataTypes =
         ImmutableMap.copyOf(
             columns.entrySet().stream()
@@ -124,7 +124,6 @@ public class CosmosTableMetadata implements TableMetadata {
     return clusteringKeyNames.contains(clusteringKeyName) ? Scan.Ordering.Order.ASC : null;
   }
 
-  @JsonIgnore
   public List<String> getKeyNames() {
     if (keyNames != null) {
       return keyNames;
