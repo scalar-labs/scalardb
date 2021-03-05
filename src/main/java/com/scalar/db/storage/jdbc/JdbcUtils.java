@@ -1,8 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
+import com.microsoft.sqlserver.jdbc.SQLServerDriver;
+import oracle.jdbc.OracleDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.SQLException;
 
 public final class JdbcUtils {
   private JdbcUtils() {}
@@ -26,8 +30,17 @@ public final class JdbcUtils {
   }
 
   public static BasicDataSource initDataSource(JdbcDatabaseConfig config, boolean transactional) {
+    String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
-    dataSource.setUrl(config.getContactPoints().get(0));
+
+    /*
+     * We need to specify a driver class corresponding to the JDBC URL to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (ex. we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(getDriverClass(jdbcUrl));
+
+    dataSource.setUrl(jdbcUrl);
     dataSource.setUsername(config.getUsername());
     dataSource.setPassword(config.getPassword());
 
@@ -44,5 +57,24 @@ public final class JdbcUtils {
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
 
     return dataSource;
+  }
+
+  private static Driver getDriverClass(String jdbcUrl) {
+    switch (getRdbEngine(jdbcUrl)) {
+      case MYSQL:
+        try {
+          return new com.mysql.cj.jdbc.Driver();
+        } catch (SQLException e) {
+          throw new RuntimeException(e);
+        }
+      case POSTGRESQL:
+        return new org.postgresql.Driver();
+      case ORACLE:
+        return new OracleDriver();
+      case SQL_SERVER:
+        return new SQLServerDriver();
+      default:
+        throw new AssertionError();
+    }
   }
 }
