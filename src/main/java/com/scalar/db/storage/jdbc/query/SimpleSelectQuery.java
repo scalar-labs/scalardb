@@ -12,7 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -101,10 +100,8 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     List<Scan.Ordering> orderingList = new ArrayList<>(orderings);
 
     Boolean reverse = null;
-    Iterator<String> iterator = tableMetadata.getClusteringKeyNames().iterator();
     int i = 0;
-    while (iterator.hasNext()) {
-      String clusteringKeyName = iterator.next();
+    for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
       if (i < orderings.size()) {
         Scan.Ordering ordering = orderings.get(i++);
         if (reverse == null) {
