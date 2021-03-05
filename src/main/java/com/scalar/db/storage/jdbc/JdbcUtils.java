@@ -36,7 +36,7 @@ public final class JdbcUtils {
     /*
      * We need to specify a driver class corresponding to the JDBC URL to the dataSource in order
      * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
-     * work (ex. we dynamically load a driver class from a fatJar).
+     * work (e.g., when we dynamically load a driver class from a fatJar).
      */
     dataSource.setDriver(getDriverClass(jdbcUrl));
 
