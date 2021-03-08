@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * A storage implementation with DynamoDB for {@link DistributedStorage}
  *
@@ -114,7 +116,7 @@ public class Dynamo implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
-    OperationChecker.check(get, metadata);
+    new OperationChecker(metadata).check(get);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
     if (items.size() > 1) {
@@ -131,7 +133,7 @@ public class Dynamo implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
-    OperationChecker.check(scan, metadata);
+    new OperationChecker(metadata).check(scan);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
@@ -141,8 +143,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(put);
-    OperationChecker.check(put, metadata);
+    new OperationChecker(metadataManager.getTableMetadata(put)).check(put);
 
     putStatementHandler.handle(put);
   }
@@ -155,8 +156,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(delete);
-    OperationChecker.check(delete, metadata);
+    new OperationChecker(metadataManager.getTableMetadata(delete)).check(delete);
 
     deleteStatementHandler.handle(delete);
   }
@@ -168,6 +168,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
+    checkArgument(mutations.size() != 0);
     if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
@@ -179,12 +180,10 @@ public class Dynamo implements DistributedStorage {
     }
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-    OperationChecker.check(mutations);
-    mutations.forEach(
-        m -> {
-          DynamoTableMetadata metadata = metadataManager.getTableMetadata(m);
-          OperationChecker.check(m, metadata);
-        });
+    OperationChecker operationChecker =
+        new OperationChecker(metadataManager.getTableMetadata(mutations.get(0)));
+    operationChecker.check(mutations);
+    mutations.forEach(operationChecker::check);
     batchHandler.handle(mutations);
   }
 

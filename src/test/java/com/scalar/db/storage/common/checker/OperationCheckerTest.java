@@ -96,7 +96,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(get, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(get)).doesNotThrowAnyException();
   }
 
   @Test
@@ -109,7 +109,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -124,7 +124,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -139,7 +139,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -154,7 +154,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -169,7 +169,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -184,7 +184,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -207,7 +207,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -229,7 +229,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -251,7 +251,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -273,7 +273,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -295,7 +295,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -316,7 +316,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -336,7 +336,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -359,7 +359,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -383,7 +383,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -407,7 +407,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -431,7 +431,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -455,7 +455,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -478,7 +478,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -501,7 +501,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -518,7 +518,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(put, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(put)).doesNotThrowAnyException();
   }
 
   @Test
@@ -534,7 +534,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(put, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(put)).doesNotThrowAnyException();
   }
 
   @Test
@@ -551,7 +551,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -569,7 +569,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -587,7 +587,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -604,7 +604,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -621,7 +621,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -641,7 +641,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -659,7 +659,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -676,7 +676,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(put, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(put))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -692,7 +692,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(delete, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(delete)).doesNotThrowAnyException();
   }
 
   @Test
@@ -705,7 +705,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(delete, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(delete)).doesNotThrowAnyException();
   }
 
   @Test
@@ -719,7 +719,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -734,7 +734,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -749,7 +749,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -763,7 +763,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -778,7 +778,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -793,7 +793,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -810,7 +810,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(delete, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(delete))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -825,7 +825,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(Arrays.asList(put, delete)))
+    assertThatCode(() -> new OperationChecker(metadata).check(Arrays.asList(put, delete)))
         .doesNotThrowAnyException();
   }
 
@@ -834,7 +834,7 @@ public class OperationCheckerTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(Collections.emptyList()))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(Collections.emptyList()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -851,7 +851,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(delete, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(Arrays.asList(put, delete)))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(Arrays.asList(put, delete)))
         .isInstanceOf(MultiPartitionException.class);
   }
 
@@ -865,7 +865,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(get, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(get)).doesNotThrowAnyException();
   }
 
   @Test
@@ -879,7 +879,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -894,7 +894,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -909,7 +909,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(get, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(get, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -931,7 +931,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatCode(() -> OperationChecker.check(scan, metadata)).doesNotThrowAnyException();
+    assertThatCode(() -> new OperationChecker(metadata).check(scan)).doesNotThrowAnyException();
   }
 
   @Test
@@ -952,7 +952,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -974,7 +974,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -996,7 +996,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -1019,7 +1019,7 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(scan, NAMESPACE_PREFIX, NAMESPACE, TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(() -> OperationChecker.check(scan, metadata))
+    assertThatThrownBy(() -> new OperationChecker(metadata).check(scan))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

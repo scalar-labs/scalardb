@@ -12,7 +12,6 @@ import com.scalar.db.storage.common.metadata.TableMetadata;
 import com.scalar.db.storage.common.util.ImmutableLinkedHashSet;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -24,7 +23,7 @@ public class CassandraTableMetadata implements TableMetadata {
   private final LinkedHashSet<String> clusteringColumnNames;
   private final Set<String> indexNames;
   private final Map<String, DataType> columnDataTypes;
-  private final Map<String, Scan.Ordering.Order> clusteringOrder;
+  private final Map<String, Scan.Ordering.Order> clusteringOrders;
 
   public CassandraTableMetadata(com.datastax.driver.core.TableMetadata tableMetadata) {
     this.partitionKeyNames =
@@ -49,13 +48,14 @@ public class CassandraTableMetadata implements TableMetadata {
                     Collectors.toMap(
                         ColumnMetadata::getName, c -> convertDataType(c.getType().getName()))));
 
-    Map<String, Scan.Ordering.Order> tmp = new HashMap<>();
-    int i = 0;
-    for (ColumnMetadata clusteringColumn : tableMetadata.getClusteringColumns()) {
-      tmp.put(
-          clusteringColumn.getName(), convertOrder(tableMetadata.getClusteringOrder().get(i++)));
+    ImmutableMap.Builder<String, Scan.Ordering.Order> clusteringOrdersBuilder =
+        ImmutableMap.builder();
+    for (int i = 0; i < tableMetadata.getClusteringColumns().size(); i++) {
+      String clusteringColumnName = tableMetadata.getClusteringColumns().get(i).getName();
+      ClusteringOrder clusteringOrder = tableMetadata.getClusteringOrder().get(i);
+      clusteringOrdersBuilder.put(clusteringColumnName, convertOrder(clusteringOrder));
     }
-    clusteringOrder = ImmutableMap.copyOf(tmp);
+    clusteringOrders = clusteringOrdersBuilder.build();
   }
 
   private DataType convertDataType(com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
@@ -117,6 +117,6 @@ public class CassandraTableMetadata implements TableMetadata {
 
   @Override
   public Scan.Ordering.Order getClusteringOrder(String clusteringKeyName) {
-    return clusteringOrder.get(clusteringKeyName);
+    return clusteringOrders.get(clusteringKeyName);
   }
 }

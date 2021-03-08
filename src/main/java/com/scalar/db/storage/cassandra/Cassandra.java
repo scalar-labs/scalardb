@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * A storage implementation with Cassandra for {@link DistributedStorage}.
  *
@@ -96,7 +98,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     CassandraTableMetadata metadata = getTableMetadata(get);
-    OperationChecker.check(get, metadata);
+    new OperationChecker(metadata).check(get);
     addProjectionsForKeys(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
@@ -115,7 +117,7 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     CassandraTableMetadata metadata = getTableMetadata(scan);
-    OperationChecker.check(scan, metadata);
+    new OperationChecker(metadata).check(scan);
     addProjectionsForKeys(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
@@ -126,8 +128,7 @@ public class Cassandra implements DistributedStorage {
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(put);
-    OperationChecker.check(put, metadata);
+    new OperationChecker(getTableMetadata(put)).check(put);
     handlers.get(put).handle(put);
   }
 
@@ -141,8 +142,7 @@ public class Cassandra implements DistributedStorage {
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(delete);
-    OperationChecker.check(delete, metadata);
+    new OperationChecker(getTableMetadata(delete)).check(delete);
     handlers.delete().handle(delete);
   }
 
@@ -155,6 +155,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     LOGGER.debug("executing batch-mutate operation with " + mutations);
+    checkArgument(mutations.size() != 0);
     if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
@@ -166,12 +167,9 @@ public class Cassandra implements DistributedStorage {
     }
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-    OperationChecker.check(mutations);
-    mutations.forEach(
-        m -> {
-          CassandraTableMetadata metadata = getTableMetadata(m);
-          OperationChecker.check(m, metadata);
-        });
+    OperationChecker operationChecker = new OperationChecker(getTableMetadata(mutations.get(0)));
+    operationChecker.check(mutations);
+    mutations.forEach(operationChecker::check);
     batch.handle(mutations);
   }
 
