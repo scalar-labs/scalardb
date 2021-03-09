@@ -2,10 +2,10 @@ package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
@@ -19,8 +19,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,8 +94,8 @@ public class TestEnv implements Closeable {
               RdbEngine.MYSQL,
               new HashMap<DataType, String>() {
                 {
-                  put(DataType.TEXT, "VARCHAR(256)");
-                  put(DataType.BLOB, "VARBINARY(256)");
+                  put(DataType.TEXT, "VARCHAR(64)");
+                  put(DataType.BLOB, "VARBINARY(64)");
                 }
               });
           put(
@@ -111,7 +109,8 @@ public class TestEnv implements Closeable {
               RdbEngine.ORACLE,
               new HashMap<DataType, String>() {
                 {
-                  put(DataType.BLOB, "RAW(2000)");
+                  put(DataType.TEXT, "VARCHAR(64)");
+                  put(DataType.BLOB, "RAW(64)");
                 }
               });
           put(RdbEngine.SQL_SERVER, new HashMap<DataType, String>() {});
@@ -160,39 +159,39 @@ public class TestEnv implements Closeable {
   public void register(
       String schema,
       String table,
-      LinkedHashMap<String, DataType> columnsAndDataTypes,
-      List<String> partitionKeys,
-      List<String> clusteringKeys,
-      Map<String, Scan.Ordering.Order> clusteringKeyOrders,
-      Set<String> indexedColumns,
-      Map<String, Scan.Ordering.Order> indexOrders) {
+      List<String> partitionKeyNames,
+      List<String> clusteringKeyNames,
+      Map<String, Scan.Ordering.Order> clusteringOrders,
+      Map<String, DataType> columnDataTypes,
+      List<String> secondaryIndexNames,
+      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
     metadataList.add(
         new JdbcTableMetadata(
             namespacePrefix() + schema,
             table,
-            columnsAndDataTypes,
-            partitionKeys,
-            clusteringKeys,
-            clusteringKeyOrders,
-            indexedColumns,
-            indexOrders));
+            partitionKeyNames,
+            clusteringKeyNames,
+            clusteringOrders,
+            columnDataTypes,
+            secondaryIndexNames,
+            secondaryIndexOrders));
   }
 
   public void register(
       String schema,
       String table,
-      LinkedHashMap<String, DataType> columnsAndDataTypes,
-      List<String> partitionKeys,
-      List<String> clusteringKeys,
-      Map<String, Scan.Ordering.Order> clusteringKeyOrders) {
+      List<String> partitionKeyNames,
+      List<String> clusteringKeyNames,
+      Map<String, Scan.Ordering.Order> clusteringOrders,
+      Map<String, DataType> columnDataTypes) {
     register(
         schema,
         table,
-        columnsAndDataTypes,
-        partitionKeys,
-        clusteringKeys,
-        clusteringKeyOrders,
-        new HashSet<>(),
+        partitionKeyNames,
+        clusteringKeyNames,
+        clusteringOrders,
+        columnDataTypes,
+        new ArrayList<>(),
         new HashMap<>());
   }
 
@@ -245,24 +244,25 @@ public class TestEnv implements Closeable {
         "CREATE TABLE "
             + enclosedFullTableName(metadata.getSchema(), metadata.getTable())
             + "("
-            + metadata.getColumns().stream()
-                .map(c -> enclose(c) + " " + getDataType(c, metadata))
+            + metadata.getColumnNames().stream()
+                .map(c -> enclose(c) + " " + getColumnDataType(c, metadata))
                 .collect(Collectors.joining(","))
             + ",PRIMARY KEY ("
             + Stream.concat(
-                    metadata.getPartitionKeys().stream(), metadata.getClusteringKeys().stream())
+                    metadata.getPartitionKeyNames().stream(),
+                    metadata.getClusteringKeyNames().stream())
                 .map(this::enclose)
                 .collect(Collectors.joining(","))
             + "))");
   }
 
-  private String getDataType(String column, JdbcTableMetadata metadata) {
+  private String getColumnDataType(String column, JdbcTableMetadata metadata) {
     boolean isPrimaryKey =
-        metadata.getPartitionKeys().contains(column)
-            || metadata.getClusteringKeys().contains(column);
-    boolean isIndexed = metadata.isIndexedColumn(column);
+        metadata.getPartitionKeyNames().contains(column)
+            || metadata.getClusteringKeyNames().contains(column);
+    boolean isIndexed = metadata.getSecondaryIndexNames().contains(column);
 
-    DataType dataType = metadata.getDataType(column);
+    DataType dataType = metadata.getColumnDataType(column);
     if (isPrimaryKey || isIndexed) {
       return getDataTypeMappingForKey().getOrDefault(dataType, getDataTypeMapping().get(dataType));
     }
@@ -295,29 +295,44 @@ public class TestEnv implements Closeable {
 
   private void insertMetadata(JdbcTableMetadata metadata) throws SQLException {
     int ordinalPosition = 1;
-    for (String column : metadata.getColumns()) {
-      String keyType = getKeyType(column, metadata);
-      Scan.Ordering.Order keyOrder = metadata.getClusteringKeyOrder(column);
-      Scan.Ordering.Order indexOrder = metadata.getIndexOrder(column);
-      execute(
-          String.format(
-              "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%s,%d)",
-              enclosedMetadataTableName(),
-              metadata.getFullTableName(),
-              column,
-              metadata.getDataType(column),
-              keyType != null ? "'" + keyType + "'" : "NULL",
-              keyOrder != null ? "'" + keyOrder + "'" : "NULL",
-              booleanValue(metadata.isIndexedColumn(column)),
-              indexOrder != null ? "'" + indexOrder + "'" : "NULL",
-              ordinalPosition++));
+    for (String partitionKeyName : metadata.getPartitionKeyNames()) {
+      insertMetadata(partitionKeyName, ordinalPosition++, metadata);
+    }
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      insertMetadata(clusteringKeyName, ordinalPosition++, metadata);
+    }
+    for (String column : metadata.getColumnNames()) {
+      if (metadata.getPartitionKeyNames().contains(column)
+          || metadata.getClusteringKeyNames().contains(column)) {
+        continue;
+      }
+      insertMetadata(column, ordinalPosition++, metadata);
     }
   }
 
+  private void insertMetadata(String column, int ordinalPosition, JdbcTableMetadata metadata)
+      throws SQLException {
+    String keyType = getKeyType(column, metadata);
+    Scan.Ordering.Order keyOrder = metadata.getClusteringOrder(column);
+    Scan.Ordering.Order indexOrder = metadata.getSecondaryIndexOrder(column);
+    execute(
+        String.format(
+            "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%s,%d)",
+            enclosedMetadataTableName(),
+            metadata.getFullTableName(),
+            column,
+            metadata.getColumnDataType(column),
+            keyType != null ? "'" + keyType + "'" : "NULL",
+            keyOrder != null ? "'" + keyOrder + "'" : "NULL",
+            booleanValue(metadata.getSecondaryIndexNames().contains(column)),
+            indexOrder != null ? "'" + indexOrder + "'" : "NULL",
+            ordinalPosition));
+  }
+
   private String getKeyType(String column, JdbcTableMetadata metadata) {
-    if (metadata.getPartitionKeys().contains(column)) {
+    if (metadata.getPartitionKeyNames().contains(column)) {
       return "PARTITION";
-    } else if (metadata.getClusteringKeys().contains(column)) {
+    } else if (metadata.getClusteringKeyNames().contains(column)) {
       return "CLUSTERING";
     }
     return null;

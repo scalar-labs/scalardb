@@ -1,12 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -21,20 +14,26 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.Arrays;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /** */
 public class BatchHandlerTest {
@@ -219,51 +218,6 @@ public class BatchHandlerTest {
 
     // Assert
     verify(spy).setConsistencyForConditionalMutation(any(BatchStatement.class));
-  }
-
-  @Test
-  public void handle_EmptyOperationsGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    configureBehavior();
-    mutations = new ArrayList<>();
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              batch.handle(mutations);
-            })
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void handle_MultiPartitionOperationsGiven_ShouldThrowMultiPartitionException() {
-    // Arrange
-    configureBehavior();
-    mutations = prepareMultiPartitionPuts();
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              batch.handle(mutations);
-            })
-        .isInstanceOf(RetriableExecutionException.class)
-        .hasCauseExactlyInstanceOf(MultiPartitionException.class);
-  }
-
-  @Test
-  public void handle_MultiTableOperationsGiven_ShouldThrowMultiPartitionException() {
-    // Arrange
-    configureBehavior();
-    mutations = prepareConditionalPuts();
-    mutations.get(1).forNamespace(ANY_KEYSPACE_NAME).forTable(ANOTHER_TABLE_NAME);
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              batch.handle(mutations);
-            })
-        .isInstanceOf(RetriableExecutionException.class)
-        .hasCauseExactlyInstanceOf(MultiPartitionException.class);
   }
 
   @Test

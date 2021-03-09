@@ -10,12 +10,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.Utility;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.IntStream;
-import javax.annotation.Nonnull;
+import com.scalar.db.storage.common.util.Utility;
 import org.jooq.Field;
 import org.jooq.OrderField;
 import org.jooq.SQLDialect;
@@ -23,6 +18,12 @@ import org.jooq.SelectConditionStep;
 import org.jooq.SelectWhereStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
+
+import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * A handler class for select statements

@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc.metadata;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan;
-import com.scalar.db.storage.TableMetadata;
+import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.storage.common.metadata.TableMetadata;
+import com.scalar.db.storage.common.util.ImmutableLinkedHashSet;
 
 import javax.annotation.concurrent.Immutable;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,54 +20,55 @@ public class JdbcTableMetadata implements TableMetadata {
   private final String fullTableName;
   private final String schema;
   private final String table;
-  private final ImmutableMap<String, DataType> dataTypes;
-  private final ImmutableList<String> partitionKeys;
-  private final ImmutableList<String> clusteringKeys;
-  private final ImmutableList<String> columns;
-  private final ImmutableMap<String, Scan.Ordering.Order> clusteringKeyOrders;
-  private final ImmutableSet<String> indexedColumns;
-  private final ImmutableMap<String, Scan.Ordering.Order> indexOrders;
+  private final LinkedHashSet<String> partitionKeyNames;
+  private final LinkedHashSet<String> clusteringKeyNames;
+  private final ImmutableMap<String, Scan.Ordering.Order> clusteringOrders;
+  private final Map<String, DataType> columnDataTypes;
+  private final Set<String> secondaryIndexNames;
+  private final ImmutableMap<String, Scan.Ordering.Order> secondaryIndexOrders;
 
   public JdbcTableMetadata(
       String fullTableName,
-      LinkedHashMap<String, DataType> columnsAndDataTypes,
-      List<String> partitionKeys,
-      List<String> clusteringKeys,
-      Map<String, Scan.Ordering.Order> clusteringKeyOrders,
-      Set<String> indexedColumns,
-      Map<String, Scan.Ordering.Order> indexOrders) {
+      List<String> partitionKeyNames,
+      List<String> clusteringKeyNames,
+      Map<String, Scan.Ordering.Order> clusteringOrders,
+      Map<String, DataType> columnDataTypes,
+      List<String> secondaryIndexNames,
+      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
     this.fullTableName = Objects.requireNonNull(fullTableName);
     String[] schemaAndTable = fullTableName.split("\\.");
     schema = schemaAndTable[0];
     table = schemaAndTable[1];
-    this.dataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnsAndDataTypes));
-    this.partitionKeys = ImmutableList.copyOf(Objects.requireNonNull(partitionKeys));
-    this.clusteringKeys = ImmutableList.copyOf(Objects.requireNonNull(clusteringKeys));
-    columns = ImmutableList.copyOf(columnsAndDataTypes.keySet());
-    this.clusteringKeyOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringKeyOrders));
-    this.indexedColumns = ImmutableSet.copyOf(indexedColumns);
-    this.indexOrders = ImmutableMap.copyOf(indexOrders);
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(partitionKeyNames));
+    this.clusteringKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(clusteringKeyNames));
+    this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
+    this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
+    this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
+    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public JdbcTableMetadata(
       String schema,
       String table,
-      LinkedHashMap<String, DataType> columnsAndDataTypes,
-      List<String> partitionKeys,
-      List<String> clusteringKeys,
-      Map<String, Scan.Ordering.Order> clusteringKeyOrders,
-      Set<String> indexedColumns,
-      Map<String, Scan.Ordering.Order> indexOrders) {
+      List<String> partitionKeyNames,
+      List<String> clusteringKeyNames,
+      Map<String, Scan.Ordering.Order> clusteringOrders,
+      Map<String, DataType> columnDataTypes,
+      List<String> secondaryIndexNames,
+      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
     this.schema = Objects.requireNonNull(schema);
     this.table = Objects.requireNonNull(table);
     this.fullTableName = schema + "." + table;
-    this.dataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnsAndDataTypes));
-    this.partitionKeys = ImmutableList.copyOf(Objects.requireNonNull(partitionKeys));
-    this.clusteringKeys = ImmutableList.copyOf(Objects.requireNonNull(clusteringKeys));
-    columns = ImmutableList.copyOf(columnsAndDataTypes.keySet());
-    this.clusteringKeyOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringKeyOrders));
-    this.indexedColumns = ImmutableSet.copyOf(indexedColumns);
-    this.indexOrders = ImmutableMap.copyOf(indexOrders);
+    this.partitionKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(partitionKeyNames));
+    this.clusteringKeyNames =
+        new ImmutableLinkedHashSet<>(Objects.requireNonNull(clusteringKeyNames));
+    this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
+    this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
+    this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
+    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public String getFullTableName() {
@@ -82,51 +83,37 @@ public class JdbcTableMetadata implements TableMetadata {
     return table;
   }
 
-  public List<String> getPartitionKeys() {
-    return partitionKeys;
-  }
-
-  public List<String> getClusteringKeys() {
-    return clusteringKeys;
-  }
-
-  public List<String> getColumns() {
-    return columns;
-  }
-
-  public DataType getDataType(String column) {
-    return dataTypes.get(column);
-  }
-
-  public Scan.Ordering.Order getClusteringKeyOrder(String clusteringKeyName) {
-    return clusteringKeyOrders.get(clusteringKeyName);
-  }
-
-  public boolean columnExists(String column) {
-    return dataTypes.containsKey(column);
-  }
-
-  /** @return whether or not the specified column is indexed */
-  public boolean isIndexedColumn(String column) {
-    return indexedColumns.contains(column);
-  }
-
-  public Scan.Ordering.Order getIndexOrder(String column) {
-    return indexOrders.get(column);
-  }
-
   @Override
   public LinkedHashSet<String> getPartitionKeyNames() {
-    return new LinkedHashSet<>(partitionKeys);
+    return partitionKeyNames;
   }
 
   @Override
   public LinkedHashSet<String> getClusteringKeyNames() {
-    return new LinkedHashSet<>(partitionKeys);
+    return clusteringKeyNames;
+  }
+
+  @Override
+  public Scan.Ordering.Order getClusteringOrder(String clusteringKeyName) {
+    return clusteringOrders.get(clusteringKeyName);
+  }
+
+  @Override
+  public Set<String> getColumnNames() {
+    return columnDataTypes.keySet();
+  }
+
+  @Override
+  public DataType getColumnDataType(String columnName) {
+    return columnDataTypes.get(columnName);
   }
 
   @Override
   public Set<String> getSecondaryIndexNames() {
-    return indexedColumns;
+    return secondaryIndexNames;
+  }
+
+  public Scan.Ordering.Order getSecondaryIndexOrder(String column) {
+    return secondaryIndexOrders.get(column);
   }
 }

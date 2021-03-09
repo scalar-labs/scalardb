@@ -27,8 +27,8 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -78,9 +78,8 @@ public class JdbcTransactionManagerTest {
     // Assert
     verify(jdbcService).get(any(), any(), any(), any());
     verify(jdbcService).scan(any(), any(), any(), any());
-    verify(jdbcService).put(any(), any(), any(), any());
-    verify(jdbcService).delete(any(), any(), any(), any());
-    verify(jdbcService).mutate(any(), any(), any(), any(), anyBoolean());
+    verify(jdbcService, times(2)).put(any(), any(), any(), any());
+    verify(jdbcService, times(2)).delete(any(), any(), any(), any());
     verify(connection).commit();
     verify(connection).close();
   }
@@ -157,7 +156,7 @@ public class JdbcTransactionManagerTest {
       whenMutateOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any(), anyBoolean())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(

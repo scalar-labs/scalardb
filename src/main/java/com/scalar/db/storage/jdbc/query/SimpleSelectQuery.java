@@ -100,15 +100,15 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     List<Scan.Ordering> orderingList = new ArrayList<>(orderings);
 
     Boolean reverse = null;
-    for (int i = 0; i < tableMetadata.getClusteringKeys().size(); i++) {
+    int i = 0;
+    for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
       if (i < orderings.size()) {
-        Scan.Ordering ordering = orderings.get(i);
+        Scan.Ordering ordering = orderings.get(i++);
         if (reverse == null) {
-          reverse = ordering.getOrder() != tableMetadata.getClusteringKeyOrder(ordering.getName());
+          reverse = ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getName());
         }
       } else {
-        String clusteringKeyName = tableMetadata.getClusteringKeys().get(i);
-        Scan.Ordering.Order order = tableMetadata.getClusteringKeyOrder(clusteringKeyName);
+        Scan.Ordering.Order order = tableMetadata.getClusteringOrder(clusteringKeyName);
 
         if (reverse != null && reverse) {
           if (order == Scan.Ordering.Order.ASC) {

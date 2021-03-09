@@ -1,20 +1,17 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import java.util.ArrayList;
-import java.util.List;
-import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A handler for a batch
@@ -42,29 +39,13 @@ public class BatchHandler {
 
   /**
    * Execute the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the list
-   * must be for the same partition. Otherwise, it throws an {@link MultiPartitionException}.
+   * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
-   * @throws MultiPartitionException if the mutations are for multiple partitions
    * @throws NoMutationException if at least one of conditional {@code Mutation}s failed because it
    *     didn't meet the condition
    */
-  public void handle(List<? extends Mutation> mutations)
-      throws InvalidUsageException, ExecutionException {
-    checkNotNull(mutations);
-    if (mutations.size() < 1) {
-      throw new IllegalArgumentException("please specify at least one mutation.");
-    }
-
-    Mutation first = mutations.get(0);
-    for (Mutation mutation : mutations) {
-      if (!mutation.forTable().equals(first.forTable())
-          || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-        throw new MultiPartitionException(
-            "Cosmos DB cannot execute this batch since multi-partition batch is not supported.");
-      }
-    }
-
+  public void handle(List<? extends Mutation> mutations) throws ExecutionException {
     try {
       executeStoredProcedure(mutations);
     } catch (CosmosException e) {

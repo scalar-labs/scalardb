@@ -14,7 +14,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
+import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
@@ -49,7 +49,6 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -180,14 +179,14 @@ public class DynamoIntegrationTest {
 
   @Test
   public void
-      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowIllegalArgumentException() {
     // Arrange
     populateRecords();
     int c3 = 3;
     Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
 
     // Act Assert
-    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -584,8 +583,9 @@ public class DynamoIntegrationTest {
   }
 
   @Test
-  public void put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldStoreProperly()
-      throws ExecutionException {
+  public void
+      put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldThrowMultiPartitionException()
+          throws ExecutionException {
     // Arrange
     puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
@@ -593,55 +593,43 @@ public class DynamoIntegrationTest {
     puts.get(6).withCondition(new PutIfNotExists());
 
     // Act
-    assertThatCode(
+    assertThatThrownBy(
             () -> {
               storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .doesNotThrowAnyException();
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
     results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 0)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 1)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 2)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 3)))).all();
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 6)))).all();
+    assertThat(results.size()).isEqualTo(0);
   }
 
   @Test
-  public void put_MultiplePutWithDifferentPartitionsGiven_ShouldStoreProperly()
+  public void put_MultiplePutWithDifferentPartitionsGiven_ShouldThrowMultiPartitionException()
       throws ExecutionException {
     // Arrange
     puts = preparePuts();
 
     // Act
-    assertThatCode(
+    assertThatThrownBy(
             () -> {
               storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .doesNotThrowAnyException();
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
     results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 0)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 1)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 2)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 3)))).all();
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 6)))).all();
+    assertThat(results.size()).isEqualTo(0);
   }
 
   @Test
@@ -976,7 +964,7 @@ public class DynamoIntegrationTest {
   }
 
   @Test
-  public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldStoreProperly()
+  public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldThrowMultiPartitionException()
       throws Exception {
     // Arrange
     puts = preparePuts();
@@ -986,22 +974,16 @@ public class DynamoIntegrationTest {
             () -> {
               storage.mutate(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .doesNotThrowAnyException();
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
     results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 0)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 1)))).all();
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(results.size()).isEqualTo(1);
-    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 2)))).all();
-    assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 3)))).all();
+    assertThat(results.size()).isEqualTo(0);
+    results = storage.scan(new Scan(new Key(new IntValue(COL_NAME1, 6)))).all();
+    assertThat(results.size()).isEqualTo(0);
   }
 
   @Test
@@ -1339,17 +1321,11 @@ public class DynamoIntegrationTest {
     values.put("table", AttributeValue.builder().s(table(DATABASE, TABLE)).build());
     values.put(
         "partitionKey",
-        AttributeValue.builder()
-            .l(AttributeValue.builder().s(COL_NAME1).build())
-            .build());
+        AttributeValue.builder().l(AttributeValue.builder().s(COL_NAME1).build()).build());
     values.put(
         "clusteringKey",
-        AttributeValue.builder()
-            .l(AttributeValue.builder().s(COL_NAME4).build())
-            .build());
-    values.put(
-        "secondaryIndex",
-        AttributeValue.builder().ss(COL_NAME3).build());
+        AttributeValue.builder().l(AttributeValue.builder().s(COL_NAME4).build()).build());
+    values.put("secondaryIndex", AttributeValue.builder().ss(COL_NAME3).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(COL_NAME1, AttributeValue.builder().s("int").build());
     columns.put(COL_NAME2, AttributeValue.builder().s("text").build());

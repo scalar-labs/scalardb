@@ -1,19 +1,19 @@
 package com.scalar.db.storage.dynamo;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedSet;
-import com.scalar.db.storage.ImmutableLinkedHashSet;
-import com.scalar.db.storage.TableMetadata;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
+import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.storage.common.metadata.TableMetadata;
+import com.scalar.db.storage.common.util.ImmutableLinkedHashSet;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -28,8 +28,8 @@ public class DynamoTableMetadata implements TableMetadata {
   private static final String COLUMNS = "columns";
   private LinkedHashSet<String> partitionKeyNames;
   private LinkedHashSet<String> clusteringKeyNames;
-  private SortedSet<String> secondayIndexNames;
-  private SortedMap<String, String> columns;
+  private Set<String> secondaryIndexNames;
+  private Map<String, DataType> columnDataTypes;
   private List<String> keyNames;
 
   public DynamoTableMetadata(Map<String, AttributeValue> metadata) {
@@ -48,11 +48,23 @@ public class DynamoTableMetadata implements TableMetadata {
 
   @Override
   public Set<String> getSecondaryIndexNames() {
-    return secondayIndexNames;
+    return secondaryIndexNames;
   }
 
-  public Map<String, String> getColumns() {
-    return columns;
+  @Override
+  public Set<String> getColumnNames() {
+    return columnDataTypes.keySet();
+  }
+
+  @Override
+  public DataType getColumnDataType(String columnName) {
+    return columnDataTypes.get(columnName);
+  }
+
+  @Override
+  public Scan.Ordering.Order getClusteringOrder(String clusteringKeyName) {
+    // Always returns ASC for now if the clustering key name exists
+    return clusteringKeyNames.contains(clusteringKeyName) ? Scan.Ordering.Order.ASC : null;
   }
 
   public List<String> getKeyNames() {
@@ -75,9 +87,9 @@ public class DynamoTableMetadata implements TableMetadata {
       this.clusteringKeyNames = new ImmutableLinkedHashSet<>();
     }
     if (metadata.containsKey(SECONDARY_INDEX)) {
-      this.secondayIndexNames = ImmutableSortedSet.copyOf(metadata.get(SECONDARY_INDEX).ss());
+      this.secondaryIndexNames = ImmutableSet.copyOf(metadata.get(SECONDARY_INDEX).ss());
     } else {
-      this.secondayIndexNames = ImmutableSortedSet.of();
+      this.secondaryIndexNames = ImmutableSet.of();
     }
 
     this.keyNames =
@@ -86,11 +98,32 @@ public class DynamoTableMetadata implements TableMetadata {
             .addAll(clusteringKeyNames)
             .build();
 
-    SortedMap<String, String> cs =
-        metadata.get(COLUMNS).m().entrySet().stream()
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey, e -> e.getValue().s(), (u, v) -> v, TreeMap::new));
-    this.columns = Collections.unmodifiableSortedMap(cs);
+    columnDataTypes =
+        ImmutableMap.copyOf(
+            metadata.get(COLUMNS).m().entrySet().stream()
+                .collect(
+                    Collectors.toMap(Map.Entry::getKey, e -> convertDataType(e.getValue().s()))));
+  }
+
+  private DataType convertDataType(String columnType) {
+    switch (columnType) {
+      case "int":
+        return DataType.INT;
+      case "bigint":
+        return DataType.BIGINT;
+      case "float":
+        return DataType.FLOAT;
+      case "double":
+        return DataType.DOUBLE;
+      case "text": // for backwards compatibility
+      case "varchar":
+        return DataType.TEXT;
+      case "boolean":
+        return DataType.BOOLEAN;
+      case "blob":
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(columnType);
+    }
   }
 }

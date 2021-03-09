@@ -12,8 +12,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
-import com.scalar.db.storage.Utility;
+import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.common.util.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -116,11 +116,11 @@ public class Dynamo implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
-    Utility.checkGetOperation(get, metadata);
+    new OperationChecker(metadata).check(get);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
     if (items.size() > 1) {
-      throw new InvalidUsageException("please use scan() for non-exact match selection");
+      throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
     if (items.isEmpty() || items.get(0) == null) {
       return Optional.empty();
@@ -133,7 +133,7 @@ public class Dynamo implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
-    Utility.checkScanOperation(scan, metadata);
+    new OperationChecker(metadata).check(scan);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
@@ -143,7 +143,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    checkIfPrimaryKeyExists(put);
+    new OperationChecker(metadataManager.getTableMetadata(put)).check(put);
 
     putStatementHandler.handle(put);
   }
@@ -156,7 +156,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    checkIfPrimaryKeyExists(delete);
+    new OperationChecker(metadataManager.getTableMetadata(delete)).check(delete);
 
     deleteStatementHandler.handle(delete);
   }
@@ -169,27 +169,26 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     checkArgument(mutations.size() != 0);
-    if (mutations.size() > 1) {
-      Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-      batchHandler.handle(mutations);
-    } else if (mutations.size() == 1) {
+    if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);
       if (mutation instanceof Put) {
         put((Put) mutation);
       } else if (mutation instanceof Delete) {
         delete((Delete) mutation);
       }
+      return;
     }
+
+    Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+    OperationChecker operationChecker =
+        new OperationChecker(metadataManager.getTableMetadata(mutations.get(0)));
+    operationChecker.check(mutations);
+    mutations.forEach(operationChecker::check);
+    batchHandler.handle(mutations);
   }
 
   @Override
   public void close() {
     client.close();
-  }
-
-  private void checkIfPrimaryKeyExists(Mutation mutation) {
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(mutation);
-
-    Utility.checkIfPrimaryKeyExists(mutation, metadata);
   }
 }

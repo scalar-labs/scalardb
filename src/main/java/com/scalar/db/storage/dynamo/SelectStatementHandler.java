@@ -7,16 +7,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.Utility;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.IntStream;
-import javax.annotation.concurrent.ThreadSafe;
+import com.scalar.db.storage.common.util.Utility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -26,6 +17,16 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.IntStream;
 
 /**
  * A handler class for select statement

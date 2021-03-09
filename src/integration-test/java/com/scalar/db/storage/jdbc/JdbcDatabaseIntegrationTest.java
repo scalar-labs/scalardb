@@ -19,7 +19,7 @@ import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.storage.jdbc.metadata.DataType;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -60,7 +58,14 @@ public class JdbcDatabaseIntegrationTest {
     testEnv.register(
         NAMESPACE,
         TABLE,
-        new LinkedHashMap<String, DataType>() {
+        Collections.singletonList(COL_NAME1),
+        Collections.singletonList(COL_NAME4),
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(COL_NAME4, Scan.Ordering.Order.ASC);
+          }
+        },
+        new HashMap<String, DataType>() {
           {
             put(COL_NAME1, DataType.INT);
             put(COL_NAME2, DataType.TEXT);
@@ -69,18 +74,7 @@ public class JdbcDatabaseIntegrationTest {
             put(COL_NAME5, DataType.BOOLEAN);
           }
         },
-        Collections.singletonList(COL_NAME1),
-        Collections.singletonList(COL_NAME4),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(COL_NAME4, Scan.Ordering.Order.ASC);
-          }
-        },
-        new HashSet<String>() {
-          {
-            add(COL_NAME3);
-          }
-        },
+        Collections.singletonList(COL_NAME3),
         new HashMap<String, Scan.Ordering.Order>() {
           {
             put(COL_NAME3, Scan.Ordering.Order.ASC);

@@ -1,18 +1,11 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -24,6 +17,11 @@ import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import software.amazon.awssdk.services.dynamodb.model.Update;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A handler for a batch
@@ -50,17 +48,14 @@ public class BatchHandler {
 
   /**
    * Execute the specified list of {@link Mutation}s in batch. All the {@link Mutation}s in the list
-   * must be for the same partition. Otherwise, it throws an {@link MultiPartitionException}.
+   * must be for the same partition.
    *
    * @param mutations a list of {@code Mutation}s to execute
    * @throws NoMutationException if at least one of conditional {@code Mutation}s failed because it
    *     didn't meet the condition
    */
   public void handle(List<? extends Mutation> mutations) throws ExecutionException {
-    checkNotNull(mutations);
-    if (mutations.size() < 1) {
-      throw new IllegalArgumentException("please specify at least one mutation.");
-    } else if (mutations.size() > 25) {
+    if (mutations.size() > 25) {
       throw new IllegalArgumentException("DynamoDB cannot batch more than 25 mutations at once.");
     }
 

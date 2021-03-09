@@ -3,13 +3,16 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
-import com.scalar.db.storage.Utility;
-import com.scalar.db.storage.jdbc.checker.OperationChecker;
+import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.common.util.Utility;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
+import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 
@@ -22,6 +25,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * A service class to perform get/scan/put/delete/mutate operations.
  *
@@ -30,15 +35,15 @@ import java.util.Optional;
 @ThreadSafe
 public class JdbcService {
 
-  private final OperationChecker operationChecker;
+  private final TableMetadataManager tableMetadataManager;
   private final QueryBuilder queryBuilder;
   private final Optional<String> namespacePrefix;
 
   public JdbcService(
-      OperationChecker operationChecker,
+      TableMetadataManager tableMetadataManager,
       QueryBuilder queryBuilder,
       Optional<String> namespacePrefix) {
-    this.operationChecker = Objects.requireNonNull(operationChecker);
+    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
     this.namespacePrefix = Objects.requireNonNull(namespacePrefix);
   }
@@ -46,10 +51,9 @@ public class JdbcService {
   public Optional<Result> get(
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
-    addProjectionsForKeys(get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-
-    operationChecker.check(get);
+    new OperationChecker(getTableMetadata(get)).check(get);
+    addProjectionsForKeys(get);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -74,10 +78,9 @@ public class JdbcService {
   public Scanner scan(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
-    addProjectionsForKeys(scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-
-    operationChecker.check(scan);
+    new OperationChecker(getTableMetadata(scan)).check(scan);
+    addProjectionsForKeys(scan);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -98,6 +101,10 @@ public class JdbcService {
     return new ScannerImpl(selectQuery, connection, preparedStatement, resultSet);
   }
 
+  private JdbcTableMetadata getTableMetadata(Operation operation) throws SQLException {
+    return tableMetadataManager.getTableMetadata(operation.forFullTableName().get());
+  }
+
   private void addProjectionsForKeys(Selection selection) {
     if (selection.getProjections().size() == 0) { // meaning projecting all
       return;
@@ -112,8 +119,7 @@ public class JdbcService {
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-
-    operationChecker.check(put);
+    new OperationChecker(getTableMetadata(put)).check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
@@ -134,8 +140,7 @@ public class JdbcService {
       Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-
-    operationChecker.check(delete);
+    new OperationChecker(getTableMetadata(delete)).check(delete);
 
     if (!delete.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
@@ -156,11 +161,11 @@ public class JdbcService {
       List<? extends Mutation> mutations,
       Connection connection,
       Optional<String> namespace,
-      Optional<String> tableName,
-      boolean allowMultiPartitions)
+      Optional<String> tableName)
       throws SQLException {
-    mutations.forEach(m -> Utility.setTargetToIfNot(m, namespacePrefix, namespace, tableName));
-    operationChecker.check(mutations, allowMultiPartitions);
+    checkArgument(mutations.size() != 0);
+    Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+    new OperationChecker(getTableMetadata(mutations.get(0))).check(mutations);
 
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {

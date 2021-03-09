@@ -2,9 +2,9 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
-import com.scalar.db.storage.jdbc.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -14,7 +14,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
@@ -50,23 +49,30 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
     testEnv.register(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
-        new LinkedHashMap<String, DataType>() {
+        Collections.singletonList(ID),
+        Collections.emptyList(),
+        new HashMap<String, Scan.Ordering.Order>() {},
+        new HashMap<String, DataType>() {
           {
             put(ID, DataType.TEXT);
             put(STATE, DataType.INT);
             put(CREATED_AT, DataType.BIGINT);
           }
-        },
-        Collections.singletonList(ID),
-        Collections.emptyList(),
-        new HashMap<String, Scan.Ordering.Order>() {});
+        });
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
       testEnv.register(
           NAMESPACE,
           table,
-          new LinkedHashMap<String, DataType>() {
+          Collections.singletonList(ACCOUNT_ID),
+          Collections.singletonList(ACCOUNT_TYPE),
+          new HashMap<String, Scan.Ordering.Order>() {
+            {
+              put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
+            }
+          },
+          new HashMap<String, DataType>() {
             {
               put(ACCOUNT_ID, DataType.INT);
               put(ACCOUNT_TYPE, DataType.INT);
@@ -82,13 +88,6 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest {
               put(BEFORE_VERSION, DataType.INT);
               put(BEFORE_PREPARED_AT, DataType.BIGINT);
               put(BEFORE_COMMITTED_AT, DataType.BIGINT);
-            }
-          },
-          Collections.singletonList(ACCOUNT_ID),
-          Collections.singletonList(ACCOUNT_TYPE),
-          new HashMap<String, Scan.Ordering.Order>() {
-            {
-              put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
             }
           });
     }

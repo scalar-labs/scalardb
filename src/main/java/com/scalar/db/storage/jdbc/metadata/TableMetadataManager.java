@@ -4,6 +4,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.Scan;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.RdbEngine;
 
 import javax.annotation.Nonnull;
@@ -15,12 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
@@ -59,12 +57,12 @@ public class TableMetadataManager {
       RdbEngine rdbEngine)
       throws SQLException {
 
-    LinkedHashMap<String, DataType> columnsAndDataTypes = new LinkedHashMap<>();
-    List<String> partitionKeys = new ArrayList<>();
-    List<String> clusteringKeys = new ArrayList<>();
-    Map<String, Scan.Ordering.Order> clusteringKeyOrders = new HashMap<>();
-    Set<String> indexedColumns = new HashSet<>();
-    Map<String, Scan.Ordering.Order> indexOrders = new HashMap<>();
+    List<String> partitionKeyNames = new ArrayList<>();
+    List<String> clusteringKeyNames = new ArrayList<>();
+    Map<String, Scan.Ordering.Order> clusteringOrders = new HashMap<>();
+    Map<String, DataType> columnDataTypes = new HashMap<>();
+    List<String> secondaryIndexNames = new ArrayList<>();
+    Map<String, Scan.Ordering.Order> secondaryIndexOrders = new HashMap<>();
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
@@ -75,12 +73,12 @@ public class TableMetadataManager {
         while (resultSet.next()) {
           String columnName = resultSet.getString("column_name");
           DataType dataType = DataType.valueOf(resultSet.getString("data_type"));
-          columnsAndDataTypes.put(columnName, dataType);
+          columnDataTypes.put(columnName, dataType);
 
           boolean indexed = resultSet.getBoolean("indexed");
           if (indexed) {
-            indexedColumns.add(columnName);
-            indexOrders.put(
+            secondaryIndexNames.add(columnName);
+            secondaryIndexOrders.put(
                 columnName, Scan.Ordering.Order.valueOf(resultSet.getString("index_order")));
           }
 
@@ -91,11 +89,11 @@ public class TableMetadataManager {
 
           switch (KeyType.valueOf(keyType)) {
             case PARTITION:
-              partitionKeys.add(columnName);
+              partitionKeyNames.add(columnName);
               break;
             case CLUSTERING:
-              clusteringKeys.add(columnName);
-              clusteringKeyOrders.put(
+              clusteringKeyNames.add(columnName);
+              clusteringOrders.put(
                   columnName, Scan.Ordering.Order.valueOf(resultSet.getString("clustering_order")));
               break;
             default:
@@ -107,12 +105,12 @@ public class TableMetadataManager {
 
     return new JdbcTableMetadata(
         fullTableName,
-        columnsAndDataTypes,
-        partitionKeys,
-        clusteringKeys,
-        clusteringKeyOrders,
-        indexedColumns,
-        indexOrders);
+        partitionKeyNames,
+        clusteringKeyNames,
+        clusteringOrders,
+        columnDataTypes,
+        secondaryIndexNames,
+        secondaryIndexOrders);
   }
 
   private String getSelectColumnsStatement(Optional<String> schemaPrefix, RdbEngine rdbEngine) {

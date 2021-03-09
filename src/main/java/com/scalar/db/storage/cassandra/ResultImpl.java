@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
@@ -18,21 +16,24 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Immutable
 public class ResultImpl implements Result {
@@ -127,7 +128,7 @@ public class ResultImpl implements Result {
                 }));
   }
 
-  private Optional<Key> getKey(Set<String> names) {
+  private Optional<Key> getKey(LinkedHashSet<String> names) {
     List<Value> list = new ArrayList<>();
     for (String name : names) {
       Value value = values.get(name);

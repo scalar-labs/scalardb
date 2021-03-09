@@ -1,4 +1,4 @@
-package com.scalar.db.storage.jdbc.metadata;
+package com.scalar.db.storage.common.metadata;
 
 public enum DataType {
   BOOLEAN,

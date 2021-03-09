@@ -3,12 +3,13 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.cosmos.ConcatenationVisitor;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nonnull;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /** A utility class for an operation */
 public class DynamoOperation {
@@ -95,16 +96,7 @@ public class DynamoOperation {
             });
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    metadata
-        .getPartitionKeyNames()
-        .forEach(
-            name -> {
-              if (keyMap.containsKey(name)) {
-                keyMap.get(name).accept(visitor);
-              } else {
-                throw new IllegalArgumentException("The partition key is not properly specified.");
-              }
-            });
+    metadata.getPartitionKeyNames().forEach(name -> keyMap.get(name).accept(visitor));
 
     return visitor.build();
   }
@@ -127,16 +119,7 @@ public class DynamoOperation {
             });
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    metadata
-        .getClusteringKeyNames()
-        .forEach(
-            name -> {
-              if (keyMap.containsKey(name)) {
-                keyMap.get(name).accept(visitor);
-              } else {
-                throw new IllegalArgumentException("The clustering key is not properly specified.");
-              }
-            });
+    metadata.getClusteringKeyNames().forEach(name -> keyMap.get(name).accept(visitor));
 
     return Optional.of(visitor.build());
   }

@@ -12,7 +12,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.metadata.DataType;
+import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.After;
 import org.junit.Before;
@@ -21,7 +21,6 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -48,18 +47,18 @@ public class JdbcTransactionIntegrationTest {
     testEnv.register(
         NAMESPACE,
         TABLE,
-        new LinkedHashMap<String, DataType>() {
-          {
-            put(ACCOUNT_ID, DataType.INT);
-            put(ACCOUNT_TYPE, DataType.INT);
-            put(BALANCE, DataType.INT);
-          }
-        },
         Collections.singletonList(ACCOUNT_ID),
         Collections.singletonList(ACCOUNT_TYPE),
         new HashMap<String, Scan.Ordering.Order>() {
           {
             put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
+          }
+        },
+        new HashMap<String, DataType>() {
+          {
+            put(ACCOUNT_ID, DataType.INT);
+            put(ACCOUNT_TYPE, DataType.INT);
+            put(BALANCE, DataType.INT);
           }
         });
     testEnv.createTables();

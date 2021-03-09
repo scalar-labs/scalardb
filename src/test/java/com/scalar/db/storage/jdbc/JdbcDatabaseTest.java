@@ -26,7 +26,6 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -220,7 +219,7 @@ public class JdbcDatabaseTest {
   @Test
   public void whenMutateOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any(), anyBoolean())).thenReturn(true);
+    when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(true);
 
     // Act
     Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
@@ -228,7 +227,7 @@ public class JdbcDatabaseTest {
     jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
-    verify(jdbcService).mutate(any(), any(), any(), any(), anyBoolean());
+    verify(jdbcService).mutate(any(), any(), any(), any());
     verify(connection).close();
   }
 
@@ -237,7 +236,7 @@ public class JdbcDatabaseTest {
       whenMutateOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any(), anyBoolean())).thenReturn(false);
+    when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -260,7 +259,7 @@ public class JdbcDatabaseTest {
       whenMutateOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any(), anyBoolean())).thenThrow(sqlException);
+    when(jdbcService.mutate(any(), any(), any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(

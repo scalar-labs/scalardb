@@ -1,10 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.api.ConditionalExpression.Operator;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -20,26 +15,30 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.InvalidUsageException;
 import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.stream.IntStream;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.IntStream;
+
+import static com.scalar.db.api.ConditionalExpression.Operator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class CassandraIntegrationTest {
   private static final String KEYSPACE = "integration_testing";
@@ -535,8 +534,7 @@ public class CassandraIntegrationTest {
             () -> {
               storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .isInstanceOf(RetriableExecutionException.class)
-        .hasCauseExactlyInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
@@ -559,8 +557,7 @@ public class CassandraIntegrationTest {
             () -> {
               storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .isInstanceOf(RetriableExecutionException.class)
-        .hasCauseExactlyInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
@@ -920,8 +917,7 @@ public class CassandraIntegrationTest {
             () -> {
               storage.mutate(Arrays.asList(puts.get(0), puts.get(3), puts.get(6)));
             })
-        .isInstanceOf(RetriableExecutionException.class)
-        .hasCauseExactlyInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(MultiPartitionException.class);
 
     // Assert
     List<Result> results;
@@ -1072,14 +1068,14 @@ public class CassandraIntegrationTest {
 
   @Test
   public void
-      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowInvalidUsageException() {
+      get_GetGivenForIndexedColumnMatchingMultipleRecords_ShouldThrowIllegalArgumentException() {
     // Arrange
     populateRecords();
     int c3 = 3;
     Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
 
     // Act Assert
-    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(InvalidUsageException.class);
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

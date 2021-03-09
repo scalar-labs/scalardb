@@ -139,26 +139,6 @@ public class CosmosOperationTest {
   }
 
   @Test
-  public void
-      getConcatenatedPartitionKey_WrongPartitionKeyGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    when(metadata.getPartitionKeyNames())
-        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
-
-    Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              cosmosOperation.getConcatenatedPartitionKey();
-            })
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
   public void getCosmosPartitionKey_MultipleKeysGiven_ShouldReturnPartitionKey() {
     // Arrange
     when(metadata.getPartitionKeyNames())
@@ -198,27 +178,5 @@ public class CosmosOperationTest {
 
     // Assert
     assertThat(actual).isEqualTo(ANY_TEXT_1 + ":" + ANY_INT_1 + ":" + ANY_TEXT_2);
-  }
-
-  @Test
-  public void getId_WrongKeyGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    when(metadata.getKeyNames()).thenReturn(ImmutableList.of(ANY_NAME_1, ANY_NAME_3, ANY_NAME_2));
-
-    Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_4, ANY_TEXT_2));
-    Get get =
-        new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              cosmosOperation.getId();
-            })
-        .isInstanceOf(IllegalArgumentException.class);
   }
 }

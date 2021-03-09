@@ -11,7 +11,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.storage.jdbc.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -49,9 +48,8 @@ public class JdbcDatabase implements DistributedStorage {
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(dataSource, namespacePrefix, rdbEngine);
-    OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
-    jdbcService = new JdbcService(operationChecker, queryBuilder, namespacePrefix);
+    jdbcService = new JdbcService(tableMetadataManager, queryBuilder, namespacePrefix);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
@@ -155,6 +153,16 @@ public class JdbcDatabase implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
+    if (mutations.size() == 1) {
+      Mutation mutation = mutations.get(0);
+      if (mutation instanceof Put) {
+        put((Put) mutation);
+      } else if (mutation instanceof Delete) {
+        delete((Delete) mutation);
+      }
+      return;
+    }
+
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
@@ -165,7 +173,7 @@ public class JdbcDatabase implements DistributedStorage {
     }
 
     try {
-      if (!jdbcService.mutate(mutations, connection, namespace, tableName, false)) {
+      if (!jdbcService.mutate(mutations, connection, namespace, tableName)) {
         try {
           connection.rollback();
         } catch (SQLException e) {
