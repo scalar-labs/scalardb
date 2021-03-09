@@ -9,44 +9,61 @@ import com.azure.cosmos.models.ThroughputProperties;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.common.metadata.DataType;
-import org.junit.After;
-import org.junit.Before;
+import com.scalar.db.storage.MetadataIntegrationTestBase;
+import com.scalar.db.storage.common.metadata.TableMetadata;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CosmosMetadataIntegrationTest {
+public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static final String METADATA_DATABASE = "scalardb";
   private static final String METADATA_CONTAINER = "metadata";
-  private static final String DATABASE = "integration_testing";
-  private static final String CONTAINER = "test_table";
 
-  private static final String COL_NAME1 = "c1";
-  private static final String COL_NAME2 = "c2";
-  private static final String COL_NAME3 = "c3";
-  private static final String COL_NAME4 = "c4";
-  private static final String COL_NAME5 = "c5";
-  private static final String COL_NAME6 = "c6";
-  private static final String COL_NAME7 = "c7";
-  private static final String COL_NAME8 = "c8";
-  private static final String COL_NAME9 = "c9";
-  private static final String COL_NAME10 = "c10";
-  private static final String COL_NAME11 = "c11";
+  private static Optional<String> namespacePrefix;
+  private static CosmosClient client;
+  private static TableMetadataManager tableMetadataManager;
 
-  private Optional<String> namespacePrefix;
-  private CosmosClient client;
+  @Override
+  protected TableMetadata getTableMetadata() {
+    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
+    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));
+    return tableMetadataManager.getTableMetadata(dummyOperation);
+  }
 
-  @Before
-  public void setUp() throws Exception {
+  @Test
+  public void testId() {
+    assertThat(((CosmosTableMetadata) getTableMetadata()).getId())
+        .isEqualTo(table(NAMESPACE, TABLE));
+  }
+
+  @Test
+  @Override
+  public void testClusteringOrder() {
+    // Fow now, the clustering order is always ASC in the Cosmos DB adapter
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME4)).isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME5)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME6)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME7)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME8)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME9)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME10)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME11)).isNull();
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
     String contactPoint = System.getProperty("scalardb.cosmos.uri");
     String password = System.getProperty("scalardb.cosmos.password");
     namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
@@ -63,7 +80,7 @@ public class CosmosMetadataIntegrationTest {
 
     // insert metadata
     CosmosTableMetadata metadata = new CosmosTableMetadata();
-    metadata.setId(table(DATABASE, CONTAINER));
+    metadata.setId(table(NAMESPACE, TABLE));
     metadata.setPartitionKeyNames(Arrays.asList(COL_NAME2, COL_NAME1));
     metadata.setClusteringKeyNames(Arrays.asList(COL_NAME4, COL_NAME3));
     metadata.setSecondaryIndexNames(new HashSet<>(Arrays.asList(COL_NAME5, COL_NAME6)));
@@ -84,10 +101,14 @@ public class CosmosMetadataIntegrationTest {
         .getDatabase(database(METADATA_DATABASE))
         .getContainer(METADATA_CONTAINER)
         .createItem(metadata);
+
+    CosmosContainer container =
+        client.getDatabase(database(METADATA_DATABASE)).getContainer(METADATA_CONTAINER);
+    tableMetadataManager = new TableMetadataManager(container);
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     CosmosDatabase database = client.getDatabase(database(METADATA_DATABASE));
     database.getContainer(METADATA_CONTAINER).delete();
     database.delete();
@@ -95,81 +116,15 @@ public class CosmosMetadataIntegrationTest {
     client.close();
   }
 
-  private String namespacePrefix() {
+  private static String namespacePrefix() {
     return namespacePrefix.map(n -> n + "_").orElse("");
   }
 
-  private String database(String database) {
+  private static String database(String database) {
     return namespacePrefix() + database;
   }
 
-  private String table(String database, String table) {
+  private static String table(String database, String table) {
     return database(database) + "." + table;
-  }
-
-  @Test
-  public void test() throws Exception {
-    CosmosContainer container =
-        client.getDatabase(database(METADATA_DATABASE)).getContainer(METADATA_CONTAINER);
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(container);
-
-    Get dummyOperation = new Get(new Key()).forNamespace(DATABASE).forTable(CONTAINER);
-    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));
-    CosmosTableMetadata tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
-
-    assertThat(tableMetadata).isNotNull();
-
-    assertThat(tableMetadata.getId()).isEqualTo(table(DATABASE, CONTAINER));
-
-    assertThat(tableMetadata.getPartitionKeyNames().size()).isEqualTo(2);
-    Iterator<String> iterator = tableMetadata.getPartitionKeyNames().iterator();
-    assertThat(iterator.next()).isEqualTo(COL_NAME2);
-    assertThat(iterator.next()).isEqualTo(COL_NAME1);
-
-    assertThat(tableMetadata.getClusteringKeyNames().size()).isEqualTo(2);
-    iterator = tableMetadata.getClusteringKeyNames().iterator();
-    assertThat(iterator.next()).isEqualTo(COL_NAME4);
-    assertThat(iterator.next()).isEqualTo(COL_NAME3);
-
-    assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME1)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME3)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME4)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME5)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME6)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME7)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME8)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME9)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME10)).isTrue();
-    assertThat(tableMetadata.getColumnNames().contains(COL_NAME11)).isTrue();
-
-    assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME2)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME3)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME4)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME5)).isEqualTo(DataType.INT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME6)).isEqualTo(DataType.TEXT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME7)).isEqualTo(DataType.BIGINT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME8)).isEqualTo(DataType.FLOAT);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME9)).isEqualTo(DataType.DOUBLE);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME10)).isEqualTo(DataType.BOOLEAN);
-    assertThat(tableMetadata.getColumnDataType(COL_NAME11)).isEqualTo(DataType.BLOB);
-
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME4)).isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME5)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME6)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME7)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME8)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME9)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME10)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME11)).isNull();
-
-    assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
-    assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
   }
 }

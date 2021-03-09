@@ -1,14 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -35,35 +26,50 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.assertj.core.api.Assertions;
 
-public class ConsensusCommitIntegrationTest {
-  static final String NAMESPACE = "integration_testing";
-  static final String TABLE_1 = "tx_test_table1";
-  static final String TABLE_2 = "tx_test_table2";
-  static final String ACCOUNT_ID = "account_id";
-  static final String ACCOUNT_TYPE = "account_type";
-  static final String BALANCE = "balance";
-  static final int INITIAL_BALANCE = 1000;
-  static final int NUM_ACCOUNTS = 4;
-  static final int NUM_TYPES = 4;
-  static final String ANY_ID_1 = "id1";
-  static final String ANY_ID_2 = "id2";
-  private final ConsensusCommitManager manager;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+public abstract class ConsensusCommitIntegrationTestBase {
+
+  protected static final String NAMESPACE = "integration_testing";
+  protected static final String TABLE_1 = "tx_test_table1";
+  protected static final String TABLE_2 = "tx_test_table2";
+  protected static final String ACCOUNT_ID = "account_id";
+  protected static final String ACCOUNT_TYPE = "account_type";
+  protected static final String BALANCE = "balance";
+  protected static final int INITIAL_BALANCE = 1000;
+  protected static final int NUM_ACCOUNTS = 4;
+  protected static final int NUM_TYPES = 4;
+  protected static final String ANY_ID_1 = "id1";
+  protected static final String ANY_ID_2 = "id2";
+
+  private ConsensusCommitManager manager;
   // assume that storage is a spied object
   private DistributedStorage storage;
   // assume that coordinator is a spied object
   private Coordinator coordinator;
   // assume that recovery is a spied object
   private RecoveryHandler recovery;
+
   private ConsensusCommit transaction;
 
-  public ConsensusCommitIntegrationTest(
+  protected void setUp(
       ConsensusCommitManager manager,
       DistributedStorage storage,
       Coordinator coordinator,
@@ -74,8 +80,7 @@ public class ConsensusCommitIntegrationTest {
     this.recovery = recovery;
   }
 
-  public void setUp() {}
-
+  @Test
   public void get_GetGivenForCommittedRecord_ShouldReturnRecord()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -92,6 +97,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(TransactionState.COMMITTED);
   }
 
+  @Test
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecord()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -108,6 +114,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(TransactionState.COMMITTED);
   }
 
+  @Test
   public void get_CalledTwice_ShouldReturnFromSnapshotInSecondTime()
       throws CrudException, ExecutionException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -124,6 +131,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result1).isEqualTo(result2);
   }
 
+  @Test
   public void
       get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
           throws CrudException, ExecutionException, CommitException,
@@ -142,6 +150,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result1).isEqualTo(result2);
   }
 
+  @Test
   public void get_GetGivenForNonExisting_ShouldReturnEmpty()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -156,6 +165,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isFalse();
   }
 
+  @Test
   public void scan_ScanGivenForNonExisting_ShouldReturnEmpty()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -192,7 +202,7 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery).rollforward(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -206,12 +216,14 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isGreaterThan(0);
   }
 
+  @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(get);
   }
 
+  @Test
   public void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
@@ -240,7 +252,7 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -254,12 +266,14 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
       throws CrudException, ExecutionException, CoordinatorException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(get);
   }
 
+  @Test
   public void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
       throws CrudException, ExecutionException, CoordinatorException {
     Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
@@ -292,6 +306,7 @@ public class ConsensusCommitIntegrationTest {
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
+  @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
           throws ExecutionException, CoordinatorException {
@@ -300,6 +315,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
           throws ExecutionException, CoordinatorException {
@@ -332,7 +348,7 @@ public class ConsensusCommitIntegrationTest {
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -346,6 +362,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
       throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
@@ -353,6 +370,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -397,7 +415,7 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery, times(2)).rollforward(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -411,6 +429,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isGreaterThan(0);
   }
 
+  @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -419,6 +438,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -464,7 +484,7 @@ public class ConsensusCommitIntegrationTest {
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -478,6 +498,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -486,6 +507,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -524,12 +546,14 @@ public class ConsensusCommitIntegrationTest {
     }
   }
 
+  @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(get);
   }
 
+  @Test
   public void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
       throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
@@ -558,7 +582,7 @@ public class ConsensusCommitIntegrationTest {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -572,12 +596,14 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
       throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(get);
   }
 
+  @Test
   public void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
       throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE_1);
@@ -610,6 +636,7 @@ public class ConsensusCommitIntegrationTest {
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
+  @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
           throws ExecutionException, CoordinatorException {
@@ -618,6 +645,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
           throws ExecutionException, CoordinatorException {
@@ -650,7 +678,7 @@ public class ConsensusCommitIntegrationTest {
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -664,6 +692,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
       throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
@@ -671,6 +700,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -723,6 +753,7 @@ public class ConsensusCommitIntegrationTest {
     }
   }
 
+  @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -731,6 +762,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -747,7 +779,6 @@ public class ConsensusCommitIntegrationTest {
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TransactionState.DELETED, current, TransactionState.ABORTED);
     transaction = manager.start();
-    Get get = prepareGet(0, 0, NAMESPACE, TABLE_1);
     transaction.setBeforeRecoveryHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -777,7 +808,7 @@ public class ConsensusCommitIntegrationTest {
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
-    TransactionResult result = null;
+    TransactionResult result;
     if (s instanceof Get) {
       result = (TransactionResult) transaction.get((Get) s).get();
     } else {
@@ -791,6 +822,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getCommittedAt()).isEqualTo(1);
   }
 
+  @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -799,6 +831,7 @@ public class ConsensusCommitIntegrationTest {
         get);
   }
 
+  @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
@@ -807,9 +840,9 @@ public class ConsensusCommitIntegrationTest {
         scan);
   }
 
+  @Test
   public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
-      throws CrudException, CommitException, UnknownTransactionStatusException,
-          InterruptedException {
+      throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     DistributedTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 1)));
@@ -832,6 +865,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result1).isEqualTo(result3);
   }
 
+  @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -852,6 +886,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result.getVersion()).isEqualTo(1);
   }
 
+  @Test
   public void putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -875,6 +910,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(actual.getVersion()).isEqualTo(2);
   }
 
+  @Test
   public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowCommitException()
       throws CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -885,13 +921,10 @@ public class ConsensusCommitIntegrationTest {
 
     // Act Assert
     transaction.put(puts.get(0));
-    assertThatThrownBy(
-            () -> {
-              transaction.commit();
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
   }
 
+  @Test
   public void
       putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit()
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
@@ -910,10 +943,11 @@ public class ConsensusCommitIntegrationTest {
 
     // Assert
     // one for prepare, one for commit
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
+  @Test
   public void putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit()
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
@@ -931,10 +965,11 @@ public class ConsensusCommitIntegrationTest {
 
     // Assert
     // twice for prepare, twice for commit
-    verify(storage, times(4)).mutate(any(List.class));
+    verify(storage, times(4)).mutate(anyList());
     verify(coordinator).putState(any(Coordinator.State.class));
   }
 
+  @Test
   public void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -956,6 +991,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(another.get(gets.get(to)).get().getValue(BALANCE)).isEqualTo(Optional.of(toBalance));
   }
 
+  @Test
   public void commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
       throws CrudException, CommitConflictException {
     // Arrange
@@ -985,11 +1021,7 @@ public class ConsensusCommitIntegrationTest {
     // Act Assert
     transaction.put(puts.get(from));
     transaction.put(puts.get(to));
-    assertThatThrownBy(
-            () -> {
-              transaction.commit();
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1001,6 +1033,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(expected));
   }
 
+  @Test
   public void commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -1018,20 +1051,12 @@ public class ConsensusCommitIntegrationTest {
     transaction.get(gets.get(to));
     transaction.delete(deletes.get(to));
     transaction.setBeforeCommitHook(
-        () -> {
-          assertThatCode(
-                  () -> {
-                    prepareTransfer(anotherFrom, anotherTo, amount).commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+        () ->
+            assertThatCode(() -> prepareTransfer(anotherFrom, anotherTo, amount).commit())
+                .doesNotThrowAnyException());
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              transaction.commit();
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1044,6 +1069,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount)));
   }
 
+  @Test
   public void commit_ConflictingPutsGivenForExisting_ShouldCommitOneAndAbortTheOther()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -1056,20 +1082,12 @@ public class ConsensusCommitIntegrationTest {
     populateRecords();
     ConsensusCommit transaction = prepareTransfer(from, to, amount1);
     transaction.setBeforeCommitHook(
-        () -> {
-          assertThatCode(
-                  () -> {
-                    prepareTransfer(anotherFrom, anotherTo, amount2).commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+        () ->
+            assertThatCode(() -> prepareTransfer(anotherFrom, anotherTo, amount2).commit())
+                .doesNotThrowAnyException());
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              transaction.commit();
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1083,6 +1101,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
   }
 
+  @Test
   public void commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -1095,20 +1114,12 @@ public class ConsensusCommitIntegrationTest {
     populateRecords();
     ConsensusCommit transaction = prepareTransfer(from, to, amount1);
     transaction.setBeforeCommitHook(
-        () -> {
-          assertThatCode(
-                  () -> {
-                    prepareTransfer(anotherFrom, anotherTo, amount2).commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+        () ->
+            assertThatCode(() -> prepareTransfer(anotherFrom, anotherTo, amount2).commit())
+                .doesNotThrowAnyException());
 
     // Act
-    assertThatCode(
-            () -> {
-              transaction.commit();
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
     List<Get> gets = prepareGets(NAMESPACE, TABLE_1);
@@ -1123,6 +1134,7 @@ public class ConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
   }
 
+  @Test
   public void commit_DeleteGivenWithoutRead_ShouldThrowInvalidUsageException() {
     // Arrange
     Delete delete = prepareDelete(0, 0, NAMESPACE, TABLE_1);
@@ -1130,14 +1142,12 @@ public class ConsensusCommitIntegrationTest {
 
     // Act
     transaction.delete(delete);
-    assertThatCode(
-            () -> {
-              transaction.commit();
-            })
+    assertThatCode(() -> transaction.commit())
         .isInstanceOf(CommitException.class)
         .hasCauseInstanceOf(InvalidUsageException.class);
   }
 
+  @Test
   public void commit_DeleteGivenForNonExisting_ShouldThrowInvalidUsageException()
       throws CrudException {
     // Arrange
@@ -1146,16 +1156,14 @@ public class ConsensusCommitIntegrationTest {
     transaction = manager.start();
 
     // Act
-    Optional<Result> result = transaction.get(get);
+    transaction.get(get);
     transaction.delete(delete);
-    assertThatCode(
-            () -> {
-              transaction.commit();
-            })
+    assertThatCode(() -> transaction.commit())
         .isInstanceOf(CommitException.class)
         .hasCauseInstanceOf(InvalidUsageException.class);
   }
 
+  @Test
   public void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1175,6 +1183,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(another.get(get).isPresent()).isFalse();
   }
 
+  @Test
   public void commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1184,20 +1193,12 @@ public class ConsensusCommitIntegrationTest {
     populateRecords();
     ConsensusCommit transaction = prepareDeletes(account1, account2);
     transaction.setBeforeCommitHook(
-        () -> {
-          assertThatCode(
-                  () -> {
-                    prepareDeletes(account2, account3).commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+        () ->
+            assertThatCode(() -> prepareDeletes(account2, account3).commit())
+                .doesNotThrowAnyException());
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              transaction.commit();
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1209,6 +1210,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(another.get(gets.get(account3)).isPresent()).isFalse();
   }
 
+  @Test
   public void commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1219,20 +1221,12 @@ public class ConsensusCommitIntegrationTest {
     populateRecords();
     ConsensusCommit transaction = prepareDeletes(account1, account2);
     transaction.setBeforeCommitHook(
-        () -> {
-          assertThatCode(
-                  () -> {
-                    prepareDeletes(account3, account4).commit();
-                  })
-              .doesNotThrowAnyException();
-        });
+        () ->
+            assertThatCode(() -> prepareDeletes(account3, account4).commit())
+                .doesNotThrowAnyException());
 
     // Act
-    assertThatCode(
-            () -> {
-              transaction.commit();
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
     List<Get> gets = prepareGets(NAMESPACE, TABLE_1);
@@ -1243,6 +1237,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(another.get(gets.get(account4)).isPresent()).isFalse();
   }
 
+  @Test
   public void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1283,6 +1278,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
   }
 
+  @Test
   public void
       commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws CommitException, UnknownTransactionStatusException, CrudException {
@@ -1327,6 +1323,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
           throws CommitException, UnknownTransactionStatusException, CrudException {
@@ -1371,6 +1368,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
@@ -1411,6 +1409,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
           throws CrudException, CoordinatorException {
@@ -1441,6 +1440,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown1).isInstanceOf(CommitException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
@@ -1484,6 +1484,7 @@ public class ConsensusCommitIntegrationTest {
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException()
           throws CrudException {
@@ -1518,6 +1519,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown2).isInstanceOf(CommitException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
           throws CrudException {
@@ -1557,6 +1559,7 @@ public class ConsensusCommitIntegrationTest {
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
+  @Test
   public void
       commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
           throws CrudException, CommitException, UnknownTransactionStatusException {
@@ -1598,6 +1601,7 @@ public class ConsensusCommitIntegrationTest {
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
+  @Test
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -1631,7 +1635,7 @@ public class ConsensusCommitIntegrationTest {
         preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
     transaction3.commit();
 
-    Throwable thrown = catchThrowable(() -> transaction1.commit());
+    Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
     assertThat(thrown)
@@ -1642,6 +1646,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
   }
 
+  @Test
   public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -1674,7 +1679,7 @@ public class ConsensusCommitIntegrationTest {
         preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
     transaction3.commit();
 
-    Throwable thrown = catchThrowable(() -> transaction1.commit());
+    Throwable thrown = catchThrowable(transaction1::commit);
 
     // Assert
     assertThat(thrown)
@@ -1685,6 +1690,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
   }
 
+  @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1698,13 +1704,14 @@ public class ConsensusCommitIntegrationTest {
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
     Optional<Result> resultAfter = transaction1.get(get);
-    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
     assertThat(resultBefore.isPresent()).isTrue();
     assertThat(resultAfter.isPresent()).isFalse();
   }
 
+  @Test
   public void scan_DeleteCalledBefore_ShouldReturnEmpty()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1718,13 +1725,14 @@ public class ConsensusCommitIntegrationTest {
     List<Result> resultBefore = transaction1.scan(scan);
     transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
     List<Result> resultAfter = transaction1.scan(scan);
-    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
     assertThat(resultBefore.size()).isEqualTo(1);
     assertThat(resultAfter.size()).isEqualTo(0);
   }
 
+  @Test
   public void delete_PutCalledBefore_ShouldDelete()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1738,7 +1746,7 @@ public class ConsensusCommitIntegrationTest {
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
     transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
-    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
     DistributedTransaction transaction2 = manager.start();
@@ -1748,6 +1756,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(resultAfter.isPresent()).isFalse();
   }
 
+  @Test
   public void put_DeleteCalledBefore_ShouldPut()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1761,7 +1770,7 @@ public class ConsensusCommitIntegrationTest {
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, NAMESPACE, TABLE_1));
     transaction1.put(preparePut(0, 0, NAMESPACE, TABLE_1).withValue(new IntValue(BALANCE, 2)));
-    assertThatCode(() -> transaction1.commit()).doesNotThrowAnyException();
+    assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
     DistributedTransaction transaction2 = manager.start();
@@ -1772,6 +1781,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(resultAfter.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
   }
 
+  @Test
   public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException()
       throws CrudException, AbortException {
     // Arrange
@@ -1787,6 +1797,7 @@ public class ConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
   }
 
+  @Test
   public void scan_NonOverlappingPutGivenBefore_ShouldScan()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -1836,24 +1847,23 @@ public class ConsensusCommitIntegrationTest {
     DistributedTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
-                        Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
-                        Put put =
-                            new Put(partitionKey, clusteringKey)
-                                .forNamespace(NAMESPACE)
-                                .forTable(TABLE_1)
-                                .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
-                        try {
-                          transaction.put(put);
-                        } catch (CrudException e) {
-                          throw new RuntimeException(e);
-                        }
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(
+                        j -> {
+                          Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
+                          Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
+                          Put put =
+                              new Put(partitionKey, clusteringKey)
+                                  .forNamespace(NAMESPACE)
+                                  .forTable(TABLE_1)
+                                  .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
+                          try {
+                            transaction.put(put);
+                          } catch (CrudException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }));
     transaction.commit();
   }
 
@@ -1901,13 +1911,9 @@ public class ConsensusCommitIntegrationTest {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        gets.add(prepareGet(i, j, namespace, table));
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> gets.add(prepareGet(i, j, namespace, table))));
     return gets;
   }
 
@@ -1934,13 +1940,9 @@ public class ConsensusCommitIntegrationTest {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        puts.add(preparePut(i, j, namespace, table));
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> puts.add(preparePut(i, j, namespace, table))));
     return puts;
   }
 
@@ -1957,28 +1959,9 @@ public class ConsensusCommitIntegrationTest {
     List<Delete> deletes = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        deletes.add(prepareDelete(i, j, namespace, table));
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> deletes.add(prepareDelete(i, j, namespace, table))));
     return deletes;
-  }
-
-  private void printAll(String namespace, String table) {
-    List<Get> gets = prepareGets(namespace, table);
-    ConsensusCommit transaction = manager.start();
-    gets.forEach(
-        g -> {
-          assertThatCode(
-                  () -> {
-                    g.withProjection(BALANCE);
-                    Optional<Result> result = transaction.get(g);
-                    System.out.println(result);
-                  })
-              .doesNotThrowAnyException();
-        });
   }
 }

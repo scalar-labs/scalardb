@@ -1,472 +1,72 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static org.mockito.Mockito.spy;
-
 import com.google.common.base.Joiner;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
-public class ConsensusCommitWithCassandraIntegrationTest {
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Properties;
+
+import static org.mockito.Mockito.spy;
+
+public class ConsensusCommitWithCassandraIntegrationTest
+    extends ConsensusCommitIntegrationTestBase {
+
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";
   private static final String CONTACT_POINT = "localhost";
-  private DistributedStorage storage;
-  private DatabaseConfig config;
-  private Coordinator coordinator;
-  private RecoveryHandler recovery;
-  private CommitHandler commit;
-  private ConsensusCommitManager manager;
-  private ConsensusCommitIntegrationTest test;
+
+  private static DistributedStorage originalStorage;
+  private static DatabaseConfig config;
 
   @Before
   public void setUp() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
-    config = new DatabaseConfig(props);
-    storage = spy(new Cassandra(config));
-    coordinator = spy(new Coordinator(storage));
-    recovery = spy(new RecoveryHandler(storage, coordinator));
-    commit = spy(new CommitHandler(storage, coordinator, recovery));
-    manager = new ConsensusCommitManager(storage, config, coordinator, recovery, commit);
-
-    test = new ConsensusCommitIntegrationTest(manager, storage, coordinator, recovery);
-    test.setUp();
+    DistributedStorage storage = spy(originalStorage);
+    Coordinator coordinator = spy(new Coordinator(storage));
+    RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
+    ConsensusCommitManager manager =
+        new ConsensusCommitManager(storage, config, coordinator, recovery, commit);
+    setUp(manager, storage, coordinator, recovery);
   }
 
   @After
   public void tearDown() throws IOException {
     executeStatement(
         truncateTableStatement(
-            ConsensusCommitIntegrationTest.NAMESPACE, ConsensusCommitIntegrationTest.TABLE_1));
+            ConsensusCommitIntegrationTestBase.NAMESPACE,
+            ConsensusCommitIntegrationTestBase.TABLE_1));
     executeStatement(
         truncateTableStatement(
-            ConsensusCommitIntegrationTest.NAMESPACE, ConsensusCommitIntegrationTest.TABLE_2));
+            ConsensusCommitIntegrationTestBase.NAMESPACE,
+            ConsensusCommitIntegrationTestBase.TABLE_2));
     executeStatement(truncateTableStatement(Coordinator.NAMESPACE, Coordinator.TABLE));
-  }
-
-  @Test
-  public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws Exception {
-    test.get_GetGivenForCommittedRecord_ShouldReturnRecord();
-  }
-
-  @Test
-  public void scan_ScanGivenForCommittedRecord_ShouldReturnRecord() throws Exception {
-    test.scan_ScanGivenForCommittedRecord_ShouldReturnRecord();
-  }
-
-  @Test
-  public void get_CalledTwice_ShouldReturnFromSnapshotInSecondTime() throws Exception {
-    test.get_CalledTwice_ShouldReturnFromSnapshotInSecondTime();
-  }
-
-  @Test
-  public void
-      get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime()
-          throws Exception {
-    test
-        .get_CalledTwiceAndAnotherTransactionCommitsInBetween_ShouldReturnFromSnapshotInSecondTime();
-  }
-
-  @Test
-  public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws Exception {
-    test.get_GetGivenForNonExisting_ShouldReturnEmpty();
-  }
-
-  @Test
-  public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws Exception {
-    test.scan_ScanGivenForNonExisting_ShouldReturnEmpty();
-  }
-
-  @Test
-  public void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws Exception {
-    test.get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward();
-  }
-
-  @Test
-  public void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws Exception {
-    test.scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward();
-  }
-
-  @Test
-  public void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback() throws Exception {
-    test.get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback();
-  }
-
-  @Test
-  public void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
-      throws Exception {
-    test.scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback();
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws Exception {
-    test
-        .get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws Exception {
-    test
-        .scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction();
-  }
-
-  @Test
-  public void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-      throws Exception {
-    test.get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws Exception {
-    test.scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction();
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
-          throws Exception {
-    test
-        .get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
-          throws Exception {
-    test
-        .scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly();
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
-          throws Exception {
-    test
-        .get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
-          throws Exception {
-    test
-        .scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly();
-  }
-
-  @Test
-  public void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws Exception {
-    test.get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward();
-  }
-
-  @Test
-  public void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws Exception {
-    test.scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward();
-  }
-
-  @Test
-  public void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback() throws Exception {
-    test.get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback();
-  }
-
-  @Test
-  public void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
-      throws Exception {
-    test.scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback();
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws Exception {
-    test
-        .get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws Exception {
-    test
-        .scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction();
-  }
-
-  @Test
-  public void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-      throws Exception {
-    test.get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws Exception {
-    test.scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction();
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
-          throws Exception {
-    test
-        .get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
-          throws Exception {
-    test
-        .scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly();
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
-          throws Exception {
-    test
-        .get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly();
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
-          throws Exception {
-    test
-        .scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly();
-  }
-
-  @Test
-  public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably() throws Exception {
-    test.getAndScan_CommitHappenedInBetween_ShouldReadRepeatably();
-  }
-
-  @Test
-  public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws Exception {
-    test.putAndCommit_PutGivenForNonExisting_ShouldCreateRecord();
-  }
-
-  @Test
-  public void put_PutGivenForExistingAfterRead_ShouldUpdateRecord() throws Exception {
-    test.putAndCommit_PutGivenForExistingAfterRead_ShouldUpdateRecord();
-  }
-
-  @Test
-  public void put_PutGivenForExistingAndNeverRead_ShouldFailWithException() throws Exception {
-    test.putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowCommitException();
-  }
-
-  @Test
-  public void put_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit()
-      throws Exception {
-    test.putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit();
-  }
-
-  @Test
-  public void put_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit()
-      throws Exception {
-    test.putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit();
-  }
-
-  @Test
-  public void putAndCommit_MultipleGetAndPutGiven_ShouldCommitProperly() throws Exception {
-    test.putAndCommit_GetsAndPutsGiven_ShouldCommitProperly();
-  }
-
-  @Test
-  public void commit_ConflictingPutsGivenForNonExisting_ShouldCommitEither() throws Exception {
-    test.commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther();
-  }
-
-  @Test
-  public void commit_ConflictingPutsGivenForExisting_ShouldCommitEither() throws Exception {
-    test.commit_ConflictingPutsGivenForExisting_ShouldCommitOneAndAbortTheOther();
-  }
-
-  @Test
-  public void commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete()
-      throws Exception {
-    test.commit_ConflictingPutAndDeleteGivenForExisting_ShouldCommitPutAndAbortDelete();
-  }
-
-  @Test
-  public void commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth() throws Exception {
-    test.commit_NonConflictingPutsGivenForExisting_ShouldCommitBoth();
-  }
-
-  @Test
-  public void commit_DeleteGivenWithoutRead_ShouldThrowInvalidUsageException() {
-    test.commit_DeleteGivenWithoutRead_ShouldThrowInvalidUsageException();
-  }
-
-  @Test
-  public void commit_DeleteGivenForNonExisting_ShouldThrowInvalidUsageException() throws Exception {
-    test.commit_DeleteGivenForNonExisting_ShouldThrowInvalidUsageException();
-  }
-
-  @Test
-  public void commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord() throws Exception {
-    test.commit_DeleteGivenForExistingAfterRead_ShouldDeleteRecord();
-  }
-
-  @Test
-  public void commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther()
-      throws Exception {
-    test.commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther();
-  }
-
-  @Test
-  public void commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth() throws Exception {
-    test.commit_NonConflictingDeletesGivenForExisting_ShouldCommitBoth();
-  }
-
-  @Test
-  public void commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult()
-      throws Exception {
-    test.commit_WriteSkewOnExistingRecordsWithSnapshot_ShouldProduceNonSerializableResult();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws Exception {
-    test
-        .commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException()
-          throws Exception {
-    test
-        .commit_WriteSkewOnExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws Exception {
-    test
-        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
-          throws Exception {
-    test
-        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
-          throws Exception {
-    test
-        .commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException()
-          throws Exception {
-    test
-        .commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
-          throws Exception {
-    test
-        .commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException();
-  }
-
-  @Test
-  public void
-      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
-          throws Exception {
-    test
-        .commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException();
-  }
-
-  @Test
-  public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
-      throws Exception {
-    test.putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
-  }
-
-  @Test
-  public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
-      throws Exception {
-    test.deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults();
-  }
-
-  @Test
-  public void get_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
-    test.get_DeleteCalledBefore_ShouldReturnEmpty();
-  }
-
-  @Test
-  public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws Exception {
-    test.scan_DeleteCalledBefore_ShouldReturnEmpty();
-  }
-
-  @Test
-  public void delete_PutCalledBefore_ShouldDelete() throws Exception {
-    test.delete_PutCalledBefore_ShouldDelete();
-  }
-
-  @Test
-  public void put_DeleteCalledBefore_ShouldPut() throws Exception {
-    test.put_DeleteCalledBefore_ShouldPut();
-  }
-
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() throws Exception {
-    test.scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException();
-  }
-
-  @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws Exception {
-    test.scan_NonOverlappingPutGivenBefore_ShouldScan();
   }
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, InterruptedException {
-    executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
-    System.out.println(createNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
+    executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTestBase.NAMESPACE));
+    System.out.println(createNamespaceStatement(ConsensusCommitIntegrationTestBase.NAMESPACE));
     executeStatement(
         createTableStatement(
-            ConsensusCommitIntegrationTest.NAMESPACE, ConsensusCommitIntegrationTest.TABLE_1));
+            ConsensusCommitIntegrationTestBase.NAMESPACE,
+            ConsensusCommitIntegrationTestBase.TABLE_1));
     System.out.println(
         createTableStatement(
-            ConsensusCommitIntegrationTest.NAMESPACE, ConsensusCommitIntegrationTest.TABLE_1));
+            ConsensusCommitIntegrationTestBase.NAMESPACE,
+            ConsensusCommitIntegrationTestBase.TABLE_1));
     executeStatement(
         createTableStatement(
-            ConsensusCommitIntegrationTest.NAMESPACE, ConsensusCommitIntegrationTest.TABLE_2));
+            ConsensusCommitIntegrationTestBase.NAMESPACE,
+            ConsensusCommitIntegrationTestBase.TABLE_2));
     executeStatement(createNamespaceStatement(Coordinator.NAMESPACE));
     System.out.println(createNamespaceStatement(Coordinator.NAMESPACE));
     executeStatement(createCoordinatorTableStatement(Coordinator.NAMESPACE, Coordinator.TABLE));
@@ -474,11 +74,20 @@ public class ConsensusCommitWithCassandraIntegrationTest {
 
     // it's supposed to be unnecessary, but just in case schema agreement takes some time
     Thread.sleep(1000);
+
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
+    props.setProperty(DatabaseConfig.USERNAME, USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
+    config = new DatabaseConfig(props);
+    originalStorage = new Cassandra(config);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws IOException {
-    executeStatement(dropNamespaceStatement(ConsensusCommitIntegrationTest.NAMESPACE));
+    originalStorage.close();
+
+    executeStatement(dropNamespaceStatement(ConsensusCommitIntegrationTestBase.NAMESPACE));
     executeStatement(dropNamespaceStatement(Coordinator.NAMESPACE));
   }
 
@@ -510,11 +119,11 @@ public class ConsensusCommitWithCassandraIntegrationTest {
               "CREATE TABLE",
               namespace + "." + table,
               "(",
-              ConsensusCommitIntegrationTest.ACCOUNT_ID,
+              ConsensusCommitIntegrationTestBase.ACCOUNT_ID,
               "int,",
-              ConsensusCommitIntegrationTest.ACCOUNT_TYPE,
+              ConsensusCommitIntegrationTestBase.ACCOUNT_TYPE,
               "int,",
-              ConsensusCommitIntegrationTest.BALANCE,
+              ConsensusCommitIntegrationTestBase.BALANCE,
               "int,",
               Attribute.ID,
               "text,",
@@ -526,7 +135,7 @@ public class ConsensusCommitWithCassandraIntegrationTest {
               "bigint,",
               Attribute.COMMITTED_AT,
               "bigint,",
-              Attribute.BEFORE_PREFIX + ConsensusCommitIntegrationTest.BALANCE,
+              Attribute.BEFORE_PREFIX + ConsensusCommitIntegrationTestBase.BALANCE,
               "int,",
               Attribute.BEFORE_ID,
               "text,",
@@ -539,8 +148,8 @@ public class ConsensusCommitWithCassandraIntegrationTest {
               Attribute.BEFORE_COMMITTED_AT,
               "bigint,",
               "PRIMARY KEY",
-              "((" + ConsensusCommitIntegrationTest.ACCOUNT_ID + "),",
-              ConsensusCommitIntegrationTest.ACCOUNT_TYPE + ")",
+              "((" + ConsensusCommitIntegrationTestBase.ACCOUNT_ID + "),",
+              ConsensusCommitIntegrationTestBase.ACCOUNT_TYPE + ")",
               ")",
             });
   }
