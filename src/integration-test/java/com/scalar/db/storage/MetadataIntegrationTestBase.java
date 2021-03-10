@@ -3,7 +3,6 @@ package com.scalar.db.storage;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.common.metadata.TableMetadata;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Iterator;
@@ -26,13 +25,10 @@ public abstract class MetadataIntegrationTestBase {
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
 
-  protected TableMetadata tableMetadata;
+  private TableMetadata tableMetadata;
 
-  protected abstract TableMetadata getTableMetadata();
-
-  @Before
-  public void setUp() throws Exception {
-    tableMetadata = getTableMetadata();
+  public void setUp(TableMetadata tableMetadata) throws Exception {
+    this.tableMetadata = tableMetadata;
   }
 
   @Test

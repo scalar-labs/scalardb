@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.IntegrationTestBase;
 import org.junit.After;
@@ -31,9 +32,12 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
   private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + NAMESPACE;
   private static final String TRUNCATE_TABLE_STMT = "TRUNCATE " + NAMESPACE + "." + TABLE;
 
+  private static DistributedStorage storage;
+
   @Before
   public void setUp() throws Exception {
     storage.with(NAMESPACE, TABLE);
+    setUp(storage);
   }
 
   @After

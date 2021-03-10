@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.IntegrationTestBase;
 import com.scalar.db.storage.common.metadata.DataType;
@@ -15,10 +16,12 @@ import java.util.HashMap;
 public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
 
   private static TestEnv testEnv;
+  private static DistributedStorage storage;
 
   @Before
   public void setUp() throws Exception {
     storage.with(NAMESPACE, TABLE);
+    setUp(storage);
   }
 
   @After

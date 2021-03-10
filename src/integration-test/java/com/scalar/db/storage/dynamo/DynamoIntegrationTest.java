@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.storage.IntegrationTestBase;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -43,10 +44,12 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
+  private static DistributedStorage storage;
 
   @Before
   public void setUp() throws Exception {
     storage.with(NAMESPACE, TABLE);
+    setUp(storage);
   }
 
   @After

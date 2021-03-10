@@ -4,8 +4,8 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -38,13 +38,11 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
-  private static TableMetadataManager tableMetadataManager;
+  private static DynamoTableMetadata tableMetadata;
 
-  @Override
-  protected TableMetadata getTableMetadata() {
-    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
-    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix().get()));
-    return tableMetadataManager.getTableMetadata(dummyOperation);
+  @Before
+  public void setUp() throws Exception {
+    setUp(tableMetadata);
   }
 
   @Test
@@ -158,7 +156,11 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     client.putItem(putItemRequest);
 
-    tableMetadataManager = new TableMetadataManager(client, namespacePrefix());
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(client, namespacePrefix());
+
+    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
+    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix().get()));
+    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
   }
 
   @AfterClass

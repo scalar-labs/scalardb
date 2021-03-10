@@ -43,10 +43,14 @@ public abstract class IntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  protected static DistributedStorage storage;
+  private DistributedStorage storage;
 
   private List<Put> puts;
   private List<Delete> deletes;
+
+  protected void setUp(DistributedStorage storage) {
+    this.storage = storage;
+  }
 
   @Test
   public void operation_NoTargetGiven_ShouldThrowIllegalArgumentException() {

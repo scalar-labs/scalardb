@@ -10,6 +10,7 @@ import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.IntegrationTestBase;
 import org.junit.After;
@@ -39,10 +40,12 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static CosmosClient client;
+  private static DistributedStorage storage;
 
   @Before
   public void setUp() throws Exception {
     storage.with(NAMESPACE, TABLE);
+    setUp(storage);
   }
 
   @After

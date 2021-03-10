@@ -2,9 +2,9 @@ package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 
 import java.util.Properties;
@@ -34,11 +34,11 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
       "CREATE INDEX " + INDEX2 + " ON " + NAMESPACE + "." + TABLE + " (c6)";
   private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + NAMESPACE;
 
-  private static ClusterManager clusterManager;
+  private static CassandraTableMetadata tableMetadata;
 
-  @Override
-  protected TableMetadata getTableMetadata() {
-    return new CassandraTableMetadata(clusterManager.getMetadata(NAMESPACE, TABLE));
+  @Before
+  public void setUp() throws Exception {
+    setUp(tableMetadata);
   }
 
   @BeforeClass
@@ -80,8 +80,10 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
     props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
     props.setProperty(DatabaseConfig.USERNAME, USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
-    clusterManager = new ClusterManager(new DatabaseConfig(props));
+    ClusterManager clusterManager = new ClusterManager(new DatabaseConfig(props));
     clusterManager.getSession();
+    tableMetadata = new CassandraTableMetadata(clusterManager.getMetadata(NAMESPACE, TABLE));
+    clusterManager.close();
   }
 
   @AfterClass

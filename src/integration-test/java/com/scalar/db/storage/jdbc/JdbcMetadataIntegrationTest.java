@@ -3,15 +3,14 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
@@ -21,47 +20,36 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static TestEnv testEnv;
-  private static TableMetadataManager tableMetadataManager;
+  private static JdbcTableMetadata tableMetadata;
 
-  @Override
-  protected TableMetadata getTableMetadata() {
-    try {
-      Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
-      String fullTableName = namespacePrefix.orElse("") + NAMESPACE + "." + TABLE;
-      return tableMetadataManager.getTableMetadata(fullTableName);
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
+  @Before
+  public void setUp() throws Exception {
+    setUp(tableMetadata);
   }
 
   @Test
   public void testSchemaAndTableName() {
-    JdbcTableMetadata jdbcTableMetadata = (JdbcTableMetadata) tableMetadata;
-
     Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
     String schema = namespacePrefix.orElse("") + NAMESPACE;
-    assertThat(jdbcTableMetadata.getSchema()).isEqualTo(schema);
-    assertThat(jdbcTableMetadata.getTable()).isEqualTo(TABLE);
+    assertThat(tableMetadata.getSchema()).isEqualTo(schema);
+    assertThat(tableMetadata.getTable()).isEqualTo(TABLE);
     String fullTableName = schema + "." + TABLE;
-    assertThat(jdbcTableMetadata.getFullTableName()).isEqualTo(fullTableName);
+    assertThat(tableMetadata.getFullTableName()).isEqualTo(fullTableName);
   }
 
   @Test
   public void testSecondaryIndexOrder() {
-    JdbcTableMetadata jdbcTableMetadata = (JdbcTableMetadata) tableMetadata;
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME1)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME2)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME3)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME4)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME5))
-        .isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME6))
-        .isEqualTo(Scan.Ordering.Order.DESC);
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME7)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME8)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME9)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME10)).isNull();
-    assertThat(jdbcTableMetadata.getSecondaryIndexOrder(COL_NAME11)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME1)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME2)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME3)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME4)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME5)).isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME6)).isEqualTo(Scan.Ordering.Order.DESC);
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME7)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME8)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME9)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME10)).isNull();
+    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME11)).isNull();
   }
 
   @BeforeClass
@@ -104,8 +92,10 @@ public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
     testEnv.insertMetadata();
 
     Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
-    tableMetadataManager =
+    TableMetadataManager tableMetadataManager =
         new TableMetadataManager(testEnv.getDataSource(), namespacePrefix, testEnv.getRdbEngine());
+    String fullTableName = namespacePrefix.orElse("") + NAMESPACE + "." + TABLE;
+    tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
   }
 
   @AfterClass

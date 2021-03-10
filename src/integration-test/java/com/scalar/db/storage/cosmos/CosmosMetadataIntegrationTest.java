@@ -10,8 +10,8 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -30,19 +30,16 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static CosmosClient client;
-  private static TableMetadataManager tableMetadataManager;
+  private static CosmosTableMetadata tableMetadata;
 
-  @Override
-  protected TableMetadata getTableMetadata() {
-    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
-    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));
-    return tableMetadataManager.getTableMetadata(dummyOperation);
+  @Before
+  public void setUp() throws Exception {
+    setUp(tableMetadata);
   }
 
   @Test
   public void testId() {
-    assertThat(((CosmosTableMetadata) getTableMetadata()).getId())
-        .isEqualTo(table(NAMESPACE, TABLE));
+    assertThat(tableMetadata.getId()).isEqualTo(table(NAMESPACE, TABLE));
   }
 
   @Test
@@ -104,7 +101,11 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     CosmosContainer container =
         client.getDatabase(database(METADATA_DATABASE)).getContainer(METADATA_CONTAINER);
-    tableMetadataManager = new TableMetadataManager(container);
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(container);
+
+    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
+    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));
+    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
   }
 
   @AfterClass
