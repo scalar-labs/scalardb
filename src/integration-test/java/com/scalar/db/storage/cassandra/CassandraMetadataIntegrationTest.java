@@ -2,12 +2,11 @@ package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
+import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import java.util.Properties;
 
 public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBase {
 

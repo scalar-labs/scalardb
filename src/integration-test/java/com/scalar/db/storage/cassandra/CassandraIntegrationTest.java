@@ -3,13 +3,12 @@ package com.scalar.db.storage.cassandra;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.IntegrationTestBase;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import java.util.Properties;
 
 public class CassandraIntegrationTest extends IntegrationTestBase {
 

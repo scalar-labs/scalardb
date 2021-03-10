@@ -1,21 +1,20 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.mockito.Mockito.spy;
+
 import com.google.common.base.Joiner;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Properties;
-
-import static org.mockito.Mockito.spy;
 
 public class ConsensusCommitWithCassandraIntegrationTest
     extends ConsensusCommitIntegrationTestBase {

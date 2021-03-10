@@ -1,13 +1,12 @@
 package com.scalar.db.storage;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.common.metadata.TableMetadata;
-import org.junit.Test;
-
 import java.util.Iterator;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Test;
 
 public abstract class MetadataIntegrationTestBase {
 

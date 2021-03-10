@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
@@ -10,18 +12,15 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 

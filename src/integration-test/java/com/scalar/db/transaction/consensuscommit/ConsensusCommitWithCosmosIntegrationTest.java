@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.mockito.Mockito.spy;
+
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosDatabase;
@@ -15,11 +17,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosTableMetadata;
 import com.scalar.db.storage.cosmos.Record;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,8 +27,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-
-import static org.mockito.Mockito.spy;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 
 public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitIntegrationTestBase {
 

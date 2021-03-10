@@ -1,21 +1,20 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Optional;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
 

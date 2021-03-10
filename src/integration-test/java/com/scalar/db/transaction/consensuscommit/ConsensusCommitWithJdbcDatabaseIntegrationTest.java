@@ -1,20 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Scan;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.jdbc.test.TestEnv;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
@@ -28,6 +13,20 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.mockito.Mockito.spy;
+
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.Scan;
+import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.storage.jdbc.test.TestEnv;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 
 public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     extends ConsensusCommitIntegrationTestBase {

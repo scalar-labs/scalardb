@@ -1,7 +1,17 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.mockito.Mockito.spy;
+
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.Dynamo;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -25,17 +35,6 @@ import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-
-import static org.mockito.Mockito.spy;
 
 public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitIntegrationTestBase {
 

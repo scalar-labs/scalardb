@@ -5,13 +5,12 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.IntegrationTestBase;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import java.util.Collections;
+import java.util.HashMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-
-import java.util.Collections;
-import java.util.HashMap;
 
 public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
 
