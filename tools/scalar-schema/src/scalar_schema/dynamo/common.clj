@@ -19,8 +19,11 @@
 (defn- get-table-name-without-prefix
   [{:keys [prefix] :as schema}]
   (let [table-name (get-table-name schema)]
-    (if prefix (str/replace-first table-name (java.util.regex.Pattern/compile (str prefix \_)) "")
-        table-name)))
+    (if prefix
+      (str/replace-first table-name
+                         (java.util.regex.Pattern/compile (str prefix \_))
+                         "")
+      table-name)))
 
 (defn get-index-name
   [schema key-name]
