@@ -9,9 +9,6 @@ import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
-import org.apache.commons.dbcp2.BasicDataSource;
-
-import javax.sql.DataSource;
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
@@ -26,6 +23,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.sql.DataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 public class TestEnv implements Closeable {
 
@@ -293,6 +292,12 @@ public class TestEnv implements Closeable {
     }
   }
 
+  public void insertMetadata() throws SQLException {
+    for (JdbcTableMetadata metadata : metadataList) {
+      insertMetadata(metadata);
+    }
+  }
+
   private void insertMetadata(JdbcTableMetadata metadata) throws SQLException {
     int ordinalPosition = 1;
     for (String partitionKeyName : metadata.getPartitionKeyNames()) {
@@ -352,7 +357,7 @@ public class TestEnv implements Closeable {
     execute("DROP TABLE " + enclosedFullTableName(metadata.getSchema(), metadata.getTable()));
   }
 
-  private void createMetadataTable() throws SQLException {
+  public void createMetadataTable() throws SQLException {
     createSchema(getMetadataSchema());
 
     // create the metadata table
@@ -396,7 +401,7 @@ public class TestEnv implements Closeable {
     }
   }
 
-  private void dropMetadataTable() throws SQLException {
+  public void dropMetadataTable() throws SQLException {
     // drop the metadata table
     execute("DROP TABLE " + enclosedMetadataTableName());
 
@@ -404,8 +409,6 @@ public class TestEnv implements Closeable {
   }
 
   public void createTables() throws SQLException {
-    createMetadataTable();
-
     Set<String> schemas =
         metadataList.stream().map(JdbcTableMetadata::getSchema).collect(Collectors.toSet());
     for (String schema : schemas) {
@@ -419,15 +422,19 @@ public class TestEnv implements Closeable {
     for (JdbcTableMetadata metadata : metadataList) {
       createIndex(metadata);
     }
+  }
 
+  public void deleteTableData() throws SQLException {
     for (JdbcTableMetadata metadata : metadataList) {
-      insertMetadata(metadata);
+      deleteTableData(metadata);
     }
   }
 
-  public void dropTables() throws SQLException {
-    dropMetadataTable();
+  private void deleteTableData(JdbcTableMetadata metadata) throws SQLException {
+    execute("DELETE FROM " + enclosedFullTableName(metadata.getSchema(), metadata.getTable()));
+  }
 
+  public void dropTables() throws SQLException {
     for (JdbcTableMetadata metadata : metadataList) {
       dropTable(metadata);
     }

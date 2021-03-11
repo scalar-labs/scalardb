@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
@@ -14,18 +16,16 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class JdbcTransactionIntegrationTest {
 
@@ -38,38 +38,12 @@ public class JdbcTransactionIntegrationTest {
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
 
-  private TestEnv testEnv;
-  private JdbcTransactionManager manager;
-
-  @Before
-  public void setUp() throws Exception {
-    testEnv = new TestEnv();
-    testEnv.register(
-        NAMESPACE,
-        TABLE,
-        Collections.singletonList(ACCOUNT_ID),
-        Collections.singletonList(ACCOUNT_TYPE),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
-          }
-        },
-        new HashMap<String, DataType>() {
-          {
-            put(ACCOUNT_ID, DataType.INT);
-            put(ACCOUNT_TYPE, DataType.INT);
-            put(BALANCE, DataType.INT);
-          }
-        });
-    testEnv.createTables();
-
-    manager = new JdbcTransactionManager(testEnv.getJdbcDatabaseConfig());
-  }
+  private static TestEnv testEnv;
+  private static JdbcTransactionManager manager;
 
   @After
   public void tearDown() throws Exception {
-    testEnv.dropTables();
-    testEnv.close();
+    testEnv.deleteTableData();
   }
 
   @Test
@@ -333,5 +307,40 @@ public class JdbcTransactionIntegrationTest {
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    testEnv = new TestEnv();
+    testEnv.register(
+        NAMESPACE,
+        TABLE,
+        Collections.singletonList(ACCOUNT_ID),
+        Collections.singletonList(ACCOUNT_TYPE),
+        new HashMap<String, Scan.Ordering.Order>() {
+          {
+            put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
+          }
+        },
+        new HashMap<String, DataType>() {
+          {
+            put(ACCOUNT_ID, DataType.INT);
+            put(ACCOUNT_TYPE, DataType.INT);
+            put(BALANCE, DataType.INT);
+          }
+        });
+
+    testEnv.createMetadataTable();
+    testEnv.createTables();
+    testEnv.insertMetadata();
+
+    manager = new JdbcTransactionManager(testEnv.getJdbcDatabaseConfig());
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    testEnv.dropMetadataTable();
+    testEnv.dropTables();
+    testEnv.close();
   }
 }
