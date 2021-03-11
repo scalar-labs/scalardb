@@ -14,8 +14,9 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/cassandra/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCassandraIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -25,8 +26,9 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/cosmos/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCosmosIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -36,8 +38,9 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/dynamo/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithDynamoIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -47,9 +50,10 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
             include '**/com/scalar/db/storage/jdbc/test/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTest.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
         }
