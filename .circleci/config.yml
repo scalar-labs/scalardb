@@ -12,6 +12,7 @@ workflows:
       - integration-test-for-dynamo
       - integration-test-for-jdbc-mysql
       - integration-test-for-jdbc-postgresql
+      - integration-test-for-multi
 jobs:
   build:
     docker:
@@ -264,6 +265,69 @@ jobs:
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-multi:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: cassandra:3.11
+        environment:
+          MAX_HEAP_SIZE: 2048m
+          HEAP_NEWSIZE: 512m
+      - image: circleci/mysql:8.0.23
+        environment:
+          MYSQL_ROOT_PASSWORD: mysql
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      - run:
+          name: Install cqlsh
+          # We need to edit DEFAULT_CQLVER defined in the cqlsh script
+          # to connect to the server without --cqlversion command line option
+          command: |
+            curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
+            sudo python get-pip.py
+            sudo pip install cqlsh
+            sudo sed -i "s/^DEFAULT_CQLVER = .*/DEFAULT_CQLVER = '3.4.4'/" /usr/local/bin/cqlsh
+
+      # https://support.circleci.com/hc/en-us/articles/360006773953-Race-Conditions-Wait-For-Database
+      - run:
+          name: Wait for Cassandra
+          # dockerize command is included in circleci/openjdk:8-jdk image
+          command: dockerize -wait tcp://localhost:9042 -timeout 1m
+
+      # run tests!
+      - run: gradle integrationTestMulti
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestMulti /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:
