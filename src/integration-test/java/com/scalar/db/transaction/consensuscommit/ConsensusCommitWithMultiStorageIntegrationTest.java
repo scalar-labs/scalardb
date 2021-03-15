@@ -19,8 +19,8 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import com.scalar.db.storage.multi.MultiDatabases;
-import com.scalar.db.storage.multi.MultiDatabasesConfig;
+import com.scalar.db.storage.multistorage.MultiStorage;
+import com.scalar.db.storage.multistorage.MultiStorageDatabaseConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -35,7 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class ConsensusCommitWithMultiDatabasesIntegrationTest
+public class ConsensusCommitWithMultiStorageIntegrationTest
     extends ConsensusCommitIntegrationTestBase {
 
   private static final String CASSANDRA_CONTACT_POINT = "localhost";
@@ -86,7 +86,7 @@ public class ConsensusCommitWithMultiDatabasesIntegrationTest
   public static void setUpBeforeClass() throws Exception {
     initCassandra();
     initMySql();
-    initMultiDatabases();
+    initMultiStorage();
   }
 
   private static void initCassandra() throws Exception {
@@ -132,50 +132,46 @@ public class ConsensusCommitWithMultiDatabasesIntegrationTest
     testEnv.insertMetadata();
   }
 
-  private static void initMultiDatabases() {
+  private static void initMultiStorage() {
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi");
+    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
 
-    // Define databases, cassandra and mysql
-    props.setProperty(MultiDatabasesConfig.DATABASES, "cassandra,mysql");
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.storage", "cassandra");
+    // Define storages, cassandra and mysql
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".cassandra.storage", "cassandra");
     props.setProperty(
-        MultiDatabasesConfig.DATABASES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.storage", "jdbc");
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
     props.setProperty(
-        MultiDatabasesConfig.DATABASES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.password", MYSQL_PASSWORD);
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
+    props.setProperty(
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(
+        MultiStorageDatabaseConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
 
     // Define table mapping from table1 to cassandra, from table2 to mysql, and from the
     // coordinator table to cassandra
     props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING,
+        MultiStorageDatabaseConfig.TABLE_MAPPING,
         NAMESPACE
             + "."
             + TABLE_1
-            + ","
+            + ":cassandra,"
             + NAMESPACE
             + "."
             + TABLE_2
-            + ","
+            + ":mysql,"
             + Coordinator.NAMESPACE
             + "."
-            + Coordinator.TABLE);
-    props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING + "." + NAMESPACE + "." + TABLE_1, "cassandra");
-    props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING + "." + NAMESPACE + "." + TABLE_2, "mysql");
-    props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING + "." + Coordinator.NAMESPACE + "." + Coordinator.TABLE,
-        "cassandra");
+            + Coordinator.TABLE
+            + ":cassandra");
 
-    // The default database is cassandra
-    props.setProperty(MultiDatabasesConfig.DEFAULT_DATABASE, "cassandra");
+    // The default storage is cassandra
+    props.setProperty(MultiStorageDatabaseConfig.DEFAULT_STORAGE, "cassandra");
 
-    originalStorage = new MultiDatabases(new MultiDatabasesConfig(props));
+    originalStorage = new MultiStorage(new MultiStorageDatabaseConfig(props));
   }
 
   @AfterClass

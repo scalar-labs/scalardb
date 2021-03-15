@@ -1,4 +1,4 @@
-package com.scalar.db.storage.multi;
+package com.scalar.db.storage.multistorage;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -26,12 +26,12 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
 /**
- * A storage implementation with multi-databases for {@link DistributedStorage}.
+ * A storage implementation with multi-storage for {@link DistributedStorage}.
  *
  * @author Toshihiro Suzuki
  */
 @ThreadSafe
-public class MultiDatabases implements DistributedStorage {
+public class MultiStorage implements DistributedStorage {
 
   private final Map<String, DistributedStorage> storageMap;
   private final DistributedStorage defaultStorage;
@@ -40,21 +40,23 @@ public class MultiDatabases implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public MultiDatabases(MultiDatabasesConfig config) {
+  public MultiStorage(MultiStorageDatabaseConfig config) {
     Map<String, DistributedStorage> databaseStorageMap = new HashMap<>();
     config
         .getDatabaseConfigMap()
         .forEach(
-            (d, c) -> {
-              Injector injector = Guice.createInjector(new StorageModule(c));
-              databaseStorageMap.put(d, injector.getInstance(DistributedStorage.class));
+            (storage, databaseConfig) -> {
+              Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
+              databaseStorageMap.put(storage, injector.getInstance(DistributedStorage.class));
             });
 
     Builder<String, DistributedStorage> builder = ImmutableMap.builder();
-    config.getTableDatabaseMap().forEach((t, d) -> builder.put(t, databaseStorageMap.get(d)));
+    config
+        .getTableStorageMap()
+        .forEach((table, storage) -> builder.put(table, databaseStorageMap.get(storage)));
     storageMap = builder.build();
 
-    defaultStorage = databaseStorageMap.get(config.getDefaultDatabase());
+    defaultStorage = databaseStorageMap.get(config.getDefaultStorage());
 
     namespace = Optional.empty();
     tableName = Optional.empty();

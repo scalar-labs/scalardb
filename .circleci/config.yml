@@ -12,7 +12,7 @@ workflows:
       - integration-test-for-dynamo
       - integration-test-for-jdbc-mysql
       - integration-test-for-jdbc-postgresql
-      - integration-test-for-multi
+      - integration-test-for-multi-storage
 jobs:
   build:
     docker:
@@ -271,7 +271,7 @@ jobs:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
 
-  integration-test-for-multi:
+  integration-test-for-multi-storage:
     docker:
       - image: circleci/openjdk:8-jdk
       - image: cassandra:3.11
@@ -321,13 +321,13 @@ jobs:
           command: dockerize -wait tcp://localhost:9042 -timeout 1m
 
       # run tests!
-      - run: gradle integrationTestMulti
+      - run: gradle integrationTestMultiStorage
 
       - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
-            cp -a build/reports/tests/integrationTestMulti /tmp/gradle_integration_test_reports/
+            cp -a build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:

@@ -10,7 +10,7 @@ import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.multi.MultiDatabases;
+import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
@@ -95,8 +95,8 @@ public class DatabaseConfig {
         case "jdbc":
           storageClass = JdbcDatabase.class;
           break;
-        case "multi":
-          storageClass = MultiDatabases.class;
+        case "multistorage":
+          storageClass = MultiStorage.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");

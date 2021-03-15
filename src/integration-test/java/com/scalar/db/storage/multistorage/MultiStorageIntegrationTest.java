@@ -1,4 +1,4 @@
-package com.scalar.db.storage.multi;
+package com.scalar.db.storage.multistorage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,7 +32,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class MultiDatabasesIntegrationTest {
+public class MultiStorageIntegrationTest {
 
   protected static final String NAMESPACE = "integration_testing";
   protected static final String TABLE1 = "test_table1";
@@ -55,7 +55,7 @@ public class MultiDatabasesIntegrationTest {
   private static Cassandra cassandra;
   private static TestEnv testEnv;
   private static JdbcDatabase mysql;
-  private static MultiDatabases multiDatabases;
+  private static MultiStorage multiStorage;
 
   @After
   public void tearDown() throws Exception {
@@ -100,12 +100,12 @@ public class MultiDatabasesIntegrationTest {
             .forTable(table);
 
     // Act
-    multiDatabases.put(put);
+    multiStorage.put(put);
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
@@ -142,12 +142,12 @@ public class MultiDatabasesIntegrationTest {
             .forTable(table);
 
     // Act
-    multiDatabases.put(put);
+    multiStorage.put(put);
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
@@ -185,12 +185,12 @@ public class MultiDatabasesIntegrationTest {
             .forTable(table);
 
     // Act
-    multiDatabases.put(put);
+    multiStorage.put(put);
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
@@ -333,7 +333,7 @@ public class MultiDatabasesIntegrationTest {
   }
 
   private List<Result> scanAll(Scan scan) throws Exception {
-    try (Scanner scanner = multiDatabases.scan(scan)) {
+    try (Scanner scanner = multiStorage.scan(scan)) {
       return scanner.all();
     }
   }
@@ -355,13 +355,13 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.delete(
+    multiStorage.delete(
         new Delete(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table));
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
     result = cassandra.get(get);
@@ -390,13 +390,13 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.delete(
+    multiStorage.delete(
         new Delete(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table));
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
     result = cassandra.get(get);
@@ -425,13 +425,13 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.delete(
+    multiStorage.delete(
         new Delete(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table));
 
     // Assert
     Get get = new Get(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get);
+    Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
     result = cassandra.get(get);
@@ -461,7 +461,7 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.mutate(
+    multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
                 .withValue(new IntValue(COL_NAME3, 3))
@@ -473,9 +473,9 @@ public class MultiDatabasesIntegrationTest {
     Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(NAMESPACE).forTable(table);
     Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get1);
+    Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = multiDatabases.get(get2);
+    result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
@@ -515,7 +515,7 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.mutate(
+    multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
                 .withValue(new IntValue(COL_NAME3, 3))
@@ -527,9 +527,9 @@ public class MultiDatabasesIntegrationTest {
     Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(NAMESPACE).forTable(table);
     Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get1);
+    Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = multiDatabases.get(get2);
+    result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
@@ -569,7 +569,7 @@ public class MultiDatabasesIntegrationTest {
     mysql.put(put);
 
     // Act
-    multiDatabases.mutate(
+    multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
                 .withValue(new IntValue(COL_NAME3, 3))
@@ -581,9 +581,9 @@ public class MultiDatabasesIntegrationTest {
     Get get1 = new Get(partitionKey, clusteringKey1).forNamespace(NAMESPACE).forTable(table);
     Get get2 = new Get(partitionKey, clusteringKey2).forNamespace(NAMESPACE).forTable(table);
 
-    Optional<Result> result = multiDatabases.get(get1);
+    Optional<Result> result = multiStorage.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = multiDatabases.get(get2);
+    result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
     assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
     assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
@@ -609,7 +609,7 @@ public class MultiDatabasesIntegrationTest {
   @Test
   public void whenCallMutateWithEmptyList_ShouldThrowIllegalArgumentException() {
     // Arrange Act Assert
-    assertThatThrownBy(() -> multiDatabases.mutate(Collections.emptyList()))
+    assertThatThrownBy(() -> multiStorage.mutate(Collections.emptyList()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -617,7 +617,7 @@ public class MultiDatabasesIntegrationTest {
   public static void setUpBeforeClass() throws Exception {
     initCassandra();
     initMySql();
-    initMultiDatabases();
+    initMultiStorage();
   }
 
   private static void initCassandra() throws Exception {
@@ -694,40 +694,39 @@ public class MultiDatabasesIntegrationTest {
     mysql = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
   }
 
-  private static void initMultiDatabases() {
+  private static void initMultiStorage() {
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi");
+    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
 
-    // Define databases, cassandra and mysql
-    props.setProperty(MultiDatabasesConfig.DATABASES, "cassandra,mysql");
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.storage", "cassandra");
+    // Define storages, cassandra and mysql
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".cassandra.storage", "cassandra");
     props.setProperty(
-        MultiDatabasesConfig.DATABASES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.storage", "jdbc");
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
     props.setProperty(
-        MultiDatabasesConfig.DATABASES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiDatabasesConfig.DATABASES + ".mysql.password", MYSQL_PASSWORD);
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
+    props.setProperty(
+        MultiStorageDatabaseConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(
+        MultiStorageDatabaseConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
+    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
 
     // Define table mapping from table1 to cassandra, and from table2 to mysql
     props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING,
-        NAMESPACE + "." + TABLE1 + "," + NAMESPACE + "." + TABLE2);
-    props.setProperty(
-        MultiDatabasesConfig.TABLE_MAPPING + "." + NAMESPACE + "." + TABLE1, "cassandra");
-    props.setProperty(MultiDatabasesConfig.TABLE_MAPPING + "." + NAMESPACE + "." + TABLE2, "mysql");
+        MultiStorageDatabaseConfig.TABLE_MAPPING,
+        NAMESPACE + "." + TABLE1 + ":cassandra," + NAMESPACE + "." + TABLE2 + ":mysql");
 
-    // The default database is cassandra
-    props.setProperty(MultiDatabasesConfig.DEFAULT_DATABASE, "cassandra");
+    // The default storage is cassandra
+    props.setProperty(MultiStorageDatabaseConfig.DEFAULT_STORAGE, "cassandra");
 
-    multiDatabases = new MultiDatabases(new MultiDatabasesConfig(props));
+    multiStorage = new MultiStorage(new MultiStorageDatabaseConfig(props));
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    multiDatabases.close();
+    multiStorage.close();
     cleanUpCassandra();
     cleanUpMySql();
   }
