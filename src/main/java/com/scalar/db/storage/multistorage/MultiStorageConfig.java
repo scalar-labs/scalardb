@@ -19,6 +19,8 @@ public class MultiStorageConfig {
   public static final String TABLE_MAPPING = PREFIX + "table_mapping";
   public static final String DEFAULT_STORAGE = PREFIX + "default_storage";
 
+  private static final String MULTI_STORAGE = "multi-storage";
+
   private final Properties props;
 
   private Map<String, DatabaseConfig> databaseConfigMap;
@@ -46,8 +48,8 @@ public class MultiStorageConfig {
 
   private void load() {
     String storage = props.getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("multi-storage")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be multi-storage");
+    if (storage == null || !storage.equals(MULTI_STORAGE)) {
+      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be " + MULTI_STORAGE);
     }
 
     loadDatabaseConfigs();
@@ -72,8 +74,9 @@ public class MultiStorageConfig {
           }
         }
 
-        if (dbProps.getProperty(DatabaseConfig.STORAGE).equals("multi-storage")) {
-          throw new IllegalArgumentException("Does not support nested multi-storage: " + storage);
+        if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(MULTI_STORAGE)) {
+          throw new IllegalArgumentException(
+              "Does not support nested " + MULTI_STORAGE + ": " + storage);
         }
         builder.put(storage, new DatabaseConfig(dbProps));
       }
