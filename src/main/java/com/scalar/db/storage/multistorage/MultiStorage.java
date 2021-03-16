@@ -28,7 +28,7 @@ import javax.inject.Inject;
 /**
  * A storage implementation with multi-storage for {@link DistributedStorage}.
  *
- * <p>This storage implementation holds multiple storage instances and have mapping a table name to
+ * <p>This storage implementation holds multiple storage instances. It chooses a storage instance on the basis of the specified configuration and a given operation. 
  * a proper storage instance. When a operation executes, it chooses a proper storage instance from
  * the specified table name by using the table-storage mapping and uses it.
  *
