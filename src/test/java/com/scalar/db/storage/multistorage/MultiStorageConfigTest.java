@@ -16,7 +16,7 @@ public class MultiStorageConfigTest {
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
@@ -101,7 +101,7 @@ public class MultiStorageConfigTest {
   public void constructor_NonExistentStorageGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
@@ -132,7 +132,7 @@ public class MultiStorageConfigTest {
   public void constructor_NonExistentStorageForDefaultGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
@@ -162,10 +162,10 @@ public class MultiStorageConfigTest {
   public void constructor_NestedMultiStorageGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     props.setProperty(MultiStorageConfig.STORAGES, "db,mysql");
-    props.setProperty(MultiStorageConfig.STORAGES + ".db.storage", "multistorage"); // nested
+    props.setProperty(MultiStorageConfig.STORAGES + ".db.storage", "multis-torage"); // nested
     props.setProperty(MultiStorageConfig.STORAGES + ".db.contact_points", "localhost");
     props.setProperty(MultiStorageConfig.STORAGES + ".db.username", "user");
     props.setProperty(MultiStorageConfig.STORAGES + ".db.password", "pass");

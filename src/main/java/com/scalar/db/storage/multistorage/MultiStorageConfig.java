@@ -14,10 +14,10 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class MultiStorageConfig {
 
-  public static final String PREFIX = DatabaseConfig.PREFIX + "multistorage.";
+  public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";
   public static final String STORAGES = PREFIX + "storages";
-  public static final String TABLE_MAPPING = PREFIX + "table-mapping";
-  public static final String DEFAULT_STORAGE = PREFIX + "default-storage";
+  public static final String TABLE_MAPPING = PREFIX + "table_mapping";
+  public static final String DEFAULT_STORAGE = PREFIX + "default_storage";
 
   private final Properties props;
 
@@ -46,8 +46,8 @@ public class MultiStorageConfig {
 
   private void load() {
     String storage = props.getProperty(DatabaseConfig.STORAGE);
-    if (storage == null || !storage.equals("multistorage")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be multistorage");
+    if (storage == null || !storage.equals("multi-storage")) {
+      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be multi-storage");
     }
 
     loadDatabaseConfigs();
@@ -63,20 +63,19 @@ public class MultiStorageConfig {
     String storages = props.getProperty(STORAGES);
     if (storages != null) {
       for (String storage : storages.split(",")) {
-        Properties properties = new Properties();
+        Properties dbProps = new Properties();
         for (String propertyName : props.stringPropertyNames()) {
           if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
-            properties.put(
-                propertyName.replace("multistorage.storages." + storage + ".", ""),
+            dbProps.put(
+                propertyName.replace("multi_storage.storages." + storage + ".", ""),
                 props.getProperty(propertyName));
           }
         }
 
-        DatabaseConfig config = new DatabaseConfig(properties);
-        if (config.getStorageClass() == MultiStorage.class) {
+        if (dbProps.getProperty(DatabaseConfig.STORAGE).equals("multi-storage")) {
           throw new IllegalArgumentException("Does not support nested multi-storage: " + storage);
         }
-        builder.put(storage, config);
+        builder.put(storage, new DatabaseConfig(dbProps));
       }
     }
     databaseConfigMap = builder.build();

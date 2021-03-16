@@ -134,7 +134,7 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
 
   private static void initMultiStorage() {
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, cassandra and mysql
     props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");

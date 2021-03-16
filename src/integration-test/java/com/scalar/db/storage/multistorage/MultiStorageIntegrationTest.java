@@ -170,7 +170,8 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoDefaultStorage() throws ExecutionException {
+  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoDefaultStorage()
+      throws ExecutionException {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -410,7 +411,8 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenDeleteDataFromTable3_DataShouldBeDeletedFromDefaultStorage() throws ExecutionException {
+  public void whenDeleteDataFromTable3_DataShouldBeDeletedFromDefaultStorage()
+      throws ExecutionException {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -696,7 +698,7 @@ public class MultiStorageIntegrationTest {
 
   private static void initMultiStorage() {
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multistorage");
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
     // Define storages, cassandra and mysql
     props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");

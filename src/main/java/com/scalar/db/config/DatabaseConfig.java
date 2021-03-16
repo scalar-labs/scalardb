@@ -65,20 +65,6 @@ public class DatabaseConfig {
   }
 
   protected void load() {
-    checkNotNull(props.getProperty(CONTACT_POINTS));
-    checkNotNull(props.getProperty(USERNAME));
-    checkNotNull(props.getProperty(PASSWORD));
-
-    contactPoints = Arrays.asList(props.getProperty(CONTACT_POINTS).split(","));
-    if (props.getProperty(CONTACT_PORT) == null) {
-      contactPort = 0;
-    } else {
-      contactPort = Integer.parseInt(props.getProperty(CONTACT_PORT));
-      checkArgument(contactPort > 0);
-    }
-    username = props.getProperty(USERNAME);
-    password = props.getProperty(PASSWORD);
-
     if (props.getProperty(STORAGE) == null) {
       storageClass = Cassandra.class;
     } else {
@@ -95,7 +81,7 @@ public class DatabaseConfig {
         case "jdbc":
           storageClass = JdbcDatabase.class;
           break;
-        case "multistorage":
+        case "multi-storage":
           storageClass = MultiStorage.class;
           break;
         default:
@@ -103,10 +89,26 @@ public class DatabaseConfig {
       }
     }
 
-    if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
-      namespacePrefix = Optional.empty();
-    } else {
-      namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
+    if (storageClass != MultiStorage.class) {
+      checkNotNull(props.getProperty(CONTACT_POINTS));
+      checkNotNull(props.getProperty(USERNAME));
+      checkNotNull(props.getProperty(PASSWORD));
+
+      contactPoints = Arrays.asList(props.getProperty(CONTACT_POINTS).split(","));
+      if (props.getProperty(CONTACT_PORT) == null) {
+        contactPort = 0;
+      } else {
+        contactPort = Integer.parseInt(props.getProperty(CONTACT_PORT));
+        checkArgument(contactPort > 0);
+      }
+      username = props.getProperty(USERNAME);
+      password = props.getProperty(PASSWORD);
+
+      if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
+        namespacePrefix = Optional.empty();
+      } else {
+        namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
+      }
     }
 
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
