@@ -20,7 +20,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.multistorage.MultiStorage;
-import com.scalar.db.storage.multistorage.MultiStorageDatabaseConfig;
+import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -137,24 +137,21 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
     props.setProperty(DatabaseConfig.STORAGE, "multistorage");
 
     // Define storages, cassandra and mysql
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES, "cassandra,mysql");
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
     props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.storage", "jdbc");
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
+        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
 
     // Define table mapping from table1 to cassandra, from table2 to mysql, and from the
     // coordinator table to cassandra
     props.setProperty(
-        MultiStorageDatabaseConfig.TABLE_MAPPING,
+        MultiStorageConfig.TABLE_MAPPING,
         NAMESPACE
             + "."
             + TABLE_1
@@ -169,9 +166,9 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
             + ":cassandra");
 
     // The default storage is cassandra
-    props.setProperty(MultiStorageDatabaseConfig.DEFAULT_STORAGE, "cassandra");
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    originalStorage = new MultiStorage(new MultiStorageDatabaseConfig(props));
+    originalStorage = new MultiStorage(new MultiStorageConfig(props));
   }
 
   @AfterClass

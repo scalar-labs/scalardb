@@ -6,7 +6,7 @@ import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
-import com.scalar.db.storage.multistorage.MultiStorageDatabaseConfig;
+import com.scalar.db.storage.multistorage.MultiStorageConfig;
 
 public class StorageModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -34,7 +34,7 @@ public class StorageModule extends AbstractModule {
 
   @Singleton
   @Provides
-  MultiStorageDatabaseConfig provideMultiStorageDatabaseConfig() {
-    return new MultiStorageDatabaseConfig(config.getProperties());
+  MultiStorageConfig provideMultiStorageConfig() {
+    return new MultiStorageConfig(config.getProperties());
   }
 }

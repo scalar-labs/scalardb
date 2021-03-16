@@ -12,7 +12,7 @@ import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class MultiStorageDatabaseConfig {
+public class MultiStorageConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "multistorage.";
   public static final String STORAGES = PREFIX + "storages";
@@ -25,17 +25,17 @@ public class MultiStorageDatabaseConfig {
   private Map<String, String> tableStorageMap;
   private String defaultStorage;
 
-  public MultiStorageDatabaseConfig(File propertiesFile) throws IOException {
+  public MultiStorageConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
   }
 
-  public MultiStorageDatabaseConfig(InputStream stream) throws IOException {
+  public MultiStorageConfig(InputStream stream) throws IOException {
     props = new Properties();
     props.load(stream);
     load();
   }
 
-  public MultiStorageDatabaseConfig(Properties properties) {
+  public MultiStorageConfig(Properties properties) {
     props = new Properties(properties);
     load();
   }

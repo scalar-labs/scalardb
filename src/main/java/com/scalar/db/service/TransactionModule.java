@@ -8,7 +8,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
-import com.scalar.db.storage.multistorage.MultiStorageDatabaseConfig;
+import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 
@@ -57,7 +57,7 @@ public class TransactionModule extends AbstractModule {
 
   @Singleton
   @Provides
-  MultiStorageDatabaseConfig provideMultiStorageDatabaseConfig() {
-    return new MultiStorageDatabaseConfig(config.getProperties());
+  MultiStorageConfig provideMultiStorageConfig() {
+    return new MultiStorageConfig(config.getProperties());
   }
 }

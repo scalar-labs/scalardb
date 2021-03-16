@@ -40,23 +40,23 @@ public class MultiStorage implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public MultiStorage(MultiStorageDatabaseConfig config) {
-    Map<String, DistributedStorage> databaseStorageMap = new HashMap<>();
+  public MultiStorage(MultiStorageConfig config) {
+    Map<String, DistributedStorage> nameStorageMap = new HashMap<>();
     config
         .getDatabaseConfigMap()
         .forEach(
             (storage, databaseConfig) -> {
               Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
-              databaseStorageMap.put(storage, injector.getInstance(DistributedStorage.class));
+              nameStorageMap.put(storage, injector.getInstance(DistributedStorage.class));
             });
 
     Builder<String, DistributedStorage> builder = ImmutableMap.builder();
     config
         .getTableStorageMap()
-        .forEach((table, storage) -> builder.put(table, databaseStorageMap.get(storage)));
+        .forEach((table, storage) -> builder.put(table, nameStorageMap.get(storage)));
     storageMap = builder.build();
 
-    defaultStorage = databaseStorageMap.get(config.getDefaultStorage());
+    defaultStorage = nameStorageMap.get(config.getDefaultStorage());
 
     namespace = Optional.empty();
     tableName = Optional.empty();

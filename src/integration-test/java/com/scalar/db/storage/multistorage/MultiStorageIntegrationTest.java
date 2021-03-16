@@ -170,7 +170,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoDefault() throws ExecutionException {
+  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoDefaultStorage() throws ExecutionException {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -293,7 +293,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenScanDataFromTable3_DataShouldBeScannedFromDefault() throws Exception {
+  public void whenScanDataFromTable3_DataShouldBeScannedFromDefaultStorage() throws Exception {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -410,7 +410,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenDeleteDataFromTable3_DataShouldBeDeletedFromDefault() throws ExecutionException {
+  public void whenDeleteDataFromTable3_DataShouldBeDeletedFromDefaultStorage() throws ExecutionException {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -553,7 +553,7 @@ public class MultiStorageIntegrationTest {
   }
 
   @Test
-  public void whenMutateDataToTable3_ShouldExecuteForDefault() throws ExecutionException {
+  public void whenMutateDataToTable3_ShouldExecuteForDefaultStorage() throws ExecutionException {
     // Arrange
     String table = TABLE3;
     Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
@@ -699,29 +699,26 @@ public class MultiStorageIntegrationTest {
     props.setProperty(DatabaseConfig.STORAGE, "multistorage");
 
     // Define storages, cassandra and mysql
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES, "cassandra,mysql");
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
     props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.storage", "jdbc");
-    props.setProperty(
-        MultiStorageDatabaseConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiStorageDatabaseConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
+        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
 
     // Define table mapping from table1 to cassandra, and from table2 to mysql
     props.setProperty(
-        MultiStorageDatabaseConfig.TABLE_MAPPING,
+        MultiStorageConfig.TABLE_MAPPING,
         NAMESPACE + "." + TABLE1 + ":cassandra," + NAMESPACE + "." + TABLE2 + ":mysql");
 
     // The default storage is cassandra
-    props.setProperty(MultiStorageDatabaseConfig.DEFAULT_STORAGE, "cassandra");
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
-    multiStorage = new MultiStorage(new MultiStorageDatabaseConfig(props));
+    multiStorage = new MultiStorage(new MultiStorageConfig(props));
   }
 
   @AfterClass
