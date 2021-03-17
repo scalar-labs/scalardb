@@ -128,12 +128,15 @@ public class TestEnv implements Closeable {
   private final List<JdbcTableMetadata> metadataList;
 
   public TestEnv() {
-    String jdbcUrl = System.getProperty(PROP_JDBC_URL);
-    String username = System.getProperty(PROP_JDBC_USERNAME, "");
-    String password = System.getProperty(PROP_JDBC_PASSWORD, "");
-    Optional<String> namespacePrefix =
-        Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
+    this(
+        System.getProperty(PROP_JDBC_URL),
+        System.getProperty(PROP_JDBC_USERNAME, ""),
+        System.getProperty(PROP_JDBC_PASSWORD, ""),
+        Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX)));
+  }
 
+  public TestEnv(
+      String jdbcUrl, String username, String password, Optional<String> namespacePrefix) {
     rdbEngine = JdbcUtils.getRdbEngine(jdbcUrl);
 
     dataSource = new BasicDataSource();

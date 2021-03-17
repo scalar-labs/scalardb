@@ -130,6 +130,10 @@ public interface DistributedTransaction {
    */
   void commit() throws CommitException, UnknownTransactionStatusException;
 
-  /** Aborts a transaction. */
+  /**
+   * Aborts a transaction.
+   *
+   * @throws AbortException if the operation fails
+   */
   void abort() throws AbortException;
 }

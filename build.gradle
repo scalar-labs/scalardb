@@ -59,6 +59,19 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+
+    integrationTestMultiStorage {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/multistorage/*.java'
+            include '**/com/scalar/db/storage/jdbc/test/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithMultiStorageIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
 }
 
 configurations {
@@ -70,6 +83,8 @@ configurations {
     integrationTestDynamoRuntime.extendsFrom testRuntime
     integrationTestJdbcCompile.extendsFrom testCompile
     integrationTestJdbcRuntime.extendsFrom testRuntime
+    integrationTestMultiStorageCompile.extendsFrom testCompile
+    integrationTestMultiStorageRuntime.extendsFrom testRuntime
 }
 
 def awssdkVersion = "2.14.24"
@@ -160,11 +175,20 @@ task integrationTestJdbc(type: Test) {
     }
 }
 
+task integrationTestMultiStorage(type: Test) {
+    description = 'Runs the integration tests for multi-storage.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
+    classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
 // build should not depend on the integration tests
 check.dependsOn -= integrationTestCassandra
 check.dependsOn -= integrationTestCosmos
 check.dependsOn -= integrationTestDynamo
 check.dependsOn -= integrationTestJdbc
+check.dependsOn -= integrationTestMultiStorage
 
 task copyTestJarsToTestLib(type: Copy) {
     from configurations.testCompile
