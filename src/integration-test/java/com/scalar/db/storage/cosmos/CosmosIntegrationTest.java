@@ -27,7 +27,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 
 public class CosmosIntegrationTest extends IntegrationTestBase {
 
@@ -62,11 +61,6 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
           .deleteItem(record, new CosmosItemRequestOptions());
     }
   }
-
-  // FIXME Ignore this test for now. It seems like the order of the result is not correct
-  @Ignore
-  @Override
-  public void put_MultiplePutWithDifferentConditionsGiven_ShouldStoreProperly() {}
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {

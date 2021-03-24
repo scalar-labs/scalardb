@@ -1,5 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
@@ -7,7 +10,6 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.ResultImpl;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,9 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
 
@@ -36,7 +35,6 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
   private final Optional<String> indexedColumn;
-  private final Optional<Scan.Ordering.Order> indexedOrder;
 
   SimpleSelectQuery(Builder builder) {
     tableMetadata = builder.tableMetadata;
@@ -54,7 +52,6 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     orderings = builder.orderings;
     isRangeQuery = builder.isRangeQuery;
     indexedColumn = builder.indexedColumn;
-    indexedOrder = builder.indexedOrder;
   }
 
   protected String sql() {
@@ -89,12 +86,8 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   }
 
   private String orderBySqlString() {
-    if (!isRangeQuery) {
+    if (!isRangeQuery || indexedColumn.isPresent()) {
       return "";
-    }
-
-    if (indexedColumn.isPresent()) {
-      return " ORDER BY " + enclose(indexedColumn.get(), rdbEngine) + " " + indexedOrder.get();
     }
 
     List<Scan.Ordering> orderingList = new ArrayList<>(orderings);

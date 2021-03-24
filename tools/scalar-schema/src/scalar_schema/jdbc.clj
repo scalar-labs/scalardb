@@ -65,7 +65,6 @@
    "key_type" "VARCHAR(20)"
    "clustering_order" "VARCHAR(10)"
    "indexed" (str boolean-type \  "NOT NULL")
-   "index_order" "VARCHAR(10)"
    "ordinal_position" "INTEGER NOT NULL"})
 
 (defn- make-create-metadata-statement
@@ -162,8 +161,7 @@
    column data-type ordinal-position]
   (let [key-type (get-key-type column partition-key clustering-key)
         key-order (if (key? column clustering-key) "'ASC'" "NULL")
-        indexed (boolean-value-fn (secondary-indexed? column secondary-index))
-        index-order (if (key? column secondary-index) "'ASC'" "NULL")]
+        indexed (boolean-value-fn (secondary-indexed? column secondary-index))]
     (str "INSERT INTO "
          (get-metadata-table-name opts)
          " VALUES ("
@@ -173,7 +171,6 @@
          (if key-type (str "'" key-type "'") "NULL") ","
          key-order ","
          indexed ","
-         index-order ","
          ordinal-position
          ")")))
 

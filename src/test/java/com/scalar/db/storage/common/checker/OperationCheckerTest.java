@@ -1,5 +1,8 @@
 package com.scalar.db.storage.common.checker;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -19,21 +22,18 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.storage.common.metadata.TableMetadata;
 import com.scalar.db.storage.common.util.Utility;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.MockitoAnnotations;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.MockitoAnnotations;
 
 public class OperationCheckerTest {
 
@@ -49,13 +49,13 @@ public class OperationCheckerTest {
   private static final String COL2 = "v2";
   private static final String COL3 = "v3";
 
-  private JdbcTableMetadata metadata;
+  private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    // Dummy metadata
+    // Dummy metadata. Using JdbcTableMetadata here as an example
     metadata =
         new JdbcTableMetadata(
             TABLE_FULL_NAME,
@@ -78,12 +78,7 @@ public class OperationCheckerTest {
                 put(COL3, DataType.BOOLEAN);
               }
             },
-            Collections.singletonList(COL1),
-            new HashMap<String, Scan.Ordering.Order>() {
-              {
-                put(COL1, Scan.Ordering.Order.ASC);
-              }
-            });
+            Collections.singletonList(COL1));
   }
 
   @Test
