@@ -14,7 +14,7 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,7 +35,7 @@ public class QueryBuilderTest {
   private static final String NAMESPACE = "n1";
   private static final String TABLE = "t1";
   @Parameterized.Parameter public RdbEngine rdbEngine;
-  @Mock private TableMetadataManager tableMetadataManager;
+  @Mock private JdbcTableMetadataManager tableMetadataManager;
   private QueryBuilder queryBuilder;
 
   @Parameterized.Parameters(name = "RDB={0}")

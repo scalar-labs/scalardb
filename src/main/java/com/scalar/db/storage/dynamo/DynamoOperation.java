@@ -3,13 +3,12 @@ package com.scalar.db.storage.dynamo;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.cosmos.ConcatenationVisitor;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-
-import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nonnull;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /** A utility class for an operation */
 public class DynamoOperation {
@@ -30,7 +29,7 @@ public class DynamoOperation {
   private final Operation operation;
   private final DynamoTableMetadata metadata;
 
-  public DynamoOperation(Operation operation, TableMetadataManager metadataManager) {
+  public DynamoOperation(Operation operation, DynamoTableMetadataManager metadataManager) {
     this.operation = operation;
     this.metadata = metadataManager.getTableMetadata(operation);
   }

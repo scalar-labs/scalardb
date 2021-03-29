@@ -1,12 +1,13 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -16,17 +17,12 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A storage implementation with Cassandra for {@link DistributedStorage}.
@@ -39,7 +35,8 @@ public class Cassandra implements DistributedStorage {
   private final StatementHandlerManager handlers;
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
-  private final Map<String, CassandraTableMetadata> tableMetadataMap;
+  private final CassandraTableMetadataManager metadataManager;
+  private final OperationChecker operationChecker;
   private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -60,10 +57,12 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
+    metadataManager = new CassandraTableMetadataManager(clusterManager);
+    operationChecker = new OperationChecker(metadataManager);
+
     namespacePrefix = config.getNamespacePrefix();
     namespace = Optional.empty();
     tableName = Optional.empty();
-    tableMetadataMap = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -97,8 +96,7 @@ public class Cassandra implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(get);
-    new OperationChecker(metadata).check(get);
+    operationChecker.check(get);
     addProjectionsForKeys(get);
 
     List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
@@ -108,6 +106,8 @@ public class Cassandra implements DistributedStorage {
     if (rows.isEmpty() || rows.get(0) == null) {
       return Optional.empty();
     }
+
+    CassandraTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(rows.get(0), metadata));
   }
 
@@ -116,11 +116,12 @@ public class Cassandra implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-    CassandraTableMetadata metadata = getTableMetadata(scan);
-    new OperationChecker(metadata).check(scan);
+    operationChecker.check(scan);
     addProjectionsForKeys(scan);
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
+
+    CassandraTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(results, metadata);
   }
 
@@ -128,7 +129,7 @@ public class Cassandra implements DistributedStorage {
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    new OperationChecker(getTableMetadata(put)).check(put);
+    operationChecker.check(put);
     handlers.get(put).handle(put);
   }
 
@@ -142,7 +143,7 @@ public class Cassandra implements DistributedStorage {
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    new OperationChecker(getTableMetadata(delete)).check(delete);
+    operationChecker.check(delete);
     handlers.delete().handle(delete);
   }
 
@@ -167,7 +168,6 @@ public class Cassandra implements DistributedStorage {
     }
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-    OperationChecker operationChecker = new OperationChecker(getTableMetadata(mutations.get(0)));
     operationChecker.check(mutations);
     mutations.forEach(operationChecker::check);
     batch.handle(mutations);
@@ -189,18 +189,5 @@ public class Cassandra implements DistributedStorage {
             k -> {
               k.forEach(v -> selection.withProjection(v.getName()));
             });
-  }
-
-  private synchronized CassandraTableMetadata getTableMetadata(Operation operation) {
-    String fullName = operation.forFullTableName().get();
-    if (!tableMetadataMap.containsKey(fullName)) {
-      tableMetadataMap.put(
-          fullName,
-          new CassandraTableMetadata(
-              clusterManager.getMetadata(
-                  operation.forFullNamespace().get(), operation.forTable().get())));
-    }
-
-    return tableMetadataMap.get(fullName);
   }
 }

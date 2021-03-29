@@ -1,5 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
@@ -14,6 +16,11 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -21,14 +28,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * A storage implementation with DynamoDB for {@link DistributedStorage}
@@ -39,11 +38,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class Dynamo implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
   private final DynamoDbClient client;
-  private final TableMetadataManager metadataManager;
+  private final DynamoTableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
+  private final OperationChecker operationChecker;
   private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -62,7 +62,8 @@ public class Dynamo implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    this.metadataManager = new TableMetadataManager(client, namespacePrefix);
+    this.metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
+    operationChecker = new OperationChecker(metadataManager);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     this.putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -78,7 +79,8 @@ public class Dynamo implements DistributedStorage {
     this.namespacePrefix = namespacePrefix.map(n -> n + "_");
     namespace = Optional.empty();
     tableName = Optional.empty();
-    metadataManager = new TableMetadataManager(client, this.namespacePrefix);
+    metadataManager = new DynamoTableMetadataManager(client, this.namespacePrefix);
+    operationChecker = new OperationChecker(metadataManager);
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     putStatementHandler = new PutStatementHandler(client, metadataManager);
     deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
@@ -115,8 +117,7 @@ public class Dynamo implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
-    new OperationChecker(metadata).check(get);
+    operationChecker.check(get);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
     if (items.size() > 1) {
@@ -126,24 +127,25 @@ public class Dynamo implements DistributedStorage {
       return Optional.empty();
     }
 
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(items.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
-    new OperationChecker(metadata).check(scan);
+    operationChecker.check(scan);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
+    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(items, scan, metadata);
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    new OperationChecker(metadataManager.getTableMetadata(put)).check(put);
+    operationChecker.check(put);
 
     putStatementHandler.handle(put);
   }
@@ -156,7 +158,7 @@ public class Dynamo implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    new OperationChecker(metadataManager.getTableMetadata(delete)).check(delete);
+    operationChecker.check(delete);
 
     deleteStatementHandler.handle(delete);
   }
@@ -180,8 +182,6 @@ public class Dynamo implements DistributedStorage {
     }
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-    OperationChecker operationChecker =
-        new OperationChecker(metadataManager.getTableMetadata(mutations.get(0)));
     operationChecker.check(mutations);
     mutations.forEach(operationChecker::check);
     batchHandler.handle(mutations);

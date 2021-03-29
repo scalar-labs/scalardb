@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 @ThreadSafe
 public class PutStatementHandler extends StatementHandler {
 
-  public PutStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public PutStatementHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 

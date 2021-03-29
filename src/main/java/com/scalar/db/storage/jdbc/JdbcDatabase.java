@@ -11,18 +11,18 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
+import javax.inject.Inject;
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A storage implementation with JDBC for {@link DistributedStorage}.
@@ -46,10 +46,12 @@ public class JdbcDatabase implements DistributedStorage {
     dataSource = JdbcUtils.initDataSource(config);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    JdbcTableMetadataManager tableMetadataManager =
+        new JdbcTableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
-    jdbcService = new JdbcService(tableMetadataManager, queryBuilder, namespacePrefix);
+    jdbcService =
+        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, namespacePrefix);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

@@ -8,7 +8,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class StatementHandlerTest {
-  @Mock private TableMetadataManager metadataManager;
+  @Mock private CosmosTableMetadataManager metadataManager;
 
   @Before
   public void setUp() throws Exception {

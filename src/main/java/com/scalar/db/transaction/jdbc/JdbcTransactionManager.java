@@ -6,20 +6,20 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
+import java.sql.SQLException;
+import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
+import javax.inject.Inject;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
-import java.sql.SQLException;
-import java.util.Optional;
 
 @ThreadSafe
 public class JdbcTransactionManager implements DistributedTransactionManager {
@@ -35,10 +35,12 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     dataSource = JdbcUtils.initDataSource(config, true);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    JdbcTableMetadataManager tableMetadataManager =
+        new JdbcTableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
-    jdbcService = new JdbcService(tableMetadataManager, queryBuilder, namespacePrefix);
+    jdbcService =
+        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, namespacePrefix);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

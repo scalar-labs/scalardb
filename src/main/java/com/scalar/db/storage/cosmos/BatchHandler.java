@@ -6,12 +6,11 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A handler for a batch
@@ -22,17 +21,17 @@ import java.util.List;
 public class BatchHandler {
   static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
   private final CosmosClient client;
-  private final TableMetadataManager metadataManager;
+  private final CosmosTableMetadataManager metadataManager;
   private final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
   /**
    * Constructs a {@code BatchHandler} with the specified {@link CosmosClient} and {@link
-   * TableMetadataManager}
+   * CosmosTableMetadataManager}
    *
    * @param client {@code CosmosClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
    */
-  public BatchHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  public BatchHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     this.client = client;
     this.metadataManager = metadataManager;
   }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +13,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -19,9 +21,10 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -47,7 +50,8 @@ public class JdbcServiceTest {
   private static final Optional<String> TABLE = Optional.of("t1");
 
   @Mock private QueryBuilder queryBuilder;
-  @Mock private TableMetadataManager tableMetadataManager;
+  @Mock private OperationChecker operationChecker;
+  @Mock private JdbcTableMetadataManager tableMetadataManager;
 
   @Mock private SelectQuery.Builder selectQueryBuilder;
   @Mock private SelectQuery selectQuery;
@@ -70,10 +74,11 @@ public class JdbcServiceTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
-    jdbcService = new JdbcService(tableMetadataManager, queryBuilder, Optional.empty());
+    jdbcService =
+        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, Optional.empty());
 
     // Arrange
-    when(tableMetadataManager.getTableMetadata(any()))
+    when(tableMetadataManager.getTableMetadata(any(Operation.class)))
         .thenReturn(
             new JdbcTableMetadata(
                 NAMESPACE.get(),
@@ -106,6 +111,7 @@ public class JdbcServiceTest {
     jdbcService.get(get, connection, NAMESPACE, TABLE);
 
     // Assert
+    verify(operationChecker).check(any(Get.class));
     verify(queryBuilder).select(any());
   }
 
@@ -130,6 +136,7 @@ public class JdbcServiceTest {
     jdbcService.scan(scan, connection, NAMESPACE, TABLE);
 
     // Assert
+    verify(operationChecker).check(any(Scan.class));
     verify(queryBuilder).select(any());
   }
 
@@ -147,6 +154,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).upsertInto(any(), any());
   }
 
@@ -173,6 +181,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -199,6 +208,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isFalse();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -222,6 +232,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -245,6 +256,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isFalse();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).update(any(), any());
   }
 
@@ -267,6 +279,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).insertInto(any(), any());
   }
 
@@ -291,6 +304,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isFalse();
+    verify(operationChecker).check(any(Put.class));
     verify(queryBuilder).insertInto(any(), any());
   }
 
@@ -308,6 +322,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -332,6 +347,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -356,6 +372,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isFalse();
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -377,6 +394,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -398,6 +416,7 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isFalse();
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).deleteFrom(any(), any());
   }
 
@@ -421,6 +440,9 @@ public class JdbcServiceTest {
 
     // Assert
     assertThat(ret).isTrue();
+    verify(operationChecker).check(anyList());
+    verify(operationChecker).check(any(Put.class));
+    verify(operationChecker).check(any(Delete.class));
     verify(queryBuilder).upsertInto(any(), any());
     verify(queryBuilder).deleteFrom(any(), any());
   }
