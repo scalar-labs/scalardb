@@ -993,7 +993,7 @@ public abstract class IntegrationTestBase {
           .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
 
       int actualClusteringKeyValue = ((IntValue) result.getValue(checkedColumn).get()).get();
-      assertThat(expectedValuesSet.contains(actualClusteringKeyValue)).isTrue();
+      assertThat(expectedValuesSet).contains(actualClusteringKeyValue);
       expectedValuesSet.remove(actualClusteringKeyValue);
     }
 
