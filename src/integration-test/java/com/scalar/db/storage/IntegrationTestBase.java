@@ -899,11 +899,11 @@ public abstract class IntegrationTestBase {
       int col1Val = ((IntValue) result.getValue(COL_NAME1).get()).get();
       int col4Val = ((IntValue) result.getValue(COL_NAME4).get()).get();
       List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
-      assertThat(expectedValues.contains(col1AndCol4)).isTrue();
+      assertThat(expectedValues).contains(col1AndCol4);
       expectedValues.remove(col1AndCol4);
     }
 
-    assertThat(expectedValues.isEmpty()).isTrue();
+    assertThat(expectedValues).isEmpty();
   }
 
   @Test
@@ -997,6 +997,6 @@ public abstract class IntegrationTestBase {
       expectedValuesSet.remove(actualClusteringKeyValue);
     }
 
-    assertThat(expectedValuesSet.isEmpty()).isTrue();
+    assertThat(expectedValuesSet).isEmpty();
   }
 }
