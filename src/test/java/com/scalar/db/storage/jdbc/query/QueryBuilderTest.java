@@ -1,5 +1,10 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
@@ -10,13 +15,6 @@ import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,11 +22,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 @RunWith(Parameterized.class)
 public class QueryBuilderTest {
@@ -73,13 +72,7 @@ public class QueryBuilderTest {
                 put("v4", DataType.TEXT);
               }
             },
-            Arrays.asList("v1", "v2"),
-            new HashMap<String, Scan.Ordering.Order>() {
-              {
-                put("v1", Scan.Ordering.Order.ASC);
-                put("v2", Scan.Ordering.Order.DESC);
-              }
-            });
+            Arrays.asList("v1", "v2"));
 
     when(tableMetadataManager.getTableMetadata(any(String.class))).thenReturn(dummyTableMetadata);
 
@@ -325,7 +318,7 @@ public class QueryBuilderTest {
                     false)
                 .build()
                 .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=? ORDER BY v1 ASC"));
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
 
     assertThat(
             queryBuilder
@@ -348,7 +341,7 @@ public class QueryBuilderTest {
                     false)
                 .build()
                 .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=? ORDER BY v2 DESC"));
+        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
   }
 
   @Test

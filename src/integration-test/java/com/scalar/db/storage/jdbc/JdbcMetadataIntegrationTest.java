@@ -36,21 +36,6 @@ public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
     assertThat(tableMetadata.getFullTableName()).isEqualTo(fullTableName);
   }
 
-  @Test
-  public void testSecondaryIndexOrder() {
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME1)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME2)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME3)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME4)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME5)).isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME6)).isEqualTo(Scan.Ordering.Order.DESC);
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME7)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME8)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME9)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME10)).isNull();
-    assertThat(tableMetadata.getSecondaryIndexOrder(COL_NAME11)).isNull();
-  }
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv();
@@ -80,13 +65,7 @@ public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
             put(COL_NAME11, DataType.BLOB);
           }
         },
-        Arrays.asList(COL_NAME5, COL_NAME6),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(COL_NAME5, Scan.Ordering.Order.ASC);
-            put(COL_NAME6, Scan.Ordering.Order.DESC);
-          }
-        });
+        Arrays.asList(COL_NAME5, COL_NAME6));
     testEnv.createMetadataTable();
     testEnv.insertMetadata();
 

@@ -50,12 +50,7 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
             put(COL_NAME5, DataType.BOOLEAN);
           }
         },
-        Collections.singletonList(COL_NAME3),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(COL_NAME3, Scan.Ordering.Order.ASC);
-          }
-        });
+        Collections.singletonList(COL_NAME3));
     testEnv.createMetadataTable();
     testEnv.createTables();
     testEnv.insertMetadata();

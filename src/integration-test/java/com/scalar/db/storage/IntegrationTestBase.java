@@ -27,8 +27,10 @@ import com.scalar.db.io.TextValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 import org.junit.Test;
 
@@ -130,19 +132,7 @@ public abstract class IntegrationTestBase {
     scanAll(scan).forEach(actual::add); // use iterator
 
     // Assert
-    assertThat(actual.size()).isEqualTo(3);
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(actual.get(1).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(2).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
   }
 
   @Test
@@ -157,23 +147,25 @@ public abstract class IntegrationTestBase {
     Scanner scanner = storage.scan(scan);
 
     // Assert
+    List<Result> results = new ArrayList<>();
+
     Optional<Result> result = scanner.one();
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    results.add(result.get());
+
     result = scanner.one();
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    results.add(result.get());
+
     result = scanner.one();
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    results.add(result.get());
+
     result = scanner.one();
     assertThat(result.isPresent()).isFalse();
+
+    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+
     scanner.close();
   }
 
@@ -221,15 +213,7 @@ public abstract class IntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // verify
-    assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(actual.get(1).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1));
   }
 
   @Test
@@ -247,15 +231,7 @@ public abstract class IntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // verify
-    assertThat(actual.size()).isEqualTo(2);
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(1).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(1, 2));
   }
 
   @Test
@@ -395,13 +371,8 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey)));
-    assertThat(results.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 1)));
-    assertThat(results.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 2)));
+    assertScanResultWithoutOrdering(
+        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
   }
 
   @Test
@@ -421,13 +392,8 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey)));
-    assertThat(results.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 1)));
-    assertThat(results.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 2)));
+    assertScanResultWithoutOrdering(
+        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
   }
 
   @Test
@@ -516,11 +482,7 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
-    assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
-    assertThat(results.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
+    assertScanResultWithoutOrdering(results, 0, COL_NAME4, Arrays.asList(0, 1));
   }
 
   @Test
@@ -625,24 +587,6 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void delete_DeleteWithPartitionKeyGiven_ShouldDeleteRecordProperly() throws Exception {
-    // Arrange
-    populateRecords();
-    int pKey = 0;
-    int cKey = 0;
-
-    // Act
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
-    Delete delete = new Delete(partitionKey, clusteringKey);
-    assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
-
-    // Assert
-    List<Result> actual = scanAll(new Scan(partitionKey));
-    assertThat(actual.size()).isEqualTo(2);
-  }
-
-  @Test
   public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
       throws Exception {
     // Arrange
@@ -657,11 +601,7 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(partitionKey));
-    assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 1)));
-    assertThat(results.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey + 2)));
+    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(cKey + 1, cKey + 2));
   }
 
   @Test
@@ -785,13 +725,8 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey)));
-    assertThat(results.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 1)));
-    assertThat(results.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, pKey + cKey + 2)));
+    assertScanResultWithoutOrdering(
+        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
   }
 
   @Test
@@ -834,11 +769,8 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertThat(results.size()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MAX_VALUE)));
-    assertThat(results.get(1).getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MIN_VALUE)));
+    assertScanResultWithoutOrdering(
+        results, pKey, COL_NAME3, Arrays.asList(Integer.MAX_VALUE, Integer.MIN_VALUE));
   }
 
   @Test
@@ -870,7 +802,9 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void mutate_SingleDeleteGiven_ShouldDeleteRecordProperly() throws Exception {
+  public void
+      mutate_SingleDeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
+          throws Exception {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -885,7 +819,7 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> actual = scanAll(new Scan(partitionKey));
-    assertThat(actual.size()).isEqualTo(2);
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(cKey + 1, cKey + 2));
   }
 
   @Test
@@ -958,18 +892,18 @@ public abstract class IntegrationTestBase {
 
     // Assert
     assertThat(actual.size()).isEqualTo(3); // (1,2), (2,1), (3,0)
-    assertThat(actual.get(0).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 1)));
-    assertThat(actual.get(0).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
-    assertThat(actual.get(1).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 2)));
-    assertThat(actual.get(1).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 1)));
-    assertThat(actual.get(2).getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, 3)));
-    assertThat(actual.get(2).getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    List<List<Integer>> expectedValues =
+        new ArrayList<>(
+            Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
+    for (Result result : actual) {
+      int col1Val = ((IntValue) result.getValue(COL_NAME1).get()).get();
+      int col4Val = ((IntValue) result.getValue(COL_NAME4).get()).get();
+      List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
+      assertThat(expectedValues).contains(col1AndCol4);
+      expectedValues.remove(col1AndCol4);
+    }
+
+    assertThat(expectedValues).isEmpty();
   }
 
   @Test
@@ -1044,5 +978,25 @@ public abstract class IntegrationTestBase {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
+  }
+
+  private void assertScanResultWithoutOrdering(
+      List<Result> actual,
+      int expectedPartitionKeyValue,
+      String checkedColumn,
+      List<Integer> expectedValues) {
+    Set<Integer> expectedValuesSet = new HashSet<>(expectedValues);
+    assertThat(actual.size()).isEqualTo(expectedValues.size());
+
+    for (Result result : actual) {
+      assertThat(result.getValue(COL_NAME1))
+          .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
+
+      int actualClusteringKeyValue = ((IntValue) result.getValue(checkedColumn).get()).get();
+      assertThat(expectedValuesSet).contains(actualClusteringKeyValue);
+      expectedValuesSet.remove(actualClusteringKeyValue);
+    }
+
+    assertThat(expectedValuesSet).isEmpty();
   }
 }

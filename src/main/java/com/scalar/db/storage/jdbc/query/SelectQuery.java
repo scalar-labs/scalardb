@@ -7,7 +7,6 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -36,7 +35,6 @@ public interface SelectQuery extends Query {
     private int limit;
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
-    Optional<Scan.Ordering.Order> indexedOrder = Optional.empty();
 
     Builder(
         TableMetadataManager tableMetadataManager, RdbEngine rdbEngine, List<String> projections) {
@@ -126,7 +124,6 @@ public interface SelectQuery extends Query {
       }
 
       indexedColumn = Optional.of(column);
-      indexedOrder = Optional.of(tableMetadata.getSecondaryIndexOrder(column));
     }
 
     public Builder orderBy(List<Scan.Ordering> orderings) {

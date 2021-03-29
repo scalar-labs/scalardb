@@ -6,13 +6,12 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.common.metadata.TableMetadata;
 import com.scalar.db.storage.common.util.ImmutableLinkedHashSet;
-
-import javax.annotation.concurrent.Immutable;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class JdbcTableMetadata implements TableMetadata {
@@ -25,7 +24,6 @@ public class JdbcTableMetadata implements TableMetadata {
   private final ImmutableMap<String, Scan.Ordering.Order> clusteringOrders;
   private final Map<String, DataType> columnDataTypes;
   private final Set<String> secondaryIndexNames;
-  private final ImmutableMap<String, Scan.Ordering.Order> secondaryIndexOrders;
 
   public JdbcTableMetadata(
       String fullTableName,
@@ -33,8 +31,7 @@ public class JdbcTableMetadata implements TableMetadata {
       List<String> clusteringKeyNames,
       Map<String, Scan.Ordering.Order> clusteringOrders,
       Map<String, DataType> columnDataTypes,
-      List<String> secondaryIndexNames,
-      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
+      List<String> secondaryIndexNames) {
     this.fullTableName = Objects.requireNonNull(fullTableName);
     String[] schemaAndTable = fullTableName.split("\\.");
     schema = schemaAndTable[0];
@@ -46,7 +43,6 @@ public class JdbcTableMetadata implements TableMetadata {
     this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
     this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
     this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
-    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public JdbcTableMetadata(
@@ -56,8 +52,7 @@ public class JdbcTableMetadata implements TableMetadata {
       List<String> clusteringKeyNames,
       Map<String, Scan.Ordering.Order> clusteringOrders,
       Map<String, DataType> columnDataTypes,
-      List<String> secondaryIndexNames,
-      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
+      List<String> secondaryIndexNames) {
     this.schema = Objects.requireNonNull(schema);
     this.table = Objects.requireNonNull(table);
     this.fullTableName = schema + "." + table;
@@ -68,7 +63,6 @@ public class JdbcTableMetadata implements TableMetadata {
     this.clusteringOrders = ImmutableMap.copyOf(Objects.requireNonNull(clusteringOrders));
     this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columnDataTypes));
     this.secondaryIndexNames = ImmutableSet.copyOf(Objects.requireNonNull(secondaryIndexNames));
-    this.secondaryIndexOrders = ImmutableMap.copyOf(Objects.requireNonNull(secondaryIndexOrders));
   }
 
   public String getFullTableName() {
@@ -111,9 +105,5 @@ public class JdbcTableMetadata implements TableMetadata {
   @Override
   public Set<String> getSecondaryIndexNames() {
     return secondaryIndexNames;
-  }
-
-  public Scan.Ordering.Order getSecondaryIndexOrder(String column) {
-    return secondaryIndexOrders.get(column);
   }
 }

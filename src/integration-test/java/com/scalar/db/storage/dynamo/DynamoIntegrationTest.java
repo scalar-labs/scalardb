@@ -80,14 +80,6 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
   @Override
   public void scan_ScanWithStartInclusiveRangeGiven_ShouldRetrieveResultsOfGivenRange() {}
 
-  /*
-   * FIXME Ignore this test for now. It seems like the order of the result is not correct when
-   *  using an index
-   */
-  @Ignore
-  @Override
-  public void scan_ScanGivenForIndexedColumn_ShouldScan() {}
-
   @BeforeClass
   public static void setUpBeforeClass() {
     String endpointOverride =

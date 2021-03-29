@@ -1,15 +1,14 @@
 package com.scalar.db.storage.jdbc.metadata;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.Scan;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,9 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+import javax.sql.DataSource;
 
 /**
  * A manager of the instances of {@link JdbcTableMetadata}.
@@ -62,7 +61,6 @@ public class TableMetadataManager {
     Map<String, Scan.Ordering.Order> clusteringOrders = new HashMap<>();
     Map<String, DataType> columnDataTypes = new HashMap<>();
     List<String> secondaryIndexNames = new ArrayList<>();
-    Map<String, Scan.Ordering.Order> secondaryIndexOrders = new HashMap<>();
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
@@ -78,8 +76,6 @@ public class TableMetadataManager {
           boolean indexed = resultSet.getBoolean("indexed");
           if (indexed) {
             secondaryIndexNames.add(columnName);
-            secondaryIndexOrders.put(
-                columnName, Scan.Ordering.Order.valueOf(resultSet.getString("index_order")));
           }
 
           String keyType = resultSet.getString("key_type");
@@ -109,8 +105,7 @@ public class TableMetadataManager {
         clusteringKeyNames,
         clusteringOrders,
         columnDataTypes,
-        secondaryIndexNames,
-        secondaryIndexOrders);
+        secondaryIndexNames);
   }
 
   private String getSelectColumnsStatement(Optional<String> schemaPrefix, RdbEngine rdbEngine) {
@@ -124,8 +119,6 @@ public class TableMetadataManager {
         + enclose("clustering_order", rdbEngine)
         + ", "
         + enclose("indexed", rdbEngine)
-        + ", "
-        + enclose("index_order", rdbEngine)
         + " FROM "
         + enclosedFullTableName(schemaPrefix.orElse("") + SCHEMA, TABLE, rdbEngine)
         + " WHERE "

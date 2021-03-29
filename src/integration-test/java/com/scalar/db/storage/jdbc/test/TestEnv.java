@@ -165,8 +165,7 @@ public class TestEnv implements Closeable {
       List<String> clusteringKeyNames,
       Map<String, Scan.Ordering.Order> clusteringOrders,
       Map<String, DataType> columnDataTypes,
-      List<String> secondaryIndexNames,
-      Map<String, Scan.Ordering.Order> secondaryIndexOrders) {
+      List<String> secondaryIndexNames) {
     metadataList.add(
         new JdbcTableMetadata(
             namespacePrefix() + schema,
@@ -175,8 +174,7 @@ public class TestEnv implements Closeable {
             clusteringKeyNames,
             clusteringOrders,
             columnDataTypes,
-            secondaryIndexNames,
-            secondaryIndexOrders));
+            secondaryIndexNames));
   }
 
   public void register(
@@ -193,8 +191,7 @@ public class TestEnv implements Closeable {
         clusteringKeyNames,
         clusteringOrders,
         columnDataTypes,
-        new ArrayList<>(),
-        new HashMap<>());
+        new ArrayList<>());
   }
 
   private String namespacePrefix() {
@@ -322,10 +319,9 @@ public class TestEnv implements Closeable {
       throws SQLException {
     String keyType = getKeyType(column, metadata);
     Scan.Ordering.Order keyOrder = metadata.getClusteringOrder(column);
-    Scan.Ordering.Order indexOrder = metadata.getSecondaryIndexOrder(column);
     execute(
         String.format(
-            "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%s,%d)",
+            "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
             enclosedMetadataTableName(),
             metadata.getFullTableName(),
             column,
@@ -333,7 +329,6 @@ public class TestEnv implements Closeable {
             keyType != null ? "'" + keyType + "'" : "NULL",
             keyOrder != null ? "'" + keyOrder + "'" : "NULL",
             booleanValue(metadata.getSecondaryIndexNames().contains(column)),
-            indexOrder != null ? "'" + indexOrder + "'" : "NULL",
             ordinalPosition));
   }
 
@@ -382,8 +377,6 @@ public class TestEnv implements Closeable {
             + " "
             + booleanType()
             + " NOT NULL,"
-            + enclose("index_order")
-            + " VARCHAR(10),"
             + enclose("ordinal_position")
             + " INTEGER NOT NULL,"
             + "PRIMARY KEY ("
