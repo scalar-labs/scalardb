@@ -1,9 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -11,9 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
 
@@ -43,16 +42,21 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
     List<String> enclosedValueNames =
         values.keySet().stream().map(n -> enclose(n, rdbEngine)).collect(Collectors.toList());
 
-    return "MERGE INTO "
-        + enclosedFullTableName(schema, table, rdbEngine)
-        + " t1 USING (SELECT "
-        + makeUsingSelectSqlString(enclosedKeyNames)
-        + " FROM DUAL) t2 ON ("
-        + makePrimaryKeyConditionsSqlString(enclosedKeyNames)
-        + ") WHEN MATCHED THEN UPDATE SET "
-        + makeUpdateSetSqlString(enclosedValueNames)
-        + " WHEN NOT MATCHED THEN INSERT "
-        + makeInsertSqlString(enclosedKeyNames, enclosedValueNames);
+    StringBuilder sql = new StringBuilder();
+    sql.append("MERGE INTO ")
+        .append(enclosedFullTableName(schema, table, rdbEngine))
+        .append(" t1 USING (SELECT ")
+        .append(makeUsingSelectSqlString(enclosedKeyNames))
+        .append(" FROM DUAL) t2 ON (")
+        .append(makePrimaryKeyConditionsSqlString(enclosedKeyNames))
+        .append(")");
+    if (!values.isEmpty()) {
+      sql.append(" WHEN MATCHED THEN UPDATE SET ")
+          .append(makeUpdateSetSqlString(enclosedValueNames));
+    }
+    sql.append(" WHEN NOT MATCHED THEN INSERT ")
+        .append(makeInsertSqlString(enclosedKeyNames, enclosedValueNames));
+    return sql.toString();
   }
 
   private String makeUsingSelectSqlString(List<String> enclosedKeyNames) {
