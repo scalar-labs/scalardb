@@ -13,15 +13,15 @@ The primary key in Scalar DB is composed of one or more partition keys and zero 
 Data types supported in Scalar DB are a little more restricted than in Cassandra.
 Here are the supported data types and their mapping to Cassandra data types.
 
-|Scalar DB  |Cassandra  |
-|---|---|
-|BOOLEAN  |boolean  |
-|INT  |int  |
-|BIGINT  |bigint  |
-|FLOAT  |float  |
-|DOUBLE  |double  |
-|TEXT  |text  |
-|BLOB  |blob  |
+|Scalar DB  |Cassandra  |Cosmos DB  |DynamoDB  |MySQL  |PostgreSQL |Oracle |SQL Server |
+|---|---|---|---|---|---|---|---|
+|BOOLEAN  |boolean  |boolean   |boolean     |boolean    |boolean    |number(1) |bit  |
+|INT  |int  |int    |ScalarAttributeType/N    |int    |int    |int    |int    |int    |
+|BIGINT  |bigint    |bigint |ScalarAttributeType/N |bigint |bigint |number(19) |bigint | 
+|FLOAT  |float  |float  |ScalarAttributeType/N  |float  |float  |binary_float   |float(24)  |
+|DOUBLE  |double    |double |ScalarAttributeType/N |double   |double precision   |binary_double  |float  |
+|TEXT  |text    |text   |ScalarAttributeType/S   |longtext |text   |varchar(4000)  |varchar(8000)  |
+|BLOB  |blob    |blob   |ScalarAttributeType/B   |longblob  |bytea  |blob   |varbinary(8000)    |
 
 ## Internal metadata in Scalar DB
 
