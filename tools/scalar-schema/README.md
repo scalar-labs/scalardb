@@ -36,7 +36,7 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSAN
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
-  - If `-u <CASSNDRA_USER>` is not supplied, it defaults to `cassandra`.
+  - If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
