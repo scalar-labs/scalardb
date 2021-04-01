@@ -293,7 +293,7 @@ When you use a JDBC database as a backend database, you can optionally use the n
 To use the native transaction manager, you need to set `jdbc` to a transaction manager type in **scalardb.properties** as follows.
 
 ```
-scalar.db.jdbc.transaction_manager.type=jdbc
+scalar.db.jdbc.transaction_manager_type=jdbc
 ```
 
 You don't need to set a key `transaction` to `true` in Scalar DB scheme for the native transaction manager.

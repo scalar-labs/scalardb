@@ -29,22 +29,22 @@ scalar.db.password=mysql
 scalar.db.storage=jdbc
 
 # The minimum number of idle connections in the connection pool. The default is 5
-#scalar.db.jdbc.connection.pool.min_idle=5
+#scalar.db.jdbc.connection_pool.min_idle=5
 
 # The maximum number of connections that can remain idle in the connection pool. The default is 10
-#scalar.db.jdbc.connection.pool.max_idle=10
+#scalar.db.jdbc.connection_pool.max_idle=10
 
 # The maximum total number of idle and borrowed connections that can be active at the same time. Use a negative value for no limit. The default is 25
-#scalar.db.jdbc.connection.pool.max_total=25
+#scalar.db.jdbc.connection_pool.max_total=25
 
 # Setting true to this property enables prepared statement pooling. The default is false
-#scalar.db.jdbc.prepared_statements.pool.enabled=false
+#scalar.db.jdbc.prepared_statements_pool.enabled=false
 
 # The maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit. The default is -1
-#scalar.db.jdbc.prepared_statements.pool.max_open=-1
+#scalar.db.jdbc.prepared_statements_pool.max_open=-1
 
-# The type of the transaction manager. "consensuscommit" or "jdbc" can be set. The default is "consensuscommit"
-#scalar.db.jdbc.transaction_manager.type=consensuscommit
+# The type of the transaction manager. "consensus-commit" or "jdbc" can be set. The default is "consensus-commit"
+#scalar.db.jdbc.transaction_manager_type=consensus-commit
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
