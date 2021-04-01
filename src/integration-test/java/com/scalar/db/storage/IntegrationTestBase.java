@@ -66,6 +66,30 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
+  public void operation_WrongNamespaceGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    storage.with("wrong_" + NAMESPACE, TABLE); // a wrong namespace
+    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Get get = new Get(partitionKey, clusteringKey);
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void operation_WrongTableGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    storage.with(NAMESPACE, "wrong_" + TABLE); // a wrong table
+    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Get get = new Get(partitionKey, clusteringKey);
+
+    // Act Assert
+    assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   public void get_GetWithPartitionKeyAndClusteringKeyGiven_ShouldRetrieveSingleResult()
       throws ExecutionException {
     // Arrange

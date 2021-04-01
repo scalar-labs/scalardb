@@ -1,5 +1,14 @@
 package com.scalar.db.storage.dynamo;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
@@ -10,6 +19,12 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,22 +37,6 @@ import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsResponse;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class BatchHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -55,7 +54,7 @@ public class BatchHandlerTest {
 
   private BatchHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private TableMetadataManager metadataManager;
+  @Mock private DynamoTableMetadataManager metadataManager;
   @Mock private DynamoTableMetadata metadata;
   @Mock private TransactWriteItemsResponse transactWriteResponse;
 

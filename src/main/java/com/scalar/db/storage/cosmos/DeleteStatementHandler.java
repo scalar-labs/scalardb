@@ -19,7 +19,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class DeleteStatementHandler extends MutateStatementHandler {
 
-  public DeleteStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  public DeleteStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 

@@ -51,7 +51,7 @@ public class SelectStatementHandlerTest {
 
   private SelectStatementHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private TableMetadataManager metadataManager;
+  @Mock private DynamoTableMetadataManager metadataManager;
   @Mock private DynamoTableMetadata metadata;
   @Mock private GetItemResponse getResponse;
   @Mock private QueryResponse queryResponse;

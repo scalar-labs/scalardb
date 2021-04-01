@@ -13,7 +13,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 /** A utility class for a mutation */
 public class DynamoMutation extends DynamoOperation {
 
-  DynamoMutation(Mutation mutation, TableMetadataManager metadataManager) {
+  DynamoMutation(Mutation mutation, DynamoTableMetadataManager metadataManager) {
     super(mutation, metadataManager);
   }
 

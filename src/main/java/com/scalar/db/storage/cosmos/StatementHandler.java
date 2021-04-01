@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public abstract class StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
   protected final CosmosClient client;
-  protected final TableMetadataManager metadataManager;
+  protected final CosmosTableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code StatementHandler} with the specified {@link CosmosClient}
@@ -26,7 +26,7 @@ public abstract class StatementHandler {
    * @param client {@code CosmosClient}
    * @param metadataManager {@code TableMetadataManager}
    */
-  protected StatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  protected StatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
   }

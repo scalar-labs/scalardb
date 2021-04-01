@@ -11,6 +11,11 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.util.Utility;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 import org.jooq.Field;
 import org.jooq.OrderField;
 import org.jooq.SQLDialect;
@@ -19,19 +24,13 @@ import org.jooq.SelectWhereStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
 
-import javax.annotation.Nonnull;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.IntStream;
-
 /**
  * A handler class for select statements
  *
  * @author Yuji Ito
  */
 public class SelectStatementHandler extends StatementHandler {
-  public SelectStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  public SelectStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 

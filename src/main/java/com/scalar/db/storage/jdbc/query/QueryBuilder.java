@@ -1,8 +1,7 @@
 package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
-
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.util.List;
 import java.util.Objects;
 
@@ -13,10 +12,10 @@ import java.util.Objects;
  */
 public final class QueryBuilder {
 
-  private final TableMetadataManager tableMetadataManager;
+  private final JdbcTableMetadataManager tableMetadataManager;
   private final RdbEngine rdbEngine;
 
-  public QueryBuilder(TableMetadataManager tableMetadataManager, RdbEngine rdbEngine) {
+  public QueryBuilder(JdbcTableMetadataManager tableMetadataManager, RdbEngine rdbEngine) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
   }

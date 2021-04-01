@@ -1,5 +1,9 @@
 package com.scalar.db.storage.cosmos;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
+
 import com.azure.cosmos.CosmosContainer;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -10,18 +14,13 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.when;
 
 public class CosmosMutationTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -38,7 +37,7 @@ public class CosmosMutationTest {
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
   @Mock private CosmosContainer container;
-  @Mock private TableMetadataManager metadataManager;
+  @Mock private CosmosTableMetadataManager metadataManager;
   @Mock private CosmosTableMetadata metadata;
 
   @Before

@@ -100,7 +100,7 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     CosmosContainer container =
         client.getDatabase(database(METADATA_DATABASE)).getContainer(METADATA_CONTAINER);
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(container);
+    CosmosTableMetadataManager tableMetadataManager = new CosmosTableMetadataManager(container);
 
     Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
     namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));

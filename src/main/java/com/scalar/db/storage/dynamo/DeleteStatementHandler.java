@@ -23,7 +23,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 @ThreadSafe
 public class DeleteStatementHandler extends StatementHandler {
 
-  public DeleteStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public DeleteStatementHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 

@@ -155,7 +155,7 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     client.putItem(putItemRequest);
 
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(client, namespacePrefix());
+    DynamoTableMetadataManager tableMetadataManager = new DynamoTableMetadataManager(client, namespacePrefix());
 
     Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
     namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix().get()));

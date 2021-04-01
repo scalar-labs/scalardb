@@ -1,24 +1,23 @@
 package com.scalar.db.storage.dynamo;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.when;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoOperationTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -28,7 +27,7 @@ public class DynamoOperationTest {
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
 
-  @Mock private TableMetadataManager metadataManager;
+  @Mock private DynamoTableMetadataManager metadataManager;
   @Mock private DynamoTableMetadata metadata;
 
   @Before

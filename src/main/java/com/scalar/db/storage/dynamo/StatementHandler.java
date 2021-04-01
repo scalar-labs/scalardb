@@ -16,16 +16,16 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @ThreadSafe
 public abstract class StatementHandler {
   protected final DynamoDbClient client;
-  protected final TableMetadataManager metadataManager;
+  protected final DynamoTableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code StatementHandler} with the specified {@link DynamoDbClient} and a new
-   * {@link TableMetadataManager}
+   * {@link DynamoTableMetadataManager}
    *
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    */
-  public StatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public StatementHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
     this.client = checkNotNull(client);
     this.metadataManager = checkNotNull(metadataManager);
   }
