@@ -6,7 +6,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -70,8 +70,8 @@ public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
     testEnv.insertMetadata();
 
     Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
-    TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(testEnv.getDataSource(), namespacePrefix, testEnv.getRdbEngine());
+    JdbcTableMetadataManager tableMetadataManager =
+        new JdbcTableMetadataManager(testEnv.getDataSource(), namespacePrefix, testEnv.getRdbEngine());
     String fullTableName = namespacePrefix.orElse("") + NAMESPACE + "." + TABLE;
     tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
   }

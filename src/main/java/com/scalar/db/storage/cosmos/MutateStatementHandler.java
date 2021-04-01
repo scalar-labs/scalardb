@@ -21,7 +21,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
   private final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
-  public MutateStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
+  public MutateStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 

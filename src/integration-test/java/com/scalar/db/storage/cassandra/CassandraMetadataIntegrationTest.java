@@ -1,6 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
+import com.scalar.db.api.Get;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import java.util.Properties;
 import org.junit.AfterClass;
@@ -81,7 +83,11 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
     ClusterManager clusterManager = new ClusterManager(new DatabaseConfig(props));
     clusterManager.getSession();
-    tableMetadata = new CassandraTableMetadata(clusterManager.getMetadata(NAMESPACE, TABLE));
+    CassandraTableMetadataManager tableMetadataManager =
+        new CassandraTableMetadataManager(clusterManager);
+
+    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
+    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
     clusterManager.close();
   }
 

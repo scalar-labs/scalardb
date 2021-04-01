@@ -6,7 +6,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -18,7 +18,7 @@ public interface SelectQuery extends Query {
   Result getResult(ResultSet resultSet) throws SQLException;
 
   class Builder {
-    private final TableMetadataManager tableMetadataManager;
+    private final JdbcTableMetadataManager tableMetadataManager;
     final RdbEngine rdbEngine;
     final List<String> projections;
     String schema;
@@ -37,7 +37,9 @@ public interface SelectQuery extends Query {
     Optional<String> indexedColumn = Optional.empty();
 
     Builder(
-        TableMetadataManager tableMetadataManager, RdbEngine rdbEngine, List<String> projections) {
+        JdbcTableMetadataManager tableMetadataManager,
+        RdbEngine rdbEngine,
+        List<String> projections) {
       this.tableMetadataManager = tableMetadataManager;
       this.rdbEngine = rdbEngine;
       this.projections = projections;
@@ -48,11 +50,7 @@ public interface SelectQuery extends Query {
       this.table = table;
 
       String fullTableName = schema + "." + table;
-      try {
-        this.tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
-      } catch (SQLException e) {
-        throw new RuntimeException("failed to get the metadata of " + fullTableName, e);
-      }
+      tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
       return this;
     }
 

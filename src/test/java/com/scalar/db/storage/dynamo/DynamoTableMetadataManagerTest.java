@@ -28,7 +28,7 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 
-public class TableMetadataManagerTest {
+public class DynamoTableMetadataManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -39,7 +39,7 @@ public class TableMetadataManagerTest {
   private static final String ANY_COLUMN_NAME_2 = "val2";
   private static final String FULLNAME = ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME;
 
-  private TableMetadataManager manager;
+  private DynamoTableMetadataManager manager;
   private Map<String, AttributeValue> metadataMap;
   @Mock private DynamoDbClient client;
   @Mock private GetItemResponse response;
@@ -48,7 +48,7 @@ public class TableMetadataManagerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    manager = new TableMetadataManager(client, Optional.empty());
+    manager = new DynamoTableMetadataManager(client, Optional.empty());
     setMetadataMap();
   }
 
@@ -92,7 +92,7 @@ public class TableMetadataManagerTest {
     // Arrange
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(metadataMap);
-    manager = new TableMetadataManager(client, Optional.of("prefix_"));
+    manager = new DynamoTableMetadataManager(client, Optional.of("prefix_"));
 
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);

@@ -7,7 +7,7 @@ import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.TableMetadataManager;
+import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import java.io.Closeable;
 import java.io.IOException;
@@ -214,11 +214,11 @@ public class TestEnv implements Closeable {
   }
 
   private String getMetadataSchema() {
-    return namespacePrefix() + TableMetadataManager.SCHEMA;
+    return namespacePrefix() + JdbcTableMetadataManager.SCHEMA;
   }
 
   private String enclosedMetadataTableName() {
-    return enclosedFullTableName(getMetadataSchema(), TableMetadataManager.TABLE);
+    return enclosedFullTableName(getMetadataSchema(), JdbcTableMetadataManager.TABLE);
   }
 
   private void createSchema(String schema) throws SQLException {

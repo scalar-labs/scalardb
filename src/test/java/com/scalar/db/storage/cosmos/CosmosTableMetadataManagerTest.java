@@ -23,7 +23,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-public class TableMetadataManagerTest {
+public class CosmosTableMetadataManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
@@ -31,7 +31,7 @@ public class TableMetadataManagerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String FULLNAME = ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME;
 
-  private TableMetadataManager manager;
+  private CosmosTableMetadataManager manager;
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadata metadata;
   @Mock private CosmosItemResponse<CosmosTableMetadata> response;
@@ -40,7 +40,7 @@ public class TableMetadataManagerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    manager = new TableMetadataManager(container);
+    manager = new CosmosTableMetadataManager(container);
   }
 
   @Test

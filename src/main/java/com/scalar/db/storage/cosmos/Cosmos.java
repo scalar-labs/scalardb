@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
@@ -17,15 +19,12 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
 import java.util.List;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A storage implementation with Cosmos DB for {@link DistributedStorage}
@@ -39,11 +38,12 @@ public class Cosmos implements DistributedStorage {
   private final String METADATA_CONTAINER = "metadata";
 
   private final CosmosClient client;
-  private final TableMetadataManager metadataManager;
+  private final CosmosTableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
+  private final OperationChecker operationChecker;
   private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -66,7 +66,8 @@ public class Cosmos implements DistributedStorage {
         namespacePrefix.isPresent() ? namespacePrefix.get() + METADATA_DATABASE : METADATA_DATABASE;
     CosmosContainer container =
         client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER);
-    this.metadataManager = new TableMetadataManager(container);
+    this.metadataManager = new CosmosTableMetadataManager(container);
+    operationChecker = new OperationChecker(metadataManager);
 
     this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
     this.putStatementHandler = new PutStatementHandler(client, metadataManager);
@@ -106,8 +107,7 @@ public class Cosmos implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(get);
-    new OperationChecker(metadata).check(get);
+    operationChecker.check(get);
 
     List<Record> records = selectStatementHandler.handle(get);
     if (records.size() > 1) {
@@ -117,24 +117,25 @@ public class Cosmos implements DistributedStorage {
       return Optional.empty();
     }
 
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(records.get(0), get, metadata));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(scan);
-    new OperationChecker(metadata).check(scan);
+    operationChecker.check(scan);
 
     List<Record> records = selectStatementHandler.handle(scan);
 
+    CosmosTableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(records, scan, metadata);
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
     Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
-    new OperationChecker(metadataManager.getTableMetadata(put)).check(put);
+    operationChecker.check(put);
 
     putStatementHandler.handle(put);
   }
@@ -147,7 +148,7 @@ public class Cosmos implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
-    new OperationChecker(metadataManager.getTableMetadata(delete)).check(delete);
+    operationChecker.check(delete);
 
     deleteStatementHandler.handle(delete);
   }
@@ -171,8 +172,6 @@ public class Cosmos implements DistributedStorage {
     }
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
-    OperationChecker operationChecker =
-        new OperationChecker(metadataManager.getTableMetadata(mutations.get(0)));
     operationChecker.check(mutations);
     mutations.forEach(operationChecker::check);
     batchHandler.handle(mutations);

@@ -41,9 +41,9 @@ public class DatabaseConfig {
   public static final String STORAGE = PREFIX + "storage";
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
-  public static final String CONSENSUSCOMMIT_PREFIX = PREFIX + "consensuscommit.";
+  public static final String CONSENSUS_COMMIT_PREFIX = PREFIX + "consensus_commit.";
   public static final String SERIALIZABLE_STRATEGY =
-      CONSENSUSCOMMIT_PREFIX + "serializable_strategy";
+      CONSENSUS_COMMIT_PREFIX + "serializable_strategy";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));

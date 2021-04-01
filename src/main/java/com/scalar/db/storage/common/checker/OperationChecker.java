@@ -11,8 +11,8 @@ import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.TableMetadata;
+import com.scalar.db.storage.common.metadata.TableMetadataManager;
 import com.scalar.db.storage.common.util.Utility;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -22,14 +22,16 @@ import java.util.function.Supplier;
 
 public class OperationChecker {
 
-  private final TableMetadata metadata;
+  private final TableMetadataManager metadataManager;
 
-  public OperationChecker(TableMetadata metadata) {
-    this.metadata = metadata;
+  public OperationChecker(TableMetadataManager metadataManager) {
+    this.metadataManager = metadataManager;
   }
 
   public void check(Get get) {
-    checkProjections(get);
+    TableMetadata metadata = getMetadata(get);
+
+    checkProjections(get, metadata);
 
     if (Utility.isSecondaryIndexSpecified(get, metadata)) {
       if (!new ColumnChecker(metadata).check(get.getPartitionKey().get().get(0))) {
@@ -44,11 +46,13 @@ public class OperationChecker {
       return;
     }
 
-    checkPrimaryKey(get);
+    checkPrimaryKey(get, metadata);
   }
 
   public void check(Scan scan) {
-    checkProjections(scan);
+    TableMetadata metadata = getMetadata(scan);
+
+    checkProjections(scan, metadata);
 
     if (Utility.isSecondaryIndexSpecified(scan, metadata)) {
       if (!new ColumnChecker(metadata).check(scan.getPartitionKey().get().get(0))) {
@@ -67,18 +71,18 @@ public class OperationChecker {
       return;
     }
 
-    checkPartitionKey(scan);
+    checkPartitionKey(scan, metadata);
 
-    checkClusteringKeys(scan);
+    checkClusteringKeys(scan, metadata);
 
     if (scan.getLimit() < 0) {
       throw new IllegalArgumentException("The limit cannot be negative Operation: " + scan);
     }
 
-    checkOrderings(scan);
+    checkOrderings(scan, metadata);
   }
 
-  private void checkProjections(Selection selection) {
+  private void checkProjections(Selection selection, TableMetadata metadata) {
     for (String projection : selection.getProjections()) {
       if (!metadata.getColumnNames().contains(projection)) {
         throw new IllegalArgumentException(
@@ -87,10 +91,11 @@ public class OperationChecker {
     }
   }
 
-  private void checkClusteringKeys(Scan scan) {
-    scan.getStartClusteringKey().ifPresent(startClusteringKey -> checkStartClusteringKey(scan));
+  private void checkClusteringKeys(Scan scan, TableMetadata metadata) {
+    scan.getStartClusteringKey()
+        .ifPresent(startClusteringKey -> checkStartClusteringKey(scan, metadata));
 
-    scan.getEndClusteringKey().ifPresent(endClusteringKey -> checkEndClusteringKey(scan));
+    scan.getEndClusteringKey().ifPresent(endClusteringKey -> checkEndClusteringKey(scan, metadata));
 
     if (scan.getStartClusteringKey().isPresent() && scan.getEndClusteringKey().isPresent()) {
       Key startClusteringKey = scan.getStartClusteringKey().get();
@@ -112,29 +117,29 @@ public class OperationChecker {
     }
   }
 
-  private void checkStartClusteringKey(Scan scan) {
+  private void checkStartClusteringKey(Scan scan, TableMetadata metadata) {
     scan.getStartClusteringKey()
         .ifPresent(
             ckey -> {
-              if (!checkKey(ckey, metadata.getClusteringKeyNames(), true)) {
+              if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
                     "The start clustering key is not properly specified. Operation: " + scan);
               }
             });
   }
 
-  private void checkEndClusteringKey(Scan scan) {
+  private void checkEndClusteringKey(Scan scan, TableMetadata metadata) {
     scan.getEndClusteringKey()
         .ifPresent(
             ckey -> {
-              if (!checkKey(ckey, metadata.getClusteringKeyNames(), true)) {
+              if (!checkKey(ckey, metadata.getClusteringKeyNames(), true, metadata)) {
                 throw new IllegalArgumentException(
                     "The end clustering key is not properly specified. Operation: " + scan);
               }
             });
   }
 
-  private void checkOrderings(Scan scan) {
+  private void checkOrderings(Scan scan, TableMetadata metadata) {
     List<Scan.Ordering> orderings = scan.getOrderings();
     if (orderings.isEmpty()) {
       return;
@@ -174,17 +179,28 @@ public class OperationChecker {
   }
 
   public void check(Put put) {
-    checkPrimaryKey(put);
-    checkValues(put);
-    checkCondition(put);
+    TableMetadata metadata = getMetadata(put);
+    checkPrimaryKey(put, metadata);
+    checkValues(put, metadata);
+    checkCondition(put, metadata);
   }
 
   public void check(Delete delete) {
-    checkPrimaryKey(delete);
-    checkCondition(delete);
+    TableMetadata metadata = getMetadata(delete);
+    checkPrimaryKey(delete, metadata);
+    checkCondition(delete, metadata);
   }
 
-  private void checkValues(Put put) {
+  private TableMetadata getMetadata(Operation operation) {
+    TableMetadata metadata = metadataManager.getTableMetadata(operation);
+    if (metadata == null) {
+      throw new IllegalArgumentException(
+          "The specified table is not found: " + operation.forFullTableName().get());
+    }
+    return metadata;
+  }
+
+  private void checkValues(Put put, TableMetadata metadata) {
     for (Map.Entry<String, Value> entry : put.getValues().entrySet()) {
       if (!new ColumnChecker(metadata).check(entry.getValue())) {
         throw new IllegalArgumentException(
@@ -193,7 +209,7 @@ public class OperationChecker {
     }
   }
 
-  private void checkCondition(Mutation mutation) {
+  private void checkCondition(Mutation mutation, TableMetadata metadata) {
     boolean isPut = mutation instanceof Put;
     mutation
         .getCondition()
@@ -221,19 +237,19 @@ public class OperationChecker {
     }
   }
 
-  private void checkPrimaryKey(Operation operation) {
-    checkPartitionKey(operation);
-    checkClusteringKey(operation);
+  private void checkPrimaryKey(Operation operation, TableMetadata metadata) {
+    checkPartitionKey(operation, metadata);
+    checkClusteringKey(operation, metadata);
   }
 
-  private void checkPartitionKey(Operation operation) {
-    if (!checkKey(operation.getPartitionKey(), metadata.getPartitionKeyNames(), false)) {
+  private void checkPartitionKey(Operation operation, TableMetadata metadata) {
+    if (!checkKey(operation.getPartitionKey(), metadata.getPartitionKeyNames(), false, metadata)) {
       throw new IllegalArgumentException(
           "The partition key is not properly specified. Operation: " + operation);
     }
   }
 
-  private void checkClusteringKey(Operation operation) {
+  private void checkClusteringKey(Operation operation, TableMetadata metadata) {
     Supplier<String> message =
         () -> "The clustering key is not properly specified. Operation: " + operation;
 
@@ -245,13 +261,14 @@ public class OperationChecker {
         .getClusteringKey()
         .ifPresent(
             ckey -> {
-              if (!checkKey(ckey, metadata.getClusteringKeyNames(), false)) {
+              if (!checkKey(ckey, metadata.getClusteringKeyNames(), false, metadata)) {
                 throw new IllegalArgumentException(message.get());
               }
             });
   }
 
-  private boolean checkKey(Key key, LinkedHashSet<String> keyNames, boolean allowPartial) {
+  private boolean checkKey(
+      Key key, LinkedHashSet<String> keyNames, boolean allowPartial, TableMetadata metadata) {
     List<Value> values = new ArrayList<>(key.get());
 
     if (!allowPartial) {

@@ -6,6 +6,10 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -18,11 +22,6 @@ import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 import software.amazon.awssdk.services.dynamodb.model.Update;
 
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 /**
  * A handler for a batch
  *
@@ -32,16 +31,16 @@ import java.util.Map;
 public class BatchHandler {
   static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
   private final DynamoDbClient client;
-  private final TableMetadataManager metadataManager;
+  private final DynamoTableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code BatchHandler} with the specified {@link DynamoDbClient} and {@link
-   * TableMetadataManager}
+   * DynamoTableMetadataManager}
    *
    * @param client {@code DynamoDbClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
    */
-  public BatchHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
+  public BatchHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
     this.client = client;
     this.metadataManager = metadataManager;
   }
