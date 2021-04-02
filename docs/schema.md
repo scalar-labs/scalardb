@@ -16,15 +16,15 @@ For each database implementation, there is an adapter that converts the database
 
 Here are the supported data types in Scalar DB and their mapping to the data types of other databases.
 
-| Scalar DB | Cassandra | Cosmos DB | DynamoDB              | MySQL    | PostgreSQL       | Oracle        | SQL Server      |
-| --------- | --------- | --------- | --------------------- | -------- | ---------------- | ------------- | --------------- |
-| BOOLEAN   | boolean   | boolean   | boolean               | boolean  | boolean          | number(1)     | bit             |
-| INT       | int       | int       | ScalarAttributeType/N | int      | int              | int           | int             | int |
-| BIGINT    | bigint    | bigint    | ScalarAttributeType/N | bigint   | bigint           | number(19)    | bigint          |
-| FLOAT     | float     | float     | ScalarAttributeType/N | float    | float            | binary_float  | float(24)       |
-| DOUBLE    | double    | double    | ScalarAttributeType/N | double   | double precision | binary_double | float           |
-| TEXT      | text      | text      | ScalarAttributeType/S | longtext | text             | varchar(4000) | varchar(8000)   |
-| BLOB      | blob      | blob      | ScalarAttributeType/B | longblob | bytea            | blob          | varbinary(8000) |
+| Scalar DB | Cassandra | Cosmos DB      | DynamoDB | MySQL    | PostgreSQL       | Oracle        | SQL Server      |
+| --------- | --------- | -------------- | ---------| -------- | ---------------- | ------------- | --------------- |
+| BOOLEAN   | boolean   | boolean (JSON) | boolean  | boolean  | boolean          | number(1)     | bit             |
+| INT       | int       | number (JSON)  | N        | int      | int              | int           | int             | 
+| BIGINT    | bigint    | number (JSON)  | N        | bigint   | bigint           | number(19)    | bigint          |
+| FLOAT     | float     | number (JSON)  | N        | float    | float            | binary_float  | float(24)       |
+| DOUBLE    | double    | number (JSON)  | N        | double   | double precision | binary_double | float           |
+| TEXT      | text      | string (JSON)  | S        | longtext | text             | varchar(4000) | varchar(8000)   |
+| BLOB      | blob      | string (JSON)  | B        | longblob | bytea            | blob          | varbinary(8000) |
 
 ## Internal metadata
 
