@@ -18,7 +18,7 @@ Here are the supported data types in Scalar DB and their mapping to the data typ
 
 | Scalar DB | Cassandra | Cosmos DB      | DynamoDB | MySQL    | PostgreSQL       | Oracle        | SQL Server      |
 | --------- | --------- | -------------- | ---------| -------- | ---------------- | ------------- | --------------- |
-| BOOLEAN   | boolean   | boolean (JSON) | boolean  | boolean  | boolean          | number(1)     | bit             |
+| BOOLEAN   | boolean   | boolean (JSON) | BOOL  | boolean  | boolean          | number(1)     | bit             |
 | INT       | int       | number (JSON)  | N        | int      | int              | int           | int             | 
 | BIGINT    | bigint    | number (JSON)  | N        | bigint   | bigint           | number(19)    | bigint          |
 | FLOAT     | float     | number (JSON)  | N        | float    | float            | binary_float  | float(24)       |
@@ -35,4 +35,3 @@ Thus, along with any required values by the application, additional values for t
 
 It is a little hard for application developers to care for the schema mapping and metadata for transactions,
 so we offer a tool called [scalar-schema](../tools/scalar-schema/README.md) for creating schema without much knowledge about those.
-
