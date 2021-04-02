@@ -32,7 +32,7 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCES
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
