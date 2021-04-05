@@ -23,7 +23,7 @@
                 "BLOB"    "BYTEA"}
    :oracle     {"INT"     "INT"
                 "BIGINT"  "NUMBER(19)"
-                "TEXT"    "VARCHAR(4000)"
+                "TEXT"    "VARCHAR2(4000)"
                 "FLOAT"   "BINARY_FLOAT"
                 "DOUBLE"  "BINARY_DOUBLE"
                 "BOOLEAN" "NUMBER(1)"
@@ -40,7 +40,8 @@
   {:mysql      {"TEXT"    "VARCHAR(64)"
                 "BLOB"    "VARBINARY(64)"}
    :postgresql {"TEXT"    "VARCHAR(10485760)"}
-   :oracle     {"BLOB"    "RAW(2000)"}
+   :oracle     {"TEXT"    "VARCHAR2(64)"
+                "BLOB"    "RAW(64)"}
    :sql-server {}})
 
 (defn- key?
@@ -58,12 +59,12 @@
     (get-table-name (if prefix (str prefix \_ database) database) table opts)))
 
 (defn- get-metadata-schema
-  [{:keys [boolean-type]}]
-  {"full_table_name" "VARCHAR(128)"
-   "column_name"     "VARCHAR(128)"
-   "data_type" "VARCHAR(20) NOT NULL"
-   "key_type" "VARCHAR(20)"
-   "clustering_order" "VARCHAR(10)"
+  [{:keys [text-type boolean-type]}]
+  {"full_table_name" (text-type 128)
+   "column_name"     (text-type 128)
+   "data_type" (str (text-type 20) \  "NOT NULL")
+   "key_type" (text-type 20)
+   "clustering_order" (text-type 10)
    "indexed" (str boolean-type \  "NOT NULL")
    "ordinal_position" "INTEGER NOT NULL"})
 
@@ -232,6 +233,12 @@
      (= rdb-engine :sql-server) (str "[" % "]")
      :else (str "\"" % "\"")))
 
+(defn- get-text-type
+  [rdb-engine]
+  #(cond
+     (= rdb-engine :oracle) (str "VARCHAR2(" % ")")
+     :else (str "VARCHAR(" % ")")))
+
 (defn- get-boolean-type
   [rdb-engine]
   (get (get data-type-mapping rdb-engine) "BOOLEAN"))
@@ -257,6 +264,7 @@
                     :execution-fn (get-execution-fn opts)
                     :rdb-engine rdb-engine
                     :enclosure-fn (get-enclosure-fn rdb-engine)
+                    :text-type (get-text-type rdb-engine)
                     :boolean-type (get-boolean-type rdb-engine)
                     :boolean-value-fn (get-boolean-value-fn rdb-engine))]
     (reify proto/IOperator
