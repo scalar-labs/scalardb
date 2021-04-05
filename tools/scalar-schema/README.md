@@ -32,11 +32,11 @@ $ java -jar target/scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCES
 
 ```console
 # For Cassandra
-$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ java -jar target/scalar-schema-standalone-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
-  - If `-u <CASSNDRA_USER>` is not supplied, it defaults to `cassandra`.
+  - If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
   - `<NETWORK_STRATEGY>` should be `SimpleStrategy` or `NetworkTopologyStrategy`
 
