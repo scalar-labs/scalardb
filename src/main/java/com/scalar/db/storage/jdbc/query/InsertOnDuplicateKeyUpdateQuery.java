@@ -1,9 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -11,9 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements UpsertQuery {
 
@@ -34,12 +33,19 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   }
 
   protected String sql() {
-    return "INSERT INTO "
-        + enclosedFullTableName(schema, table, rdbEngine)
-        + " "
-        + makeValuesSqlString()
-        + " "
-        + makeOnDuplicateKeyUpdateSqlString();
+    StringBuilder sql;
+    if (!values.isEmpty()) {
+      sql = new StringBuilder("INSERT INTO ");
+    } else {
+      sql = new StringBuilder("INSERT IGNORE INTO ");
+    }
+    sql.append(enclosedFullTableName(schema, table, rdbEngine))
+        .append(" ")
+        .append(makeValuesSqlString());
+    if (!values.isEmpty()) {
+      sql.append(" ").append(makeOnDuplicateKeyUpdateSqlString());
+    }
+    return sql.toString();
   }
 
   private String makeValuesSqlString() {

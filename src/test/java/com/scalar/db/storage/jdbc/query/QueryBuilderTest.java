@@ -569,7 +569,8 @@ public class QueryBuilderTest {
       case ORACLE:
         expectedQuery =
             "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
         break;
       case SQL_SERVER:
@@ -629,6 +630,105 @@ public class QueryBuilderTest {
                     new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
                     Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
                     values)
+                .build()
+                .toString())
+        .isEqualTo(encloseSql(expectedQuery));
+  }
+
+  @Test
+  public void upsertQueryWithoutValuesTest() {
+    String expectedQuery;
+
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery = "INSERT IGNORE INTO n1.t1 (p1) VALUES (?)";
+        break;
+      case POSTGRESQL:
+        expectedQuery = "INSERT INTO n1.t1 (p1) VALUES (?) ON CONFLICT (p1) DO NOTHING";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1) t2 ON (t1.p1=t2.p1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
+        break;
+    }
+    assertThat(
+            queryBuilder
+                .upsertInto(NAMESPACE, TABLE)
+                .values(
+                    new Key(new TextValue("p1", "aaa")), Optional.empty(), Collections.emptyMap())
+                .build()
+                .toString())
+        .isEqualTo(encloseSql(expectedQuery));
+
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,c1) VALUES (?,?)";
+        break;
+      case POSTGRESQL:
+        expectedQuery = "INSERT INTO n1.t1 (p1,c1) VALUES (?,?) ON CONFLICT (p1,c1) DO NOTHING";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1,? c1) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
+        break;
+    }
+    assertThat(
+            queryBuilder
+                .upsertInto(NAMESPACE, TABLE)
+                .values(
+                    new Key(new TextValue("p1", "aaa")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Collections.emptyMap())
+                .build()
+                .toString())
+        .isEqualTo(encloseSql(expectedQuery));
+
+    switch (rdbEngine) {
+      case MYSQL:
+        expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?)";
+        break;
+      case POSTGRESQL:
+        expectedQuery =
+            "INSERT INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?) "
+                + "ON CONFLICT (p1,p2,c1,c2) DO NOTHING";
+        break;
+      case ORACLE:
+        expectedQuery =
+            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
+        break;
+      case SQL_SERVER:
+      default:
+        expectedQuery =
+            "MERGE n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2) t2 "
+                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
+                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
+        break;
+    }
+    assertThat(
+            queryBuilder
+                .upsertInto(NAMESPACE, TABLE)
+                .values(
+                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
+                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
+                    Collections.emptyMap())
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));

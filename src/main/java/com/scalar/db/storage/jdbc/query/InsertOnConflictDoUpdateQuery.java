@@ -1,9 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -11,9 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements UpsertQuery {
 
@@ -60,12 +59,21 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
     partitionKey.forEach(v -> primaryKeys.add(v.getName()));
     clusteringKey.ifPresent(k -> k.forEach(v -> primaryKeys.add(v.getName())));
 
-    return "ON CONFLICT ("
-        + primaryKeys.stream().map(k -> enclose(k, rdbEngine)).collect(Collectors.joining(","))
-        + ") DO UPDATE SET "
-        + values.keySet().stream()
-            .map(n -> enclose(n, rdbEngine) + "=?")
-            .collect(Collectors.joining(","));
+    StringBuilder sql = new StringBuilder();
+    sql.append("ON CONFLICT (")
+        .append(
+            primaryKeys.stream().map(k -> enclose(k, rdbEngine)).collect(Collectors.joining(",")))
+        .append(") DO ");
+    if (!values.isEmpty()) {
+      sql.append("UPDATE SET ")
+          .append(
+              values.keySet().stream()
+                  .map(n -> enclose(n, rdbEngine) + "=?")
+                  .collect(Collectors.joining(",")));
+    } else {
+      sql.append("NOTHING");
+    }
+    return sql.toString();
   }
 
   @Override
