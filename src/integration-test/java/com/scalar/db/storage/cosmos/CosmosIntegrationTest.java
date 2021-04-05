@@ -584,6 +584,38 @@ public class CosmosIntegrationTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws Exception {
+    // Arrange
+    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+
+    // Act
+    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+        .doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> result = storage.get(new Get(partitionKey, clusteringKey));
+    assertThat(result).isPresent();
+  }
+
+  @Test
+  public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws Exception {
+    // Arrange
+    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+
+    // Act
+    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+        .doesNotThrowAnyException();
+    assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
+        .doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> result = storage.get(new Get(partitionKey, clusteringKey));
+    assertThat(result).isPresent();
+  }
+
   private Get prepareGet(int pKey, int cKey) {
     Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
     Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
