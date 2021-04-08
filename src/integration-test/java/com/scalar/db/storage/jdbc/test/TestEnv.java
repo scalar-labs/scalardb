@@ -63,7 +63,7 @@ public class TestEnv implements Closeable {
                 {
                   put(DataType.INT, "INT");
                   put(DataType.BIGINT, "NUMBER(19)");
-                  put(DataType.TEXT, "VARCHAR(4000)");
+                  put(DataType.TEXT, "VARCHAR2(4000)");
                   put(DataType.FLOAT, "BINARY_FLOAT");
                   put(DataType.DOUBLE, "BINARY_DOUBLE");
                   put(DataType.BOOLEAN, "NUMBER(1)");
@@ -108,7 +108,7 @@ public class TestEnv implements Closeable {
               RdbEngine.ORACLE,
               new HashMap<DataType, String>() {
                 {
-                  put(DataType.TEXT, "VARCHAR(64)");
+                  put(DataType.TEXT, "VARCHAR2(64)");
                   put(DataType.BLOB, "RAW(64)");
                 }
               });
@@ -364,15 +364,25 @@ public class TestEnv implements Closeable {
             + enclosedMetadataTableName()
             + "("
             + enclose("full_table_name")
-            + " VARCHAR(128),"
+            + " "
+            + textType(128)
+            + ","
             + enclose("column_name")
-            + " VARCHAR(128),"
+            + " "
+            + textType(128)
+            + ","
             + enclose("data_type")
-            + " VARCHAR(20) NOT NULL,"
+            + " "
+            + textType(20)
+            + " NOT NULL,"
             + enclose("key_type")
-            + " VARCHAR(20),"
+            + " "
+            + textType(20)
+            + ","
             + enclose("clustering_order")
-            + " VARCHAR(10),"
+            + " "
+            + textType(10)
+            + ","
             + enclose("indexed")
             + " "
             + booleanType()
@@ -384,6 +394,19 @@ public class TestEnv implements Closeable {
             + ", "
             + enclose("column_name")
             + "))");
+  }
+
+  private String textType(int length) {
+    String textType;
+    switch (rdbEngine) {
+      case ORACLE:
+        textType = "VARCHAR2";
+        break;
+      default:
+        textType = "VARCHAR";
+        break;
+    }
+    return textType + "(" + length + ")";
   }
 
   private String booleanType() {

@@ -136,7 +136,7 @@ When creating tables for a JDBC database with this tool, Scalar DB data types ar
 | ---- | ---- |  ---- |  ---- |  ---- | 
 | INT | INT | INT | INT | INT |
 | BIGINT | BIGINT | BIGINT | NUMBER(19) | BIGINT |
-| TEXT | LONGTEXT | TEXT | VARCHAR(4000) | VARCHAR(8000) |
+| TEXT | LONGTEXT | TEXT | VARCHAR2(4000) | VARCHAR(8000) |
 | FLOAT | FLOAT | FLOAT | BINARY_FLOAT | FLOAT(24) |
 | DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | FLOAT |
 | BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1) | BIT |
@@ -146,7 +146,7 @@ However, the following types are converted differently when they are used as a p
 
 | ScalarDB | MySQL | PostgreSQL | Oracle | SQL Server |
 | ---- | ---- |  ---- |  ---- |  ---- |
-| TEXT | VARCHAR(64) | VARCHAR(10485760) | | |
-| BLOB | VARBINARY(64) | |  RAW(2000) | |
+| TEXT | VARCHAR(64) | VARCHAR(10485760) | VARCHAR2(64) | |
+| BLOB | VARBINARY(64) | | RAW(64) | |
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
