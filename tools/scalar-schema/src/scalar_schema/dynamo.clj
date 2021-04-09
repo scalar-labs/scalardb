@@ -39,10 +39,12 @@
    "blob" ScalarAttributeType/B})
 
 (defn- get-client
-  [user password region]
+  [user password region endpoint-override]
   (-> (DynamoDbClient/builder)
       (.credentialsProvider (dynamo/get-credentials-provider user password))
       (.region (Region/of region))
+      (#(if endpoint-override
+          (.endpointOverride % (java.net.URI/create endpoint-override)) %))
       .build))
 
 (defn- table-exists?
@@ -207,9 +209,9 @@
       (log/warn table "doesn't exist"))))
 
 (defn make-dynamo-operator
-  [{:keys [user password region no-scaling no-backup]}]
-  (let [client (get-client user password region)
-        scaling-client (scaling/get-scaling-client user password region)]
+  [{:keys [user password region no-scaling no-backup endpoint-override]}]
+  (let [client (get-client user password region endpoint-override)
+        scaling-client (scaling/get-scaling-client user password region endpoint-override)]
     (reify proto/IOperator
       (create-table [_ schema opts]
         (create-table client schema opts)
@@ -219,7 +221,8 @@
         (when-not no-backup
           (backup/enable-continuous-backup client schema)))
       (delete-table [_ schema _]
-        (scaling/disable-auto-scaling scaling-client schema)
+        (when-not no-scaling
+          (scaling/disable-auto-scaling scaling-client schema))
         (delete-table client schema))
       (close [_ _]
         (.close client)
