@@ -12,7 +12,7 @@
    ["-P" "--port DB_PORT" "Port of Cassandra"
     :parse-fn #(Integer/parseInt %)]
    ["-u" "--user USERNAME" "Username of Cassandra or a JDBC database"]
-   ["-p" "--password PASSWORD" "Password of the database"]
+   ["-p" "--password PASSWORD" "Password of a database"]
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
    ["-r" "--ru RESOURCE_UNIT" "Base RU for each table on Cosmos DB or DynamoDB. The RU of the coordinator for Scalar DB transaction is specified by this option"
     :parse-fn #(Integer/parseInt %)]
