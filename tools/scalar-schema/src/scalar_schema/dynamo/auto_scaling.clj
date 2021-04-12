@@ -28,10 +28,12 @@
    :index-write ScalableDimension/DYNAMODB_INDEX_WRITE_CAPACITY_UNITS})
 
 (defn get-scaling-client
-  [user password region]
+  [user password region endpoint-override]
   (-> (ApplicationAutoScalingClient/builder)
       (.credentialsProvider (dynamo/get-credentials-provider user password))
       (.region (Region/of region))
+      (#(if endpoint-override
+          (.endpointOverride % (java.net.URI/create endpoint-override)) %))
       .build))
 
 (defn- get-resource-id
