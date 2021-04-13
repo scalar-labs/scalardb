@@ -24,11 +24,11 @@
     (proto/close operator opts)))
 
 (defn delete-all
-  [{:keys [cosmos dynamo prefix] :as opts}]
+  [{:keys [cosmos dynamo jdbc prefix] :as opts}]
   (log/warn "Deleting all databases and tables in the file")
   (let [operator (make-operator opts)
         parsed (common/parse-schema opts)
-        schema (if (or cosmos dynamo)
+        schema (if (or cosmos dynamo jdbc)
                  (conj parsed
                        {:database (if prefix
                                     (str prefix \_ common/METADATA_DATABASE)

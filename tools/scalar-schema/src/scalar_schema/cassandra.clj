@@ -72,12 +72,12 @@
     (doseq [index (:secondary-index schema)]
       (alia/execute session
                     (->raw (statement/create-index
-                             table
-                             index
-                             (clause/index-name (str (name table) \_
-                                                     common/INDEX_NAME_PREFIX
-                                                     \_ index))
-                             (clause/if-exists false)))))))
+                            table
+                            index
+                            (clause/index-name (str (name table) \_
+                                                    common/INDEX_NAME_PREFIX
+                                                    \_ index))
+                            (clause/if-exists false)))))))
 
 (defn- delete-table
   [session schema]
