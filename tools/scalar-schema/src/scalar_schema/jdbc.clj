@@ -59,12 +59,12 @@
     (get-table-name (if prefix (str prefix \_ database) database) table opts)))
 
 (defn- get-metadata-schema
-  [{:keys [text-type boolean-type]}]
-  {"full_table_name" (text-type 128)
-   "column_name"     (text-type 128)
-   "data_type" (str (text-type 20) \  "NOT NULL")
-   "key_type" (text-type 20)
-   "clustering_order" (text-type 10)
+  [{:keys [text-type-fn boolean-type]}]
+  {"full_table_name" (text-type-fn 128)
+   "column_name"     (text-type-fn 128)
+   "data_type" (str (text-type-fn 20) \  "NOT NULL")
+   "key_type" (text-type-fn 20)
+   "clustering_order" (text-type-fn 10)
    "indexed" (str boolean-type \  "NOT NULL")
    "ordinal_position" "INTEGER NOT NULL"})
 
@@ -233,7 +233,7 @@
      (= rdb-engine :sql-server) (str "[" % "]")
      :else (str "\"" % "\"")))
 
-(defn- get-text-type
+(defn- get-text-type-fn
   [rdb-engine]
   #(cond
      (= rdb-engine :oracle) (str "VARCHAR2(" % ")")
@@ -264,7 +264,7 @@
                     :execution-fn (get-execution-fn opts)
                     :rdb-engine rdb-engine
                     :enclosure-fn (get-enclosure-fn rdb-engine)
-                    :text-type (get-text-type rdb-engine)
+                    :text-type-fn (get-text-type-fn rdb-engine)
                     :boolean-type (get-boolean-type rdb-engine)
                     :boolean-value-fn (get-boolean-value-fn rdb-engine))]
     (reify proto/IOperator
