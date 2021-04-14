@@ -188,20 +188,17 @@
   [{:keys [database table]} opts]
   (str "DROP TABLE " (get-table-name database table opts)))
 
+(defn- make-drop-database-statement
+  [{:keys [database]} {:keys [enclosure-fn]}]
+  (str "DROP SCHEMA " (enclosure-fn database)))
+
 (defn- drop-table
-  [schema {:keys [execution-fn] :as opts}]
-  (execution-fn (make-drop-table-statement schema opts)))
-
-(defn- make-delete-metadata-statement
-  [{:keys [database table]} {:keys [enclosure-fn] :as opts}]
-  (str "DELETE FROM "
-       (get-metadata-table-name opts)
-       " WHERE " (enclosure-fn "full_table_name") " = "
-       "'" (get-table-name database table) "'"))
-
-(defn- delete-metadata
-  [schema {:keys [execution-fn] :as opts}]
-  (execution-fn (make-delete-metadata-statement schema opts)))
+  [{:keys [database] :as schema}
+   {:keys [execution-fn rdb-engine has-tables-fn] :as opts}]
+  (execution-fn (make-drop-table-statement schema opts))
+  (when-not (= rdb-engine :oracle)
+    (when-not (has-tables-fn database)
+      (execution-fn (make-drop-database-statement schema opts)))))
 
 (defn- reorder-columns
   [{:keys [columns partition-key clustering-key]}]
@@ -216,6 +213,19 @@
     (log/debug "Executing" statement)
     (-> {:connection-uri jdbc-url :user user :password password}
         (jdbc/execute! [statement]))))
+
+(defn- get-has-tables-fn
+  [{:keys [jdbc-url user password]} rdb-engine]
+  (fn [database]
+    (println database)
+    (jdbc/with-db-metadata [meta
+                            {:connection-uri jdbc-url
+                             :user user
+                             :password password}]
+      (-> (jdbc/metadata-query (if (= rdb-engine :mysql)
+                                 (.getTables meta database nil nil nil)
+                                 (.getTables meta nil database nil nil)))
+          empty? not))))
 
 (defn- get-rdb-engine
   [{:keys [jdbc-url]}]
@@ -266,7 +276,8 @@
                     :enclosure-fn (get-enclosure-fn rdb-engine)
                     :text-type-fn (get-text-type-fn rdb-engine)
                     :boolean-type (get-boolean-type rdb-engine)
-                    :boolean-value-fn (get-boolean-value-fn rdb-engine))]
+                    :boolean-value-fn (get-boolean-value-fn rdb-engine)
+                    :has-tables-fn (get-has-tables-fn opts rdb-engine))]
     (reify proto/IOperator
       (create-table [_ {:keys [database table] :as schema} _]
         (let [schema (assoc schema :reordered-columns (reorder-columns schema))
@@ -285,9 +296,6 @@
       (delete-table [_ {:keys [database table] :as schema} _]
         (let [table-name (get-table-name database table)]
           (try
-            (create-metadata-database opts)
-            (create-metadata-table opts)
-            (delete-metadata schema opts)
             (drop-table schema opts)
             (log/info table-name "is deleted successfully.")
             (catch SQLException e (if (or (string/includes? (.getMessage e) "Unknown table")
