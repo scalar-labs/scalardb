@@ -12,6 +12,7 @@ workflows:
       - integration-test-for-dynamo
       - integration-test-for-jdbc-mysql
       - integration-test-for-jdbc-postgresql
+      - integration-test-for-jdbc-oracle
       - integration-test-for-multi-storage
 jobs:
   build:
@@ -259,6 +260,61 @@ jobs:
 
       # run tests with the namespace prefix!
       - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-jdbc-oracle:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: ghcr.io/scalar-labs/oracle/database:18.4.0-xe
+        auth:
+          username: scalar-git
+          password: ${SCALAR_GIT_PASSWORD}
+        environment:
+          ORACLE_PWD: Oracle18
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # https://support.circleci.com/hc/en-us/articles/360006773953-Race-Conditions-Wait-For-Database
+      - run:
+          name: Wait for Oracle Database to be ready
+          # dockerize command is included in circleci/openjdk:8-jdk image
+          command: dockerize -wait tcp://localhost:5500 -timeout 15m
+
+      # run tests!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
+
+      # run tests with the namespace prefix!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18 -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
