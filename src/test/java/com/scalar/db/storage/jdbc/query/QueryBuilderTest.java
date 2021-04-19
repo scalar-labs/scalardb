@@ -269,8 +269,8 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "SELECT * FROM (SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
-                + "ORDER BY c1 ASC,c2 DESC) WHERE ROWNUM <= 10";
+            "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? "
+                + "ORDER BY c1 ASC,c2 DESC FETCH FIRST 10 ROWS ONLY";
         break;
       case SQL_SERVER:
       default:
