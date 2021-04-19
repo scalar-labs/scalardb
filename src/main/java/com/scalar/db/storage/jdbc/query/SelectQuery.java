@@ -141,7 +141,7 @@ public interface SelectQuery extends Query {
           case POSTGRESQL:
             return new SelectWithLimitQuery(this, limit);
           case ORACLE:
-            return new SelectWithRowNumQuery(this, limit);
+            return new SelectWithFetchFirstNRowsOnly(this, limit);
           case SQL_SERVER:
             return new SelectWithOffsetFetchQuery(this, limit);
           default:
