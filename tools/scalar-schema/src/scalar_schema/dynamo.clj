@@ -62,6 +62,10 @@
 
 (defn- make-attribute-definition
   [name type]
+  (when (= type "boolean")
+    (throw (IllegalArgumentException.
+            (str "BOOLEAN type is not supported for a clustering key"
+                 " or a secondary index in DynamoDB"))))
   (-> (AttributeDefinition/builder)
       (.attributeName name)
       (.attributeType (type-map type))
@@ -72,11 +76,11 @@
   (let [key-names (into (set clustering-key) secondary-index)
         key-types (map #(columns %) key-names)
         base [(make-attribute-definition PARTITION_KEY "text")]]
-    (if (clustering-keys-exist? schema)
-      (-> base
-          (conj (make-attribute-definition CLUSTERING_KEY "text"))
-          (into (map #(make-attribute-definition %1 %2) key-names key-types)))
-      base)))
+    (cond-> base
+      (clustering-keys-exist? schema)
+      (conj (make-attribute-definition CLUSTERING_KEY "text"))
+      (seq key-names)
+      (into (map #(make-attribute-definition %1 %2) key-names key-types)))))
 
 (defn- make-key-schema-element
   [name key-type]
