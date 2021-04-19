@@ -62,6 +62,10 @@
 
 (defn- make-attribute-definition
   [name type]
+  (when (= type "boolean")
+    (throw (IllegalArgumentException.
+            (str "BOOLEAN type is not supported for a clustering key"
+                 " or a secondary index in DynamoDB"))))
   (-> (AttributeDefinition/builder)
       (.attributeName name)
       (.attributeType (type-map type))
