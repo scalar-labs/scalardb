@@ -70,11 +70,11 @@
   (let [key-names (into (set clustering-key) secondary-index)
         key-types (map #(columns %) key-names)
         base [(make-attribute-definition PARTITION_KEY "text")]]
-    (if (clustering-keys-exist? schema)
-      (-> base
-          (conj (make-attribute-definition CLUSTERING_KEY "text"))
-          (into (map #(make-attribute-definition %1 %2) key-names key-types)))
-      base)))
+    (cond-> base
+      (clustering-keys-exist? schema)
+      (conj (make-attribute-definition CLUSTERING_KEY "text"))
+      (seq key-names)
+      (into (map #(make-attribute-definition %1 %2) key-names key-types)))))
 
 (defn- make-key-schema-element
   [name key-type]
