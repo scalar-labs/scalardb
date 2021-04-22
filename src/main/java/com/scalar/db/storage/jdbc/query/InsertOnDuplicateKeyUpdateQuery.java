@@ -6,7 +6,6 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,30 +67,28 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
-    PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
-
+  protected void bind(PreparedStatementBinder preparedStatementBinder) throws SQLException {
     for (Value value : partitionKey) {
-      value.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      value.accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
       for (Value value : clusteringKey.get()) {
-        value.accept(binder);
-        binder.throwSQLExceptionIfOccurred();
+        value.accept(preparedStatementBinder);
+        preparedStatementBinder.throwSQLExceptionIfOccurred();
       }
     }
 
     for (Value value : values.values()) {
-      value.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      value.accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
 
     // For ON DUPLICATE KEY UPDATE
     for (Value value : values.values()) {
-      value.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      value.accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
   }
 }

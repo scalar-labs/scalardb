@@ -10,7 +10,6 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.ResultImpl;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -121,36 +120,34 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
-    PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
-
+  protected void bind(PreparedStatementBinder preparedStatementBinder) throws SQLException {
     for (Value value : partitionKey) {
-      value.accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      value.accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
       for (Value value : clusteringKey.get()) {
-        value.accept(binder);
-        binder.throwSQLExceptionIfOccurred();
+        value.accept(preparedStatementBinder);
+        preparedStatementBinder.throwSQLExceptionIfOccurred();
       }
     }
 
     if (commonClusteringKey.isPresent()) {
       for (Value value : commonClusteringKey.get()) {
-        value.accept(binder);
-        binder.throwSQLExceptionIfOccurred();
+        value.accept(preparedStatementBinder);
+        preparedStatementBinder.throwSQLExceptionIfOccurred();
       }
     }
 
     if (startValue.isPresent()) {
-      startValue.get().accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      startValue.get().accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
 
     if (endValue.isPresent()) {
-      endValue.get().accept(binder);
-      binder.throwSQLExceptionIfOccurred();
+      endValue.get().accept(preparedStatementBinder);
+      preparedStatementBinder.throwSQLExceptionIfOccurred();
     }
   }
 

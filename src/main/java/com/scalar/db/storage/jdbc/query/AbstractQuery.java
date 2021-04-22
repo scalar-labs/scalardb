@@ -9,7 +9,9 @@ public abstract class AbstractQuery implements Query {
   @Override
   public PreparedStatement prepareAndBind(Connection connection) throws SQLException {
     PreparedStatement preparedStatement = prepare(connection);
-    bind(preparedStatement);
+    PreparedStatementBinder preparedStatementBinder =
+        new PreparedStatementBinder(preparedStatement);
+    bind(preparedStatementBinder);
     return preparedStatement;
   }
 
@@ -19,7 +21,7 @@ public abstract class AbstractQuery implements Query {
     return connection.prepareStatement(sql());
   }
 
-  protected abstract void bind(PreparedStatement preparedStatement) throws SQLException;
+  protected abstract void bind(PreparedStatementBinder preparedStatementBinder) throws SQLException;
 
   @Override
   public String toString() {

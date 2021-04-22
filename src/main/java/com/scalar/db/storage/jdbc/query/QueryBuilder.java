@@ -37,6 +37,6 @@ public final class QueryBuilder {
   }
 
   public UpsertQuery.Builder upsertInto(String schema, String table) {
-    return new UpsertQuery.Builder(rdbEngine, schema, table);
+    return new UpsertQuery.Builder(rdbEngine, this, schema, table);
   }
 }

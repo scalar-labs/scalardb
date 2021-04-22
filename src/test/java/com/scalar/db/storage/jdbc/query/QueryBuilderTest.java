@@ -535,9 +535,9 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?)";
+            "BEGIN INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN "
+                + "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?;END;";
         break;
       case SQL_SERVER:
       default:
@@ -568,10 +568,9 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)";
+            "BEGIN INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN "
+                + "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?;END;";
         break;
       case SQL_SERVER:
       default:
@@ -608,11 +607,10 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN MATCHED THEN UPDATE SET v1=?,v2=?,v3=?,v4=? "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) "
-                + "VALUES (?,?,?,?,?,?,?,?)";
+            "BEGIN INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN "
+                + "UPDATE n1.t1 SET v1=?,v2=?,v3=?,v4=? WHERE p1=? AND p2=? AND c1=? AND c2=?;"
+                + "END;";
         break;
       case SQL_SERVER:
       default:
@@ -648,8 +646,8 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1 FROM DUAL) t2 ON (t1.p1=t2.p1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?)";
+            "BEGIN INSERT INTO n1.t1 (p1) VALUES (?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;END;";
         break;
       case SQL_SERVER:
       default:
@@ -676,9 +674,8 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? c1 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.c1=t2.c1) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?)";
+            "BEGIN INSERT INTO n1.t1 (p1,c1) VALUES (?,?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;END;";
         break;
       case SQL_SERVER:
       default:
@@ -710,9 +707,8 @@ public class QueryBuilderTest {
         break;
       case ORACLE:
         expectedQuery =
-            "MERGE INTO n1.t1 t1 USING (SELECT ? p1,? p2,? c1,? c2 FROM DUAL) t2 "
-                + "ON (t1.p1=t2.p1 AND t1.p2=t2.p2 AND t1.c1=t2.c1 AND t1.c2=t2.c2) "
-                + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?)";
+            "BEGIN INSERT INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?);"
+                + "EXCEPTION WHEN DUP_VAL_ON_INDEX THEN NULL;END;";
         break;
       case SQL_SERVER:
       default:
