@@ -23,7 +23,7 @@ public final class BlobValue implements Value<BlobValue> {
   private final Optional<ByteBuffer> bytes;
 
   /**
-   * Constructs a {@code BlobValue} with the specified name and values
+   * Constructs a {@code BlobValue} with the specified name and value
    *
    * @param name name of the {@code Value}
    * @param value content of the {@code Value}
