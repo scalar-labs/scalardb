@@ -76,7 +76,7 @@ public final class TextValue implements Value<TextValue> {
   }
 
   /**
-   * Sets the specified byte array
+   * Sets the specified byte arrays
    *
    * @param value
    */
