@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Optional;
@@ -36,7 +38,7 @@ public final class BlobValue implements Value<BlobValue> {
       bytes.ifPresent(
           b -> {
             b.put(value);
-            b.flip();
+            ((Buffer)b).flip();
           });
     }
   }

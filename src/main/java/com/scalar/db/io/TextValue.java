@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -83,7 +85,7 @@ public final class TextValue implements Value<TextValue> {
     bytes.ifPresent(
         b -> {
           b.put(value);
-          b.flip();
+          ((Buffer)b).flip();
         });
   }
 
