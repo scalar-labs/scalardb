@@ -85,7 +85,7 @@ public final class TextValue implements Value<TextValue> {
     bytes.ifPresent(
         b -> {
           b.put(value);
-          ((Buffer)b).flip();
+          ((Buffer) b).flip();
         });
   }
 

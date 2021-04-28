@@ -38,7 +38,7 @@ public final class BlobValue implements Value<BlobValue> {
       bytes.ifPresent(
           b -> {
             b.put(value);
-            ((Buffer)b).flip();
+            ((Buffer) b).flip();
           });
     }
   }
