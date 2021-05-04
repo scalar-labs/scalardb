@@ -21,7 +21,7 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class TransactionResult implements Result {
   private final Result result;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   public TransactionResult(Result result) {
     // assume that all the values are projected to the result
@@ -46,13 +46,13 @@ public class TransactionResult implements Result {
   }
 
   @Override
-  public Optional<Value> getValue(String name) {
+  public Optional<Value<?>> getValue(String name) {
     return Optional.ofNullable(values.get(name));
   }
 
   @Override
   @Nonnull
-  public ImmutableMap<String, Value> getValues() {
+  public ImmutableMap<String, Value<?>> getValues() {
     return ImmutableMap.copyOf(values);
   }
 

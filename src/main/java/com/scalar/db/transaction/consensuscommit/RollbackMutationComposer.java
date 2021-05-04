@@ -90,7 +90,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
         && !result.getState().equals(TransactionState.DELETED)) {
       throw new TransactionRuntimeException("rollback is toward non-prepared record");
     }
-    Map<String, Value> map = new HashMap<>();
+    Map<String, Value<?>> map = new HashMap<>();
     result
         .getValues()
         .forEach(

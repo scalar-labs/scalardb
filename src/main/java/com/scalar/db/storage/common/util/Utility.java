@@ -3,7 +3,6 @@ package com.scalar.db.storage.common.util;
 import com.scalar.db.api.Operation;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.TableMetadata;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -42,7 +41,7 @@ public final class Utility {
   }
 
   public static boolean isSecondaryIndexSpecified(Operation operation, TableMetadata metadata) {
-    List<Value> keyValues = operation.getPartitionKey().get();
+    List<Value<?>> keyValues = operation.getPartitionKey().get();
     if (keyValues.size() == 1) {
       String name = keyValues.get(0).getName();
       return metadata.getSecondaryIndexNames().contains(name);

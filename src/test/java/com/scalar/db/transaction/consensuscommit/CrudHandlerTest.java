@@ -79,8 +79,8 @@ public class CrudHandlerTest {
       when(mock.getClusteringKey()).thenReturn(Optional.empty());
     }
 
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
             .put(Attribute.STATE, Attribute.toStateValue(state))
             .put(Attribute.VERSION, Attribute.toVersionValue(2))

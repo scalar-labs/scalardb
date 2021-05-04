@@ -1,20 +1,19 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
+
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
 
 public class DeleteQuery extends AbstractQuery {
 
@@ -57,13 +56,13 @@ public class DeleteQuery extends AbstractQuery {
   protected void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

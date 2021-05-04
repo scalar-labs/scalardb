@@ -95,7 +95,7 @@ public class SelectStatementHandler extends StatementHandler {
 
   private QueryResponse executeQueryWithIndex(Selection selection) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, metadataManager);
-    Value keyValue = selection.getPartitionKey().get().get(0);
+    Value<?> keyValue = selection.getPartitionKey().get().get(0);
     String column = keyValue.getName();
     String indexTable = dynamoOperation.getGlobalIndexName(column);
     QueryRequest.Builder builder =
@@ -163,12 +163,12 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Optional<String> getIndexName(Scan scan) {
     if (scan.getStartClusteringKey().isPresent()) {
-      List<Value> start = scan.getStartClusteringKey().get().get();
+      List<Value<?>> start = scan.getStartClusteringKey().get().get();
       return Optional.of(start.get(start.size() - 1).getName());
     }
 
     if (scan.getEndClusteringKey().isPresent()) {
-      List<Value> end = scan.getEndClusteringKey().get().get();
+      List<Value<?>> end = scan.getEndClusteringKey().get().get();
       return Optional.of(end.get(end.size() - 1).getName());
     }
 
@@ -221,8 +221,8 @@ public class SelectStatementHandler extends StatementHandler {
       return false;
     }
 
-    List<Value> start = scan.getStartClusteringKey().get().get();
-    List<Value> end = scan.getEndClusteringKey().get().get();
+    List<Value<?>> start = scan.getStartClusteringKey().get().get();
+    List<Value<?>> end = scan.getEndClusteringKey().get().get();
     String startKeyName = start.get(start.size() - 1).getName();
     String endKeyName = end.get(end.size() - 1).getName();
 
@@ -243,9 +243,9 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> start = k.get();
+              List<Value<?>> start = k.get();
               for (int i = 0; i < start.size(); i++) {
-                Value value = start.get(i);
+                Value<?> value = start.get(i);
                 List<String> elements = new ArrayList<>();
                 elements.add(value.getName());
                 if (i < start.size() - 1) {
@@ -271,9 +271,9 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> end = k.get();
+              List<Value<?>> end = k.get();
               for (int i = 0; i < end.size(); i++) {
-                Value value = end.get(i);
+                Value<?> value = end.get(i);
                 List<String> elements = new ArrayList<>();
                 elements.add(value.getName());
                 if (i < end.size() - 1) {
@@ -295,8 +295,8 @@ public class SelectStatementHandler extends StatementHandler {
 
   private Map<String, AttributeValue> getRangeBindMap(Scan scan) {
     ValueBinder binder = new ValueBinder(DynamoOperation.RANGE_KEY_ALIAS);
-    List<Value> start = scan.getStartClusteringKey().get().get();
-    List<Value> end = scan.getEndClusteringKey().get().get();
+    List<Value<?>> start = scan.getStartClusteringKey().get().get();
+    List<Value<?>> end = scan.getEndClusteringKey().get().get();
     start.get(start.size() - 1).accept(binder);
     end.get(end.size() - 1).accept(binder);
 
@@ -308,7 +308,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> start = k.get();
+              List<Value<?>> start = k.get();
               int size = isRangeEnabled ? start.size() - 1 : start.size();
               IntStream.range(0, size)
                   .forEach(
@@ -325,7 +325,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> end = k.get();
+              List<Value<?>> end = k.get();
               int size = isRangeEnabled ? end.size() - 1 : end.size();
               IntStream.range(0, size)
                   .forEach(

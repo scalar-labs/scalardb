@@ -34,7 +34,6 @@ import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -868,7 +867,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    Value expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     Put put = preparePut(0, 0, TABLE_1).withValue(expected);
     transaction = manager.start();
 
@@ -896,7 +895,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act
     Optional<Result> result = transaction.get(get);
     int afterBalance = ((IntValue) result.get().getValue(BALANCE).get()).get() + 100;
-    Value expected = new IntValue(BALANCE, afterBalance);
+    IntValue expected = new IntValue(BALANCE, afterBalance);
     Put put = preparePut(0, 0, TABLE_1).withValue(expected);
     transaction.put(put);
     transaction.commit();
@@ -929,7 +928,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
               CoordinatorException {
     // Arrange
-    Value balance = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts = preparePuts(TABLE_1);
     puts.get(0).withValue(balance);
     puts.get(1).withValue(balance);
@@ -951,7 +950,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
           CoordinatorException {
     // Arrange
-    Value balance = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts = preparePuts(TABLE_1);
     puts.get(0).withValue(balance);
     puts.get(NUM_TYPES).withValue(balance); // next account
@@ -1015,7 +1014,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     boolean differentTables = !table1.equals(table2);
 
-    Value expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts1 = preparePuts(table1);
     List<Put> puts2 = differentTables ? preparePuts(table2) : puts1;
 
@@ -1246,7 +1245,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void putAndCommit_GetsAndPutsForSameKeyButDifferentTablesGiven_ShouldCommitBoth()
       throws CrudException {
     // Arrange
-    Value expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts1 = preparePuts(TABLE_1);
     List<Put> puts2 = preparePuts(TABLE_2);
 

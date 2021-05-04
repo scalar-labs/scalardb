@@ -108,8 +108,8 @@ public class OperationChecker {
       }
 
       for (int i = 0; i < startClusteringKey.size() - 1; i++) {
-        Value startValue = startClusteringKey.get().get(i);
-        Value endValue = endClusteringKey.get().get(i);
+        Value<?> startValue = startClusteringKey.get().get(i);
+        Value<?> endValue = endClusteringKey.get().get(i);
         if (!startValue.equals(endValue)) {
           throw new IllegalArgumentException(message.get());
         }
@@ -201,7 +201,7 @@ public class OperationChecker {
   }
 
   private void checkValues(Put put, TableMetadata metadata) {
-    for (Map.Entry<String, Value> entry : put.getValues().entrySet()) {
+    for (Map.Entry<String, Value<?>> entry : put.getValues().entrySet()) {
       if (!new ColumnChecker(metadata).check(entry.getValue())) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
@@ -269,7 +269,7 @@ public class OperationChecker {
 
   private boolean checkKey(
       Key key, LinkedHashSet<String> keyNames, boolean allowPartial, TableMetadata metadata) {
-    List<Value> values = new ArrayList<>(key.get());
+    List<Value<?>> values = new ArrayList<>(key.get());
 
     if (!allowPartial) {
       if (values.size() != keyNames.size()) {
@@ -282,7 +282,7 @@ public class OperationChecker {
     }
 
     Iterator<String> iterator = keyNames.iterator();
-    for (Value value : values) {
+    for (Value<?> value : values) {
       String keyName = iterator.next();
 
       if (!keyName.equals(value.getName())) {

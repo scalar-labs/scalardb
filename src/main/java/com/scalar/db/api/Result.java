@@ -32,12 +32,12 @@ public interface Result {
    * @param name name of the {@code Value}
    * @return an {@code Optional} with the {@code Value}
    */
-  Optional<Value> getValue(String name);
+  Optional<Value<?>> getValue(String name);
 
   /**
    * Returns a map of {@link Value}s
    *
    * @return a map of {@code Value}s
    */
-  Map<String, Value> getValues();
+  Map<String, Value<?>> getValues();
 }

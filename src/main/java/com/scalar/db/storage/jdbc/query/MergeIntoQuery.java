@@ -21,7 +21,7 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
   private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   public MergeIntoQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
@@ -89,35 +89,35 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     // For the USING SELECT statement
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     // For the UPDATE statement
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     // For the INSERT statement
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }

@@ -40,8 +40,8 @@ public class TransactionResultTest {
     when(mock.getClusteringKey())
         .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
 
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))
@@ -97,7 +97,7 @@ public class TransactionResultTest {
     result = new TransactionResult(prepareResult());
 
     // Act
-    Optional<Value> actual = result.getValue(ANY_NAME_3);
+    Optional<Value<?>> actual = result.getValue(ANY_NAME_3);
 
     // Assert
     assertThat(actual).isEqualTo(Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)));
@@ -110,7 +110,7 @@ public class TransactionResultTest {
     result = new TransactionResult(given);
 
     // Act
-    Map<String, Value> values = result.getValues();
+    Map<String, Value<?>> values = result.getValues();
 
     // Assert
     assertThat(values.size()).isEqualTo(given.getValues().size());

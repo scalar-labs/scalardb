@@ -529,7 +529,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
@@ -545,7 +545,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = null;
@@ -562,7 +562,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue("c3", "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
@@ -580,7 +580,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue("c3", "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
@@ -598,7 +598,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = null;
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
@@ -615,7 +615,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
     MutationCondition condition = new PutIfExists();
@@ -632,7 +632,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
@@ -650,7 +650,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition =
@@ -670,7 +670,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIfExists();
@@ -687,7 +687,7 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key clusteringKey = new Key(new IntValue(CKEY1, 2), new TextValue(CKEY2, "val1"));
-    List<Value> values =
+    List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIf();

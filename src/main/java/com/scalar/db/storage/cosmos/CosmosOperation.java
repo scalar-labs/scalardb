@@ -42,7 +42,7 @@ public class CosmosOperation {
 
   @Nonnull
   public String getConcatenatedPartitionKey() {
-    Map<String, Value> keyMap = new HashMap<>();
+    Map<String, Value<?>> keyMap = new HashMap<>();
     operation
         .getPartitionKey()
         .get()
@@ -64,7 +64,7 @@ public class CosmosOperation {
 
   @Nonnull
   public String getId() {
-    Map<String, Value> keyMap = new HashMap<>();
+    Map<String, Value<?>> keyMap = new HashMap<>();
     operation
         .getPartitionKey()
         .get()

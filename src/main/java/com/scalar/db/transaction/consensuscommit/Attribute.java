@@ -4,7 +4,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.io.Value;
 
 /** */
 public final class Attribute {
@@ -22,51 +21,51 @@ public final class Attribute {
   public static final String BEFORE_PREPARED_AT = BEFORE_PREFIX + PREPARED_AT;
   public static final String BEFORE_COMMITTED_AT = BEFORE_PREFIX + COMMITTED_AT;
 
-  public static Value toIdValue(String transactionId) {
+  public static TextValue toIdValue(String transactionId) {
     return new TextValue(Attribute.ID, transactionId);
   }
 
-  public static Value toStateValue(TransactionState state) {
+  public static IntValue toStateValue(TransactionState state) {
     return new IntValue(Attribute.STATE, state.get());
   }
 
-  public static Value toVersionValue(int version) {
+  public static IntValue toVersionValue(int version) {
     return new IntValue(Attribute.VERSION, version);
   }
 
-  public static Value toPreparedAtValue(long preparedAt) {
+  public static BigIntValue toPreparedAtValue(long preparedAt) {
     return new BigIntValue(Attribute.PREPARED_AT, preparedAt);
   }
 
-  public static Value toCommittedAtValue(long committedAt) {
+  public static BigIntValue toCommittedAtValue(long committedAt) {
     return new BigIntValue(Attribute.COMMITTED_AT, committedAt);
   }
 
-  public static Value toCreatedAtValue(long createdAt) {
+  public static BigIntValue toCreatedAtValue(long createdAt) {
     return new BigIntValue(Attribute.CREATED_AT, createdAt);
   }
 
-  public static Value toMetadataValue(String metadata) {
+  public static TextValue toMetadataValue(String metadata) {
     return new TextValue(Attribute.METADATA, metadata);
   }
 
-  public static Value toBeforeIdValue(String transactionId) {
+  public static TextValue toBeforeIdValue(String transactionId) {
     return new TextValue(Attribute.BEFORE_ID, transactionId);
   }
 
-  public static Value toBeforeStateValue(TransactionState state) {
+  public static IntValue toBeforeStateValue(TransactionState state) {
     return new IntValue(Attribute.BEFORE_STATE, state.get());
   }
 
-  public static Value toBeforeVersionValue(int version) {
+  public static IntValue toBeforeVersionValue(int version) {
     return new IntValue(Attribute.BEFORE_VERSION, version);
   }
 
-  public static Value toBeforePreparedAtValue(long preparedAt) {
+  public static BigIntValue toBeforePreparedAtValue(long preparedAt) {
     return new BigIntValue(Attribute.BEFORE_PREPARED_AT, preparedAt);
   }
 
-  public static Value toBeforeCommittedAtValue(long committedAt) {
+  public static BigIntValue toBeforeCommittedAtValue(long committedAt) {
     return new BigIntValue(Attribute.BEFORE_COMMITTED_AT, committedAt);
   }
 }

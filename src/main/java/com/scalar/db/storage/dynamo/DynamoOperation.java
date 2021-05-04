@@ -85,7 +85,7 @@ public class DynamoOperation {
   }
 
   String getConcatenatedPartitionKey() {
-    Map<String, Value> keyMap = new HashMap<>();
+    Map<String, Value<?>> keyMap = new HashMap<>();
     operation
         .getPartitionKey()
         .get()
@@ -105,7 +105,7 @@ public class DynamoOperation {
       return Optional.empty();
     }
 
-    Map<String, Value> keyMap = new HashMap<>();
+    Map<String, Value<?>> keyMap = new HashMap<>();
     operation
         .getClusteringKey()
         .ifPresent(
@@ -123,7 +123,7 @@ public class DynamoOperation {
     return Optional.of(visitor.build());
   }
 
-  Map<String, AttributeValue> toMap(Collection<Value> values) {
+  Map<String, AttributeValue> toMap(Collection<Value<?>> values) {
     MapVisitor visitor = new MapVisitor();
     values.forEach(v -> v.accept(visitor));
 

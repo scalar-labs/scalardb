@@ -20,7 +20,7 @@ public interface Value<T> extends Comparable<T> {
    * @param name name of a {@code Value}
    * @return a {@code Value} which has the same content of this value
    */
-  Value copyWith(String name);
+  Value<?> copyWith(String name);
 
   /**
    * Accepts a {@link ValueVisitor} to be able to be traversed

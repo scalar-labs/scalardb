@@ -15,7 +15,7 @@ public interface UpsertQuery extends Query {
     final String table;
     Key partitionKey;
     Optional<Key> clusteringKey;
-    Map<String, Value> values;
+    Map<String, Value<?>> values;
 
     Builder(RdbEngine rdbEngine, String schema, String table) {
       this.rdbEngine = rdbEngine;
@@ -24,7 +24,7 @@ public interface UpsertQuery extends Query {
     }
 
     public Builder values(
-        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value<?>> values) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.values = values;

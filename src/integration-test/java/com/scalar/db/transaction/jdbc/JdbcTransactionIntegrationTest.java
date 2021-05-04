@@ -13,7 +13,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.util.ArrayList;
@@ -109,7 +108,7 @@ public class JdbcTransactionIntegrationTest {
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
-    Value expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
     DistributedTransaction transaction = manager.start();
 
@@ -136,7 +135,7 @@ public class JdbcTransactionIntegrationTest {
     // Act
     Optional<Result> result = transaction.get(get);
     int afterBalance = ((IntValue) result.get().getValue(BALANCE).get()).get() + 100;
-    Value expected = new IntValue(BALANCE, afterBalance);
+    IntValue expected = new IntValue(BALANCE, afterBalance);
     Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
     transaction.put(put);
     transaction.commit();

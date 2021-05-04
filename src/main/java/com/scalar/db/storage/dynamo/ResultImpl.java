@@ -1,5 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
@@ -16,12 +18,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -29,15 +25,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 @Immutable
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
   private final Selection selection;
   private final DynamoTableMetadata metadata;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   public ResultImpl(
       Map<String, AttributeValue> item, Selection selection, DynamoTableMetadata metadata) {
@@ -59,13 +58,13 @@ public class ResultImpl implements Result {
   }
 
   @Override
-  public Optional<Value> getValue(String name) {
+  public Optional<Value<?>> getValue(String name) {
     return Optional.ofNullable(values.get(name));
   }
 
   @Override
   @Nonnull
-  public Map<String, Value> getValues() {
+  public Map<String, Value<?>> getValues() {
     return ImmutableMap.copyOf(values);
   }
 
@@ -121,15 +120,15 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
-    List<Value> list = new ArrayList<>();
+    List<Value<?>> list = new ArrayList<>();
     for (String name : names) {
-      Value value = values.get(name);
+      Value<?> value = values.get(name);
       list.add(value);
     }
     return Optional.of(new Key(list));
   }
 
-  private Value convert(AttributeValue itemValue, String name, DataType dataType)
+  private Value<?> convert(AttributeValue itemValue, String name, DataType dataType)
       throws UnsupportedTypeException {
     // When itemValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver

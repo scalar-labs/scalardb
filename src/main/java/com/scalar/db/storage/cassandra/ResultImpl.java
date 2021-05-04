@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
@@ -16,11 +18,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,14 +29,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
   private final CassandraTableMetadata metadata;
-  private Map<String, Value> values;
+  private Map<String, Value<?>> values;
 
   public ResultImpl(Row row, CassandraTableMetadata metadata) {
     checkNotNull(row);
@@ -53,7 +52,7 @@ public class ResultImpl implements Result {
    * @param values
    */
   @VisibleForTesting
-  ResultImpl(Collection<Value> values, CassandraTableMetadata metadata) {
+  ResultImpl(Collection<Value<?>> values, CassandraTableMetadata metadata) {
     this.metadata = metadata;
     this.values = new HashMap<>();
     values.forEach(v -> this.values.put(v.getName(), v));
@@ -70,13 +69,13 @@ public class ResultImpl implements Result {
   }
 
   @Override
-  public Optional<Value> getValue(String name) {
+  public Optional<Value<?>> getValue(String name) {
     return Optional.ofNullable(values.get(name));
   }
 
   @Override
   @Nonnull
-  public Map<String, Value> getValues() {
+  public Map<String, Value<?>> getValues() {
     return Collections.unmodifiableMap(values);
   }
 
@@ -111,7 +110,7 @@ public class ResultImpl implements Result {
     getColumnDefinitions(row)
         .forEach(
             (name, type) -> {
-              Value value = convert(row, name, type.getName());
+              Value<?> value = convert(row, name, type.getName());
               values.put(name, value);
             });
   }
@@ -129,9 +128,9 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
-    List<Value> list = new ArrayList<>();
+    List<Value<?>> list = new ArrayList<>();
     for (String name : names) {
-      Value value = values.get(name);
+      Value<?> value = values.get(name);
       if (value == null) {
         LOGGER.warn("full key doesn't seem to be projected into the result");
         return Optional.empty();
@@ -141,7 +140,7 @@ public class ResultImpl implements Result {
     return Optional.of(new Key(list));
   }
 
-  private static Value convert(Row row, String name, DataType.Name type)
+  private static Value<?> convert(Row row, String name, DataType.Name type)
       throws UnsupportedTypeException {
     switch (type) {
       case BOOLEAN:

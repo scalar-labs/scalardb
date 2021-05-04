@@ -36,8 +36,8 @@ public class RecoveryHandlerTest {
   }
 
   private void configureResult(Result mock, long preparedAt) {
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_1))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(preparedAt))
             .put(Attribute.STATE, Attribute.toStateValue(TransactionState.PREPARED))

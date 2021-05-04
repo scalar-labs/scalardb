@@ -28,7 +28,7 @@ public class KeyTest {
     Key key = new Key(key1, key2);
 
     // Act
-    List<Value> values = key.get();
+    List<Value<?>> values = key.get();
 
     // Assert
     assertThat(values).isEqualTo(Arrays.asList(key1, key2));
@@ -42,7 +42,7 @@ public class KeyTest {
     Key key = new Key(key1, key2);
 
     // Act Assert
-    List<Value> values = key.get();
+    List<Value<?>> values = key.get();
     assertThatThrownBy(
             () -> {
               values.add(new TextValue(ANY_NAME_3, ANY_TEXT_3));
@@ -205,7 +205,7 @@ public class KeyTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              new Key((List<Value>) null);
+              new Key((List<Value<?>>) null);
             })
         .isInstanceOf(NullPointerException.class);
   }
