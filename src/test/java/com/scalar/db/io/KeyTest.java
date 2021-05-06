@@ -35,6 +35,33 @@ public class KeyTest {
   }
 
   @Test
+  public void get_ProperKeysGivenInBuilder_ShouldReturnWhatsSet() {
+    // Arrange
+    Key key =
+        Key.newBuilder()
+            .addBigInt("key1", 1234L)
+            .addBlob("key2", "blob_key".getBytes())
+            .addBoolean("key3", true)
+            .addDouble("key4", 1.23)
+            .addFloat("key5", 4.56f)
+            .addInt("key6", 5678)
+            .addText("key7", "string_key")
+            .build();
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.get(0)).isEqualTo(new BigIntValue("key1", 1234L));
+    assertThat(values.get(1)).isEqualTo(new BlobValue("key2", "blob_key".getBytes()));
+    assertThat(values.get(2)).isEqualTo(new BooleanValue("key3", true));
+    assertThat(values.get(3)).isEqualTo(new DoubleValue("key4", 1.23));
+    assertThat(values.get(4)).isEqualTo(new FloatValue("key5", 4.56f));
+    assertThat(values.get(5)).isEqualTo(new IntValue("key6", 5678));
+    assertThat(values.get(6)).isEqualTo(new TextValue("key7", "string_key"));
+  }
+
+  @Test
   public void get_TryToModifyReturned_ShouldThrowException() {
     // Arrange
     TextValue key1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);

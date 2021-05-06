@@ -108,6 +108,16 @@ public final class TextValue implements Value<TextValue> {
   }
 
   @Override
+  public Optional<byte[]> getAsBytes() {
+    return getBytes();
+  }
+
+  @Override
+  public Optional<String> getAsString() {
+    return getString();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;

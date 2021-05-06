@@ -30,7 +30,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   public Key(Value<?>... values) {
     checkNotNull(values);
     this.values = new ArrayList<>(values.length);
-    Arrays.stream(values).forEach(v -> this.values.add(v));
+    this.values.addAll(Arrays.asList(values));
   }
 
   /**
@@ -41,7 +41,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   public Key(List<Value<?>> values) {
     checkNotNull(values);
     this.values = new ArrayList<>(values.size());
-    values.forEach(v -> this.values.add(v));
+    this.values.addAll(values);
   }
 
   /**
@@ -90,16 +90,13 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return false;
     }
     Key that = (Key) o;
-    if (values.equals(that.values)) {
-      return true;
-    }
-    return false;
+    return values.equals(that.values);
   }
 
   @Override
   public String toString() {
     MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
-    values.forEach(v -> helper.addValue(v));
+    values.forEach(helper::addValue);
     return helper.toString();
   }
 
@@ -113,5 +110,60 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     return ComparisonChain.start()
         .compare(values, o.values, Ordering.<Value<?>>natural().lexicographical())
         .result();
+  }
+
+  /**
+   * Returns a new builder instance
+   *
+   * @return a new builder instance
+   */
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
+  /** A builder class that builds a {@code Key} instance */
+  public static final class Builder {
+    private final List<Value<?>> values = new ArrayList<>();
+
+    private Builder() {}
+
+    public Builder addBigInt(String name, long value) {
+      values.add(new BigIntValue(name, value));
+      return this;
+    }
+
+    public Builder addBlob(String name, byte[] value) {
+      values.add(new BlobValue(name, value));
+      return this;
+    }
+
+    public Builder addBoolean(String name, boolean value) {
+      values.add(new BooleanValue(name, value));
+      return this;
+    }
+
+    public Builder addDouble(String name, double value) {
+      values.add(new DoubleValue(name, value));
+      return this;
+    }
+
+    public Builder addFloat(String name, float value) {
+      values.add(new FloatValue(name, value));
+      return this;
+    }
+
+    public Builder addInt(String name, int value) {
+      values.add(new IntValue(name, value));
+      return this;
+    }
+
+    public Builder addText(String name, String value) {
+      values.add(new TextValue(name, value));
+      return this;
+    }
+
+    public Key build() {
+      return new Key(values);
+    }
   }
 }

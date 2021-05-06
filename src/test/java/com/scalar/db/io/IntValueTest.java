@@ -24,6 +24,89 @@ public class IntValueTest {
   }
 
   @Test
+  public void getAsInt_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act
+    int actual = value.getAsInt();
+
+    // Assert
+    assertThat(expected).isEqualTo(actual);
+  }
+
+  @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act
+    long actual = value.getAsLong();
+
+    // Assert
+    assertThat(expected).isEqualTo(actual);
+  }
+
+  @Test
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act
+    double actual = value.getAsDouble();
+
+    // Assert
+    assertThat((double) expected).isEqualTo(actual);
+  }
+
+  @Test
+  public void getAsFloat_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act
+    float actual = value.getAsFloat();
+
+    // Assert
+    assertThat((float) expected).isEqualTo(actual);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void
+      getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBoolean).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     int some = Integer.MAX_VALUE;

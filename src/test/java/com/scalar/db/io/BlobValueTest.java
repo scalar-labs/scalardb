@@ -22,8 +22,85 @@ public class BlobValueTest {
     Optional<byte[]> actual = value.get();
 
     // Assert
+    assertThat(actual.isPresent()).isTrue();
     assertThat(Arrays.equals(expected, actual.get())).isTrue();
     assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act
+    Optional<byte[]> actual = value.getAsBytes();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(Arrays.equals(expected, actual.get())).isTrue();
+    assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void
+      getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBoolean).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsFloat_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsFloat).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
