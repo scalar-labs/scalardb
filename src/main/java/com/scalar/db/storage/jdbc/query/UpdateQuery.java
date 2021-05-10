@@ -1,10 +1,13 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
+
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -14,10 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.getOperatorString;
-
 public class UpdateQuery extends AbstractQuery {
 
   private final RdbEngine rdbEngine;
@@ -25,7 +24,7 @@ public class UpdateQuery extends AbstractQuery {
   private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
   private final List<ConditionalExpression> otherConditions;
 
   private UpdateQuery(Builder builder) {
@@ -70,18 +69,18 @@ public class UpdateQuery extends AbstractQuery {
   protected void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
@@ -100,7 +99,7 @@ public class UpdateQuery extends AbstractQuery {
     List<ConditionalExpression> otherConditions;
     private Key partitionKey;
     private Optional<Key> clusteringKey;
-    private Map<String, Value> values;
+    private Map<String, Value<?>> values;
 
     Builder(RdbEngine rdbEngine, String schema, String table) {
       this.rdbEngine = rdbEngine;
@@ -108,7 +107,7 @@ public class UpdateQuery extends AbstractQuery {
       this.table = table;
     }
 
-    public Builder set(Map<String, Value> values) {
+    public Builder set(Map<String, Value<?>> values) {
       this.values = values;
       return this;
     }

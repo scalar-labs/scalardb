@@ -346,7 +346,7 @@ public class QueryBuilderTest {
 
   @Test
   public void insertQueryTest() {
-    Map<String, Value> values = new HashMap<>();
+    Map<String, Value<?>> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
     values.put("v3", new TextValue("ddd"));
@@ -387,7 +387,7 @@ public class QueryBuilderTest {
 
   @Test
   public void updateQueryTest() {
-    Map<String, Value> values = new HashMap<>();
+    Map<String, Value<?>> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
     values.put("v3", new TextValue("ddd"));
@@ -515,7 +515,7 @@ public class QueryBuilderTest {
 
   @Test
   public void upsertQueryTest() {
-    Map<String, Value> values = new HashMap<>();
+    Map<String, Value<?>> values = new HashMap<>();
     values.put("v1", new TextValue("aaa"));
     values.put("v2", new TextValue("bbb"));
     values.put("v3", new TextValue("ddd"));

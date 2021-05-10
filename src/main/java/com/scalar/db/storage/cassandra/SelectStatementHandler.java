@@ -153,7 +153,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> start = k.get();
+              List<Value<?>> start = k.get();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
@@ -178,7 +178,7 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value> end = k.get();
+              List<Value<?>> end = k.get();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {

@@ -39,7 +39,7 @@ public class PutTest {
     Key actual = put.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value>) expected).isEqualTo(actual);
+    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class PutTest {
     put.withValue(value1).withValue(value2);
 
     // Act Assert
-    Map<String, Value> values = put.getValues();
+    Map<String, Value<?>> values = put.getValues();
     assertThatThrownBy(
             () -> {
               values.put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_3));

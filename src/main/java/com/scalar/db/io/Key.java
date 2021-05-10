@@ -19,15 +19,15 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class Key implements Comparable<Key>, Iterable<Value> {
-  private final List<Value> values;
+public final class Key implements Comparable<Key>, Iterable<Value<?>> {
+  private final List<Value<?>> values;
 
   /**
    * Constructs a {@code Key} with the specified {@link Value}s
    *
    * @param values one or more {@link Value}s which this key is composed of
    */
-  public Key(Value... values) {
+  public Key(Value<?>... values) {
     checkNotNull(values);
     this.values = new ArrayList<>(values.length);
     Arrays.stream(values).forEach(v -> this.values.add(v));
@@ -38,7 +38,7 @@ public final class Key implements Comparable<Key>, Iterable<Value> {
    *
    * @param values a list of {@link Value}s which this key is composed of
    */
-  public Key(List<Value> values) {
+  public Key(List<Value<?>> values) {
     checkNotNull(values);
     this.values = new ArrayList<>(values.size());
     values.forEach(v -> this.values.add(v));
@@ -50,7 +50,7 @@ public final class Key implements Comparable<Key>, Iterable<Value> {
    * @return list of {@code Value} which this key is composed of
    */
   @Nonnull
-  public List<Value> get() {
+  public List<Value<?>> get() {
     return Collections.unmodifiableList(values);
   }
 
@@ -104,14 +104,14 @@ public final class Key implements Comparable<Key>, Iterable<Value> {
   }
 
   @Override
-  public Iterator<Value> iterator() {
+  public Iterator<Value<?>> iterator() {
     return values.iterator();
   }
 
   @Override
   public int compareTo(Key o) {
     return ComparisonChain.start()
-        .compare(values, o.values, Ordering.<Value>natural().lexicographical())
+        .compare(values, o.values, Ordering.<Value<?>>natural().lexicographical())
         .result();
   }
 }

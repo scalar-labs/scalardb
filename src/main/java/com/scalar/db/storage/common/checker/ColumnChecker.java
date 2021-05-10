@@ -11,7 +11,6 @@ import com.scalar.db.io.Value;
 import com.scalar.db.io.ValueVisitor;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.common.metadata.TableMetadata;
-
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -24,7 +23,7 @@ class ColumnChecker implements ValueVisitor {
     this.tableMetadata = tableMetadata;
   }
 
-  public boolean check(Value value) {
+  public boolean check(Value<?> value) {
     // Check if the column exists
     if (!tableMetadata.getColumnNames().contains(getName(value))) {
       return false;
@@ -35,12 +34,12 @@ class ColumnChecker implements ValueVisitor {
     return isValid;
   }
 
-  public boolean check(String name, Value value) {
+  public boolean check(String name, Value<?> value) {
     this.name = name;
     return check(value);
   }
 
-  private String getName(Value value) {
+  private String getName(Value<?> value) {
     return name != null ? name : value.getName();
   }
 

@@ -57,7 +57,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
 
-    List<Value> values = new ArrayList<>();
+    List<Value<?>> values = new ArrayList<>();
     values.add(Attribute.toIdValue(id));
     values.add(Attribute.toStateValue(TransactionState.PREPARED));
     values.add(Attribute.toPreparedAtValue(current));
@@ -96,7 +96,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
 
-    List<Value> values = new ArrayList<>();
+    List<Value<?>> values = new ArrayList<>();
     values.add(Attribute.toIdValue(id));
     values.add(Attribute.toStateValue(TransactionState.DELETED));
     values.add(Attribute.toPreparedAtValue(current));
@@ -123,7 +123,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
 
-    List<Value> values = new ArrayList<>();
+    List<Value<?>> values = new ArrayList<>();
     values.add(Attribute.toIdValue(id));
     values.add(Attribute.toStateValue(TransactionState.DELETED));
     values.add(Attribute.toPreparedAtValue(current));
@@ -136,11 +136,11 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     mutations.add(put);
   }
 
-  private List<Value> createBeforeValues(Mutation base, TransactionResult result) {
+  private List<Value<?>> createBeforeValues(Mutation base, TransactionResult result) {
     Key partitionKey = base.getPartitionKey();
     Optional<Key> clusteringKey = getClusteringKey(base, result);
 
-    List<Value> values = new ArrayList<>();
+    List<Value<?>> values = new ArrayList<>();
     result
         .getValues()
         .values()
@@ -153,7 +153,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     return values;
   }
 
-  private boolean isBeforeRequired(Value value, Key primary, Optional<Key> clustering) {
+  private boolean isBeforeRequired(Value<?> value, Key primary, Optional<Key> clustering) {
     if (!value.getName().startsWith(Attribute.BEFORE_PREFIX)
         && !isValueInKeys(value, primary, clustering)) {
       return true;
@@ -161,8 +161,8 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     return false;
   }
 
-  private boolean isValueInKeys(Value value, Key primary, Optional<Key> clustering) {
-    for (Value v : primary) {
+  private boolean isValueInKeys(Value<?> value, Key primary, Optional<Key> clustering) {
+    for (Value<?> v : primary) {
       if (v.equals(value)) {
         return true;
       }
@@ -172,7 +172,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
       return false;
     }
 
-    for (Value v : clustering.get()) {
+    for (Value<?> v : clustering.get()) {
       if (v.equals(value)) {
         return true;
       }

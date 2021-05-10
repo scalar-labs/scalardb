@@ -13,8 +13,6 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-
-import javax.annotation.concurrent.Immutable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -25,12 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import javax.annotation.concurrent.Immutable;
 
 @Immutable
 public class ResultImpl implements Result {
 
   private final JdbcTableMetadata tableMetadata;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   public ResultImpl(JdbcTableMetadata tableMetadata, List<String> projections, ResultSet resultSet)
       throws SQLException {
@@ -48,7 +47,7 @@ public class ResultImpl implements Result {
     }
   }
 
-  private Value getValue(JdbcTableMetadata tableMetadata, String name, ResultSet resultSet)
+  private Value<?> getValue(JdbcTableMetadata tableMetadata, String name, ResultSet resultSet)
       throws SQLException {
     DataType dataType = tableMetadata.getColumnDataType(name);
     switch (dataType) {
@@ -82,9 +81,9 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
-    List<Value> list = new ArrayList<>();
+    List<Value<?>> list = new ArrayList<>();
     for (String name : names) {
-      Value value = values.get(name);
+      Value<?> value = values.get(name);
       if (value == null) {
         return Optional.empty();
       }
@@ -94,12 +93,12 @@ public class ResultImpl implements Result {
   }
 
   @Override
-  public Optional<Value> getValue(String name) {
+  public Optional<Value<?>> getValue(String name) {
     return Optional.ofNullable(values.get(name));
   }
 
   @Override
-  public Map<String, Value> getValues() {
+  public Map<String, Value<?>> getValues() {
     return Collections.unmodifiableMap(values);
   }
 

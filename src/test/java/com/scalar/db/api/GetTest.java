@@ -49,7 +49,7 @@ public class GetTest {
     Key actual = get.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value>) expected).isEqualTo(actual);
+    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
   }
 
   @Test

@@ -27,9 +27,9 @@ public interface SelectQuery extends Query {
     Key partitionKey;
     Optional<Key> clusteringKey = Optional.empty();
     Optional<Key> commonClusteringKey = Optional.empty();
-    Optional<Value> startValue = Optional.empty();
+    Optional<Value<?>> startValue = Optional.empty();
     boolean startInclusive;
-    Optional<Value> endValue = Optional.empty();
+    Optional<Value<?>> endValue = Optional.empty();
     boolean endInclusive;
     List<Scan.Ordering> orderings = Collections.emptyList();
     private int limit;

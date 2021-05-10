@@ -1,5 +1,12 @@
 package com.scalar.db.storage.cassandra;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
@@ -7,11 +14,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,13 +23,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 /** */
 public class ResultImplTest {
@@ -69,7 +68,7 @@ public class ResultImplTest {
         .thenReturn((ByteBuffer) ByteBuffer.allocate(64).put("string".getBytes()).flip());
   }
 
-  private List<Value> prepareValues() {
+  private List<Value<?>> prepareValues() {
     return Arrays.asList(new IntValue("k1", 1), new TextValue("k2", "2"));
   }
 
@@ -85,7 +84,7 @@ public class ResultImplTest {
     spy.interpret(row);
 
     // Act
-    Optional<Value> actual = spy.getValue(expectedText);
+    Optional<Value<?>> actual = spy.getValue(expectedText);
 
     // Assert
     assertThat(actual).isEqualTo(Optional.of(new IntValue(expectedText, expectedInt)));
@@ -103,7 +102,7 @@ public class ResultImplTest {
     spy.interpret(row);
 
     // Act
-    Map<String, Value> actual = spy.getValues();
+    Map<String, Value<?>> actual = spy.getValues();
 
     // Assert
     assertThat(actual.get(expectedText)).isEqualTo(new IntValue(expectedText, expectedInt));
@@ -130,7 +129,7 @@ public class ResultImplTest {
     ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), null));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
-    Map<String, Value> values = spy.getValues();
+    Map<String, Value<?>> values = spy.getValues();
 
     // Act Assert
     assertThatThrownBy(

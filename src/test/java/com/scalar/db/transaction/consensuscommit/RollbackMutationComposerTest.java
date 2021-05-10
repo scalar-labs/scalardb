@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -93,8 +96,8 @@ public class RollbackMutationComposerTest {
     when(mock.getClusteringKey())
         .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
 
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))
@@ -126,7 +129,7 @@ public class RollbackMutationComposerTest {
         .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
 
     ImmutableMap.Builder builder =
-        ImmutableMap.<String, Value>builder()
+        ImmutableMap.<String, Value<?>>builder()
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_1))
             .put(Attribute.ID, Attribute.toIdValue(id))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_1))
@@ -146,8 +149,8 @@ public class RollbackMutationComposerTest {
     return new TransactionResult(result);
   }
 
-  private List<Value> extractAfterValues(TransactionResult result) {
-    List<Value> values = new ArrayList<>();
+  private List<Value<?>> extractAfterValues(TransactionResult result) {
+    List<Value<?>> values = new ArrayList<>();
     result
         .getValues()
         .forEach(

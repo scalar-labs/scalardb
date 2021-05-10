@@ -1,7 +1,10 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
-import static com.scalar.db.transaction.consensuscommit.Attribute.*;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
+import static com.scalar.db.transaction.consensuscommit.Attribute.toStateValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -81,8 +84,8 @@ public class CommitMutationComposerTest {
     when(mock.getClusteringKey())
         .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
 
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_1))

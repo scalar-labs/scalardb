@@ -10,7 +10,7 @@ import java.util.Objects;
  */
 public class ConditionalExpression {
   private final String name;
-  private final Value value;
+  private final Value<?> value;
   private final Operator operator;
 
   /**
@@ -23,7 +23,7 @@ public class ConditionalExpression {
    * @param value value used to compare with the target value
    * @param operator operator used to compare the target value specified with the name and the value
    */
-  public ConditionalExpression(String name, Value value, Operator operator) {
+  public ConditionalExpression(String name, Value<?> value, Operator operator) {
     this.name = name;
     this.value = value;
     this.operator = operator;
@@ -44,7 +44,7 @@ public class ConditionalExpression {
    *
    * @return the value used to compare with the target value
    */
-  public Value getValue() {
+  public Value<?> getValue() {
     return value;
   }
 

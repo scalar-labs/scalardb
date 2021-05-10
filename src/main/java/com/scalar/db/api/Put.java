@@ -17,7 +17,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Put extends Mutation {
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
@@ -46,7 +46,7 @@ public class Put extends Mutation {
    * @param value a {@code Value} to put
    * @return this object
    */
-  public Put withValue(Value value) {
+  public Put withValue(Value<?> value) {
     values.put(value.getName(), value);
     return this;
   }
@@ -57,7 +57,7 @@ public class Put extends Mutation {
    * @param values a collection of {@code Value}s to put
    * @return this object
    */
-  public Put withValues(Collection<Value> values) {
+  public Put withValues(Collection<Value<?>> values) {
     values.forEach(v -> this.values.put(v.getName(), v));
     return this;
   }
@@ -67,7 +67,7 @@ public class Put extends Mutation {
    *
    * @return a map of {@code Value}s
    */
-  public Map<String, Value> getValues() {
+  public Map<String, Value<?>> getValues() {
     return ImmutableMap.copyOf(values);
   }
 

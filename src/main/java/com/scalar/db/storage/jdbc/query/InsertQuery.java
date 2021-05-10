@@ -1,9 +1,11 @@
 package com.scalar.db.storage.jdbc.query;
 
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
+import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
+
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -12,9 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 public class InsertQuery extends AbstractQuery {
 
   private final RdbEngine rdbEngine;
@@ -22,7 +21,7 @@ public class InsertQuery extends AbstractQuery {
   private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   private InsertQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
@@ -56,19 +55,19 @@ public class InsertQuery extends AbstractQuery {
   protected void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
@@ -80,7 +79,7 @@ public class InsertQuery extends AbstractQuery {
     private final String table;
     private Key partitionKey;
     private Optional<Key> clusteringKey;
-    private Map<String, Value> values;
+    private Map<String, Value<?>> values;
 
     Builder(RdbEngine rdbEngine, String schema, String table) {
       this.rdbEngine = rdbEngine;
@@ -89,7 +88,7 @@ public class InsertQuery extends AbstractQuery {
     }
 
     public Builder values(
-        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value> values) {
+        Key partitionKey, Optional<Key> clusteringKey, Map<String, Value<?>> values) {
       this.partitionKey = partitionKey;
       this.clusteringKey = clusteringKey;
       this.values = values;

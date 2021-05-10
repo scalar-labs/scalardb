@@ -33,7 +33,7 @@ public class DeleteTest {
     Key actual = del.getPartitionKey();
 
     // Assert
-    assertThat((Iterable<? extends Value>) expected).isEqualTo(actual);
+    assertThat((Iterable<? extends Value<?>>) expected).isEqualTo(actual);
   }
 
   @Test

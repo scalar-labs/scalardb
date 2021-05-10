@@ -120,11 +120,11 @@ public class SelectStatementHandler extends StatementHandler {
         .ifPresent(
             k -> {
               ValueBinder binder = new ValueBinder();
-              List<Value> start = k.get();
+              List<Value<?>> start = k.get();
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
-                        Value value = start.get(i);
+                        Value<?> value = start.get(i);
                         Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
@@ -149,11 +149,11 @@ public class SelectStatementHandler extends StatementHandler {
         .ifPresent(
             k -> {
               ValueBinder binder = new ValueBinder();
-              List<Value> end = k.get();
+              List<Value<?>> end = k.get();
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {
-                        Value value = end.get(i);
+                        Value<?> value = end.get(i);
                         Field field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
@@ -186,7 +186,7 @@ public class SelectStatementHandler extends StatementHandler {
 
   private String makeQueryWithIndex(Operation operation) {
     SelectWhereStep<org.jooq.Record> select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r");
-    Value keyValue = operation.getPartitionKey().get().get(0);
+    Value<?> keyValue = operation.getPartitionKey().get().get(0);
     CosmosTableMetadata metadata = metadataManager.getTableMetadata(operation);
     String fieldName;
     if (metadata.getClusteringKeyNames().contains(keyValue.getName())) {

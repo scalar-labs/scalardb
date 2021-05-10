@@ -28,9 +28,9 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Optional<Key> commonClusteringKey;
-  private final Optional<Value> startValue;
+  private final Optional<Value<?>> startValue;
   private final boolean startInclusive;
-  private final Optional<Value> endValue;
+  private final Optional<Value<?>> endValue;
   private final boolean endInclusive;
   private final List<Scan.Ordering> orderings;
   private final boolean isRangeQuery;
@@ -124,20 +124,20 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   protected void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
     if (commonClusteringKey.isPresent()) {
-      for (Value value : commonClusteringKey.get()) {
+      for (Value<?> value : commonClusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }

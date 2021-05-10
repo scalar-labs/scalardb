@@ -1,5 +1,11 @@
 package com.scalar.db.storage.cosmos;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Get;
 import com.scalar.db.io.BigIntValue;
@@ -11,21 +17,14 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ResultImplTest {
   private static final String ANY_ID_1 = "id1";
@@ -96,7 +95,7 @@ public class ResultImplTest {
     ResultImpl result = new ResultImpl(record, get, metadata);
 
     // Act
-    Optional<Value> actual = result.getValue(ANY_NAME_1);
+    Optional<Value<?>> actual = result.getValue(ANY_NAME_1);
 
     // Assert
     assertThat(actual).isEqualTo(Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)));
@@ -108,7 +107,7 @@ public class ResultImplTest {
     ResultImpl result = new ResultImpl(record, get, metadata);
 
     // Act
-    Map<String, Value> actual = result.getValues();
+    Map<String, Value<?>> actual = result.getValues();
 
     // Assert
     assertThat(actual.get(ANY_NAME_1)).isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
@@ -129,7 +128,7 @@ public class ResultImplTest {
     ResultImpl result = new ResultImpl(emptyRecord, get, metadata);
 
     // Act
-    Map<String, Value> actual = result.getValues();
+    Map<String, Value<?>> actual = result.getValues();
 
     // Assert
     assertThat(actual.get(ANY_COLUMN_NAME_1)).isEqualTo(new BooleanValue(ANY_COLUMN_NAME_1, false));
@@ -160,7 +159,7 @@ public class ResultImplTest {
   public void getValues_TryToModifyReturned_ShouldThrowException() {
     // Arrange
     ResultImpl result = new ResultImpl(record, get, metadata);
-    Map<String, Value> values = result.getValues();
+    Map<String, Value<?>> values = result.getValues();
 
     // Act Assert
     assertThatThrownBy(
@@ -178,7 +177,7 @@ public class ResultImplTest {
     ResultImpl result = new ResultImpl(record, getWithProjections, metadata);
 
     // Act
-    Map<String, Value> actual = result.getValues();
+    Map<String, Value<?>> actual = result.getValues();
 
     // Assert
     assertThat(actual.size()).isEqualTo(4);

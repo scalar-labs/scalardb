@@ -21,7 +21,7 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   private final String table;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Value> values;
+  private final Map<String, Value<?>> values;
 
   InsertOnDuplicateKeyUpdateQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
@@ -71,25 +71,25 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   protected void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
-    for (Value value : partitionKey) {
+    for (Value<?> value : partitionKey) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     if (clusteringKey.isPresent()) {
-      for (Value value : clusteringKey.get()) {
+      for (Value<?> value : clusteringKey.get()) {
         value.accept(binder);
         binder.throwSQLExceptionIfOccurred();
       }
     }
 
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
 
     // For ON DUPLICATE KEY UPDATE
-    for (Value value : values.values()) {
+    for (Value<?> value : values.values()) {
       value.accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }

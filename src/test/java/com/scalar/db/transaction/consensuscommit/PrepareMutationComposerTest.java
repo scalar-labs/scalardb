@@ -83,8 +83,8 @@ public class PrepareMutationComposerTest {
     when(mock.getClusteringKey())
         .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
 
-    ImmutableMap<String, Value> values =
-        ImmutableMap.<String, Value>builder()
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))

@@ -114,7 +114,7 @@ public class CosmosMutation extends CosmosOperation {
     return new CosmosStoredProcedureRequestOptions().setPartitionKey(getCosmosPartitionKey());
   }
 
-  private Map<String, Object> toMap(Collection<Value> values) {
+  private Map<String, Object> toMap(Collection<Value<?>> values) {
     MapVisitor visitor = new MapVisitor();
     values.forEach(v -> v.accept(visitor));
 

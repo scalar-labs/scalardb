@@ -65,7 +65,7 @@ public class ScanTest {
             .withLimit(100);
 
     // Assert
-    assertThat((Iterable<? extends Value>) scan.getPartitionKey()).isEqualTo(partitionKey);
+    assertThat((Iterable<? extends Value<?>>) scan.getPartitionKey()).isEqualTo(partitionKey);
     assertThat(scan.getStartClusteringKey()).isEqualTo(Optional.of(startClusteringKey));
     assertThat(scan.getEndClusteringKey()).isEqualTo(Optional.of(endClusteringKey));
     assertThat(scan.getProjections()).isEqualTo(Arrays.asList(ANY_NAME_1));
