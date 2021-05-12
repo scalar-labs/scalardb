@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /** */
-public class UncommittedRecordException extends CrudException {
+public class UncommittedRecordException extends CrudConflictException {
   private final List<TransactionResult> results;
 
   public UncommittedRecordException(TransactionResult result, String message) {
