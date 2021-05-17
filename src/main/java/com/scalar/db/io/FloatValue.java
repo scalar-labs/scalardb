@@ -48,6 +48,16 @@ public final class FloatValue implements Value<FloatValue> {
   }
 
   @Override
+  public float getAsFloat() {
+    return get();
+  }
+
+  @Override
+  public double getAsDouble() {
+    return get();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;

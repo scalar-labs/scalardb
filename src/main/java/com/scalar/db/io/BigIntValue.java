@@ -48,6 +48,21 @@ public final class BigIntValue implements Value<BigIntValue> {
   }
 
   @Override
+  public long getAsLong() {
+    return get();
+  }
+
+  @Override
+  public float getAsFloat() {
+    return get();
+  }
+
+  @Override
+  public double getAsDouble() {
+    return get();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;
