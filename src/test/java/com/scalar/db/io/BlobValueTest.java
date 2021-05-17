@@ -43,16 +43,6 @@ public class BlobValueTest {
   }
 
   @Test
-  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    byte[] expected = "some_text".getBytes();
-    Value<?> value = new BlobValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
   public void
       getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
@@ -64,13 +54,23 @@ public class BlobValueTest {
   }
 
   @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     byte[] expected = "some_text".getBytes();
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
-    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -84,13 +84,13 @@ public class BlobValueTest {
   }
 
   @Test
-  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     byte[] expected = "some_text".getBytes();
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
-    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

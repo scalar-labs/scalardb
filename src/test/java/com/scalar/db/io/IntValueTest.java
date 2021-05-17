@@ -50,19 +50,6 @@ public class IntValueTest {
   }
 
   @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    int expected = Integer.MAX_VALUE;
-    Value<?> value = new IntValue(ANY_NAME, expected);
-
-    // Act
-    double actual = value.getAsDouble();
-
-    // Assert
-    assertThat((double) expected).isEqualTo(actual);
-  }
-
-  @Test
   public void getAsFloat_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     int expected = Integer.MAX_VALUE;
@@ -76,13 +63,16 @@ public class IntValueTest {
   }
 
   @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     int expected = Integer.MAX_VALUE;
     Value<?> value = new IntValue(ANY_NAME, expected);
 
-    // Act Assert
-    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
+    // Act
+    double actual = value.getAsDouble();
+
+    // Assert
+    assertThat((double) expected).isEqualTo(actual);
   }
 
   @Test
@@ -104,6 +94,16 @@ public class IntValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

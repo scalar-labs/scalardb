@@ -24,19 +24,6 @@ public class FloatValueTest {
   }
 
   @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    float expected = Float.MAX_VALUE;
-    Value<?> value = new FloatValue(ANY_NAME, expected);
-
-    // Act
-    double actual = value.getAsDouble();
-
-    // Assert
-    assertThat((double) expected).isEqualTo(actual);
-  }
-
-  @Test
   public void getAsFloat_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     float expected = Float.MAX_VALUE;
@@ -50,23 +37,16 @@ public class FloatValueTest {
   }
 
   @Test
-  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     float expected = Float.MAX_VALUE;
     Value<?> value = new FloatValue(ANY_NAME, expected);
 
-    // Act Assert
-    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
-  }
+    // Act
+    double actual = value.getAsDouble();
 
-  @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    float expected = Float.MAX_VALUE;
-    Value<?> value = new FloatValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
+    // Assert
+    assertThat((double) expected).isEqualTo(actual);
   }
 
   @Test
@@ -91,6 +71,16 @@ public class FloatValueTest {
   }
 
   @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    float expected = Float.MAX_VALUE;
+    Value<?> value = new FloatValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     float expected = Float.MAX_VALUE;
@@ -98,6 +88,16 @@ public class FloatValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    float expected = Float.MAX_VALUE;
+    Value<?> value = new FloatValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

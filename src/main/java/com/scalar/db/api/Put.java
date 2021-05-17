@@ -59,30 +59,6 @@ public class Put extends Mutation {
   }
 
   /**
-   * Adds the specified BigInt value to the list of put values.
-   *
-   * @param name a name of the value
-   * @param value a value to put
-   * @return this object
-   */
-  public Put withValue(String name, long value) {
-    values.put(name, new BigIntValue(name, value));
-    return this;
-  }
-
-  /**
-   * Adds the specified Blob value to the list of put values.
-   *
-   * @param name a name of the value
-   * @param value a value to put
-   * @return this object
-   */
-  public Put withValue(String name, byte[] value) {
-    values.put(name, new BlobValue(name, value));
-    return this;
-  }
-
-  /**
    * Adds the specified Boolean value to the list of put values.
    *
    * @param name a name of the value
@@ -91,30 +67,6 @@ public class Put extends Mutation {
    */
   public Put withValue(String name, boolean value) {
     values.put(name, new BooleanValue(name, value));
-    return this;
-  }
-
-  /**
-   * Adds the specified Double value to the list of put values.
-   *
-   * @param name a name of the value
-   * @param value a value to put
-   * @return this object
-   */
-  public Put withValue(String name, double value) {
-    values.put(name, new DoubleValue(name, value));
-    return this;
-  }
-
-  /**
-   * Adds the specified Float value to the list of put values.
-   *
-   * @param name a name of the value
-   * @param value a value to put
-   * @return this object
-   */
-  public Put withValue(String name, float value) {
-    values.put(name, new FloatValue(name, value));
     return this;
   }
 
@@ -131,6 +83,42 @@ public class Put extends Mutation {
   }
 
   /**
+   * Adds the specified BigInt value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, long value) {
+    values.put(name, new BigIntValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Float value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, float value) {
+    values.put(name, new FloatValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Double value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, double value) {
+    values.put(name, new DoubleValue(name, value));
+    return this;
+  }
+
+  /**
    * Adds the specified Text value to the list of put values.
    *
    * @param name a name of the value
@@ -139,6 +127,18 @@ public class Put extends Mutation {
    */
   public Put withValue(String name, String value) {
     values.put(name, new TextValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Blob value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, byte[] value) {
+    values.put(name, new BlobValue(name, value));
     return this;
   }
 

@@ -96,23 +96,23 @@ public class PutTest {
     Put put = preparePut();
 
     // Act
-    put.withValue("val1", 1234L)
-        .withValue("val2", "blob_value".getBytes())
-        .withValue("val3", true)
-        .withValue("val4", 1.23)
-        .withValue("val5", 4.56f)
+    put.withValue("val3", true)
         .withValue("val6", 5678)
-        .withValue("val7", "string_value");
+        .withValue("val1", 1234L)
+        .withValue("val5", 4.56f)
+        .withValue("val4", 1.23)
+        .withValue("val7", "string_value")
+        .withValue("val2", "blob_value".getBytes());
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
-    assertThat(values.get("val1")).isEqualTo(new BigIntValue("val1", 1234L));
-    assertThat(values.get("val2")).isEqualTo(new BlobValue("val2", "blob_value".getBytes()));
     assertThat(values.get("val3")).isEqualTo(new BooleanValue("val3", true));
-    assertThat(values.get("val4")).isEqualTo(new DoubleValue("val4", 1.23));
-    assertThat(values.get("val5")).isEqualTo(new FloatValue("val5", 4.56f));
     assertThat(values.get("val6")).isEqualTo(new IntValue("val6", 5678));
+    assertThat(values.get("val1")).isEqualTo(new BigIntValue("val1", 1234L));
+    assertThat(values.get("val5")).isEqualTo(new FloatValue("val5", 4.56f));
+    assertThat(values.get("val4")).isEqualTo(new DoubleValue("val4", 1.23));
     assertThat(values.get("val7")).isEqualTo(new TextValue("val7", "string_value"));
+    assertThat(values.get("val2")).isEqualTo(new BlobValue("val2", "blob_value".getBytes()));
   }
 
   @Test

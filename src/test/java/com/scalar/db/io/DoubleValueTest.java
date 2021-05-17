@@ -37,26 +37,6 @@ public class DoubleValueTest {
   }
 
   @Test
-  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    double expected = Double.MAX_VALUE;
-    Value<?> value = new DoubleValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    double expected = Double.MAX_VALUE;
-    Value<?> value = new DoubleValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
   public void
       getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
@@ -65,16 +45,6 @@ public class DoubleValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsBoolean).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void getAsFloat_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    double expected = Double.MAX_VALUE;
-    Value<?> value = new DoubleValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsFloat).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -88,6 +58,26 @@ public class DoubleValueTest {
   }
 
   @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    double expected = Double.MAX_VALUE;
+    Value<?> value = new DoubleValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsFloat_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    double expected = Double.MAX_VALUE;
+    Value<?> value = new DoubleValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsFloat).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     boolean expected = Boolean.TRUE;
@@ -95,6 +85,16 @@ public class DoubleValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    double expected = Double.MAX_VALUE;
+    Value<?> value = new DoubleValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

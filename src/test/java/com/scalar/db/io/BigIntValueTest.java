@@ -37,19 +37,6 @@ public class BigIntValueTest {
   }
 
   @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    long expected = Long.MAX_VALUE;
-    Value<?> value = new BigIntValue(ANY_NAME, expected);
-
-    // Act
-    double actual = value.getAsDouble();
-
-    // Assert
-    assertThat((double) expected).isEqualTo(actual);
-  }
-
-  @Test
   public void getAsFloat_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     long expected = Long.MAX_VALUE;
@@ -63,13 +50,16 @@ public class BigIntValueTest {
   }
 
   @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     long expected = Long.MAX_VALUE;
     Value<?> value = new BigIntValue(ANY_NAME, expected);
 
-    // Act Assert
-    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
+    // Act
+    double actual = value.getAsDouble();
+
+    // Assert
+    assertThat((double) expected).isEqualTo(actual);
   }
 
   @Test
@@ -101,6 +91,16 @@ public class BigIntValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    long expected = Long.MAX_VALUE;
+    Value<?> value = new BigIntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

@@ -37,6 +37,16 @@ public class BooleanValueTest {
   }
 
   @Test
+  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    boolean expected = Boolean.TRUE;
+    Value<?> value = new BooleanValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     boolean expected = Boolean.TRUE;
@@ -44,26 +54,6 @@ public class BooleanValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    boolean expected = Boolean.TRUE;
-    Value<?> value = new BooleanValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
-  }
-
-  @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
-    // Arrange
-    boolean expected = Boolean.TRUE;
-    Value<?> value = new BooleanValue(ANY_NAME, expected);
-
-    // Act Assert
-    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -77,13 +67,13 @@ public class BooleanValueTest {
   }
 
   @Test
-  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     boolean expected = Boolean.TRUE;
     Value<?> value = new BooleanValue(ANY_NAME, expected);
 
     // Act Assert
-    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -94,6 +84,16 @@ public class BooleanValueTest {
 
     // Act Assert
     assertThatThrownBy(value::getAsString).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    boolean expected = Boolean.TRUE;
+    Value<?> value = new BooleanValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBytes).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

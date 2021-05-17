@@ -44,21 +44,6 @@ public class TextValueTest {
   }
 
   @Test
-  public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    byte[] expected = "some_text".getBytes();
-    Value<?> value = new TextValue(ANY_NAME, expected);
-
-    // Act
-    Optional<byte[]> actual = value.getAsBytes();
-
-    // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(Arrays.equals(expected, actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
-  }
-
-  @Test
   public void getAsString_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     String expected = "some_text";
@@ -74,13 +59,18 @@ public class TextValueTest {
   }
 
   @Test
-  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    String expected = "some_text";
+    byte[] expected = "some_text".getBytes();
     Value<?> value = new TextValue(ANY_NAME, expected);
 
-    // Act Assert
-    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
+    // Act
+    Optional<byte[]> actual = value.getAsBytes();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(Arrays.equals(expected, actual.get())).isTrue();
+    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -95,13 +85,23 @@ public class TextValueTest {
   }
 
   @Test
-  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     String expected = "some_text";
     Value<?> value = new TextValue(ANY_NAME, expected);
 
     // Act Assert
-    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -115,13 +115,13 @@ public class TextValueTest {
   }
 
   @Test
-  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
     String expected = "some_text";
     Value<?> value = new TextValue(ANY_NAME, expected);
 
     // Act Assert
-    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

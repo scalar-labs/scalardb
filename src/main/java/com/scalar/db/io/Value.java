@@ -32,47 +32,11 @@ public interface Value<T> extends Comparable<T> {
   void accept(ValueVisitor v);
 
   /**
-   * Returns the content of this {@code Value} as a long type
-   *
-   * @return the content of this {@code Value}
-   */
-  default long getAsLong() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Returns the content of this {@code Value} as a byte array type
-   *
-   * @return the content of this {@code Value}
-   */
-  default Optional<byte[]> getAsBytes() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
    * Returns the content of this {@code Value} as a boolean type
    *
    * @return the content of this {@code Value}
    */
   default boolean getAsBoolean() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Returns the content of this {@code Value} as a double type
-   *
-   * @return the content of this {@code Value}
-   */
-  default double getAsDouble() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Returns the content of this {@code Value} as a float type
-   *
-   * @return the content of this {@code Value}
-   */
-  default float getAsFloat() {
     throw new UnsupportedOperationException();
   }
 
@@ -86,11 +50,47 @@ public interface Value<T> extends Comparable<T> {
   }
 
   /**
+   * Returns the content of this {@code Value} as a long type
+   *
+   * @return the content of this {@code Value}
+   */
+  default long getAsLong() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the content of this {@code Value} as a float type
+   *
+   * @return the content of this {@code Value}
+   */
+  default float getAsFloat() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the content of this {@code Value} as a double type
+   *
+   * @return the content of this {@code Value}
+   */
+  default double getAsDouble() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
    * Returns the content of this {@code Value} as a string
    *
    * @return the content of this {@code Value}
    */
   default Optional<String> getAsString() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the content of this {@code Value} as a byte array type
+   *
+   * @return the content of this {@code Value}
+   */
+  default Optional<byte[]> getAsBytes() {
     throw new UnsupportedOperationException();
   }
 }

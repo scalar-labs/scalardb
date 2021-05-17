@@ -127,28 +127,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
     private Builder() {}
 
-    public Builder addBigInt(String name, long value) {
-      values.add(new BigIntValue(name, value));
-      return this;
-    }
-
-    public Builder addBlob(String name, byte[] value) {
-      values.add(new BlobValue(name, value));
-      return this;
-    }
-
     public Builder addBoolean(String name, boolean value) {
       values.add(new BooleanValue(name, value));
-      return this;
-    }
-
-    public Builder addDouble(String name, double value) {
-      values.add(new DoubleValue(name, value));
-      return this;
-    }
-
-    public Builder addFloat(String name, float value) {
-      values.add(new FloatValue(name, value));
       return this;
     }
 
@@ -157,8 +137,28 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return this;
     }
 
+    public Builder addBigInt(String name, long value) {
+      values.add(new BigIntValue(name, value));
+      return this;
+    }
+
+    public Builder addFloat(String name, float value) {
+      values.add(new FloatValue(name, value));
+      return this;
+    }
+
+    public Builder addDouble(String name, double value) {
+      values.add(new DoubleValue(name, value));
+      return this;
+    }
+
     public Builder addText(String name, String value) {
       values.add(new TextValue(name, value));
+      return this;
+    }
+
+    public Builder addBlob(String name, byte[] value) {
+      values.add(new BlobValue(name, value));
       return this;
     }
 
