@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 
 /**
  * A storage implementation with multi-storage for {@link DistributedStorage}.
