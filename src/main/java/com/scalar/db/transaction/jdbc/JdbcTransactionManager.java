@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
@@ -18,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 import java.sql.SQLException;
 import java.util.Optional;
 
