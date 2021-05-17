@@ -54,7 +54,8 @@ public class Dynamo implements DistributedStorage {
         DynamoDbClient.builder()
             .credentialsProvider(
                 StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(config.getUsername(), config.getPassword())))
+                    AwsBasicCredentials.create(
+                        config.getUsername().orElse(null), config.getPassword().orElse(null))))
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
 

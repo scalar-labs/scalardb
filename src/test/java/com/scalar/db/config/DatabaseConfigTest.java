@@ -7,7 +7,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
 
@@ -29,10 +29,52 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Arrays.asList(ANY_HOST));
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithoutUsernameGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.CONTACT_PORT, Integer.toString(ANY_PORT));
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(ANY_PORT);
+    assertThat(config.getUsername().isPresent()).isFalse();
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithoutPasswordGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.CONTACT_PORT, Integer.toString(ANY_PORT));
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(ANY_PORT);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
   }
 
@@ -49,10 +91,12 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Arrays.asList(ANY_HOST));
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getContactPort()).isEqualTo(ANY_PORT);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
   }
 
   @Test
@@ -98,10 +142,12 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Arrays.asList(ANY_HOST));
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
   }
 
@@ -135,10 +181,12 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Arrays.asList(ANY_HOST));
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
   }
 
@@ -173,10 +221,12 @@ public class DatabaseConfigTest {
     DatabaseConfig config = new DatabaseConfig(props);
 
     // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Arrays.asList(ANY_HOST));
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_WRITE);
   }
 
