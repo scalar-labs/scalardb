@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
@@ -82,6 +88,31 @@ public class PutTest {
     // Assert
     assertThat(put.getValues())
         .isEqualTo(ImmutableMap.of(value1.getName(), value1, value2.getName(), value2));
+  }
+
+  @Test
+  public void addValue_ProperValuesGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    Put put = preparePut();
+
+    // Act
+    put.withValue("val3", true)
+        .withValue("val6", 5678)
+        .withValue("val1", 1234L)
+        .withValue("val5", 4.56f)
+        .withValue("val4", 1.23)
+        .withValue("val7", "string_value")
+        .withValue("val2", "blob_value".getBytes());
+
+    // Assert
+    Map<String, Value<?>> values = put.getValues();
+    assertThat(values.get("val3")).isEqualTo(new BooleanValue("val3", true));
+    assertThat(values.get("val6")).isEqualTo(new IntValue("val6", 5678));
+    assertThat(values.get("val1")).isEqualTo(new BigIntValue("val1", 1234L));
+    assertThat(values.get("val5")).isEqualTo(new FloatValue("val5", 4.56f));
+    assertThat(values.get("val4")).isEqualTo(new DoubleValue("val4", 1.23));
+    assertThat(values.get("val7")).isEqualTo(new TextValue("val7", "string_value"));
+    assertThat(values.get("val2")).isEqualTo(new BlobValue("val2", "blob_value".getBytes()));
   }
 
   @Test

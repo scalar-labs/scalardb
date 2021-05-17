@@ -2,7 +2,14 @@ package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -48,6 +55,90 @@ public class Put extends Mutation {
    */
   public Put withValue(Value<?> value) {
     values.put(value.getName(), value);
+    return this;
+  }
+
+  /**
+   * Adds the specified Boolean value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, boolean value) {
+    values.put(name, new BooleanValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Int value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, int value) {
+    values.put(name, new IntValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified BigInt value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, long value) {
+    values.put(name, new BigIntValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Float value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, float value) {
+    values.put(name, new FloatValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Double value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, double value) {
+    values.put(name, new DoubleValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Text value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, String value) {
+    values.put(name, new TextValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Blob value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, byte[] value) {
+    values.put(name, new BlobValue(name, value));
     return this;
   }
 

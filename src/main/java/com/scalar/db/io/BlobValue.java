@@ -60,6 +60,11 @@ public final class BlobValue implements Value<BlobValue> {
   }
 
   @Override
+  public Optional<byte[]> getAsBytes() {
+    return get();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;
