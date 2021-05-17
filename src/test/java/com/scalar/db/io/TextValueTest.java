@@ -16,13 +16,14 @@ public class TextValueTest {
   @Test
   public void getBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = new String("some_text").getBytes(StandardCharsets.UTF_8);
+    byte[] expected = "some_text".getBytes();
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
     Optional<byte[]> actual = value.getBytes();
 
     // Assert
+    assertThat(actual.isPresent()).isTrue();
     assertThat(Arrays.equals(expected, actual.get())).isTrue();
     assertThat(expected == actual.get()).isFalse();
   }
@@ -30,15 +31,97 @@ public class TextValueTest {
   @Test
   public void getString_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    String expected = new String("some_text");
+    String expected = "some_text";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
     Optional<String> actual = value.getString();
 
     // Assert
+    assertThat(actual.isPresent()).isTrue();
     assertThat(expected.equals(actual.get())).isTrue();
     assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void getAsString_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act
+    Optional<String> actual = value.getAsString();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(expected.equals(actual.get())).isTrue();
+    assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    byte[] expected = "some_text".getBytes();
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act
+    Optional<byte[]> actual = value.getAsBytes();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(Arrays.equals(expected, actual.get())).isTrue();
+    assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void
+      getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsBoolean).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsInt).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsLong).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsFloat_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsFloat).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsDouble).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

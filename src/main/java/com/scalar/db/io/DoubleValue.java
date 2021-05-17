@@ -48,6 +48,11 @@ public final class DoubleValue implements Value<DoubleValue> {
   }
 
   @Override
+  public double getAsDouble() {
+    return get();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;
