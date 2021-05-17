@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
@@ -9,20 +11,20 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.NotThreadSafe;
+import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This indicates a transaction session of JDBC.
@@ -38,16 +40,19 @@ public class JdbcTransaction implements DistributedTransaction {
 
   private final JdbcService jdbcService;
   private final Connection connection;
+  private final RdbEngine rdbEngine;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   JdbcTransaction(
       JdbcService jdbcService,
       Connection connection,
+      RdbEngine rdbEngine,
       Optional<String> namespace,
       Optional<String> tableName) {
     this.jdbcService = jdbcService;
     this.connection = connection;
+    this.rdbEngine = rdbEngine;
     this.namespace = namespace;
     this.tableName = tableName;
   }
@@ -112,7 +117,7 @@ public class JdbcTransaction implements DistributedTransaction {
     try {
       jdbcService.put(put, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("put operation failed", e);
+      throw createCrudException(e, "put operation failed");
     }
   }
 
@@ -135,7 +140,7 @@ public class JdbcTransaction implements DistributedTransaction {
     try {
       jdbcService.delete(delete, connection, namespace, tableName);
     } catch (SQLException e) {
-      throw new CrudException("delete operation failed", e);
+      throw createCrudException(e, "delete operation failed");
     }
   }
 
@@ -169,7 +174,7 @@ public class JdbcTransaction implements DistributedTransaction {
       } catch (SQLException sqlException) {
         throw new UnknownTransactionStatusException("failed to rollback", sqlException);
       }
-      throw new CommitException("failed to commit", e);
+      throw createCommitException(e);
     } finally {
       try {
         connection.close();
@@ -197,5 +202,46 @@ public class JdbcTransaction implements DistributedTransaction {
         LOGGER.warn("failed to close the connection", e);
       }
     }
+  }
+
+  private CrudException createCrudException(SQLException e, String message) {
+    if (isConflictError(e)) {
+      return new CrudConflictException("conflict happened; try restarting transaction", e);
+    }
+    return new CrudException(message, e);
+  }
+
+  private CommitException createCommitException(SQLException e) {
+    if (isConflictError(e)) {
+      return new CommitConflictException("conflict happened; try restarting transaction", e);
+    }
+    return new CommitException("failed to commit", e);
+  }
+
+  private boolean isConflictError(SQLException e) {
+    switch (rdbEngine) {
+      case MYSQL:
+        if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
+          // Deadlock found when trying to get lock or Lock wait timeout exceeded
+          return true;
+        }
+        break;
+      case POSTGRESQL:
+        if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+          // Serialization error happened or Dead lock found
+          return true;
+        }
+        break;
+      case ORACLE:
+        if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
+          // ORA-08177: can't serialize access for this transaction
+          // ORA-00060: deadlock detected while waiting for resource
+          return true;
+        }
+        break;
+      default:
+        break;
+    }
+    return false;
   }
 }
