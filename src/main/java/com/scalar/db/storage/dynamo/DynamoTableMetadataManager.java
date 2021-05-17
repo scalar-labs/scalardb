@@ -1,8 +1,12 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
-import com.scalar.db.storage.common.metadata.TableMetadataManager;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
+import com.scalar.db.io.DataType;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -14,16 +18,21 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 
 /**
- * A manager to read and cache {@link DynamoTableMetadata} to know the type of each column
+ * A manager to read and cache {@link TableMetadata} to know the type of each column
  *
  * @author Yuji Ito
  */
 @ThreadSafe
 public class DynamoTableMetadataManager implements TableMetadataManager {
-  private final String METADATA_TABLE = "scalardb.metadata";
+  private static final String METADATA_TABLE = "scalardb.metadata";
+  private static final String PARTITION_KEY = "partitionKey";
+  private static final String CLUSTERING_KEY = "clusteringKey";
+  private static final String SECONDARY_INDEX = "secondaryIndex";
+  private static final String COLUMNS = "columns";
+
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
-  private final Map<String, DynamoTableMetadata> tableMetadataMap;
+  private final Map<String, TableMetadata> tableMetadataMap;
 
   public DynamoTableMetadataManager(DynamoDbClient client, Optional<String> namespacePrefix) {
     this.client = client;
@@ -32,24 +41,24 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   }
 
   @Override
-  public DynamoTableMetadata getTableMetadata(Operation operation) {
+  public TableMetadata getTableMetadata(Operation operation) {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
 
     String fullName = operation.forFullTableName().get();
     if (!tableMetadataMap.containsKey(fullName)) {
-      DynamoTableMetadata dynamoTableMetadata = readMetadata(fullName);
-      if (dynamoTableMetadata == null) {
+      TableMetadata tableMetadata = readMetadata(fullName);
+      if (tableMetadata == null) {
         return null;
       }
-      tableMetadataMap.put(fullName, dynamoTableMetadata);
+      tableMetadataMap.put(fullName, tableMetadata);
     }
 
     return tableMetadataMap.get(fullName);
   }
 
-  private DynamoTableMetadata readMetadata(String fullName) {
+  private TableMetadata readMetadata(String fullName) {
     Map<String, AttributeValue> key = new HashMap<>();
     key.put("table", AttributeValue.builder().s(fullName).build());
     String metadataTable = namespacePrefix.map(s -> s + METADATA_TABLE).orElse(METADATA_TABLE);
@@ -62,9 +71,52 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
         // The specified table is not found
         return null;
       }
-      return new DynamoTableMetadata(metadata);
+      return createTableMetadata(metadata);
     } catch (DynamoDbException e) {
       throw new StorageRuntimeException("Failed to read the table metadata", e);
+    }
+  }
+
+  private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata) {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    metadata
+        .get(COLUMNS)
+        .m()
+        .forEach((name, type) -> builder.addColumn(name, convertDataType(type.s())));
+    metadata.get(PARTITION_KEY).l().stream()
+        .map(AttributeValue::s)
+        .forEach(builder::addPartitionKey);
+    if (metadata.containsKey(CLUSTERING_KEY)) {
+      // The clustering order is always ASC for now
+      metadata.get(CLUSTERING_KEY).l().stream()
+          .map(AttributeValue::s)
+          .forEach(n -> builder.addClusteringKey(n, Scan.Ordering.Order.ASC));
+    }
+    if (metadata.containsKey(SECONDARY_INDEX)) {
+      metadata.get(SECONDARY_INDEX).ss().forEach(builder::addSecondaryIndex);
+    }
+    return builder.build();
+  }
+
+  private DataType convertDataType(String columnType) {
+    switch (columnType) {
+      case "int":
+        return DataType.INT;
+      case "bigint":
+        return DataType.BIGINT;
+      case "float":
+        return DataType.FLOAT;
+      case "double":
+        return DataType.DOUBLE;
+      case "text": // for backwards compatibility
+      case "varchar":
+        return DataType.TEXT;
+      case "boolean":
+        return DataType.BOOLEAN;
+      case "blob":
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(columnType);
     }
   }
 }

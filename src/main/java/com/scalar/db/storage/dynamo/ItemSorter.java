@@ -1,17 +1,16 @@
 package com.scalar.db.storage.dynamo;
 
-import com.scalar.db.api.Scan;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
-import com.scalar.db.storage.common.metadata.DataType;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Collections;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
+import com.scalar.db.io.DataType;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.concurrent.NotThreadSafe;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /**
  * A sorter for items retrieved from DynamoDB
@@ -23,7 +22,7 @@ public class ItemSorter {
   private final Scan scan;
   private final Comparator<Map<String, AttributeValue>> comparator;
 
-  public ItemSorter(Scan scan, DynamoTableMetadata metadata) {
+  public ItemSorter(Scan scan, TableMetadata metadata) {
     checkNotNull(metadata);
     this.scan = checkNotNull(scan);
     this.comparator = getComparator(scan, metadata);
@@ -33,7 +32,7 @@ public class ItemSorter {
     checkNotNull(items);
 
     if (!scan.getOrderings().isEmpty()) {
-      Collections.sort(items, comparator);
+      items.sort(comparator);
     }
 
     int limit = scan.getLimit();
@@ -44,23 +43,20 @@ public class ItemSorter {
     return items;
   }
 
-  private Comparator<Map<String, AttributeValue>> getComparator(
-      Scan scan, DynamoTableMetadata metadata) {
-    return new Comparator<Map<String, AttributeValue>>() {
-      public int compare(Map<String, AttributeValue> o1, Map<String, AttributeValue> o2) {
-        int compareResult = 0;
-        for (Scan.Ordering ordering : scan.getOrderings()) {
-          String name = ordering.getName();
-          compareResult =
-              compareAttributeValues(metadata.getColumnDataType(name), o1.get(name), o2.get(name));
-          compareResult *= ordering.getOrder() == Scan.Ordering.Order.ASC ? 1 : -1;
-          if (compareResult != 0) {
-            break;
-          }
+  private Comparator<Map<String, AttributeValue>> getComparator(Scan scan, TableMetadata metadata) {
+    return (o1, o2) -> {
+      int compareResult = 0;
+      for (Scan.Ordering ordering : scan.getOrderings()) {
+        String name = ordering.getName();
+        compareResult =
+            compareAttributeValues(metadata.getColumnDataType(name), o1.get(name), o2.get(name));
+        compareResult *= ordering.getOrder() == Scan.Ordering.Order.ASC ? 1 : -1;
+        if (compareResult != 0) {
+          break;
         }
-
-        return compareResult;
       }
+
+      return compareResult;
     };
   }
 

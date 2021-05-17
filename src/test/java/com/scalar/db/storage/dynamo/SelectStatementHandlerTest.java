@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -52,7 +53,7 @@ public class SelectStatementHandlerTest {
   private SelectStatementHandler handler;
   @Mock private DynamoDbClient client;
   @Mock private DynamoTableMetadataManager metadataManager;
-  @Mock private DynamoTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private GetItemResponse getResponse;
   @Mock private QueryResponse queryResponse;
 
@@ -69,7 +70,6 @@ public class SelectStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new HashSet<>(Collections.singletonList(ANY_NAME_3)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Get prepareGet() {

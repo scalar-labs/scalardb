@@ -16,21 +16,19 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.common.metadata.TableMetadataManager;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.util.Utility;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
@@ -43,7 +41,6 @@ public class OperationCheckerTest {
   private static final Optional<String> NAMESPACE_PREFIX = Optional.empty();
   private static final Optional<String> NAMESPACE = Optional.of("s1");
   private static final Optional<String> TABLE_NAME = Optional.of("t1");
-  private static final String TABLE_FULL_NAME = "s1.t1";
   private static final String PKEY1 = "p1";
   private static final String PKEY2 = "p2";
   private static final String CKEY1 = "c1";
@@ -59,31 +56,23 @@ public class OperationCheckerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    // Dummy metadata. Using JdbcTableMetadata here as an example
-    JdbcTableMetadata metadata =
-        new JdbcTableMetadata(
-            TABLE_FULL_NAME,
-            Arrays.asList(PKEY1, PKEY2),
-            Arrays.asList(CKEY1, CKEY2),
-            new HashMap<String, Scan.Ordering.Order>() {
-              {
-                put(CKEY1, Scan.Ordering.Order.ASC);
-                put(CKEY2, Scan.Ordering.Order.DESC);
-              }
-            },
-            new LinkedHashMap<String, DataType>() {
-              {
-                put(PKEY1, DataType.INT);
-                put(PKEY2, DataType.TEXT);
-                put(CKEY1, DataType.INT);
-                put(CKEY2, DataType.TEXT);
-                put(COL1, DataType.INT);
-                put(COL2, DataType.DOUBLE);
-                put(COL3, DataType.BOOLEAN);
-              }
-            },
-            Collections.singletonList(COL1));
-    when(metadataManager.getTableMetadata(any())).thenReturn(metadata);
+    // Dummy metadata
+    when(metadataManager.getTableMetadata(any()))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn(PKEY1, DataType.INT)
+                .addColumn(PKEY2, DataType.TEXT)
+                .addColumn(CKEY1, DataType.INT)
+                .addColumn(CKEY2, DataType.TEXT)
+                .addColumn(COL1, DataType.INT)
+                .addColumn(COL2, DataType.DOUBLE)
+                .addColumn(COL3, DataType.BOOLEAN)
+                .addPartitionKey(PKEY1)
+                .addPartitionKey(PKEY2)
+                .addClusteringKey(CKEY1, Scan.Ordering.Order.ASC)
+                .addClusteringKey(CKEY2, Scan.Ordering.Order.DESC)
+                .addSecondaryIndex(COL1)
+                .build());
 
     operationChecker = new OperationChecker(metadataManager);
   }

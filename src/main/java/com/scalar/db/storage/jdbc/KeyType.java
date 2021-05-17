@@ -1,4 +1,4 @@
-package com.scalar.db.storage.jdbc.metadata;
+package com.scalar.db.storage.jdbc;
 
 public enum KeyType {
   PARTITION,

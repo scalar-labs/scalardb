@@ -12,7 +12,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import java.sql.Connection;

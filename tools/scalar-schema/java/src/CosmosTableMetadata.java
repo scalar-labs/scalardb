@@ -17,7 +17,6 @@ public class CosmosTableMetadata {
   private LinkedHashSet<String> clusteringKeyNames;
   private Set<String> secondaryIndexNames;
   private Map<String, String> columns;
-  private List<String> keyNames;
 
   public CosmosTableMetadata() {}
 
@@ -41,10 +40,6 @@ public class CosmosTableMetadata {
     this.columns = ImmutableMap.copyOf(columns);
   }
 
-  public void setKeyNames(List<String> keyNames) {
-    this.keyNames = ImmutableList.copyOf(keyNames);
-  }
-
   public String getId() {
     return id;
   }
@@ -63,19 +58,5 @@ public class CosmosTableMetadata {
 
   public Map<String, String> getColumns() {
     return columns;
-  }
-
-  public List<String> getKeyNames() {
-    if (keyNames != null) {
-      return keyNames;
-    }
-
-    keyNames =
-        new ImmutableList.Builder<String>()
-            .addAll(partitionKeyNames)
-            .addAll(clusteringKeyNames)
-            .build();
-
-    return keyNames;
   }
 }

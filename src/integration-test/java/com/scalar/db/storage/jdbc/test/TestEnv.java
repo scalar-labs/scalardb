@@ -1,13 +1,13 @@
 package com.scalar.db.storage.jdbc.test;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import java.io.Closeable;
 import java.io.IOException;
@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -125,7 +126,9 @@ public class TestEnv implements Closeable {
   private final BasicDataSource dataSource;
   private final JdbcDatabaseConfig config;
 
-  private final List<JdbcTableMetadata> metadataList;
+  private final List<String> schemaList;
+  private final List<String> tableList;
+  private final List<TableMetadata> metadataList;
 
   public TestEnv() {
     this(
@@ -155,43 +158,15 @@ public class TestEnv implements Closeable {
     namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
     config = new JdbcDatabaseConfig(props);
 
+    schemaList = new ArrayList<>();
+    tableList = new ArrayList<>();
     metadataList = new ArrayList<>();
   }
 
-  public void register(
-      String schema,
-      String table,
-      List<String> partitionKeyNames,
-      List<String> clusteringKeyNames,
-      Map<String, Scan.Ordering.Order> clusteringOrders,
-      Map<String, DataType> columnDataTypes,
-      List<String> secondaryIndexNames) {
-    metadataList.add(
-        new JdbcTableMetadata(
-            namespacePrefix() + schema,
-            table,
-            partitionKeyNames,
-            clusteringKeyNames,
-            clusteringOrders,
-            columnDataTypes,
-            secondaryIndexNames));
-  }
-
-  public void register(
-      String schema,
-      String table,
-      List<String> partitionKeyNames,
-      List<String> clusteringKeyNames,
-      Map<String, Scan.Ordering.Order> clusteringOrders,
-      Map<String, DataType> columnDataTypes) {
-    register(
-        schema,
-        table,
-        partitionKeyNames,
-        clusteringKeyNames,
-        clusteringOrders,
-        columnDataTypes,
-        new ArrayList<>());
+  public void register(String schema, String table, TableMetadata metadata) {
+    schemaList.add(schema);
+    tableList.add(table);
+    metadataList.add(metadata);
   }
 
   private String namespacePrefix() {
@@ -238,10 +213,11 @@ public class TestEnv implements Closeable {
     }
   }
 
-  private void createTable(JdbcTableMetadata metadata) throws SQLException {
+  private void createTable(String schema, String table, TableMetadata metadata)
+      throws SQLException {
     execute(
         "CREATE TABLE "
-            + enclosedFullTableName(metadata.getSchema(), metadata.getTable())
+            + enclosedFullTableName(schema, table)
             + "("
             + metadata.getColumnNames().stream()
                 .map(c -> enclose(c) + " " + getColumnDataType(c, metadata))
@@ -255,7 +231,7 @@ public class TestEnv implements Closeable {
             + "))");
   }
 
-  private String getColumnDataType(String column, JdbcTableMetadata metadata) {
+  private String getColumnDataType(String column, TableMetadata metadata) {
     boolean isPrimaryKey =
         metadata.getPartitionKeyNames().contains(column)
             || metadata.getClusteringKeyNames().contains(column);
@@ -277,15 +253,15 @@ public class TestEnv implements Closeable {
     return DATA_TYPE_MAPPING.get(rdbEngine);
   }
 
-  private void createIndex(JdbcTableMetadata metadata) throws SQLException {
+  private void createIndex(String schema, String table, TableMetadata metadata)
+      throws SQLException {
     for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      String indexName =
-          "index_" + metadata.getSchema() + "_" + metadata.getTable() + "_" + indexedColumn;
+      String indexName = "index_" + schema + "_" + table + "_" + indexedColumn;
       execute(
           "CREATE INDEX "
               + enclose(indexName)
               + " ON "
-              + enclosedFullTableName(metadata.getSchema(), metadata.getTable())
+              + enclosedFullTableName(schema, table)
               + "("
               + enclose(indexedColumn)
               + ")");
@@ -293,29 +269,31 @@ public class TestEnv implements Closeable {
   }
 
   public void insertMetadata() throws SQLException {
-    for (JdbcTableMetadata metadata : metadataList) {
-      insertMetadata(metadata);
+    for (int i = 0; i < metadataList.size(); i++) {
+      insertMetadata(schemaList.get(i), tableList.get(i), metadataList.get(i));
     }
   }
 
-  private void insertMetadata(JdbcTableMetadata metadata) throws SQLException {
+  private void insertMetadata(String schema, String table, TableMetadata metadata)
+      throws SQLException {
     int ordinalPosition = 1;
     for (String partitionKeyName : metadata.getPartitionKeyNames()) {
-      insertMetadata(partitionKeyName, ordinalPosition++, metadata);
+      insertMetadata(partitionKeyName, ordinalPosition++, schema, table, metadata);
     }
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
-      insertMetadata(clusteringKeyName, ordinalPosition++, metadata);
+      insertMetadata(clusteringKeyName, ordinalPosition++, schema, table, metadata);
     }
     for (String column : metadata.getColumnNames()) {
       if (metadata.getPartitionKeyNames().contains(column)
           || metadata.getClusteringKeyNames().contains(column)) {
         continue;
       }
-      insertMetadata(column, ordinalPosition++, metadata);
+      insertMetadata(column, ordinalPosition++, schema, table, metadata);
     }
   }
 
-  private void insertMetadata(String column, int ordinalPosition, JdbcTableMetadata metadata)
+  private void insertMetadata(
+      String column, int ordinalPosition, String schema, String table, TableMetadata metadata)
       throws SQLException {
     String keyType = getKeyType(column, metadata);
     Scan.Ordering.Order keyOrder = metadata.getClusteringOrder(column);
@@ -323,7 +301,7 @@ public class TestEnv implements Closeable {
         String.format(
             "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
             enclosedMetadataTableName(),
-            metadata.getFullTableName(),
+            schema + "." + table,
             column,
             metadata.getColumnDataType(column),
             keyType != null ? "'" + keyType + "'" : "NULL",
@@ -332,7 +310,7 @@ public class TestEnv implements Closeable {
             ordinalPosition));
   }
 
-  private String getKeyType(String column, JdbcTableMetadata metadata) {
+  private String getKeyType(String column, TableMetadata metadata) {
     if (metadata.getPartitionKeyNames().contains(column)) {
       return "PARTITION";
     } else if (metadata.getClusteringKeyNames().contains(column)) {
@@ -351,8 +329,8 @@ public class TestEnv implements Closeable {
     }
   }
 
-  private void dropTable(JdbcTableMetadata metadata) throws SQLException {
-    execute("DROP TABLE " + enclosedFullTableName(metadata.getSchema(), metadata.getTable()));
+  private void dropTable(String schema, String table) throws SQLException {
+    execute("DROP TABLE " + enclosedFullTableName(schema, table));
   }
 
   public void createMetadataTable() throws SQLException {
@@ -428,38 +406,36 @@ public class TestEnv implements Closeable {
   }
 
   public void createTables() throws SQLException {
-    Set<String> schemas =
-        metadataList.stream().map(JdbcTableMetadata::getSchema).collect(Collectors.toSet());
+    Set<String> schemas = new HashSet<>(schemaList);
     for (String schema : schemas) {
       createSchema(schema);
     }
 
-    for (JdbcTableMetadata metadata : metadataList) {
-      createTable(metadata);
+    for (int i = 0; i < metadataList.size(); i++) {
+      createTable(schemaList.get(i), tableList.get(i), metadataList.get(i));
     }
 
-    for (JdbcTableMetadata metadata : metadataList) {
-      createIndex(metadata);
+    for (int i = 0; i < metadataList.size(); i++) {
+      createIndex(schemaList.get(i), tableList.get(i), metadataList.get(i));
     }
   }
 
   public void deleteTableData() throws SQLException {
-    for (JdbcTableMetadata metadata : metadataList) {
-      deleteTableData(metadata);
+    for (int i = 0; i < metadataList.size(); i++) {
+      deleteTableData(schemaList.get(i), tableList.get(i));
     }
   }
 
-  private void deleteTableData(JdbcTableMetadata metadata) throws SQLException {
-    execute("DELETE FROM " + enclosedFullTableName(metadata.getSchema(), metadata.getTable()));
+  private void deleteTableData(String schema, String table) throws SQLException {
+    execute("DELETE FROM " + enclosedFullTableName(schema, table));
   }
 
   public void dropTables() throws SQLException {
-    for (JdbcTableMetadata metadata : metadataList) {
-      dropTable(metadata);
+    for (int i = 0; i < metadataList.size(); i++) {
+      dropTable(schemaList.get(i), tableList.get(i));
     }
 
-    Set<String> schemas =
-        metadataList.stream().map(JdbcTableMetadata::getSchema).collect(Collectors.toSet());
+    Set<String> schemas = new HashSet<>(schemaList);
     for (String schema : schemas) {
       dropSchema(schema);
     }

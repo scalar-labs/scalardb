@@ -11,6 +11,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -38,7 +39,7 @@ public class CosmosMutationTest {
 
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
-  @Mock private CosmosTableMetadata metadata;
+  @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
@@ -47,7 +48,6 @@ public class CosmosMutationTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Put preparePut() {

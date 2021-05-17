@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import java.util.Iterator;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -12,12 +13,10 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public final class ScannerIterator implements Iterator<Result> {
   private final Iterator<Map<String, AttributeValue>> iterator;
   private final Selection selection;
-  private final DynamoTableMetadata metadata;
+  private final TableMetadata metadata;
 
   public ScannerIterator(
-      Iterator<Map<String, AttributeValue>> iterator,
-      Selection selection,
-      DynamoTableMetadata metadata) {
+      Iterator<Map<String, AttributeValue>> iterator, Selection selection, TableMetadata metadata) {
     this.iterator = iterator;
     this.selection = selection;
     this.metadata = metadata;

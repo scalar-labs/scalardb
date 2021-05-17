@@ -3,6 +3,8 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.ArrayList;
@@ -41,29 +43,30 @@ public class ItemSorterTest {
   private static final byte[] ANY_SMALL_BLOB = "a".getBytes();
   private static final String ANY_COLUMN_NAME_1 = "val1";
 
-  private DynamoTableMetadata metadata;
+  private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
-    Map<String, AttributeValue> metadataMap = new HashMap<>();
-    metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
-    metadataMap.put(
-        "clusteringKey",
-        AttributeValue.builder()
-            .ss(ANY_NAME_2, ANY_NAME_3, ANY_NAME_4, ANY_NAME_5, ANY_NAME_6, ANY_NAME_7, ANY_NAME_8)
-            .build());
-    Map<String, AttributeValue> columns = new HashMap<>();
-    columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
-    columns.put(ANY_NAME_2, AttributeValue.builder().s("int").build());
-    columns.put(ANY_NAME_3, AttributeValue.builder().s("boolean").build());
-    columns.put(ANY_NAME_4, AttributeValue.builder().s("bigint").build());
-    columns.put(ANY_NAME_5, AttributeValue.builder().s("float").build());
-    columns.put(ANY_NAME_6, AttributeValue.builder().s("double").build());
-    columns.put(ANY_NAME_7, AttributeValue.builder().s("text").build());
-    columns.put(ANY_NAME_8, AttributeValue.builder().s("blob").build());
-    columns.put(ANY_COLUMN_NAME_1, AttributeValue.builder().s("text").build());
-    metadataMap.put("columns", AttributeValue.builder().m(columns).build());
-    metadata = new DynamoTableMetadata(metadataMap);
+    metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_NAME_2, DataType.INT)
+            .addColumn(ANY_NAME_3, DataType.BOOLEAN)
+            .addColumn(ANY_NAME_4, DataType.BIGINT)
+            .addColumn(ANY_NAME_5, DataType.FLOAT)
+            .addColumn(ANY_NAME_6, DataType.DOUBLE)
+            .addColumn(ANY_NAME_7, DataType.TEXT)
+            .addColumn(ANY_NAME_8, DataType.BLOB)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.TEXT)
+            .addPartitionKey(ANY_NAME_1)
+            .addClusteringKey(ANY_NAME_2)
+            .addClusteringKey(ANY_NAME_3)
+            .addClusteringKey(ANY_NAME_4)
+            .addClusteringKey(ANY_NAME_5)
+            .addClusteringKey(ANY_NAME_6)
+            .addClusteringKey(ANY_NAME_7)
+            .addClusteringKey(ANY_NAME_8)
+            .build();
   }
 
   private Map<String, AttributeValue> prepareItemWithSmallValues() {

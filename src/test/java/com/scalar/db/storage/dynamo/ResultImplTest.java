@@ -7,9 +7,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.Get;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
@@ -41,30 +43,25 @@ public class ResultImplTest {
   private static final String ANY_COLUMN_NAME_7 = "val7";
 
   private Get get;
-  private DynamoTableMetadata metadata;
+  private TableMetadata metadata;
   private Map<String, AttributeValue> item = new HashMap<>();
 
   @Before
   public void setUp() throws Exception {
-    Map<String, AttributeValue> metadataMap = new HashMap<>();
-    metadataMap.put(
-        "partitionKey",
-        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_1).build()).build());
-    metadataMap.put(
-        "clusteringKey",
-        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_2).build()).build());
-    Map<String, AttributeValue> columns = new HashMap<>();
-    columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
-    columns.put(ANY_NAME_2, AttributeValue.builder().s("text").build());
-    columns.put(ANY_COLUMN_NAME_1, AttributeValue.builder().s("boolean").build());
-    columns.put(ANY_COLUMN_NAME_2, AttributeValue.builder().s("int").build());
-    columns.put(ANY_COLUMN_NAME_3, AttributeValue.builder().s("bigint").build());
-    columns.put(ANY_COLUMN_NAME_4, AttributeValue.builder().s("float").build());
-    columns.put(ANY_COLUMN_NAME_5, AttributeValue.builder().s("double").build());
-    columns.put(ANY_COLUMN_NAME_6, AttributeValue.builder().s("text").build());
-    columns.put(ANY_COLUMN_NAME_7, AttributeValue.builder().s("blob").build());
-    metadataMap.put("columns", AttributeValue.builder().m(columns).build());
-    metadata = new DynamoTableMetadata(metadataMap);
+    metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_NAME_2, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.BOOLEAN)
+            .addColumn(ANY_COLUMN_NAME_2, DataType.INT)
+            .addColumn(ANY_COLUMN_NAME_3, DataType.BIGINT)
+            .addColumn(ANY_COLUMN_NAME_4, DataType.FLOAT)
+            .addColumn(ANY_COLUMN_NAME_5, DataType.DOUBLE)
+            .addColumn(ANY_COLUMN_NAME_6, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_7, DataType.BLOB)
+            .addPartitionKey(ANY_NAME_1)
+            .addClusteringKey(ANY_NAME_2)
+            .build();
 
     item.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
     item.put(ANY_NAME_1, AttributeValue.builder().s(ANY_TEXT_1).build());

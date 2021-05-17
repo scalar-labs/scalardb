@@ -1,12 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.IntegrationTestBase;
-import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import java.util.Collections;
-import java.util.HashMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -34,23 +32,16 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
     testEnv.register(
         NAMESPACE,
         TABLE,
-        Collections.singletonList(COL_NAME1),
-        Collections.singletonList(COL_NAME4),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(COL_NAME4, Scan.Ordering.Order.ASC);
-          }
-        },
-        new HashMap<String, DataType>() {
-          {
-            put(COL_NAME1, DataType.INT);
-            put(COL_NAME2, DataType.TEXT);
-            put(COL_NAME3, DataType.INT);
-            put(COL_NAME4, DataType.INT);
-            put(COL_NAME5, DataType.BOOLEAN);
-          }
-        },
-        Collections.singletonList(COL_NAME3));
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.INT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.BOOLEAN)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME4)
+            .addSecondaryIndex(COL_NAME3)
+            .build());
     testEnv.createMetadataTable();
     testEnv.createTables();
     testEnv.insertMetadata();

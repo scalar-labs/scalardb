@@ -7,11 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.azure.cosmos.models.PartitionKey;
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -29,13 +29,12 @@ public class CosmosOperationTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
-  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final int ANY_INT_1 = 1;
 
   @Mock private CosmosTableMetadataManager metadataManager;
-  @Mock private CosmosTableMetadata metadata;
+  @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
@@ -161,7 +160,10 @@ public class CosmosOperationTest {
   @Test
   public void getId_MultipleKeysGiven_ShouldReturnConcatenatedPartitionKey() {
     // Arrange
-    when(metadata.getKeyNames()).thenReturn(ImmutableList.of(ANY_NAME_1, ANY_NAME_3, ANY_NAME_2));
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_3)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
         new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));

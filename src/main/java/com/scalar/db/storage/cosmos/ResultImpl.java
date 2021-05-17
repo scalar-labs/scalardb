@@ -7,17 +7,18 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.DataType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -29,16 +30,13 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 public class ResultImpl implements Result {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
-  private final CosmosTableMetadata metadata;
+  private final TableMetadata metadata;
   private final Map<String, Value<?>> values;
 
-  public ResultImpl(Record record, Selection selection, CosmosTableMetadata metadata) {
+  public ResultImpl(Record record, Selection selection, TableMetadata metadata) {
     checkNotNull(record);
     this.metadata = checkNotNull(metadata);
     values = new HashMap<>();
@@ -92,7 +90,7 @@ public class ResultImpl implements Result {
   }
 
   @VisibleForTesting
-  void interpret(Record record, Selection selection, CosmosTableMetadata metadata) {
+  void interpret(Record record, Selection selection, TableMetadata metadata) {
     Map<String, Object> recordValues = record.getValues();
     if (selection.getProjections().isEmpty()) {
       metadata

@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc.query;
 
+import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.util.List;
 import java.util.Objects;
 

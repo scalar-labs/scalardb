@@ -12,6 +12,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -127,7 +128,7 @@ public class Dynamo implements DistributedStorage {
       return Optional.empty();
     }
 
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(get);
+    TableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(items.get(0), get, metadata));
   }
 
@@ -138,7 +139,7 @@ public class Dynamo implements DistributedStorage {
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
-    DynamoTableMetadata metadata = metadataManager.getTableMetadata(scan);
+    TableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(items, scan, metadata);
   }
 

@@ -6,6 +6,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -18,11 +19,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @NotThreadSafe
 public final class ScannerImpl implements Scanner {
   private final Selection selection;
-  private final DynamoTableMetadata metadata;
+  private final TableMetadata metadata;
   private List<Map<String, AttributeValue>> items;
 
   public ScannerImpl(
-      List<Map<String, AttributeValue>> items, Selection selection, DynamoTableMetadata metadata) {
+      List<Map<String, AttributeValue>> items, Selection selection, TableMetadata metadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, metadata);
     if (dynamoOperation.isSingleClusteringKey()) {
       // the ordering and the limitation already are applied in DynamoDB if there is only a single

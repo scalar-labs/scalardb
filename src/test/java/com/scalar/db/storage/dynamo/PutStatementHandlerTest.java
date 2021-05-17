@@ -13,12 +13,12 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -49,7 +49,7 @@ public class PutStatementHandlerTest {
   private PutStatementHandler handler;
   @Mock private DynamoDbClient client;
   @Mock private DynamoTableMetadataManager metadataManager;
-  @Mock private DynamoTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private UpdateItemResponse updateResponse;
 
   @Before
@@ -61,7 +61,6 @@ public class PutStatementHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Put preparePut() {
@@ -109,7 +108,6 @@ public class PutStatementHandlerTest {
   public void handle_PutWithoutClusteringKeyGiven_ShouldCallUpdateItem() {
     // Arrange
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1));
     Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
     Put put =
         new Put(partitionKey)

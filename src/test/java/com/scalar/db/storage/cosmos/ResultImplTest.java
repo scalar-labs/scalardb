@@ -8,9 +8,11 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
@@ -20,7 +22,6 @@ import com.scalar.db.io.Value;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Before;
@@ -46,27 +47,24 @@ public class ResultImplTest {
 
   private Record record;
   private Get get;
-  private CosmosTableMetadata metadata;
+  private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
-    metadata = new CosmosTableMetadata();
-    metadata.setId("ks.tbl");
-    metadata.setPartitionKeyNames(Collections.singletonList(ANY_NAME_1));
-    metadata.setClusteringKeyNames(Collections.singletonList(ANY_NAME_2));
-    ImmutableMap<String, String> columns =
-        ImmutableMap.<String, String>builder()
-            .put(ANY_NAME_1, "text")
-            .put(ANY_NAME_2, "text")
-            .put(ANY_COLUMN_NAME_1, "boolean")
-            .put(ANY_COLUMN_NAME_2, "int")
-            .put(ANY_COLUMN_NAME_3, "bigint")
-            .put(ANY_COLUMN_NAME_4, "float")
-            .put(ANY_COLUMN_NAME_5, "double")
-            .put(ANY_COLUMN_NAME_6, "text")
-            .put(ANY_COLUMN_NAME_7, "blob")
+    metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, DataType.TEXT)
+            .addColumn(ANY_NAME_2, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, DataType.BOOLEAN)
+            .addColumn(ANY_COLUMN_NAME_2, DataType.INT)
+            .addColumn(ANY_COLUMN_NAME_3, DataType.BIGINT)
+            .addColumn(ANY_COLUMN_NAME_4, DataType.FLOAT)
+            .addColumn(ANY_COLUMN_NAME_5, DataType.DOUBLE)
+            .addColumn(ANY_COLUMN_NAME_6, DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_7, DataType.BLOB)
+            .addPartitionKey(ANY_NAME_1)
+            .addClusteringKey(ANY_NAME_2)
             .build();
-    metadata.setColumns(columns);
 
     record = new Record();
     record.setId(ANY_ID_1);

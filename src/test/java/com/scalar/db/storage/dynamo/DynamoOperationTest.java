@@ -6,9 +6,9 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -28,7 +28,7 @@ public class DynamoOperationTest {
   private static final String ANY_TEXT_2 = "text2";
 
   @Mock private DynamoTableMetadataManager metadataManager;
-  @Mock private DynamoTableMetadata metadata;
+  @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() throws Exception {
@@ -39,7 +39,6 @@ public class DynamoOperationTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Get prepareGet() {

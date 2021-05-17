@@ -3,8 +3,8 @@ package com.scalar.db.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Scan;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.common.metadata.TableMetadata;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import java.util.Iterator;
 import org.junit.Test;
 

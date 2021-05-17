@@ -8,6 +8,7 @@ import com.datastax.driver.core.Row;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -37,10 +38,10 @@ import org.slf4j.LoggerFactory;
 @Immutable
 public class ResultImpl implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
-  private final CassandraTableMetadata metadata;
+  private final TableMetadata metadata;
   private Map<String, Value<?>> values;
 
-  public ResultImpl(Row row, CassandraTableMetadata metadata) {
+  public ResultImpl(Row row, TableMetadata metadata) {
     checkNotNull(row);
     this.metadata = checkNotNull(metadata);
     interpret(row);
@@ -52,7 +53,7 @@ public class ResultImpl implements Result {
    * @param values
    */
   @VisibleForTesting
-  ResultImpl(Collection<Value<?>> values, CassandraTableMetadata metadata) {
+  ResultImpl(Collection<Value<?>> values, TableMetadata metadata) {
     this.metadata = metadata;
     this.values = new HashMap<>();
     values.forEach(v -> this.values.put(v.getName(), v));

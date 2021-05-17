@@ -2,11 +2,11 @@ package com.scalar.db.storage.jdbc.query;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -23,7 +23,7 @@ public interface SelectQuery extends Query {
     final List<String> projections;
     String schema;
     String table;
-    JdbcTableMetadata tableMetadata;
+    TableMetadata tableMetadata;
     Key partitionKey;
     Optional<Key> clusteringKey = Optional.empty();
     Optional<Key> commonClusteringKey = Optional.empty();

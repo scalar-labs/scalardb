@@ -1,4 +1,4 @@
-package com.scalar.db.storage.jdbc.metadata;
+package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
@@ -8,18 +8,14 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.common.metadata.TableMetadataManager;
-import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.io.DataType;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
@@ -27,7 +23,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.sql.DataSource;
 
 /**
- * A manager of the instances of {@link JdbcTableMetadata}.
+ * A manager of the instances of {@link TableMetadata}.
  *
  * @author Toshihiro Suzuki
  */
@@ -36,7 +32,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   public static final String SCHEMA = "scalardb";
   public static final String TABLE = "metadata";
 
-  private final LoadingCache<String, Optional<JdbcTableMetadata>> tableMetadataCache;
+  private final LoadingCache<String, Optional<TableMetadata>> tableMetadataCache;
 
   public JdbcTableMetadataManager(
       DataSource dataSource, Optional<String> schemaPrefix, RdbEngine rdbEngine) {
@@ -44,9 +40,9 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     tableMetadataCache =
         CacheBuilder.newBuilder()
             .build(
-                new CacheLoader<String, Optional<JdbcTableMetadata>>() {
+                new CacheLoader<String, Optional<TableMetadata>>() {
                   @Override
-                  public Optional<JdbcTableMetadata> load(@Nonnull String fullTableName)
+                  public Optional<TableMetadata> load(@Nonnull String fullTableName)
                       throws SQLException {
                     return JdbcTableMetadataManager.this.load(
                         dataSource, fullTableName, schemaPrefix, rdbEngine);
@@ -54,18 +50,14 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                 });
   }
 
-  private Optional<JdbcTableMetadata> load(
+  private Optional<TableMetadata> load(
       DataSource dataSource,
       String fullTableName,
       Optional<String> schemaPrefix,
       RdbEngine rdbEngine)
       throws SQLException {
-
-    List<String> partitionKeyNames = new ArrayList<>();
-    List<String> clusteringKeyNames = new ArrayList<>();
-    Map<String, Scan.Ordering.Order> clusteringOrders = new HashMap<>();
-    Map<String, DataType> columnDataTypes = new HashMap<>();
-    List<String> secondaryIndexNames = new ArrayList<>();
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
@@ -74,13 +66,15 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
+          tableExists = true;
+
           String columnName = resultSet.getString("column_name");
           DataType dataType = DataType.valueOf(resultSet.getString("data_type"));
-          columnDataTypes.put(columnName, dataType);
+          builder.addColumn(columnName, dataType);
 
           boolean indexed = resultSet.getBoolean("indexed");
           if (indexed) {
-            secondaryIndexNames.add(columnName);
+            builder.addSecondaryIndex(columnName);
           }
 
           String keyType = resultSet.getString("key_type");
@@ -90,12 +84,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
           switch (KeyType.valueOf(keyType)) {
             case PARTITION:
-              partitionKeyNames.add(columnName);
+              builder.addPartitionKey(columnName);
               break;
             case CLUSTERING:
-              clusteringKeyNames.add(columnName);
-              clusteringOrders.put(
-                  columnName, Scan.Ordering.Order.valueOf(resultSet.getString("clustering_order")));
+              Scan.Ordering.Order clusteringOrder =
+                  Scan.Ordering.Order.valueOf(resultSet.getString("clustering_order"));
+              builder.addClusteringKey(columnName, clusteringOrder);
               break;
             default:
               throw new AssertionError("invalid key type: " + keyType);
@@ -104,19 +98,11 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
     }
 
-    if (partitionKeyNames.isEmpty()) {
-      // The specified table is not found
+    if (!tableExists) {
       return Optional.empty();
     }
 
-    return Optional.of(
-        new JdbcTableMetadata(
-            fullTableName,
-            partitionKeyNames,
-            clusteringKeyNames,
-            clusteringOrders,
-            columnDataTypes,
-            secondaryIndexNames));
+    return Optional.of(builder.build());
   }
 
   private String getSelectColumnsStatement(Optional<String> schemaPrefix, RdbEngine rdbEngine) {
@@ -140,7 +126,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   @Override
-  public JdbcTableMetadata getTableMetadata(Operation operation) {
+  public TableMetadata getTableMetadata(Operation operation) {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
@@ -149,7 +135,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return getTableMetadata(fullTableName);
   }
 
-  public JdbcTableMetadata getTableMetadata(String fullTableName) {
+  public TableMetadata getTableMetadata(String fullTableName) {
     try {
       return tableMetadataCache.get(fullTableName).orElse(null);
     } catch (ExecutionException e) {

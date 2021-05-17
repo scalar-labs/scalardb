@@ -8,21 +8,20 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.cassandra.Cassandra;
-import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -672,22 +671,15 @@ public class MultiStorageIntegrationTest {
       testEnv.register(
           NAMESPACE,
           table,
-          Collections.singletonList(COL_NAME1),
-          Collections.singletonList(COL_NAME4),
-          new HashMap<String, Order>() {
-            {
-              put(COL_NAME4, Scan.Ordering.Order.ASC);
-            }
-          },
-          new HashMap<String, DataType>() {
-            {
-              put(COL_NAME1, DataType.INT);
-              put(COL_NAME2, DataType.TEXT);
-              put(COL_NAME3, DataType.INT);
-              put(COL_NAME4, DataType.INT);
-              put(COL_NAME5, DataType.BOOLEAN);
-            }
-          });
+          TableMetadata.newBuilder()
+              .addColumn(COL_NAME1, DataType.INT)
+              .addColumn(COL_NAME2, DataType.TEXT)
+              .addColumn(COL_NAME3, DataType.INT)
+              .addColumn(COL_NAME4, DataType.INT)
+              .addColumn(COL_NAME5, DataType.BOOLEAN)
+              .addPartitionKey(COL_NAME1)
+              .addClusteringKey(COL_NAME4)
+              .build());
     }
     testEnv.createMetadataTable();
     testEnv.createTables();

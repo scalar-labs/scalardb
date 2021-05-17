@@ -22,6 +22,7 @@ import com.azure.cosmos.util.CosmosPagedIterable;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -55,7 +56,7 @@ public class SelectStatementHandlerTest {
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
-  @Mock private CosmosTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse<Record> response;
   @Mock private CosmosPagedIterable<Record> responseIterable;
 
@@ -70,7 +71,8 @@ public class SelectStatementHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_3)));
   }

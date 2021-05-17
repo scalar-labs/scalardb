@@ -8,18 +8,17 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Before;
@@ -49,32 +48,24 @@ public class QueryBuilderTest {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata
-    JdbcTableMetadata dummyTableMetadata =
-        new JdbcTableMetadata(
-            NAMESPACE + "." + TABLE,
-            Arrays.asList("p1", "p2"),
-            Arrays.asList("c1", "c2"),
-            new HashMap<String, Scan.Ordering.Order>() {
-              {
-                put("c1", Scan.Ordering.Order.ASC);
-                put("c2", Scan.Ordering.Order.DESC);
-              }
-            },
-            new LinkedHashMap<String, DataType>() {
-              {
-                put("p1", DataType.TEXT);
-                put("p2", DataType.TEXT);
-                put("c1", DataType.TEXT);
-                put("c2", DataType.TEXT);
-                put("v1", DataType.TEXT);
-                put("v2", DataType.TEXT);
-                put("v3", DataType.TEXT);
-                put("v4", DataType.TEXT);
-              }
-            },
-            Arrays.asList("v1", "v2"));
-
-    when(tableMetadataManager.getTableMetadata(any(String.class))).thenReturn(dummyTableMetadata);
+    when(tableMetadataManager.getTableMetadata(any(String.class)))
+        .thenReturn(
+            TableMetadata.newBuilder()
+                .addColumn("p1", DataType.TEXT)
+                .addColumn("p2", DataType.INT)
+                .addColumn("c1", DataType.TEXT)
+                .addColumn("c2", DataType.TEXT)
+                .addColumn("v1", DataType.TEXT)
+                .addColumn("v2", DataType.TEXT)
+                .addColumn("v3", DataType.TEXT)
+                .addColumn("v4", DataType.TEXT)
+                .addPartitionKey("p1")
+                .addPartitionKey("p2")
+                .addClusteringKey("c1", Scan.Ordering.Order.ASC)
+                .addClusteringKey("c2", Scan.Ordering.Order.DESC)
+                .addSecondaryIndex("v1")
+                .addSecondaryIndex("v2")
+                .build());
 
     queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
   }

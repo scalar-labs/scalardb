@@ -5,11 +5,11 @@ import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.ResultImpl;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
 
-  private final JdbcTableMetadata tableMetadata;
+  private final TableMetadata tableMetadata;
   private final List<String> projections;
   private final RdbEngine rdbEngine;
   private final String schema;
