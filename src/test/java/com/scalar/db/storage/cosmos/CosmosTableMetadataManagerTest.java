@@ -18,6 +18,9 @@ import com.scalar.db.api.Get;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -41,6 +44,17 @@ public class CosmosTableMetadataManagerTest {
     MockitoAnnotations.initMocks(this);
 
     manager = new CosmosTableMetadataManager(container);
+
+    // Arrange
+    when(metadata.getColumns())
+        .thenReturn(
+            new HashMap<String, String>() {
+              {
+                put(ANY_NAME_1, "varchar");
+              }
+            });
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
   }
 
   @Test

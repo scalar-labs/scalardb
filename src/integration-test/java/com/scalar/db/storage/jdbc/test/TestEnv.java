@@ -164,7 +164,7 @@ public class TestEnv implements Closeable {
   }
 
   public void register(String schema, String table, TableMetadata metadata) {
-    schemaList.add(schema);
+    schemaList.add(namespacePrefix() + schema);
     tableList.add(table);
     metadataList.add(metadata);
   }

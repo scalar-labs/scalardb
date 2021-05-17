@@ -54,8 +54,10 @@ public class DynamoTableMetadataManagerTest {
 
   private void setMetadataMap() {
     metadataMap = new HashMap<>();
-    metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
-    metadataMap.put("clusteringKey", AttributeValue.builder().ss(new ArrayList<String>()).build());
+    metadataMap.put(
+        "partitionKey",
+        AttributeValue.builder().l(AttributeValue.builder().s(ANY_NAME_1).build()).build());
+    metadataMap.put("clusteringKey", AttributeValue.builder().l(new ArrayList<>()).build());
     metadataMap.put("sortKey", AttributeValue.builder().s(null).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
