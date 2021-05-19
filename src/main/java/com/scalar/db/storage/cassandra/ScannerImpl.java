@@ -18,6 +18,8 @@ public final class ScannerImpl implements Scanner {
   private final ResultSet resultSet;
   private final CassandraTableMetadata metadata;
 
+  private ScannerIterator scannerIterator;
+
   public ScannerImpl(ResultSet resultSet, CassandraTableMetadata metadata) {
     this.resultSet = checkNotNull(resultSet);
     this.metadata = checkNotNull(metadata);
@@ -43,7 +45,10 @@ public final class ScannerImpl implements Scanner {
 
   @Override
   public Iterator<Result> iterator() {
-    return new ScannerIterator(resultSet, metadata);
+    if (scannerIterator == null) {
+      scannerIterator = new ScannerIterator(resultSet, metadata);
+    }
+    return scannerIterator;
   }
 
   @Override

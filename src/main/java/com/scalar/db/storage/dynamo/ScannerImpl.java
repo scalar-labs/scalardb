@@ -21,6 +21,8 @@ public final class ScannerImpl implements Scanner {
   private final DynamoTableMetadata metadata;
   private List<Map<String, AttributeValue>> items;
 
+  private ScannerIterator scannerIterator;
+
   public ScannerImpl(
       List<Map<String, AttributeValue>> items, Selection selection, DynamoTableMetadata metadata) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, metadata);
@@ -56,7 +58,10 @@ public final class ScannerImpl implements Scanner {
 
   @Override
   public Iterator<Result> iterator() {
-    return new ScannerIterator(items.iterator(), selection, metadata);
+    if (scannerIterator == null) {
+      scannerIterator = new ScannerIterator(items.iterator(), selection, metadata);
+    }
+    return scannerIterator;
   }
 
   @Override

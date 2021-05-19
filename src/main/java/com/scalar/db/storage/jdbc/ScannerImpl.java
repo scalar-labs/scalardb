@@ -4,11 +4,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,6 +14,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class ScannerImpl implements Scanner {
@@ -28,6 +27,8 @@ public class ScannerImpl implements Scanner {
   private final Connection connection;
   private final PreparedStatement preparedStatement;
   private final ResultSet resultSet;
+
+  private ScannerIterator scannerIterator;
 
   public ScannerImpl(
       SelectQuery selectQuery,
@@ -69,7 +70,10 @@ public class ScannerImpl implements Scanner {
   @Override
   @Nonnull
   public Iterator<Result> iterator() {
-    return new ScannerIterator(this);
+    if (scannerIterator == null) {
+      scannerIterator = new ScannerIterator(this);
+    }
+    return scannerIterator;
   }
 
   @Override

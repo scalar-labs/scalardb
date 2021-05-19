@@ -4,7 +4,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import java.util.Iterator;
-import javax.annotation.Nullable;
+import java.util.NoSuchElementException;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -23,11 +23,10 @@ public final class ScannerIterator implements Iterator<Result> {
   }
 
   @Override
-  @Nullable
   public Result next() {
     Row row = iterator.next();
     if (row == null) {
-      return null;
+      throw new NoSuchElementException();
     }
     return new ResultImpl(row, metadata);
   }

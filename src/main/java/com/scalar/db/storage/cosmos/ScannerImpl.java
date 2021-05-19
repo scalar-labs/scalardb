@@ -18,6 +18,8 @@ public final class ScannerImpl implements Scanner {
   private final Selection selection;
   private final CosmosTableMetadata metadata;
 
+  private ScannerIterator scannerIterator;
+
   public ScannerImpl(List<Record> records, Selection selection, CosmosTableMetadata metadata) {
     this.records = checkNotNull(records);
     this.selection = selection;
@@ -45,7 +47,10 @@ public final class ScannerImpl implements Scanner {
 
   @Override
   public Iterator<Result> iterator() {
-    return new ScannerIterator(records.iterator(), selection, metadata);
+    if (scannerIterator == null) {
+      scannerIterator = new ScannerIterator(records.iterator(), selection, metadata);
+    }
+    return scannerIterator;
   }
 
   @Override

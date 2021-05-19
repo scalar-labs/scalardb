@@ -4,7 +4,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
 import java.util.Iterator;
 import java.util.Map;
-import javax.annotation.Nullable;
+import java.util.NoSuchElementException;
 import javax.annotation.concurrent.NotThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -29,11 +29,10 @@ public final class ScannerIterator implements Iterator<Result> {
   }
 
   @Override
-  @Nullable
   public Result next() {
     Map<String, AttributeValue> item = iterator.next();
     if (item == null) {
-      return null;
+      throw new NoSuchElementException();
     }
 
     return new ResultImpl(item, selection, metadata);
