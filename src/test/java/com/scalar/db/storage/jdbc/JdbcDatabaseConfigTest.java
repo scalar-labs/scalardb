@@ -1,13 +1,12 @@
 package com.scalar.db.storage.jdbc;
 
-import com.scalar.db.config.DatabaseConfig;
-import org.junit.Test;
-
-import java.util.Collections;
-import java.util.Properties;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.scalar.db.config.DatabaseConfig;
+import java.util.Collections;
+import java.util.Properties;
+import org.junit.Test;
 
 public class JdbcDatabaseConfigTest {
 
@@ -41,8 +40,10 @@ public class JdbcDatabaseConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
@@ -72,8 +73,10 @@ public class JdbcDatabaseConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
@@ -129,8 +132,10 @@ public class JdbcDatabaseConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
     assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);

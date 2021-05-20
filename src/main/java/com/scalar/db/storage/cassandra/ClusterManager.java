@@ -108,8 +108,8 @@ public class ClusterManager {
 
   @VisibleForTesting
   Cluster getCluster(DatabaseConfig config) {
-    if (config.getUsername() != null && config.getPassword() != null) {
-      builder.withCredentials(config.getUsername(), config.getPassword());
+    if (config.getUsername().isPresent() && config.getPassword().isPresent()) {
+      builder.withCredentials(config.getUsername().get(), config.getPassword().get());
     }
     return builder.build();
   }

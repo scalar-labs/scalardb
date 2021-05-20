@@ -47,8 +47,10 @@ public class MultiStorageConfigTest {
     assertThat(c.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(c.getContactPoints()).isEqualTo(Collections.singletonList("localhost"));
     assertThat(c.getContactPort()).isEqualTo(7000);
-    assertThat(c.getUsername()).isEqualTo("cassandra");
-    assertThat(c.getPassword()).isEqualTo("cassandra");
+    assertThat(c.getUsername().isPresent()).isTrue();
+    assertThat(c.getUsername().get()).isEqualTo("cassandra");
+    assertThat(c.getPassword().isPresent()).isTrue();
+    assertThat(c.getPassword().get()).isEqualTo("cassandra");
     assertThat(c.getNamespacePrefix().isPresent()).isTrue();
     assertThat(c.getNamespacePrefix().get()).isEqualTo("prefix_");
     assertThat(config.getDatabaseConfigMap().containsKey("mysql")).isTrue();
@@ -56,8 +58,10 @@ public class MultiStorageConfigTest {
     assertThat(c.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(c.getContactPoints())
         .isEqualTo(Collections.singletonList("jdbc:mysql://localhost:3306/"));
-    assertThat(c.getUsername()).isEqualTo("root");
-    assertThat(c.getPassword()).isEqualTo("mysql");
+    assertThat(c.getUsername().isPresent()).isTrue();
+    assertThat(c.getUsername().get()).isEqualTo("root");
+    assertThat(c.getPassword().isPresent()).isTrue();
+    assertThat(c.getPassword().get()).isEqualTo("mysql");
     assertThat(c.getNamespacePrefix().isPresent()).isFalse();
 
     assertThat(config.getTableStorageMap().size()).isEqualTo(3);
