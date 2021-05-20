@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Represents the table metadata */
+/** A class that represents the table metadata */
 public class TableMetadata {
 
   private final LinkedHashSet<String> columnNames;
