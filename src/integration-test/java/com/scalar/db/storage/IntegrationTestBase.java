@@ -145,18 +145,29 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithPartitionKeyGiven_ShouldRetrieveMultipleResults() throws Exception {
+  public void scan_ScanWithProjectionsGiven_ShouldRetrieveSpecifiedValues() throws Exception {
     // Arrange
     populateRecords();
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
-    List<Result> actual = new ArrayList<>();
-    scanAll(scan).forEach(actual::add); // use iterator
+    Scan scan =
+        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
+            .withProjection(COL_NAME1)
+            .withProjection(COL_NAME2)
+            .withProjection(COL_NAME3);
+    List<Result> actual = scanAll(scan);
 
     // Assert
     assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    actual.forEach(
+        a -> {
+          assertThat(a.getValue(COL_NAME1).isPresent()).isTrue();
+          assertThat(a.getValue(COL_NAME2).isPresent()).isTrue();
+          assertThat(a.getValue(COL_NAME3).isPresent()).isTrue();
+          assertThat(a.getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
+          assertThat(a.getValue(COL_NAME5).isPresent()).isFalse();
+        });
   }
 
   @Test
@@ -320,6 +331,85 @@ public abstract class IntegrationTestBase {
     assertThat(actual.size()).isEqualTo(1);
     assertThat(actual.get(0).getValue(COL_NAME4))
         .isEqualTo(Optional.of(new IntValue(COL_NAME4, 2)));
+  }
+
+  @Test
+  public void scannerIterator_ScanWithPartitionKeyGiven_ShouldRetrieveCorrectResults()
+      throws Exception {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    List<Result> actual = new ArrayList<>();
+    Scanner scanner = storage.scan(scan);
+    scanner.forEach(actual::add);
+    scanner.close();
+
+    // Assert
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+  }
+
+  @Test
+  public void scannerIterator_OneAndIteratorCalled_ShouldRetrieveCorrectResults() throws Exception {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    List<Result> actual = new ArrayList<>();
+    Scanner scanner = storage.scan(scan);
+    Optional<Result> result = scanner.one();
+    scanner.forEach(actual::add);
+    scanner.close();
+
+    // Assert
+    assertThat(result.isPresent()).isTrue();
+
+    List<Integer> expected = new ArrayList<>(Arrays.asList(0, 1, 2));
+    expected.remove(Integer.valueOf(result.get().getValue(COL_NAME4).get().getAsInt()));
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, expected);
+  }
+
+  @Test
+  public void scannerIterator_AllAndIteratorCalled_ShouldRetrieveCorrectResults() throws Exception {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    List<Result> actual = new ArrayList<>();
+    Scanner scanner = storage.scan(scan);
+    List<Result> all = scanner.all();
+    scanner.forEach(actual::add);
+    scanner.close();
+
+    // Assert
+    assertScanResultWithoutOrdering(all, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(actual).isEmpty();
+  }
+
+  @Test
+  public void scannerIterator_IteratorCalledMultipleTimes_ShouldRetrieveCorrectResults()
+      throws Exception {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+
+    // Act
+    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    List<Result> actual = new ArrayList<>();
+    Scanner scanner = storage.scan(scan);
+    actual.add(scanner.iterator().next());
+    actual.add(scanner.iterator().next());
+    actual.add(scanner.iterator().next());
+    scanner.close();
+
+    // Assert
+    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
   }
 
   @Test

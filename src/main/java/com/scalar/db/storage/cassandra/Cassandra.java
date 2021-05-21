@@ -2,6 +2,8 @@ package com.scalar.db.storage.cassandra;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
@@ -12,7 +14,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -98,18 +99,19 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing get operation with " + get);
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     operationChecker.check(get);
-    addProjectionsForKeys(get);
+    TableMetadata metadata = metadataManager.getTableMetadata(get);
+    Utility.addProjectionsForKeys(get, metadata);
 
-    List<com.datastax.driver.core.Row> rows = handlers.select().handle(get).all();
-    if (rows.size() > 1) {
-      throw new IllegalArgumentException("please use scan() for non-exact match selection");
-    }
-    if (rows.isEmpty() || rows.get(0) == null) {
+    ResultSet resultSet = handlers.select().handle(get);
+    Row row = resultSet.one();
+    if (row == null) {
       return Optional.empty();
     }
-
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
-    return Optional.of(new ResultImpl(rows.get(0), metadata));
+    Row next = resultSet.one();
+    if (next != null) {
+      throw new IllegalArgumentException("please use scan() for non-exact match selection");
+    }
+    return Optional.of(new ResultInterpreter(metadata).interpret(row));
   }
 
   @Override
@@ -118,12 +120,12 @@ public class Cassandra implements DistributedStorage {
     LOGGER.debug("executing scan operation with " + scan);
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     operationChecker.check(scan);
-    addProjectionsForKeys(scan);
-
-    com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
-
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    return new ScannerImpl(results, metadata);
+    Utility.addProjectionsForKeys(scan, metadata);
+
+    ResultSet results = handlers.select().handle(scan);
+
+    return new ScannerImpl(results, new ResultInterpreter(metadata));
   }
 
   @Override
@@ -177,18 +179,5 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void close() {
     clusterManager.close();
-  }
-
-  private void addProjectionsForKeys(Selection selection) {
-    if (selection.getProjections().size() == 0) { // meaning projecting all
-      return;
-    }
-    selection.getPartitionKey().forEach(v -> selection.withProjection(v.getName()));
-    selection
-        .getClusteringKey()
-        .ifPresent(
-            k -> {
-              k.forEach(v -> selection.withProjection(v.getName()));
-            });
   }
 }

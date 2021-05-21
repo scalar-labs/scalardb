@@ -9,7 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -52,7 +52,8 @@ public class JdbcService {
       throws SQLException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     operationChecker.check(get);
-    addProjectionsForKeys(get);
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
+    Utility.addProjectionsForKeys(get, tableMetadata);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -64,7 +65,9 @@ public class JdbcService {
     try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
         ResultSet resultSet = preparedStatement.executeQuery()) {
       if (resultSet.next()) {
-        Optional<Result> ret = Optional.of(selectQuery.getResult(resultSet));
+        Optional<Result> ret =
+            Optional.of(
+                new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
         if (resultSet.next()) {
           throw new IllegalArgumentException("please use scan() for non-exact match selection");
         }
@@ -79,7 +82,8 @@ public class JdbcService {
       throws SQLException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     operationChecker.check(scan);
-    addProjectionsForKeys(scan);
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
+    Utility.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -97,17 +101,11 @@ public class JdbcService {
 
     PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
     ResultSet resultSet = preparedStatement.executeQuery();
-    return new ScannerImpl(selectQuery, connection, preparedStatement, resultSet);
-  }
-
-  private void addProjectionsForKeys(Selection selection) {
-    if (selection.getProjections().size() == 0) { // meaning projecting all
-      return;
-    }
-    selection.getPartitionKey().forEach(v -> selection.withProjection(v.getName()));
-    selection
-        .getClusteringKey()
-        .ifPresent(k -> k.forEach(v -> selection.withProjection(v.getName())));
+    return new ScannerImpl(
+        new ResultInterpreter(scan.getProjections(), tableMetadata),
+        connection,
+        preparedStatement,
+        resultSet);
   }
 
   public boolean put(
