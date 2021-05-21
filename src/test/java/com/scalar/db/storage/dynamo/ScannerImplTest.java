@@ -3,6 +3,8 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -28,32 +30,27 @@ public class ScannerImplTest {
   @Before
   public void setUp() throws Exception {}
 
-  private DynamoTableMetadata prepareMetadataForSingleClusteringKey() {
-    Map<String, AttributeValue> metadataMap = new HashMap<>();
-    metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
-    metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2).build());
-    metadataMap.put("columns", AttributeValue.builder().m(prepareColumns()).build());
-
-    return new DynamoTableMetadata(metadataMap);
+  private TableMetadata prepareMetadataForSingleClusteringKey() {
+    return TableMetadata.newBuilder()
+        .addColumn(ANY_NAME_1, DataType.TEXT)
+        .addColumn(ANY_NAME_2, DataType.INT)
+        .addColumn(ANY_NAME_3, DataType.TEXT)
+        .addColumn(ANY_COLUMN_NAME_1, DataType.TEXT)
+        .addPartitionKey(ANY_NAME_1)
+        .addClusteringKey(ANY_NAME_2)
+        .build();
   }
 
-  private DynamoTableMetadata prepareMetadataForMultipleClusteringKeys() {
-    Map<String, AttributeValue> metadataMap = new HashMap<>();
-    metadataMap.put("partitionKey", AttributeValue.builder().ss(ANY_NAME_1).build());
-    metadataMap.put("clusteringKey", AttributeValue.builder().ss(ANY_NAME_2, ANY_NAME_3).build());
-    metadataMap.put("columns", AttributeValue.builder().m(prepareColumns()).build());
-
-    return new DynamoTableMetadata(metadataMap);
-  }
-
-  private Map<String, AttributeValue> prepareColumns() {
-    Map<String, AttributeValue> columns = new HashMap<>();
-    columns.put(ANY_NAME_1, AttributeValue.builder().s("text").build());
-    columns.put(ANY_NAME_2, AttributeValue.builder().s("int").build());
-    columns.put(ANY_NAME_3, AttributeValue.builder().s("text").build());
-    columns.put(ANY_COLUMN_NAME_1, AttributeValue.builder().s("text").build());
-
-    return columns;
+  private TableMetadata prepareMetadataForMultipleClusteringKeys() {
+    return TableMetadata.newBuilder()
+        .addColumn(ANY_NAME_1, DataType.TEXT)
+        .addColumn(ANY_NAME_2, DataType.INT)
+        .addColumn(ANY_NAME_3, DataType.TEXT)
+        .addColumn(ANY_COLUMN_NAME_1, DataType.TEXT)
+        .addPartitionKey(ANY_NAME_1)
+        .addClusteringKey(ANY_NAME_2)
+        .addClusteringKey(ANY_NAME_3)
+        .build();
   }
 
   private Map<String, AttributeValue> prepareItem() {
@@ -71,7 +68,7 @@ public class ScannerImplTest {
   @Test
   public void constructor_ItemsWithSingleClusteringKeyGiven_ShouldNotSortItems() {
     // Arrange
-    DynamoTableMetadata metadata = prepareMetadataForSingleClusteringKey();
+    TableMetadata metadata = prepareMetadataForSingleClusteringKey();
     Map<String, AttributeValue> item1 = prepareItem();
     item1.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Map<String, AttributeValue> item2 = prepareItem();
@@ -91,7 +88,7 @@ public class ScannerImplTest {
   @Test
   public void constructor_ItemsWithMultipleClusteringKeysGiven_ShouldSortItems() {
     // Arrange
-    DynamoTableMetadata metadata = prepareMetadataForMultipleClusteringKeys();
+    TableMetadata metadata = prepareMetadataForMultipleClusteringKeys();
     Map<String, AttributeValue> item1 = prepareItem();
     Map<String, AttributeValue> item2 = prepareItem();
     item2.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());

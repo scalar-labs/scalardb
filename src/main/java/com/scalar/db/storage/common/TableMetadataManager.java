@@ -1,9 +1,9 @@
-package com.scalar.db.storage.common.metadata;
+package com.scalar.db.storage.common;
 
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 
 public interface TableMetadataManager {
-
   /**
    * Returns a table metadata corresponding to the specified operation.
    *

@@ -25,11 +25,11 @@ import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -54,7 +54,7 @@ public class DeleteStatementHandlerTest {
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
-  @Mock private CosmosTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse response;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;
@@ -71,7 +71,8 @@ public class DeleteStatementHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
   }
 
   private Delete prepareDelete() {

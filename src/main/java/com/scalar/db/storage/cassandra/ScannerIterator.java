@@ -3,6 +3,7 @@ package com.scalar.db.storage.cassandra;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import java.util.Iterator;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -10,9 +11,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public final class ScannerIterator implements Iterator<Result> {
   private final Iterator<Row> iterator;
-  private final CassandraTableMetadata metadata;
+  private final TableMetadata metadata;
 
-  public ScannerIterator(ResultSet resultSet, CassandraTableMetadata metadata) {
+  public ScannerIterator(ResultSet resultSet, TableMetadata metadata) {
     iterator = resultSet.iterator();
     this.metadata = metadata;
   }

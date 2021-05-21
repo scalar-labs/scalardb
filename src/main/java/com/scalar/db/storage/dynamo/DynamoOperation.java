@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.cosmos.ConcatenationVisitor;
 import java.util.Collection;
@@ -27,14 +28,14 @@ public class DynamoOperation {
   static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
 
   private final Operation operation;
-  private final DynamoTableMetadata metadata;
+  private final TableMetadata metadata;
 
   public DynamoOperation(Operation operation, DynamoTableMetadataManager metadataManager) {
     this.operation = operation;
     this.metadata = metadataManager.getTableMetadata(operation);
   }
 
-  public DynamoOperation(Operation operation, DynamoTableMetadata metadata) {
+  public DynamoOperation(Operation operation, TableMetadata metadata) {
     this.operation = operation;
     this.metadata = metadata;
   }
@@ -45,7 +46,7 @@ public class DynamoOperation {
   }
 
   @Nonnull
-  public DynamoTableMetadata getMetadata() {
+  public TableMetadata getMetadata() {
     return metadata;
   }
 

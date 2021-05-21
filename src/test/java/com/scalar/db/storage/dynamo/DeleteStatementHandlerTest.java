@@ -12,11 +12,11 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import org.junit.Before;
@@ -42,7 +42,7 @@ public class DeleteStatementHandlerTest {
   private String concatenatedPartitionKey;
   @Mock private DynamoDbClient client;
   @Mock private DynamoTableMetadataManager metadataManager;
-  @Mock private DynamoTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private DeleteItemResponse response;
 
   @Before
@@ -54,7 +54,6 @@ public class DeleteStatementHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Delete prepareDelete() {

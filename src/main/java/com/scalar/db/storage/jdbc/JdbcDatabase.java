@@ -13,7 +13,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.Connection;
 import java.sql.SQLException;

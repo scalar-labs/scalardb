@@ -14,6 +14,7 @@ import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.IntValue;
@@ -55,7 +56,7 @@ public class BatchHandlerTest {
   private BatchHandler handler;
   @Mock private DynamoDbClient client;
   @Mock private DynamoTableMetadataManager metadataManager;
-  @Mock private DynamoTableMetadata metadata;
+  @Mock private TableMetadata metadata;
   @Mock private TransactWriteItemsResponse transactWriteResponse;
 
   @Before
@@ -67,7 +68,6 @@ public class BatchHandlerTest {
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
-    when(metadata.getKeyNames()).thenReturn(Arrays.asList(ANY_NAME_1, ANY_NAME_2));
   }
 
   private Put preparePut() {

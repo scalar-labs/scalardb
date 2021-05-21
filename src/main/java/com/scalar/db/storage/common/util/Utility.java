@@ -1,8 +1,8 @@
 package com.scalar.db.storage.common.util;
 
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import java.util.List;
 import java.util.Optional;
 

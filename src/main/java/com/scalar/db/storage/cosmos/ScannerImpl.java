@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -16,9 +17,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 public final class ScannerImpl implements Scanner {
   private final List<Record> records;
   private final Selection selection;
-  private final CosmosTableMetadata metadata;
+  private final TableMetadata metadata;
 
-  public ScannerImpl(List<Record> records, Selection selection, CosmosTableMetadata metadata) {
+  public ScannerImpl(List<Record> records, Selection selection, TableMetadata metadata) {
     this.records = checkNotNull(records);
     this.selection = selection;
     this.metadata = checkNotNull(metadata);

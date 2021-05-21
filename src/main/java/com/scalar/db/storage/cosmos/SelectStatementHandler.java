@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.util.Utility;
 import java.util.Arrays;
@@ -187,7 +188,7 @@ public class SelectStatementHandler extends StatementHandler {
   private String makeQueryWithIndex(Operation operation) {
     SelectWhereStep<org.jooq.Record> select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r");
     Value<?> keyValue = operation.getPartitionKey().get().get(0);
-    CosmosTableMetadata metadata = metadataManager.getTableMetadata(operation);
+    TableMetadata metadata = metadataManager.getTableMetadata(operation);
     String fieldName;
     if (metadata.getClusteringKeyNames().contains(keyValue.getName())) {
       fieldName = "r.clusteringKey.";

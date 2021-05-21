@@ -10,6 +10,7 @@ import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import java.util.Arrays;
@@ -29,16 +30,11 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static CosmosClient client;
-  private static CosmosTableMetadata tableMetadata;
+  private static TableMetadata tableMetadata;
 
   @Before
   public void setUp() throws Exception {
     setUp(tableMetadata);
-  }
-
-  @Test
-  public void testId() {
-    assertThat(tableMetadata.getId()).isEqualTo(table(NAMESPACE, TABLE));
   }
 
   @Test

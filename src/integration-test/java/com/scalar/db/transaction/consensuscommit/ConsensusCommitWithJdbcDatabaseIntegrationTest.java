@@ -15,14 +15,12 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.mockito.Mockito.spy;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Scan;
-import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -59,47 +57,36 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     testEnv.register(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
-        Collections.singletonList(ID),
-        Collections.emptyList(),
-        new HashMap<String, Scan.Ordering.Order>() {},
-        new HashMap<String, DataType>() {
-          {
-            put(ID, DataType.TEXT);
-            put(STATE, DataType.INT);
-            put(CREATED_AT, DataType.BIGINT);
-          }
-        });
+        TableMetadata.newBuilder()
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(CREATED_AT, DataType.BIGINT)
+            .addPartitionKey(ID)
+            .build());
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
       testEnv.register(
           NAMESPACE,
           table,
-          Collections.singletonList(ACCOUNT_ID),
-          Collections.singletonList(ACCOUNT_TYPE),
-          new HashMap<String, Scan.Ordering.Order>() {
-            {
-              put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
-            }
-          },
-          new HashMap<String, DataType>() {
-            {
-              put(ACCOUNT_ID, DataType.INT);
-              put(ACCOUNT_TYPE, DataType.INT);
-              put(BALANCE, DataType.INT);
-              put(ID, DataType.TEXT);
-              put(STATE, DataType.INT);
-              put(VERSION, DataType.INT);
-              put(PREPARED_AT, DataType.BIGINT);
-              put(COMMITTED_AT, DataType.BIGINT);
-              put(BEFORE_PREFIX + BALANCE, DataType.INT);
-              put(BEFORE_ID, DataType.TEXT);
-              put(BEFORE_STATE, DataType.INT);
-              put(BEFORE_VERSION, DataType.INT);
-              put(BEFORE_PREPARED_AT, DataType.BIGINT);
-              put(BEFORE_COMMITTED_AT, DataType.BIGINT);
-            }
-          });
+          TableMetadata.newBuilder()
+              .addColumn(ACCOUNT_ID, DataType.INT)
+              .addColumn(ACCOUNT_TYPE, DataType.INT)
+              .addColumn(BALANCE, DataType.INT)
+              .addColumn(ID, DataType.TEXT)
+              .addColumn(STATE, DataType.INT)
+              .addColumn(VERSION, DataType.INT)
+              .addColumn(PREPARED_AT, DataType.BIGINT)
+              .addColumn(COMMITTED_AT, DataType.BIGINT)
+              .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
+              .addColumn(BEFORE_ID, DataType.TEXT)
+              .addColumn(BEFORE_STATE, DataType.INT)
+              .addColumn(BEFORE_VERSION, DataType.INT)
+              .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
+              .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
+              .addPartitionKey(ACCOUNT_ID)
+              .addClusteringKey(ACCOUNT_TYPE)
+              .build());
     }
 
     testEnv.createMetadataTable();

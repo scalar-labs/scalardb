@@ -19,12 +19,11 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -36,8 +35,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,19 +77,11 @@ public class JdbcServiceTest {
     // Arrange
     when(tableMetadataManager.getTableMetadata(any(Operation.class)))
         .thenReturn(
-            new JdbcTableMetadata(
-                NAMESPACE.get(),
-                TABLE.get(),
-                Collections.singletonList("p1"),
-                Collections.emptyList(),
-                new HashMap<String, Scan.Ordering.Order>() {},
-                new HashMap<String, DataType>() {
-                  {
-                    put("p1", DataType.TEXT);
-                    put("v1", DataType.TEXT);
-                  }
-                },
-                Collections.emptyList()));
+            TableMetadata.newBuilder()
+                .addColumn("p1", DataType.TEXT)
+                .addColumn("v1", DataType.TEXT)
+                .addPartitionKey("p1")
+                .build());
   }
 
   @Test

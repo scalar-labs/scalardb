@@ -7,17 +7,18 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.DataType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -27,19 +28,15 @@ import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 @Immutable
 public class ResultImpl implements Result {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ResultImpl.class);
   private final Selection selection;
-  private final DynamoTableMetadata metadata;
+  private final TableMetadata metadata;
   private final Map<String, Value<?>> values;
 
-  public ResultImpl(
-      Map<String, AttributeValue> item, Selection selection, DynamoTableMetadata metadata) {
+  public ResultImpl(Map<String, AttributeValue> item, Selection selection, TableMetadata metadata) {
     checkNotNull(item);
     this.selection = selection;
     this.metadata = checkNotNull(metadata);
@@ -94,7 +91,7 @@ public class ResultImpl implements Result {
   }
 
   @VisibleForTesting
-  void interpret(Map<String, AttributeValue> item, DynamoTableMetadata metadata) {
+  void interpret(Map<String, AttributeValue> item, TableMetadata metadata) {
     if (selection.getProjections().isEmpty()) {
       metadata
           .getColumnNames()

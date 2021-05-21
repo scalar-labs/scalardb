@@ -2,10 +2,11 @@ package com.scalar.db.storage.cosmos;
 
 import com.azure.cosmos.models.PartitionKey;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Streams;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -13,7 +14,7 @@ import javax.annotation.Nonnull;
 /** A class to treating utilities for a operation */
 public class CosmosOperation {
   private final Operation operation;
-  private final CosmosTableMetadata metadata;
+  private final TableMetadata metadata;
 
   public CosmosOperation(Operation operation, CosmosTableMetadataManager metadataManager) {
     this.operation = operation;
@@ -84,8 +85,9 @@ public class CosmosOperation {
             });
 
     ConcatenationVisitor visitor = new ConcatenationVisitor();
-    List<String> keyNames = metadata.getKeyNames();
-    keyNames.forEach(name -> keyMap.get(name).accept(visitor));
+    Streams.concat(
+            metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
+        .forEach(name -> keyMap.get(name).accept(visitor));
 
     return visitor.build();
   }

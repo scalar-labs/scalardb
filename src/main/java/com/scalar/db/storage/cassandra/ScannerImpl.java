@@ -6,6 +6,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -16,9 +17,9 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public final class ScannerImpl implements Scanner {
   private final ResultSet resultSet;
-  private final CassandraTableMetadata metadata;
+  private final TableMetadata metadata;
 
-  public ScannerImpl(ResultSet resultSet, CassandraTableMetadata metadata) {
+  public ScannerImpl(ResultSet resultSet, TableMetadata metadata) {
     this.resultSet = checkNotNull(resultSet);
     this.metadata = checkNotNull(metadata);
   }

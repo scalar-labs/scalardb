@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
 import java.net.URI;
@@ -37,7 +38,7 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
   private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
-  private static DynamoTableMetadata tableMetadata;
+  private static TableMetadata tableMetadata;
 
   @Before
   public void setUp() throws Exception {
@@ -155,7 +156,8 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     client.putItem(putItemRequest);
 
-    DynamoTableMetadataManager tableMetadataManager = new DynamoTableMetadataManager(client, namespacePrefix());
+    DynamoTableMetadataManager tableMetadataManager =
+        new DynamoTableMetadataManager(client, namespacePrefix());
 
     Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
     namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix().get()));

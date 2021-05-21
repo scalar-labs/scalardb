@@ -1,16 +1,16 @@
 package com.scalar.db.storage.common.checker;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.io.ValueVisitor;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.common.metadata.TableMetadata;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe

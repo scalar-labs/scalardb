@@ -7,9 +7,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -42,8 +42,7 @@ public class ResultImplTest {
   private static final int ANY_INT = 10;
   private Definitions definitions;
   @Mock private Row row;
-  @Mock private CassandraTableMetadata CassandraTableMetadata;
-  @Mock private ColumnMetadata columnMetadata;
+  @Mock private TableMetadata tableMetadata;
 
   @Before
   public void setUp() throws Exception {
@@ -172,8 +171,8 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_RequiredValuesGiven_ShouldReturnPartitionKey() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getPartitionKeyNames())
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(tableMetadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_COLUMN_NAME_2)));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
@@ -190,8 +189,8 @@ public class ResultImplTest {
   @Test
   public void getPartitionKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getPartitionKeyNames())
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(tableMetadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList("another")));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
@@ -206,8 +205,8 @@ public class ResultImplTest {
   @Test
   public void getClusteringKey_RequiredValuesGiven_ShouldReturnClusteringKey() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getClusteringKeyNames())
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(tableMetadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_COLUMN_NAME_2)));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);
@@ -224,8 +223,8 @@ public class ResultImplTest {
   @Test
   public void getClusteringKey_RequiredValuesNotGiven_ShouldReturnEmpty() {
     // Arrange
-    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), CassandraTableMetadata));
-    when(CassandraTableMetadata.getClusteringKeyNames())
+    ResultImpl spy = spy(new ResultImpl(new ArrayList<>(), tableMetadata));
+    when(tableMetadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList("another")));
     doReturn(definitions.get()).when(spy).getColumnDefinitions(row);
     spy.interpret(row);

@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.Get;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.MetadataIntegrationTestBase;
@@ -35,7 +36,7 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
       "CREATE INDEX " + INDEX2 + " ON " + NAMESPACE + "." + TABLE + " (c6)";
   private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + NAMESPACE;
 
-  private static CassandraTableMetadata tableMetadata;
+  private static TableMetadata tableMetadata;
 
   @Before
   public void setUp() throws Exception {

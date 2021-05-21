@@ -9,15 +9,14 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.common.metadata.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -314,20 +313,13 @@ public class JdbcTransactionIntegrationTest {
     testEnv.register(
         NAMESPACE,
         TABLE,
-        Collections.singletonList(ACCOUNT_ID),
-        Collections.singletonList(ACCOUNT_TYPE),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
-          }
-        },
-        new HashMap<String, DataType>() {
-          {
-            put(ACCOUNT_ID, DataType.INT);
-            put(ACCOUNT_TYPE, DataType.INT);
-            put(BALANCE, DataType.INT);
-          }
-        });
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build());
 
     testEnv.createMetadataTable();
     testEnv.createTables();

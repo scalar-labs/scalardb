@@ -2,17 +2,17 @@ package com.scalar.db.storage.jdbc;
 
 import com.google.common.base.MoreObjects;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.metadata.DataType;
-import com.scalar.db.storage.jdbc.metadata.JdbcTableMetadata;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,10 +28,10 @@ import javax.annotation.concurrent.Immutable;
 @Immutable
 public class ResultImpl implements Result {
 
-  private final JdbcTableMetadata tableMetadata;
+  private final TableMetadata tableMetadata;
   private final Map<String, Value<?>> values;
 
-  public ResultImpl(JdbcTableMetadata tableMetadata, List<String> projections, ResultSet resultSet)
+  public ResultImpl(TableMetadata tableMetadata, List<String> projections, ResultSet resultSet)
       throws SQLException {
     this.tableMetadata = tableMetadata;
 
@@ -47,7 +47,7 @@ public class ResultImpl implements Result {
     }
   }
 
-  private Value<?> getValue(JdbcTableMetadata tableMetadata, String name, ResultSet resultSet)
+  private Value<?> getValue(TableMetadata tableMetadata, String name, ResultSet resultSet)
       throws SQLException {
     DataType dataType = tableMetadata.getColumnDataType(name);
     switch (dataType) {

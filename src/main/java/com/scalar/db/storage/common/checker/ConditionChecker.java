@@ -8,8 +8,7 @@ import com.scalar.db.api.MutationConditionVisitor;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.storage.common.metadata.TableMetadata;
-
+import com.scalar.db.api.TableMetadata;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe

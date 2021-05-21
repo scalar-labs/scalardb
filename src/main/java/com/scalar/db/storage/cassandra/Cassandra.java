@@ -13,6 +13,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -107,7 +108,7 @@ public class Cassandra implements DistributedStorage {
       return Optional.empty();
     }
 
-    CassandraTableMetadata metadata = metadataManager.getTableMetadata(get);
+    TableMetadata metadata = metadataManager.getTableMetadata(get);
     return Optional.of(new ResultImpl(rows.get(0), metadata));
   }
 
@@ -121,7 +122,7 @@ public class Cassandra implements DistributedStorage {
 
     com.datastax.driver.core.ResultSet results = handlers.select().handle(scan);
 
-    CassandraTableMetadata metadata = metadataManager.getTableMetadata(scan);
+    TableMetadata metadata = metadataManager.getTableMetadata(scan);
     return new ScannerImpl(results, metadata);
   }
 

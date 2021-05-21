@@ -15,9 +15,9 @@ import static org.mockito.Mockito.spy;
 
 import com.google.common.base.Joiner;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.common.metadata.DataType;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
@@ -25,8 +25,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.After;
@@ -101,31 +99,24 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
     testEnv.register(
         NAMESPACE,
         TABLE_2,
-        Collections.singletonList(ACCOUNT_ID),
-        Collections.singletonList(ACCOUNT_TYPE),
-        new HashMap<String, Scan.Ordering.Order>() {
-          {
-            put(ACCOUNT_TYPE, Scan.Ordering.Order.ASC);
-          }
-        },
-        new HashMap<String, DataType>() {
-          {
-            put(ACCOUNT_ID, DataType.INT);
-            put(ACCOUNT_TYPE, DataType.INT);
-            put(BALANCE, DataType.INT);
-            put(ID, DataType.TEXT);
-            put(STATE, DataType.INT);
-            put(VERSION, DataType.INT);
-            put(PREPARED_AT, DataType.BIGINT);
-            put(COMMITTED_AT, DataType.BIGINT);
-            put(BEFORE_PREFIX + BALANCE, DataType.INT);
-            put(BEFORE_ID, DataType.TEXT);
-            put(BEFORE_STATE, DataType.INT);
-            put(BEFORE_VERSION, DataType.INT);
-            put(BEFORE_PREPARED_AT, DataType.BIGINT);
-            put(BEFORE_COMMITTED_AT, DataType.BIGINT);
-          }
-        });
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(VERSION, DataType.INT)
+            .addColumn(PREPARED_AT, DataType.BIGINT)
+            .addColumn(COMMITTED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(BEFORE_ID, DataType.TEXT)
+            .addColumn(BEFORE_STATE, DataType.INT)
+            .addColumn(BEFORE_VERSION, DataType.INT)
+            .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build());
 
     testEnv.createMetadataTable();
     testEnv.createTables();
