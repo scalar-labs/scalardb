@@ -1,12 +1,11 @@
 package com.scalar.db.storage.jdbc;
 
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
-import oracle.jdbc.OracleDriver;
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
+import oracle.jdbc.OracleDriver;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 public final class JdbcUtils {
   private JdbcUtils() {}
@@ -41,8 +40,9 @@ public final class JdbcUtils {
     dataSource.setDriver(getDriverClass(jdbcUrl));
 
     dataSource.setUrl(jdbcUrl);
-    dataSource.setUsername(config.getUsername());
-    dataSource.setPassword(config.getPassword());
+
+    config.getUsername().ifPresent(dataSource::setUsername);
+    config.getPassword().ifPresent(dataSource::setPassword);
 
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);

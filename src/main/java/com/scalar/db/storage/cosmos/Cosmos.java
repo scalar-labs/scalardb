@@ -54,7 +54,7 @@ public class Cosmos implements DistributedStorage {
     this.client =
         new CosmosClientBuilder()
             .endpoint(config.getContactPoints().get(0))
-            .key(config.getPassword())
+            .key(config.getPassword().orElse(null))
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();

@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
@@ -16,7 +17,6 @@ import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +26,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
+  private final RdbEngine rdbEngine;
   private final JdbcService jdbcService;
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -34,7 +35,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   public JdbcTransactionManager(JdbcDatabaseConfig config) {
     dataSource = JdbcUtils.initDataSource(config, true);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
-    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     JdbcTableMetadataManager tableMetadataManager =
         new JdbcTableMetadataManager(dataSource, namespacePrefix, rdbEngine);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
@@ -46,8 +47,9 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   }
 
   @VisibleForTesting
-  JdbcTransactionManager(BasicDataSource dataSource, JdbcService jdbcService) {
+  JdbcTransactionManager(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcService jdbcService) {
     this.dataSource = dataSource;
+    this.rdbEngine = rdbEngine;
     this.jdbcService = jdbcService;
   }
 
@@ -80,7 +82,8 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Override
   public JdbcTransaction start() throws TransactionException {
     try {
-      return new JdbcTransaction(jdbcService, dataSource.getConnection(), namespace, tableName);
+      return new JdbcTransaction(
+          jdbcService, dataSource.getConnection(), rdbEngine, namespace, tableName);
     } catch (SQLException e) {
       throw new TransactionException("failed to start the transaction", e);
     }

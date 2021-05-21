@@ -47,6 +47,11 @@ public final class BooleanValue implements Value<BooleanValue> {
   }
 
   @Override
+  public boolean getAsBoolean() {
+    return get();
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;

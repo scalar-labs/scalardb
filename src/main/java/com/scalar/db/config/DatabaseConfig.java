@@ -27,8 +27,8 @@ public class DatabaseConfig {
   private final Properties props;
   private List<String> contactPoints;
   private int contactPort;
-  private String username;
-  private String password;
+  private Optional<String> username;
+  private Optional<String> password;
   private Class<? extends DistributedStorage> storageClass;
   private Optional<String> namespacePrefix;
   private Isolation isolation = Isolation.SNAPSHOT;
@@ -91,8 +91,6 @@ public class DatabaseConfig {
 
     if (storageClass != MultiStorage.class) {
       checkNotNull(props.getProperty(CONTACT_POINTS));
-      checkNotNull(props.getProperty(USERNAME));
-      checkNotNull(props.getProperty(PASSWORD));
 
       contactPoints = Arrays.asList(props.getProperty(CONTACT_POINTS).split(","));
       if (props.getProperty(CONTACT_PORT) == null) {
@@ -101,8 +99,8 @@ public class DatabaseConfig {
         contactPort = Integer.parseInt(props.getProperty(CONTACT_PORT));
         checkArgument(contactPort > 0);
       }
-      username = props.getProperty(USERNAME);
-      password = props.getProperty(PASSWORD);
+      username = Optional.ofNullable(props.getProperty(USERNAME));
+      password = Optional.ofNullable(props.getProperty(PASSWORD));
 
       if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
         namespacePrefix = Optional.empty();
@@ -129,11 +127,11 @@ public class DatabaseConfig {
     return contactPort;
   }
 
-  public String getUsername() {
+  public Optional<String> getUsername() {
     return username;
   }
 
-  public String getPassword() {
+  public Optional<String> getPassword() {
     return password;
   }
 
