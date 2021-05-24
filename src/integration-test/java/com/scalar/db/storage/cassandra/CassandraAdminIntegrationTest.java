@@ -1,17 +1,15 @@
 package com.scalar.db.storage.cassandra;
 
-import com.scalar.db.api.Get;
-import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.io.Key;
-import com.scalar.db.storage.MetadataIntegrationTestBase;
+import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBase {
+public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
 
   private static final String INDEX1 = "test_index1";
   private static final String INDEX2 = "test_index2";
@@ -36,11 +34,11 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
       "CREATE INDEX " + INDEX2 + " ON " + NAMESPACE + "." + TABLE + " (c6)";
   private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + NAMESPACE;
 
-  private static TableMetadata tableMetadata;
+  private static DistributedStorageAdmin admin;
 
   @Before
   public void setUp() throws Exception {
-    setUp(tableMetadata);
+    setUp(admin);
   }
 
   @BeforeClass
@@ -82,14 +80,7 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
     props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
     props.setProperty(DatabaseConfig.USERNAME, USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
-    ClusterManager clusterManager = new ClusterManager(new DatabaseConfig(props));
-    clusterManager.getSession();
-    CassandraTableMetadataManager tableMetadataManager =
-        new CassandraTableMetadataManager(clusterManager);
-
-    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
-    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
-    clusterManager.close();
+    admin = new CassandraAdmin(new DatabaseConfig(props));
   }
 
   @AfterClass
@@ -104,5 +95,7 @@ public class CassandraMetadataIntegrationTest extends MetadataIntegrationTestBas
     if (ret != 0) {
       Assert.fail("DROP KEYSPACE failed.");
     }
+
+    admin.close();
   }
 }

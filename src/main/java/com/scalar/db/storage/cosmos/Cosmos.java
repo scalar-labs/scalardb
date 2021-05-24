@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
-import com.azure.cosmos.CosmosContainer;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -35,8 +34,6 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class Cosmos implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
-  private final String METADATA_DATABASE = "scalardb";
-  private final String METADATA_CONTAINER = "metadata";
 
   private final CosmosClient client;
   private final CosmosTableMetadataManager metadataManager;
@@ -51,7 +48,7 @@ public class Cosmos implements DistributedStorage {
 
   @Inject
   public Cosmos(DatabaseConfig config) {
-    this.client =
+    client =
         new CosmosClientBuilder()
             .endpoint(config.getContactPoints().get(0))
             .key(config.getPassword().orElse(null))
@@ -63,17 +60,13 @@ public class Cosmos implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    String metadataDatabase =
-        namespacePrefix.isPresent() ? namespacePrefix.get() + METADATA_DATABASE : METADATA_DATABASE;
-    CosmosContainer container =
-        client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER);
-    this.metadataManager = new CosmosTableMetadataManager(container);
+    metadataManager = new CosmosTableMetadataManager(client, namespacePrefix);
     operationChecker = new OperationChecker(metadataManager);
 
-    this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
-    this.putStatementHandler = new PutStatementHandler(client, metadataManager);
-    this.deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
-    this.batchHandler = new BatchHandler(client, metadataManager);
+    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
+    putStatementHandler = new PutStatementHandler(client, metadataManager);
+    deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
+    batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
   }

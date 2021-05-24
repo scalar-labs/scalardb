@@ -135,6 +135,11 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return getTableMetadata(fullTableName);
   }
 
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) {
+    return getTableMetadata(namespace + "." + table);
+  }
+
   public TableMetadata getTableMetadata(String fullTableName) {
     try {
       return tableMetadataCache.get(fullTableName).orElse(null);

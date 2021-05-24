@@ -2,11 +2,10 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.Get;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Key;
-import com.scalar.db.storage.MetadataIntegrationTestBase;
+import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,23 +30,25 @@ import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 
-public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
+public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
 
   private static final String METADATA_DATABASE = "scalardb";
   private static final String METADATA_TABLE = "metadata";
 
   private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
-  private static TableMetadata tableMetadata;
+  private static DistributedStorageAdmin admin;
 
   @Before
   public void setUp() throws Exception {
-    setUp(tableMetadata);
+    setUp(admin);
   }
 
   @Test
   @Override
-  public void testClusteringOrder() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     // Fow now, the clustering order is always ASC in the DynamoDB adapter
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
@@ -156,12 +157,7 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
 
     client.putItem(putItemRequest);
 
-    DynamoTableMetadataManager tableMetadataManager =
-        new DynamoTableMetadataManager(client, namespacePrefix());
-
-    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
-    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix().get()));
-    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
+    admin = new DynamoAdmin(client, namespacePrefix());
   }
 
   @AfterClass
@@ -170,6 +166,7 @@ public class DynamoMetadataIntegrationTest extends MetadataIntegrationTestBase {
         DeleteTableRequest.builder().tableName(table(METADATA_DATABASE, METADATA_TABLE)).build());
 
     client.close();
+    admin.close();
   }
 
   private static Optional<String> namespacePrefix() {
