@@ -17,9 +17,7 @@ public class AdminModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    if (config.getAdminClass() != null) {
-      bind(DistributedStorageAdmin.class).to(config.getAdminClass()).in(Singleton.class);
-    }
+    bind(DistributedStorageAdmin.class).to(config.getAdminClass()).in(Singleton.class);
   }
 
   @Singleton
