@@ -16,6 +16,7 @@ import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
+import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
@@ -94,7 +95,7 @@ public class DatabaseConfig {
           break;
         case "multi-storage":
           storageClass = MultiStorage.class;
-          adminClass = null;
+          adminClass = MultiStorageAdmin.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
@@ -119,6 +120,10 @@ public class DatabaseConfig {
       } else {
         namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
       }
+    } else {
+      username = Optional.empty();
+      password = Optional.empty();
+      namespacePrefix = Optional.empty();
     }
 
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {

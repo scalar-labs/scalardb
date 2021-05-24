@@ -12,6 +12,8 @@ import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
+import com.scalar.db.storage.multistorage.MultiStorage;
+import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.util.Collections;
 import java.util.Properties;
@@ -230,6 +232,25 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithMultiStorageGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isNull();
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isFalse();
+    assertThat(config.getPassword().isPresent()).isFalse();
+    assertThat(config.getNamespacePrefix().isPresent()).isFalse();
+    assertThat(config.getStorageClass()).isEqualTo(MultiStorage.class);
+    assertThat(config.getAdminClass()).isEqualTo(MultiStorageAdmin.class);
   }
 
   @Test
