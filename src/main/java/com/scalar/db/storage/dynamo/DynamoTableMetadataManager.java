@@ -45,8 +45,12 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
+    return getTableMetadata(operation.forFullNamespace().get(), operation.forTable().get());
+  }
 
-    String fullName = operation.forFullTableName().get();
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) {
+    String fullName = namespace + "." + table;
     if (!tableMetadataMap.containsKey(fullName)) {
       TableMetadata tableMetadata = readMetadata(fullName);
       if (tableMetadata == null) {

@@ -5,12 +5,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cosmos.Cosmos;
+import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
+import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
+import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,6 +36,7 @@ public class DatabaseConfig {
   private Optional<String> username;
   private Optional<String> password;
   private Class<? extends DistributedStorage> storageClass;
+  private Class<? extends DistributedStorageAdmin> adminClass;
   private Optional<String> namespacePrefix;
   private Isolation isolation = Isolation.SNAPSHOT;
   private SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
@@ -67,22 +74,28 @@ public class DatabaseConfig {
   protected void load() {
     if (props.getProperty(STORAGE) == null) {
       storageClass = Cassandra.class;
+      adminClass = CassandraAdmin.class;
     } else {
       switch (props.getProperty(STORAGE).toLowerCase()) {
         case "cassandra":
           storageClass = Cassandra.class;
+          adminClass = CassandraAdmin.class;
           break;
         case "cosmos":
           storageClass = Cosmos.class;
+          adminClass = CosmosAdmin.class;
           break;
         case "dynamo":
           storageClass = Dynamo.class;
+          adminClass = DynamoAdmin.class;
           break;
         case "jdbc":
           storageClass = JdbcDatabase.class;
+          adminClass = JdbcDatabaseAdmin.class;
           break;
         case "multi-storage":
           storageClass = MultiStorage.class;
+          adminClass = MultiStorageAdmin.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
@@ -107,6 +120,10 @@ public class DatabaseConfig {
       } else {
         namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
       }
+    } else {
+      username = Optional.empty();
+      password = Optional.empty();
+      namespacePrefix = Optional.empty();
     }
 
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
@@ -137,6 +154,10 @@ public class DatabaseConfig {
 
   public Class<? extends DistributedStorage> getStorageClass() {
     return storageClass;
+  }
+
+  public Class<? extends DistributedStorageAdmin> getAdminClass() {
+    return adminClass;
   }
 
   public Optional<String> getNamespacePrefix() {

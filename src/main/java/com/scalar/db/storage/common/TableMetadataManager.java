@@ -11,4 +11,13 @@ public interface TableMetadataManager {
    * @return a table metadata. null if the table is not found.
    */
   TableMetadata getTableMetadata(Operation operation);
+
+  /**
+   * Returns a table metadata corresponding to the specified namespace and table.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return a table metadata. null if the table is not found.
+   */
+  TableMetadata getTableMetadata(String namespace , String table);
 }

@@ -47,6 +47,7 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
     assertThat(config.getConnectionPoolMaxIdle()).isEqualTo(100);
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(200);
@@ -80,6 +81,7 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())
@@ -139,6 +141,7 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getNamespacePrefix().isPresent()).isTrue();
     assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())

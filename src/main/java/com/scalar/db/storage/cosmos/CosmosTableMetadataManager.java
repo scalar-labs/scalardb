@@ -1,9 +1,11 @@
 package com.scalar.db.storage.cosmos;
 
+import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.PartitionKey;
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -12,6 +14,7 @@ import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -22,12 +25,23 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public class CosmosTableMetadataManager implements TableMetadataManager {
+  private static final String METADATA_DATABASE = "scalardb";
+  private static final String METADATA_CONTAINER = "metadata";
+
   private final CosmosContainer container;
   private final Map<String, TableMetadata> tableMetadataMap;
 
-  public CosmosTableMetadataManager(CosmosContainer container) {
+  public CosmosTableMetadataManager(CosmosClient client, Optional<String> namespacePrefix) {
+    String metadataDatabase =
+        namespacePrefix.map(s -> s + METADATA_DATABASE).orElse(METADATA_DATABASE);
+    container = client.getDatabase(metadataDatabase).getContainer(METADATA_CONTAINER);
+    tableMetadataMap = new ConcurrentHashMap<>();
+  }
+
+  @VisibleForTesting
+  CosmosTableMetadataManager(CosmosContainer container) {
     this.container = container;
-    this.tableMetadataMap = new ConcurrentHashMap<>();
+    tableMetadataMap = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -35,8 +49,12 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
+    return getTableMetadata(operation.forFullNamespace().get(), operation.forTable().get());
+  }
 
-    String fullName = operation.forFullTableName().get();
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) {
+    String fullName = namespace + "." + table;
     if (!tableMetadataMap.containsKey(fullName)) {
       CosmosTableMetadata cosmosTableMetadata = readMetadata(fullName);
       if (cosmosTableMetadata == null) {

@@ -51,7 +51,7 @@ public class Dynamo implements DistributedStorage {
 
   @Inject
   public Dynamo(DatabaseConfig config) {
-    this.client =
+    client =
         DynamoDbClient.builder()
             .credentialsProvider(
                 StaticCredentialsProvider.create(
@@ -64,13 +64,13 @@ public class Dynamo implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    this.metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
+    metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
     operationChecker = new OperationChecker(metadataManager);
 
-    this.selectStatementHandler = new SelectStatementHandler(client, metadataManager);
-    this.putStatementHandler = new PutStatementHandler(client, metadataManager);
-    this.deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
-    this.batchHandler = new BatchHandler(client, metadataManager);
+    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
+    putStatementHandler = new PutStatementHandler(client, metadataManager);
+    deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
+    batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("DynamoDB object is created properly.");
   }

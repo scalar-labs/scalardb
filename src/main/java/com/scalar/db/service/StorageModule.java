@@ -4,6 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
@@ -18,6 +19,7 @@ public class StorageModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(DistributedStorage.class).to(config.getStorageClass()).in(Singleton.class);
+    bind(DistributedStorageAdmin.class).to(config.getAdminClass()).in(Singleton.class);
   }
 
   @Singleton

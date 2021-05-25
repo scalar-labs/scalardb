@@ -1,0 +1,71 @@
+package com.scalar.db.storage.cosmos;
+
+import com.azure.cosmos.ConsistencyLevel;
+import com.azure.cosmos.CosmosClient;
+import com.azure.cosmos.CosmosClientBuilder;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
+import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
+import java.util.Map;
+import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
+
+@ThreadSafe
+public class CosmosAdmin implements DistributedStorageAdmin {
+
+  private final CosmosClient client;
+  private final Optional<String> namespacePrefix;
+  private final CosmosTableMetadataManager metadataManager;
+
+  @Inject
+  public CosmosAdmin(DatabaseConfig config) {
+    client =
+        new CosmosClientBuilder()
+            .endpoint(config.getContactPoints().get(0))
+            .key(config.getPassword().orElse(null))
+            .directMode()
+            .consistencyLevel(ConsistencyLevel.STRONG)
+            .buildClient();
+    namespacePrefix = config.getNamespacePrefix();
+    metadataManager = new CosmosTableMetadataManager(client, namespacePrefix);
+  }
+
+  @VisibleForTesting
+  CosmosAdmin(CosmosTableMetadataManager metadataManager, Optional<String> namespacePrefix) {
+    client = null;
+    this.metadataManager = metadataManager;
+    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
+  }
+
+  @Override
+  public void createTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options) {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public void dropTable(String namespace, String table) {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public void truncateTable(String namespace, String table) {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) {
+    return metadataManager.getTableMetadata(fullNamespace(namespace), table);
+  }
+
+  private String fullNamespace(String namespace) {
+    return namespacePrefix.map(s -> s + namespace).orElse(namespace);
+  }
+
+  @Override
+  public void close() {
+    client.close();
+  }
+}

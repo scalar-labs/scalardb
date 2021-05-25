@@ -2,13 +2,14 @@ package com.scalar.db.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import java.util.Iterator;
 import org.junit.Test;
 
-public abstract class MetadataIntegrationTestBase {
+public abstract class AdminIntegrationTestBase {
 
   protected static final String NAMESPACE = "integration_testing";
   protected static final String TABLE = "test_table";
@@ -24,19 +25,22 @@ public abstract class MetadataIntegrationTestBase {
   protected static final String COL_NAME10 = "c10";
   protected static final String COL_NAME11 = "c11";
 
-  private TableMetadata tableMetadata;
+  private DistributedStorageAdmin admin;
 
-  public void setUp(TableMetadata tableMetadata) throws Exception {
-    this.tableMetadata = tableMetadata;
+  public void setUp(DistributedStorageAdmin admin) throws Exception {
+    this.admin = admin;
   }
 
   @Test
-  public void testMetadataIsNotNull() {
+  public void getTableMetadata_CorrectTableGiven_MetadataShouldNotBeNull() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
     assertThat(tableMetadata).isNotNull();
   }
 
   @Test
-  public void testPartitionKeyNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectPartitionKeyNames() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getPartitionKeyNames().size()).isEqualTo(2);
     Iterator<String> iterator = tableMetadata.getPartitionKeyNames().iterator();
     assertThat(iterator.next()).isEqualTo(COL_NAME2);
@@ -44,7 +48,9 @@ public abstract class MetadataIntegrationTestBase {
   }
 
   @Test
-  public void testClusteringKeyNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringKeyNames() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getClusteringKeyNames().size()).isEqualTo(2);
     Iterator<String> iterator = tableMetadata.getClusteringKeyNames().iterator();
     assertThat(iterator.next()).isEqualTo(COL_NAME4);
@@ -52,7 +58,9 @@ public abstract class MetadataIntegrationTestBase {
   }
 
   @Test
-  public void testColumnNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnNames() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME1)).isTrue();
     assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isTrue();
@@ -68,7 +76,9 @@ public abstract class MetadataIntegrationTestBase {
   }
 
   @Test
-  public void testColumnDataType() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnDataTypes() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.INT);
     assertThat(tableMetadata.getColumnDataType(COL_NAME2)).isEqualTo(DataType.TEXT);
     assertThat(tableMetadata.getColumnDataType(COL_NAME3)).isEqualTo(DataType.TEXT);
@@ -83,7 +93,9 @@ public abstract class MetadataIntegrationTestBase {
   }
 
   @Test
-  public void testClusteringOrder() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.DESC);
@@ -98,9 +110,17 @@ public abstract class MetadataIntegrationTestBase {
   }
 
   @Test
-  public void testSecondaryIndexNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectSecondaryIndexNames() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME5)).isTrue();
     assertThat(tableMetadata.getSecondaryIndexNames().contains(COL_NAME6)).isTrue();
+  }
+
+  @Test
+  public void getTableMetadata_WrongTableGiven_ShouldReturnNull() {
+    TableMetadata tableMetadata = admin.getTableMetadata("wrong_ns", "wrong_table");
+    assertThat(tableMetadata).isNull();
   }
 }

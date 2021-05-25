@@ -27,13 +27,16 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
+    return getTableMetadata(operation.forFullNamespace().get(), operation.forTable().get());
+  }
 
-    String fullName = operation.forFullTableName().get();
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String table) {
+    String fullName = namespace + "." + table;
     if (!tableMetadataMap.containsKey(fullName)) {
       try {
         com.datastax.driver.core.TableMetadata metadata =
-            clusterManager.getMetadata(
-                operation.forFullNamespace().get(), operation.forTable().get());
+            clusterManager.getMetadata(namespace, table);
         tableMetadataMap.put(fullName, createTableMetadata(metadata));
       } catch (StorageRuntimeException e) {
         // The specified table is not found

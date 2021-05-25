@@ -4,42 +4,44 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
-import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.ThroughputProperties;
-import com.scalar.db.api.Get;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Key;
-import com.scalar.db.storage.MetadataIntegrationTestBase;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
+public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
 
   private static final String METADATA_DATABASE = "scalardb";
   private static final String METADATA_CONTAINER = "metadata";
 
   private static Optional<String> namespacePrefix;
   private static CosmosClient client;
-  private static TableMetadata tableMetadata;
+  private static DistributedStorageAdmin admin;
 
   @Before
   public void setUp() throws Exception {
-    setUp(tableMetadata);
+    setUp(admin);
   }
 
   @Test
   @Override
-  public void testClusteringOrder() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders() {
+    TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
+
     // Fow now, the clustering order is always ASC in the Cosmos DB adapter
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
@@ -94,13 +96,12 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
         .getContainer(METADATA_CONTAINER)
         .createItem(metadata);
 
-    CosmosContainer container =
-        client.getDatabase(database(METADATA_DATABASE)).getContainer(METADATA_CONTAINER);
-    CosmosTableMetadataManager tableMetadataManager = new CosmosTableMetadataManager(container);
-
-    Get dummyOperation = new Get(new Key()).forNamespace(NAMESPACE).forTable(TABLE);
-    namespacePrefix.ifPresent(n -> dummyOperation.forNamespacePrefix(namespacePrefix()));
-    tableMetadata = tableMetadataManager.getTableMetadata(dummyOperation);
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
+    props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "cosmos");
+    namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
+    admin = new CosmosAdmin(new DatabaseConfig(props));
   }
 
   @AfterClass
@@ -110,6 +111,7 @@ public class CosmosMetadataIntegrationTest extends MetadataIntegrationTestBase {
     database.delete();
 
     client.close();
+    admin.close();
   }
 
   private static String namespacePrefix() {

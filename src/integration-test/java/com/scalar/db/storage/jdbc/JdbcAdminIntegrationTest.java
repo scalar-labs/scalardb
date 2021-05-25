@@ -1,23 +1,23 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.MetadataIntegrationTestBase;
+import com.scalar.db.storage.AdminIntegrationTestBase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import java.util.Optional;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
+public class JdbcAdminIntegrationTest extends AdminIntegrationTestBase {
 
   private static TestEnv testEnv;
-  private static TableMetadata tableMetadata;
+  private static DistributedStorageAdmin admin;
 
   @Before
   public void setUp() throws Exception {
-    setUp(tableMetadata);
+    setUp(admin);
   }
 
   @BeforeClass
@@ -48,17 +48,13 @@ public class JdbcMetadataIntegrationTest extends MetadataIntegrationTestBase {
     testEnv.createMetadataTable();
     testEnv.insertMetadata();
 
-    Optional<String> namespacePrefix = testEnv.getJdbcDatabaseConfig().getNamespacePrefix();
-    JdbcTableMetadataManager tableMetadataManager =
-        new JdbcTableMetadataManager(
-            testEnv.getDataSource(), namespacePrefix, testEnv.getRdbEngine());
-    String fullTableName = namespacePrefix.orElse("") + NAMESPACE + "." + TABLE;
-    tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
+    admin = new JdbcDatabaseAdmin(testEnv.getJdbcDatabaseConfig());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     testEnv.dropMetadataTable();
     testEnv.close();
+    admin.close();
   }
 }
