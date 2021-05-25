@@ -35,11 +35,6 @@ public class DynamoOperation {
     this.metadata = metadataManager.getTableMetadata(operation);
   }
 
-  public DynamoOperation(Operation operation, TableMetadata metadata) {
-    this.operation = operation;
-    this.metadata = metadata;
-  }
-
   @Nonnull
   public Operation getOperation() {
     return operation;

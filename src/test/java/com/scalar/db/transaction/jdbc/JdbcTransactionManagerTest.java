@@ -19,8 +19,8 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.storage.jdbc.ResultInterpreter;
 import com.scalar.db.storage.jdbc.ScannerImpl;
-import com.scalar.db.storage.jdbc.query.SelectQuery;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,7 +37,7 @@ public class JdbcTransactionManagerTest {
   @Mock private BasicDataSource dataSource;
   @Mock private JdbcService jdbcService;
 
-  @Mock private SelectQuery selectQuery;
+  @Mock private ResultInterpreter resultInterpreter;
   @Mock private Connection connection;
   @Mock private PreparedStatement preparedStatement;
   @Mock private ResultSet resultSet;
@@ -57,7 +57,7 @@ public class JdbcTransactionManagerTest {
   public void whenSomeOperationsExecutedAndCommit_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.scan(any(), any(), any(), any()))
-        .thenReturn(new ScannerImpl(selectQuery, connection, preparedStatement, resultSet));
+        .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
     when(resultSet.next()).thenReturn(false);
     when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
     when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);

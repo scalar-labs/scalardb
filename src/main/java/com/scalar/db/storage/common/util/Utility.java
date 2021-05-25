@@ -1,6 +1,8 @@
 package com.scalar.db.storage.common.util;
 
+import com.google.common.collect.Streams;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.List;
@@ -48,5 +50,15 @@ public final class Utility {
     }
 
     return false;
+  }
+
+  public static void addProjectionsForKeys(Selection selection, TableMetadata metadata) {
+    if (selection.getProjections().isEmpty()) { // meaning projecting all
+      return;
+    }
+    Streams.concat(
+            metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
+        .filter(n -> !selection.getProjections().contains(n))
+        .forEach(selection::withProjection);
   }
 }

@@ -1,13 +1,12 @@
-package com.scalar.db.storage.jdbc;
+package com.scalar.db.storage.common;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
-
-import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
 public class ScannerIterator implements Iterator<Result> {
@@ -17,20 +16,19 @@ public class ScannerIterator implements Iterator<Result> {
 
   public ScannerIterator(Scanner scanner) {
     this.scanner = Objects.requireNonNull(scanner);
-    fetch();
-  }
-
-  private void fetch() {
-    try {
-      next = scanner.one().orElse(null);
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e.getMessage(), e);
-    }
   }
 
   @Override
   public boolean hasNext() {
-    return next != null;
+    if (next != null) {
+      return true;
+    }
+
+    try {
+      return (next = scanner.one().orElse(null)) != null;
+    } catch (ExecutionException e) {
+      throw new RuntimeException(e.getMessage(), e);
+    }
   }
 
   @Override
@@ -40,7 +38,7 @@ public class ScannerIterator implements Iterator<Result> {
     }
 
     Result ret = next;
-    fetch();
+    next = null;
     return ret;
   }
 }
