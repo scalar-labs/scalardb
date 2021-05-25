@@ -3,15 +3,12 @@ package com.scalar.db.storage.jdbc.query;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
-import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.ResultImpl;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -152,9 +149,5 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
       endValue.get().accept(binder);
       binder.throwSQLExceptionIfOccurred();
     }
-  }
-
-  public Result getResult(ResultSet resultSet) throws SQLException {
-    return new ResultImpl(tableMetadata, projections, resultSet);
   }
 }

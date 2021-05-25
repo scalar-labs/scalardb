@@ -112,7 +112,8 @@ public class Cosmos implements DistributedStorage {
     }
 
     TableMetadata metadata = metadataManager.getTableMetadata(get);
-    return Optional.of(new ResultImpl(records.get(0), get, metadata));
+    return Optional.of(
+        new ResultInterpreter(get.getProjections(), metadata).interpret(records.get(0)));
   }
 
   @Override
@@ -123,7 +124,7 @@ public class Cosmos implements DistributedStorage {
     List<Record> records = selectStatementHandler.handle(scan);
 
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    return new ScannerImpl(records, scan, metadata);
+    return new ScannerImpl(records, new ResultInterpreter(scan.getProjections(), metadata));
   }
 
   @Override

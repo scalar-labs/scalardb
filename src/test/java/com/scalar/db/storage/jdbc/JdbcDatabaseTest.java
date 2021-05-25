@@ -1,5 +1,10 @@
 package com.scalar.db.storage.jdbc;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Get;
@@ -11,30 +16,23 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.storage.jdbc.query.SelectQuery;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Arrays;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 public class JdbcDatabaseTest {
 
   @Mock private BasicDataSource dataSource;
   @Mock private JdbcService jdbcService;
 
-  @Mock private SelectQuery selectQuery;
+  @Mock private ResultInterpreter resultInterpreter;
   @Mock private Connection connection;
   @Mock private PreparedStatement preparedStatement;
   @Mock private ResultSet resultSet;
@@ -84,7 +82,7 @@ public class JdbcDatabaseTest {
   public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
     // Arrange
     when(jdbcService.scan(any(), any(), any(), any()))
-        .thenReturn(new ScannerImpl(selectQuery, connection, preparedStatement, resultSet));
+        .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
 
     // Act
     Scan scan = new Scan(new Key(new TextValue("p1", "val")));

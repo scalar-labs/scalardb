@@ -5,11 +5,11 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.util.Utility;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -17,8 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -34,7 +32,6 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SelectStatementHandler.class);
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
@@ -54,27 +51,20 @@ public class SelectStatementHandler extends StatementHandler {
     try {
       if (Utility.isSecondaryIndexSpecified(
           operation, metadataManager.getTableMetadata(operation))) {
-        // convert to a mutable list for the Scanner
-        return new ArrayList<>(executeQueryWithIndex((Selection) operation).items());
+        return executeQueryWithIndex((Selection) operation);
       }
 
       if (operation instanceof Get) {
-        GetItemResponse response = executeGet((Get) operation);
-        if (response.hasItem()) {
-          return Arrays.asList(response.item());
-        } else {
-          return Collections.emptyList();
-        }
+        return executeGet((Get) operation);
       } else {
-        // convert to a mutable list for the Scanner
-        return new ArrayList<>(executeQuery((Scan) operation).items());
+        return executeQuery((Scan) operation);
       }
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
   }
 
-  private GetItemResponse executeGet(Get get) {
+  private List<Map<String, AttributeValue>> executeGet(Get get) {
     DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
 
     GetItemRequest.Builder builder =
@@ -90,10 +80,15 @@ public class SelectStatementHandler extends StatementHandler {
       builder.consistentRead(true);
     }
 
-    return client.getItem(builder.build());
+    GetItemResponse getItemResponse = client.getItem(builder.build());
+    if (getItemResponse.hasItem()) {
+      return Collections.singletonList(getItemResponse.item());
+    } else {
+      return Collections.emptyList();
+    }
   }
 
-  private QueryResponse executeQueryWithIndex(Selection selection) {
+  private List<Map<String, AttributeValue>> executeQueryWithIndex(Selection selection) {
     DynamoOperation dynamoOperation = new DynamoOperation(selection, metadataManager);
     Value<?> keyValue = selection.getPartitionKey().get().get(0);
     String column = keyValue.getName();
@@ -118,10 +113,11 @@ public class SelectStatementHandler extends StatementHandler {
       }
     }
 
-    return client.query(builder.build());
+    QueryResponse queryResponse = client.query(builder.build());
+    return new ArrayList<>(queryResponse.items());
   }
 
-  private QueryResponse executeQuery(Scan scan) {
+  private List<Map<String, AttributeValue>> executeQuery(Scan scan) {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
@@ -158,7 +154,13 @@ public class SelectStatementHandler extends StatementHandler {
       builder.consistentRead(true);
     }
 
-    return client.query(builder.build());
+    QueryResponse queryResponse = client.query(builder.build());
+    List<Map<String, AttributeValue>> ret = new ArrayList<>(queryResponse.items());
+    if (!dynamoOperation.isSingleClusteringKey()) {
+      TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
+      ret = new ItemSorter(scan, tableMetadata).sort(ret);
+    }
+    return ret;
   }
 
   private Optional<String> getIndexName(Scan scan) {
@@ -239,7 +241,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void setStartCondition(
       Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
@@ -267,7 +268,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void setEndCondition(
       Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
@@ -310,11 +310,7 @@ public class SelectStatementHandler extends StatementHandler {
             k -> {
               List<Value<?>> start = k.get();
               int size = isRangeEnabled ? start.size() - 1 : start.size();
-              IntStream.range(0, size)
-                  .forEach(
-                      i -> {
-                        start.get(i).accept(binder);
-                      });
+              IntStream.range(0, size).forEach(i -> start.get(i).accept(binder));
             });
 
     return binder.build();
@@ -327,11 +323,7 @@ public class SelectStatementHandler extends StatementHandler {
             k -> {
               List<Value<?>> end = k.get();
               int size = isRangeEnabled ? end.size() - 1 : end.size();
-              IntStream.range(0, size)
-                  .forEach(
-                      i -> {
-                        end.get(i).accept(binder);
-                      });
+              IntStream.range(0, size).forEach(i -> end.get(i).accept(binder));
             });
 
     return binder.build();

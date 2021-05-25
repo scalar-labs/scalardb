@@ -120,6 +120,8 @@ public class Dynamo implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
     operationChecker.check(get);
+    TableMetadata metadata = metadataManager.getTableMetadata(get);
+    Utility.addProjectionsForKeys(get, metadata);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(get);
     if (items.size() > 1) {
@@ -129,19 +131,20 @@ public class Dynamo implements DistributedStorage {
       return Optional.empty();
     }
 
-    TableMetadata metadata = metadataManager.getTableMetadata(get);
-    return Optional.of(new ResultImpl(items.get(0), get, metadata));
+    return Optional.of(
+        new ResultInterpreter(get.getProjections(), metadata).interpret(items.get(0)));
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
     operationChecker.check(scan);
+    TableMetadata metadata = metadataManager.getTableMetadata(scan);
+    Utility.addProjectionsForKeys(scan, metadata);
 
     List<Map<String, AttributeValue>> items = selectStatementHandler.handle(scan);
 
-    TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    return new ScannerImpl(items, scan, metadata);
+    return new ScannerImpl(items, new ResultInterpreter(scan.getProjections(), metadata));
   }
 
   @Override
