@@ -7,7 +7,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.service.AdminModule;
+import com.scalar.db.service.StorageModule;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +24,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
         .forEach(
             (storage, databaseConfig) -> {
               // Instantiate admins with Guice
-              Injector injector = Guice.createInjector(new AdminModule(databaseConfig));
+              Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
               nameAdminMap.put(storage, injector.getInstance(DistributedStorageAdmin.class));
             });
 
