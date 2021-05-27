@@ -17,7 +17,6 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
@@ -848,7 +847,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowMultiPartitionException() {
+      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey1 = new Key(new IntValue(PKEY1, 1), new TextValue(PKEY2, "val1"));
     Key partitionKey2 = new Key(new IntValue(PKEY1, 2), new TextValue(PKEY2, "val2"));
@@ -860,7 +859,7 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
-        .isInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
