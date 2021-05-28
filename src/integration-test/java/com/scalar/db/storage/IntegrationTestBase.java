@@ -18,7 +18,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.IntValue;
@@ -568,7 +567,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void
-      put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldThrowMultiPartitionException()
+      put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldThrowIllegalArgumentException()
           throws Exception {
     // Arrange
     puts = preparePuts();
@@ -578,7 +577,7 @@ public abstract class IntegrationTestBase {
 
     // Act
     assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
 
     // Assert
     List<Result> results;
@@ -591,14 +590,14 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutWithDifferentPartitionsGiven_ShouldThrowMultiPartitionException()
+  public void put_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange
     puts = preparePuts();
 
     // Act
     assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
 
     // Assert
     List<Result> results;
@@ -876,14 +875,14 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldThrowMultiPartitionException()
+  public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
       throws Exception {
     // Arrange
     puts = preparePuts();
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
-        .isInstanceOf(MultiPartitionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
 
     // Assert
     List<Result> results;

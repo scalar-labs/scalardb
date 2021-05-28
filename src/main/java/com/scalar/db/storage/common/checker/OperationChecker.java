@@ -8,7 +8,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.MultiPartitionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
@@ -231,8 +230,7 @@ public class OperationChecker {
     for (Mutation mutation : mutations) {
       if (!mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
-        throw new MultiPartitionException(
-            "decided not to execute this batch since multi-partition batch is not recommended");
+        throw new IllegalArgumentException("Mutations that span multi-partition are not supported");
       }
     }
   }
