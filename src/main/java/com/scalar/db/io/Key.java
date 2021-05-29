@@ -7,6 +7,7 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -159,6 +160,16 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
     public Builder addBlob(String name, byte[] value) {
       values.add(new BlobValue(name, value));
+      return this;
+    }
+
+    public Builder add(Value<?> value) {
+      values.add(value);
+      return this;
+    }
+
+    public Builder addAll(Collection<? extends Value<?>> values) {
+      this.values.addAll(values);
       return this;
     }
 
