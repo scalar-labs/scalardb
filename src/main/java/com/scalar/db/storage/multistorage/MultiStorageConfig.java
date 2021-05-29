@@ -17,6 +17,7 @@ public class MultiStorageConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";
   public static final String STORAGES = PREFIX + "storages";
   public static final String TABLE_MAPPING = PREFIX + "table_mapping";
+  public static final String NAMESPACE_MAPPING = PREFIX + "namespace_mapping";
   public static final String DEFAULT_STORAGE = PREFIX + "default_storage";
 
   private static final String MULTI_STORAGE = "multi-storage";
@@ -25,6 +26,7 @@ public class MultiStorageConfig {
 
   private Map<String, DatabaseConfig> databaseConfigMap;
   private Map<String, String> tableStorageMap;
+  private Map<String, String> namespaceStorageMap;
   private String defaultStorage;
 
   public MultiStorageConfig(File propertiesFile) throws IOException {
@@ -54,6 +56,7 @@ public class MultiStorageConfig {
 
     loadDatabaseConfigs();
     loadTableStorageMapping();
+    loadNamespaceStorageMapping();
 
     defaultStorage = props.getProperty(DEFAULT_STORAGE);
     checkIfStorageExists(defaultStorage);
@@ -88,15 +91,32 @@ public class MultiStorageConfig {
     Builder<String, String> builder = ImmutableMap.builder();
 
     String tableMapping = props.getProperty(TABLE_MAPPING);
-    for (String tableAndStorage : tableMapping.split(",")) {
-      String[] s = tableAndStorage.split(":");
-      String table = s[0];
-      String storage = s[1];
-
-      checkIfStorageExists(storage);
-      builder.put(table, storage);
+    if (tableMapping != null) {
+      for (String tableAndStorage : tableMapping.split(",")) {
+        String[] s = tableAndStorage.split(":");
+        String table = s[0];
+        String storage = s[1];
+        checkIfStorageExists(storage);
+        builder.put(table, storage);
+      }
     }
     tableStorageMap = builder.build();
+  }
+
+  private void loadNamespaceStorageMapping() {
+    Builder<String, String> builder = ImmutableMap.builder();
+
+    String namespaceMapping = props.getProperty(NAMESPACE_MAPPING);
+    if (namespaceMapping != null) {
+      for (String namespaceAndStorage : namespaceMapping.split(",")) {
+        String[] s = namespaceAndStorage.split(":");
+        String namespace = s[0];
+        String storage = s[1];
+        checkIfStorageExists(storage);
+        builder.put(namespace, storage);
+      }
+    }
+    namespaceStorageMap = builder.build();
   }
 
   private void checkIfStorageExists(String storage) {
@@ -111,6 +131,10 @@ public class MultiStorageConfig {
 
   public Map<String, String> getTableStorageMap() {
     return tableStorageMap;
+  }
+
+  public Map<String, String> getNamespaceStorageMap() {
+    return namespaceStorageMap;
   }
 
   public String getDefaultStorage() {

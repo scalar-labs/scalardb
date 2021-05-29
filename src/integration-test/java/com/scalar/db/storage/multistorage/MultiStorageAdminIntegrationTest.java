@@ -7,6 +7,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
@@ -17,7 +18,8 @@ import org.junit.Test;
 
 public class MultiStorageAdminIntegrationTest {
 
-  protected static final String NAMESPACE = "integration_testing";
+  protected static final String NAMESPACE1 = "integration_testing1";
+  protected static final String NAMESPACE2 = "integration_testing2";
   protected static final String TABLE1 = "test_table1";
   protected static final String TABLE2 = "test_table2";
   protected static final String TABLE3 = "test_table3";
@@ -48,7 +50,7 @@ public class MultiStorageAdminIntegrationTest {
   @Test
   public void getTableMetadata_ForTable1_ShouldReturnMetadataFromCassandra() {
     // Arrange
-    String namespace = NAMESPACE;
+    String namespace = NAMESPACE1;
     String table = TABLE1;
 
     // Act
@@ -87,7 +89,7 @@ public class MultiStorageAdminIntegrationTest {
   @Test
   public void getTableMetadata_ForTable2_ShouldReturnMetadataFromMySql() {
     // Arrange
-    String namespace = NAMESPACE;
+    String namespace = NAMESPACE1;
     String table = TABLE2;
 
     // Act
@@ -119,7 +121,7 @@ public class MultiStorageAdminIntegrationTest {
   @Test
   public void getTableMetadata_ForTable3_ShouldReturnMetadataFromDefaultAdmin() {
     // Arrange
-    String namespace = NAMESPACE;
+    String namespace = NAMESPACE1;
     String table = TABLE3;
 
     // Act
@@ -168,40 +170,79 @@ public class MultiStorageAdminIntegrationTest {
     assertThat(tableMetadata).isNull();
   }
 
-  private static void initCassandra() throws Exception {
-    ProcessBuilder builder;
-    Process process;
-    int ret;
+  @Test
+  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromMySql() {
+    // Arrange
+    String namespace = NAMESPACE2;
+    String table = TABLE1;
 
-    String createKeyspaceStmt =
-        "CREATE KEYSPACE "
-            + NAMESPACE
-            + " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 }";
-    builder =
-        new ProcessBuilder(
-            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createKeyspaceStmt);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE KEYSPACE failed.");
-    }
+    // Act
+    TableMetadata tableMetadata = multiStorageAdmin.getTableMetadata(namespace, table);
+
+    // Assert
+    assertThat(tableMetadata).isNotNull();
+    assertThat(tableMetadata.getPartitionKeyNames().size()).isEqualTo(1);
+    assertThat(tableMetadata.getPartitionKeyNames().iterator().next()).isEqualTo(COL_NAME1);
+
+    assertThat(tableMetadata.getClusteringKeyNames()).isEmpty();
+
+    assertThat(tableMetadata.getColumnNames().size()).isEqualTo(3);
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME1)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME2)).isTrue();
+    assertThat(tableMetadata.getColumnNames().contains(COL_NAME3)).isTrue();
+
+    assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.TEXT);
+    assertThat(tableMetadata.getColumnDataType(COL_NAME2)).isEqualTo(DataType.INT);
+    assertThat(tableMetadata.getColumnDataType(COL_NAME3)).isEqualTo(DataType.BOOLEAN);
+
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isNull();
+
+    assertThat(tableMetadata.getSecondaryIndexNames()).isEmpty();
+  }
+
+  private static void initCassandra() throws Exception {
+    createKeyspace(NAMESPACE1);
+    createKeyspace(NAMESPACE2);
 
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      String createTableStmt =
-          "CREATE TABLE "
-              + NAMESPACE
-              + "."
-              + table
-              + " (c1 int, c2 text, c3 int, c4 int, c5 boolean, PRIMARY KEY((c1), c4))";
+      createTable(NAMESPACE1, table);
+    }
+    createTable(NAMESPACE2, TABLE1);
+  }
 
-      builder =
-          new ProcessBuilder(
-              "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createTableStmt);
-      process = builder.start();
-      ret = process.waitFor();
-      if (ret != 0) {
-        Assert.fail("CREATE TABLE failed: " + table);
-      }
+  private static void createKeyspace(String keyspace) throws IOException, InterruptedException {
+    String createKeyspaceStmt =
+        "CREATE KEYSPACE "
+            + keyspace
+            + " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 }";
+    ProcessBuilder builder =
+        new ProcessBuilder(
+            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createKeyspaceStmt);
+    Process process = builder.start();
+    int ret = process.waitFor();
+    if (ret != 0) {
+      Assert.fail("CREATE KEYSPACE failed: " + keyspace);
+    }
+  }
+
+  private static void createTable(String keyspace, String table)
+      throws IOException, InterruptedException {
+    String createTableStmt =
+        "CREATE TABLE "
+            + keyspace
+            + "."
+            + table
+            + " (c1 int, c2 text, c3 int, c4 int, c5 boolean, PRIMARY KEY((c1), c4))";
+
+    ProcessBuilder builder =
+        new ProcessBuilder(
+            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createTableStmt);
+    Process process = builder.start();
+    int ret = process.waitFor();
+    if (ret != 0) {
+      Assert.fail("CREATE TABLE failed: " + keyspace + "." + table);
     }
   }
 
@@ -210,7 +251,7 @@ public class MultiStorageAdminIntegrationTest {
 
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
       testEnv.register(
-          NAMESPACE,
+          NAMESPACE1,
           table,
           TableMetadata.newBuilder()
               .addColumn(COL_NAME1, DataType.TEXT)
@@ -219,6 +260,15 @@ public class MultiStorageAdminIntegrationTest {
               .addPartitionKey(COL_NAME1)
               .build());
     }
+    testEnv.register(
+        NAMESPACE2,
+        TABLE1,
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.TEXT)
+            .addColumn(COL_NAME2, DataType.INT)
+            .addColumn(COL_NAME3, DataType.BOOLEAN)
+            .addPartitionKey(COL_NAME1)
+            .build());
     testEnv.createMetadataTable();
     testEnv.createTables();
     testEnv.insertMetadata();
@@ -243,7 +293,10 @@ public class MultiStorageAdminIntegrationTest {
     // Define table mapping from table1 to cassandra, and from table2 to mysql
     props.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
-        NAMESPACE + "." + TABLE1 + ":cassandra," + NAMESPACE + "." + TABLE2 + ":mysql");
+        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":mysql");
+
+    // Define namespace mapping from namespace2 to mysql
+    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":mysql");
 
     // The default storage is cassandra
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
@@ -259,18 +312,19 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   private static void cleanUpCassandra() throws Exception {
-    ProcessBuilder builder;
-    Process process;
-    int ret;
+    dropKeyspace(NAMESPACE1);
+    dropKeyspace(NAMESPACE2);
+  }
 
-    String dropKeyspaceStmt = "DROP KEYSPACE " + NAMESPACE;
-    builder =
+  private static void dropKeyspace(String keyspace) throws IOException, InterruptedException {
+    String dropKeyspaceStmt = "DROP KEYSPACE " + keyspace;
+    ProcessBuilder builder =
         new ProcessBuilder(
             "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", dropKeyspaceStmt);
-    process = builder.start();
-    ret = process.waitFor();
+    Process process = builder.start();
+    int ret = process.waitFor();
     if (ret != 0) {
-      Assert.fail("DROP KEYSPACE failed.");
+      Assert.fail("DROP KEYSPACE failed: " + keyspace);
     }
   }
 

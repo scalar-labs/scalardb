@@ -2,8 +2,7 @@ package com.scalar.db.storage.multistorage;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -19,6 +18,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageModule;
 import com.scalar.db.storage.common.util.Utility;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,34 +36,57 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class MultiStorage implements DistributedStorage {
 
-  private final Map<String, DistributedStorage> storageMap;
+  private final Map<String, DistributedStorage> tableStorageMap;
+  private final Map<String, DistributedStorage> namespaceStorageMap;
   private final DistributedStorage defaultStorage;
+  private final List<DistributedStorage> storages;
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   @Inject
   public MultiStorage(MultiStorageConfig config) {
+    storages = new ArrayList<>();
     Map<String, DistributedStorage> nameStorageMap = new HashMap<>();
     config
         .getDatabaseConfigMap()
         .forEach(
-            (storage, databaseConfig) -> {
+            (storageName, databaseConfig) -> {
               // Instantiate storages with Guice
               Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
-              nameStorageMap.put(storage, injector.getInstance(DistributedStorage.class));
+              DistributedStorage storage = injector.getInstance(DistributedStorage.class);
+              nameStorageMap.put(storageName, storage);
+              storages.add(storage);
             });
 
-    Builder<String, DistributedStorage> builder = ImmutableMap.builder();
+    tableStorageMap = new HashMap<>();
     config
         .getTableStorageMap()
-        .forEach((table, storage) -> builder.put(table, nameStorageMap.get(storage)));
-    storageMap = builder.build();
+        .forEach(
+            (table, storageName) -> tableStorageMap.put(table, nameStorageMap.get(storageName)));
+
+    namespaceStorageMap = new HashMap<>();
+    config
+        .getNamespaceStorageMap()
+        .forEach(
+            (table, storageName) ->
+                namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
 
     defaultStorage = nameStorageMap.get(config.getDefaultStorage());
 
     namespace = Optional.empty();
     tableName = Optional.empty();
+  }
+
+  @VisibleForTesting
+  MultiStorage(
+      Map<String, DistributedStorage> tableStorageMap,
+      Map<String, DistributedStorage> namespaceStorageMap,
+      DistributedStorage defaultStorage) {
+    this.tableStorageMap = tableStorageMap;
+    this.namespaceStorageMap = namespaceStorageMap;
+    this.defaultStorage = defaultStorage;
+    storages = null;
   }
 
   @Override
@@ -141,16 +164,18 @@ public class MultiStorage implements DistributedStorage {
   private DistributedStorage getStorage(Operation operation) {
     Utility.setTargetToIfNot(operation, Optional.empty(), namespace, tableName);
     String fullTaleName = operation.forFullTableName().get();
-    DistributedStorage storage = storageMap.get(fullTaleName);
-    if (storage == null) {
-      return defaultStorage;
+    DistributedStorage storage = tableStorageMap.get(fullTaleName);
+    if (storage != null) {
+      return storage;
     }
-    return storage;
+    String namespace = operation.forNamespace().get();
+    storage = namespaceStorageMap.get(namespace);
+    return storage != null ? storage : defaultStorage;
   }
 
   @Override
   public void close() {
-    for (DistributedStorage storage : storageMap.values()) {
+    for (DistributedStorage storage : storages) {
       storage.close();
     }
   }
