@@ -81,7 +81,7 @@ public class JdbcDatabaseTest {
   @Test
   public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any()))
+    when(jdbcService.getScanner(any(), any(), any(), any()))
         .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
 
     // Act
@@ -90,7 +90,7 @@ public class JdbcDatabaseTest {
     scanner.close();
 
     // Assert
-    verify(jdbcService).scan(any(), any(), any(), any());
+    verify(jdbcService).getScanner(any(), any(), any(), any());
     verify(connection).close();
   }
 
@@ -99,7 +99,7 @@ public class JdbcDatabaseTest {
       whenScanOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.getScanner(any(), any(), any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(

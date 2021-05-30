@@ -9,7 +9,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -100,8 +99,8 @@ public class JdbcTransaction implements DistributedTransaction {
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     try {
-      return jdbcService.scan(scan, connection, namespace, tableName).all();
-    } catch (SQLException | ExecutionException e) {
+      return jdbcService.scan(scan, connection, namespace, tableName);
+    } catch (SQLException e) {
       throw new CrudException("scan operation failed", e);
     }
   }
