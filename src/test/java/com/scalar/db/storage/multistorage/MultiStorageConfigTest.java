@@ -35,6 +35,9 @@ public class MultiStorageConfigTest {
         MultiStorageConfig.TABLE_MAPPING,
         "user.order:cassandra,user.customer:mysql,coordinator.state:cassandra");
 
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING, "namespace1:cassandra,namespace2:mysql");
+
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act
@@ -69,6 +72,10 @@ public class MultiStorageConfigTest {
     assertThat(config.getTableStorageMap().get("user.customer")).isEqualTo("mysql");
     assertThat(config.getTableStorageMap().get("coordinator.state")).isEqualTo("cassandra");
 
+    assertThat(config.getNamespaceStorageMap().size()).isEqualTo(2);
+    assertThat(config.getNamespaceStorageMap().get("namespace1")).isEqualTo("cassandra");
+    assertThat(config.getNamespaceStorageMap().get("namespace2")).isEqualTo("mysql");
+
     assertThat(config.getDefaultStorage()).isEqualTo("cassandra");
   }
 
@@ -94,6 +101,9 @@ public class MultiStorageConfigTest {
         MultiStorageConfig.TABLE_MAPPING,
         "user.order:cassandra,user.customer:mysql,coordinator.state:cassandra");
 
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING, "namespace1:cassandra,namespace2:mysql");
+
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
     // Act Assert
@@ -102,7 +112,8 @@ public class MultiStorageConfigTest {
   }
 
   @Test
-  public void constructor_NonExistentStorageGiven_ShouldThrowIllegalArgumentException() {
+  public void
+      constructor_NonExistentStorageGivenInTableMapping_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
@@ -124,6 +135,44 @@ public class MultiStorageConfigTest {
         MultiStorageConfig.TABLE_MAPPING,
         "user.order:cassandra,user.customer:mysql,"
             + "coordinator.state:dynamo"); // non-existent storage
+
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING, "namespace1:cassandra,namespace2:mysql");
+
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+
+    // Act Assert
+    assertThatThrownBy(() -> new MultiStorageConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_NonExistentStorageGivenInNamespaceMapping_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_points", "localhost");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", "root");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", "mysql");
+
+    props.setProperty(
+        MultiStorageConfig.TABLE_MAPPING,
+        "user.order:cassandra,user.customer:mysql,coordinator.state:cassandra");
+
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING,
+        "namespace1:cassandra,namespace2:dynamo"); // non-existent storage
 
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
@@ -155,6 +204,9 @@ public class MultiStorageConfigTest {
         MultiStorageConfig.TABLE_MAPPING,
         "user.order:cassandra,user.customer:mysql,coordinator.state:cassandra");
 
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING, "namespace1:cassandra,namespace2:mysql");
+
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "dynamo"); // non-existent storage
 
     // Act Assert
@@ -182,6 +234,9 @@ public class MultiStorageConfigTest {
     props.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
         "user.order:cassandra,user.customer:mysql,coordinator.state:cassandra");
+
+    props.setProperty(
+        MultiStorageConfig.NAMESPACE_MAPPING, "namespace1:cassandra,namespace2:mysql");
 
     props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
 
