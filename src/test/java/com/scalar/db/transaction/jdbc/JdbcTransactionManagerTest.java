@@ -20,12 +20,12 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.ResultInterpreter;
-import com.scalar.db.storage.jdbc.ScannerImpl;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,9 +56,7 @@ public class JdbcTransactionManagerTest {
   @Test
   public void whenSomeOperationsExecutedAndCommit_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any()))
-        .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
-    when(resultSet.next()).thenReturn(false);
+    when(jdbcService.scan(any(), any(), any(), any())).thenReturn(Collections.emptyList());
     when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
     when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);
 
