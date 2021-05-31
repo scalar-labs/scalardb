@@ -39,26 +39,32 @@ public class KeyTest {
     // Arrange
     Key key =
         Key.newBuilder()
-            .addBoolean("key3", true)
-            .addInt("key6", 5678)
-            .addBigInt("key1", 1234L)
-            .addFloat("key5", 4.56f)
-            .addDouble("key4", 1.23)
-            .addText("key7", "string_key")
-            .addBlob("key2", "blob_key".getBytes())
+            .addBoolean("key1", true)
+            .addInt("key2", 5678)
+            .addBigInt("key3", 1234L)
+            .addFloat("key4", 4.56f)
+            .addDouble("key5", 1.23)
+            .addText("key6", "string_key")
+            .addBlob("key7", "blob_key".getBytes())
+            .add(new IntValue("key8", 1357))
+            .addAll(Arrays.asList(new IntValue("key9", 2468), new BigIntValue("key10", 1111L)))
             .build();
 
     // Act
     List<Value<?>> values = key.get();
 
     // Assert
-    assertThat(values.get(0)).isEqualTo(new BooleanValue("key3", true));
-    assertThat(values.get(1)).isEqualTo(new IntValue("key6", 5678));
-    assertThat(values.get(2)).isEqualTo(new BigIntValue("key1", 1234L));
-    assertThat(values.get(3)).isEqualTo(new FloatValue("key5", 4.56f));
-    assertThat(values.get(4)).isEqualTo(new DoubleValue("key4", 1.23));
-    assertThat(values.get(5)).isEqualTo(new TextValue("key7", "string_key"));
-    assertThat(values.get(6)).isEqualTo(new BlobValue("key2", "blob_key".getBytes()));
+    assertThat(values.size()).isEqualTo(10);
+    assertThat(values.get(0)).isEqualTo(new BooleanValue("key1", true));
+    assertThat(values.get(1)).isEqualTo(new IntValue("key2", 5678));
+    assertThat(values.get(2)).isEqualTo(new BigIntValue("key3", 1234L));
+    assertThat(values.get(3)).isEqualTo(new FloatValue("key4", 4.56f));
+    assertThat(values.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
+    assertThat(values.get(5)).isEqualTo(new TextValue("key6", "string_key"));
+    assertThat(values.get(6)).isEqualTo(new BlobValue("key7", "blob_key".getBytes()));
+    assertThat(values.get(7)).isEqualTo(new IntValue("key8", 1357));
+    assertThat(values.get(8)).isEqualTo(new IntValue("key9", 2468));
+    assertThat(values.get(9)).isEqualTo(new BigIntValue("key10", 1111L));
   }
 
   @Test
