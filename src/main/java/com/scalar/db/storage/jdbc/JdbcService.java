@@ -86,20 +86,7 @@ public class JdbcService {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery =
-        queryBuilder
-            .select(scan.getProjections())
-            .from(scan.forFullNamespace().get(), scan.forTable().get())
-            .where(
-                scan.getPartitionKey(),
-                scan.getStartClusteringKey(),
-                scan.getStartInclusive(),
-                scan.getEndClusteringKey(),
-                scan.getEndInclusive())
-            .orderBy(scan.getOrderings())
-            .limit(scan.getLimit())
-            .build();
-
+    SelectQuery selectQuery = buildSelectQueryForScan(scan);
     PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
@@ -117,20 +104,7 @@ public class JdbcService {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery =
-        queryBuilder
-            .select(scan.getProjections())
-            .from(scan.forFullNamespace().get(), scan.forTable().get())
-            .where(
-                scan.getPartitionKey(),
-                scan.getStartClusteringKey(),
-                scan.getStartInclusive(),
-                scan.getEndClusteringKey(),
-                scan.getEndInclusive())
-            .orderBy(scan.getOrderings())
-            .limit(scan.getLimit())
-            .build();
-
+    SelectQuery selectQuery = buildSelectQueryForScan(scan);
     try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
         ResultSet resultSet = preparedStatement.executeQuery()) {
       List<Result> ret = new ArrayList<>();
@@ -141,6 +115,21 @@ public class JdbcService {
       }
       return ret;
     }
+  }
+
+  private SelectQuery buildSelectQueryForScan(Scan scan) {
+    return queryBuilder
+        .select(scan.getProjections())
+        .from(scan.forFullNamespace().get(), scan.forTable().get())
+        .where(
+            scan.getPartitionKey(),
+            scan.getStartClusteringKey(),
+            scan.getStartInclusive(),
+            scan.getEndClusteringKey(),
+            scan.getEndInclusive())
+        .orderBy(scan.getOrderings())
+        .limit(scan.getLimit())
+        .build();
   }
 
   public boolean put(
