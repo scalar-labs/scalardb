@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
@@ -63,58 +64,61 @@ public class MultiStorageConfig {
   }
 
   private void loadDatabaseConfigs() {
-    Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
-
     String storages = props.getProperty(STORAGES);
-    if (storages != null) {
-      for (String storage : storages.split(",")) {
-        Properties dbProps = new Properties();
-        for (String propertyName : props.stringPropertyNames()) {
-          if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
-            dbProps.put(
-                propertyName.replace("multi_storage.storages." + storage + ".", ""),
-                props.getProperty(propertyName));
-          }
+    if (storages == null) {
+      databaseConfigMap = Collections.emptyMap();
+      return;
+    }
+    Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
+    for (String storage : storages.split(",")) {
+      Properties dbProps = new Properties();
+      for (String propertyName : props.stringPropertyNames()) {
+        if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
+          dbProps.put(
+              propertyName.replace("multi_storage.storages." + storage + ".", ""),
+              props.getProperty(propertyName));
         }
-
-        if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(MULTI_STORAGE)) {
-          throw new IllegalArgumentException(
-              "Does not support nested " + MULTI_STORAGE + ": " + storage);
-        }
-        builder.put(storage, new DatabaseConfig(dbProps));
       }
+
+      if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(MULTI_STORAGE)) {
+        throw new IllegalArgumentException(
+            "Does not support nested " + MULTI_STORAGE + ": " + storage);
+      }
+      builder.put(storage, new DatabaseConfig(dbProps));
     }
     databaseConfigMap = builder.build();
   }
 
   private void loadTableStorageMapping() {
-    Builder<String, String> builder = ImmutableMap.builder();
-
     String tableMapping = props.getProperty(TABLE_MAPPING);
-    if (tableMapping != null) {
-      for (String tableAndStorage : tableMapping.split(",")) {
-        String[] s = tableAndStorage.split(":");
-        String table = s[0];
-        String storage = s[1];
-        checkIfStorageExists(storage);
-        builder.put(table, storage);
-      }
+    if (tableMapping == null) {
+      tableStorageMap = Collections.emptyMap();
+      return;
+    }
+    Builder<String, String> builder = ImmutableMap.builder();
+    for (String tableAndStorage : tableMapping.split(",")) {
+      String[] s = tableAndStorage.split(":");
+      String table = s[0];
+      String storage = s[1];
+      checkIfStorageExists(storage);
+      builder.put(table, storage);
     }
     tableStorageMap = builder.build();
   }
 
   private void loadNamespaceStorageMapping() {
-    Builder<String, String> builder = ImmutableMap.builder();
-
     String namespaceMapping = props.getProperty(NAMESPACE_MAPPING);
-    if (namespaceMapping != null) {
-      for (String namespaceAndStorage : namespaceMapping.split(",")) {
-        String[] s = namespaceAndStorage.split(":");
-        String namespace = s[0];
-        String storage = s[1];
-        checkIfStorageExists(storage);
-        builder.put(namespace, storage);
-      }
+    if (namespaceMapping == null) {
+      namespaceStorageMap = Collections.emptyMap();
+      return;
+    }
+    Builder<String, String> builder = ImmutableMap.builder();
+    for (String namespaceAndStorage : namespaceMapping.split(",")) {
+      String[] s = namespaceAndStorage.split(":");
+      String namespace = s[0];
+      String storage = s[1];
+      checkIfStorageExists(storage);
+      builder.put(namespace, storage);
     }
     namespaceStorageMap = builder.build();
   }

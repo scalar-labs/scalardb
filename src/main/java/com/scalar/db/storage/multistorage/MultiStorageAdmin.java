@@ -13,6 +13,16 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.concurrent.ThreadSafe;
 
+/**
+ * An implementation with multi-storage for {@link DistributedStorageAdmin}.
+ *
+ * <p>This implementation holds multiple DistributedStorageAdmin instances. It chooses a instance on
+ * the basis of the specified configuration and a given operation. If conflicting between a table
+ * mapping and a namespace mapping, it prefers the table mapping because table mappings are more
+ * specific than namespace mappings.
+ *
+ * @author Toshihiro Suzuki
+ */
 @ThreadSafe
 public class MultiStorageAdmin implements DistributedStorageAdmin {
 
