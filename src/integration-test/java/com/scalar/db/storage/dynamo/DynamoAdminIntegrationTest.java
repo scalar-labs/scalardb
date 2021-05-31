@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -157,7 +159,16 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
 
     client.putItem(putItemRequest);
 
-    admin = new DynamoAdmin(client, namespacePrefix());
+    Properties props = new Properties();
+    if (endpointOverride != null) {
+      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+    }
+    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
+    admin = new DynamoAdmin(new DynamoDatabaseConfig(props));
   }
 
   @AfterClass

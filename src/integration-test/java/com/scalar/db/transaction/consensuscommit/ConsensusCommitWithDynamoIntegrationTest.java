@@ -2,8 +2,10 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.mockito.Mockito.spy;
 
+import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.storage.dynamo.DynamoDatabaseConfig;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,25 +45,19 @@ public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitInt
   private static final String PARTITION_KEY = "concatenatedPartitionKey";
   private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
 
-  private static DynamoDbClient client;
   private static Optional<String> namespacePrefix;
+  private static DynamoDbClient client;
+  private static DistributedStorage originalStorage;
+  private static DynamoDatabaseConfig config;
 
   @Before
   public void setUp() {
-    Dynamo storage = spy(new Dynamo(client, namespacePrefix));
+    DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
-
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "dummy");
-    props.setProperty(DatabaseConfig.USERNAME, "dummy");
-    props.setProperty(DatabaseConfig.PASSWORD, "dummy");
-
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage, new DatabaseConfig(props), coordinator, recovery, commit);
-
+        new ConsensusCommitManager(storage, config, coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
@@ -123,6 +119,18 @@ public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitInt
       Thread.currentThread().interrupt();
     }
     insertMetadata();
+
+    Properties props = new Properties();
+    if (endpointOverride != null) {
+      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+    }
+    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
+    config = new DynamoDatabaseConfig(props);
+    originalStorage = new Dynamo(config);
   }
 
   private static String namespacePrefix() {
