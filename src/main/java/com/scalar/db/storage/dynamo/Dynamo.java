@@ -2,7 +2,6 @@ package com.scalar.db.storage.dynamo;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -13,10 +12,10 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.common.util.Utility;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +27,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /**
@@ -50,9 +50,11 @@ public class Dynamo implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public Dynamo(DatabaseConfig config) {
+  public Dynamo(DynamoDatabaseConfig config) {
+    DynamoDbClientBuilder builder = DynamoDbClient.builder();
+    config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     client =
-        DynamoDbClient.builder()
+        builder
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
@@ -73,20 +75,6 @@ public class Dynamo implements DistributedStorage {
     batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("DynamoDB object is created properly.");
-  }
-
-  @VisibleForTesting
-  public Dynamo(DynamoDbClient client, Optional<String> namespacePrefix) {
-    this.client = client;
-    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
-    namespace = Optional.empty();
-    tableName = Optional.empty();
-    metadataManager = new DynamoTableMetadataManager(client, this.namespacePrefix);
-    operationChecker = new OperationChecker(metadataManager);
-    selectStatementHandler = new SelectStatementHandler(client, metadataManager);
-    putStatementHandler = new PutStatementHandler(client, metadataManager);
-    deleteStatementHandler = new DeleteStatementHandler(client, metadataManager);
-    batchHandler = new BatchHandler(client, metadataManager);
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.IntegrationTestBase;
 import java.net.URI;
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -114,7 +116,16 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
     }
     insertMetadata();
 
-    storage = new Dynamo(client, namespacePrefix);
+    Properties props = new Properties();
+    if (endpointOverride != null) {
+      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+    }
+    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
+    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
+    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
+    namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
+    storage = new Dynamo(new DynamoDatabaseConfig(props));
   }
 
   private static String namespacePrefix() {
