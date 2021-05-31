@@ -105,7 +105,7 @@ public class JdbcDatabase implements DistributedStorage {
     Connection connection = null;
     try {
       connection = dataSource.getConnection();
-      return jdbcService.scan(scan, connection, namespace, tableName);
+      return jdbcService.getScanner(scan, connection, namespace, tableName);
     } catch (SQLException e) {
       close(connection);
       throw new ExecutionException("scan operation failed", e);

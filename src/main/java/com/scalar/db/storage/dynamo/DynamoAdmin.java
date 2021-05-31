@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
+import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -12,6 +12,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
@@ -21,9 +22,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final DynamoTableMetadataManager metadataManager;
 
   @Inject
-  public DynamoAdmin(DatabaseConfig config) {
+  public DynamoAdmin(DynamoDatabaseConfig config) {
+    DynamoDbClientBuilder builder = DynamoDbClient.builder();
+    config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     this.client =
-        DynamoDbClient.builder()
+        builder
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
@@ -31,13 +34,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
     namespacePrefix = config.getNamespacePrefix();
-    metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
-  }
-
-  @VisibleForTesting
-  public DynamoAdmin(DynamoDbClient client, Optional<String> namespacePrefix) {
-    this.client = client;
-    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
     metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
   }
 

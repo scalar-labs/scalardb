@@ -18,6 +18,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -77,7 +78,7 @@ public class JdbcService {
     }
   }
 
-  public Scanner scan(
+  public Scanner getScanner(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
     Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
@@ -85,20 +86,7 @@ public class JdbcService {
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery =
-        queryBuilder
-            .select(scan.getProjections())
-            .from(scan.forFullNamespace().get(), scan.forTable().get())
-            .where(
-                scan.getPartitionKey(),
-                scan.getStartClusteringKey(),
-                scan.getStartInclusive(),
-                scan.getEndClusteringKey(),
-                scan.getEndInclusive())
-            .orderBy(scan.getOrderings())
-            .limit(scan.getLimit())
-            .build();
-
+    SelectQuery selectQuery = buildSelectQueryForScan(scan);
     PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
@@ -106,6 +94,42 @@ public class JdbcService {
         connection,
         preparedStatement,
         resultSet);
+  }
+
+  public List<Result> scan(
+      Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
+      throws SQLException {
+    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+    operationChecker.check(scan);
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
+    Utility.addProjectionsForKeys(scan, tableMetadata);
+
+    SelectQuery selectQuery = buildSelectQueryForScan(scan);
+    try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
+        ResultSet resultSet = preparedStatement.executeQuery()) {
+      List<Result> ret = new ArrayList<>();
+      ResultInterpreter resultInterpreter =
+          new ResultInterpreter(scan.getProjections(), tableMetadata);
+      while (resultSet.next()) {
+        ret.add(resultInterpreter.interpret(resultSet));
+      }
+      return ret;
+    }
+  }
+
+  private SelectQuery buildSelectQueryForScan(Scan scan) {
+    return queryBuilder
+        .select(scan.getProjections())
+        .from(scan.forFullNamespace().get(), scan.forTable().get())
+        .where(
+            scan.getPartitionKey(),
+            scan.getStartClusteringKey(),
+            scan.getStartInclusive(),
+            scan.getEndClusteringKey(),
+            scan.getEndInclusive())
+        .orderBy(scan.getOrderings())
+        .limit(scan.getLimit())
+        .build();
   }
 
   public boolean put(

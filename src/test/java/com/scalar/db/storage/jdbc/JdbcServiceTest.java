@@ -105,7 +105,32 @@ public class JdbcServiceTest {
   }
 
   @Test
-  public void whenScanOperationExecuted_shouldCallQueryBuilder() throws Exception {
+  public void whenGetScannerExecuted_shouldCallQueryBuilder() throws Exception {
+    // Arrange
+    when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
+
+    when(selectQueryBuilder.from(any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean()))
+        .thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.build()).thenReturn(selectQuery);
+
+    when(selectQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(resultSet.next()).thenReturn(false);
+
+    // Act
+    Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+    jdbcService.getScanner(scan, connection, NAMESPACE, TABLE);
+
+    // Assert
+    verify(operationChecker).check(any(Scan.class));
+    verify(queryBuilder).select(any());
+  }
+
+  @Test
+  public void whenScanExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
