@@ -26,7 +26,18 @@ public class PutIf implements MutationCondition {
   public PutIf(ConditionalExpression... expressions) {
     checkNotNull(expressions);
     this.expressions = new ArrayList<>(expressions.length);
-    Arrays.stream(expressions).forEach(v -> this.expressions.add(v));
+    this.expressions.addAll(Arrays.asList(expressions));
+  }
+
+  /**
+   * Constructs a {@code PutIf} with the specified list of conditional expressions.
+   *
+   * @param expressions a list of expressions specified with {@code ConditionalExpression}s
+   */
+  public PutIf(List<ConditionalExpression> expressions) {
+    checkNotNull(expressions);
+    this.expressions = new ArrayList<>(expressions.size());
+    this.expressions.addAll(expressions);
   }
 
   /**

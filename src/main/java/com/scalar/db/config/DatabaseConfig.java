@@ -17,6 +17,8 @@ import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
+import com.scalar.db.storage.rpc.GrpcAdmin;
+import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.io.File;
 import java.io.FileInputStream;
@@ -96,6 +98,10 @@ public class DatabaseConfig {
         case "multi-storage":
           storageClass = MultiStorage.class;
           adminClass = MultiStorageAdmin.class;
+          break;
+        case "grpc":
+          storageClass = GrpcStorage.class;
+          adminClass = GrpcAdmin.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");

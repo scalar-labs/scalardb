@@ -37,7 +37,7 @@ public interface DistributedStorageAdmin {
    *
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
-   * @return the table metadata of the specified table
+   * @return the table metadata of the specified table. null if the table is not found.
    */
   TableMetadata getTableMetadata(String namespace, String table);
 
