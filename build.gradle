@@ -8,9 +8,6 @@ plugins {
     id 'application'
 }
 
-mainClassName = 'com.scalar.db.server.ScalarDbServer'
-applicationName = 'scalardb-server'
-
 repositories {
     mavenCentral()
 }
@@ -242,6 +239,11 @@ task copyTestJarsToTestLib(type: Copy) {
 }
 
 test.dependsOn += copyTestJarsToTestLib
+
+application {
+    mainClassName = 'com.scalar.db.server.ScalarDbServer'
+    startScripts.applicationName = 'scalardb-server'
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
