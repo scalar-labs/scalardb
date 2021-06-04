@@ -245,7 +245,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   }
 
   private static void execute(
-      ThrowableRunnable<Exception> runnable, StreamObserver<?> responseObserver) {
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
     try {
       runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
@@ -255,7 +255,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     } catch (NoMutationException e) {
       responseObserver.onError(
           Status.FAILED_PRECONDITION.withDescription(e.getMessage()).asRuntimeException());
-    } catch (Exception e) {
+    } catch (Throwable e) {
       LOGGER.error("an internal error happened during the execution", e);
       responseObserver.onError(
           Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
