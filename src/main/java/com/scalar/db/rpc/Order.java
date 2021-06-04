@@ -85,7 +85,7 @@ public enum Order
   }
   public static final com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.getDescriptor().getEnumTypes().get(2);
+    return com.scalar.db.rpc.ScalarDbProto.getDescriptor().getEnumTypes().get(1);
   }
 
   private static final Order[] VALUES = values();

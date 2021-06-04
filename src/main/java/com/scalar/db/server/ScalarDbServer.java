@@ -7,6 +7,7 @@ import com.scalar.db.config.ServerConfig;
 import com.scalar.db.service.ServerModule;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
@@ -56,6 +57,8 @@ public class ScalarDbServer implements Callable<Integer> {
         ServerBuilder.forPort(config.getPort())
             .addService(injector.getInstance(DistributedStorageService.class))
             .addService(injector.getInstance(DistributedStorageAdminService.class))
+            .addService(new HealthService())
+            .addService(ProtoReflectionService.newInstance())
             .build()
             .start();
 

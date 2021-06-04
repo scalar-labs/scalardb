@@ -17,7 +17,6 @@ private static final long serialVersionUID = 0L;
   }
   private Value() {
     name_ = "";
-    type_ = 0;
   }
 
   @java.lang.Override
@@ -57,44 +56,38 @@ private static final long serialVersionUID = 0L;
             break;
           }
           case 16: {
-            int rawValue = input.readEnum();
-
-            type_ = rawValue;
+            valueCase_ = 2;
+            value_ = input.readBool();
             break;
           }
           case 24: {
             valueCase_ = 3;
-            value_ = input.readBool();
+            value_ = input.readInt32();
             break;
           }
           case 32: {
             valueCase_ = 4;
-            value_ = input.readInt32();
-            break;
-          }
-          case 40: {
-            valueCase_ = 5;
             value_ = input.readInt64();
             break;
           }
-          case 53: {
-            valueCase_ = 6;
+          case 45: {
+            valueCase_ = 5;
             value_ = input.readFloat();
             break;
           }
-          case 57: {
-            valueCase_ = 7;
+          case 49: {
+            valueCase_ = 6;
             value_ = input.readDouble();
             break;
           }
-          case 66: {
+          case 58: {
             java.lang.String s = input.readStringRequireUtf8();
-            valueCase_ = 8;
+            valueCase_ = 7;
             value_ = s;
             break;
           }
-          case 74: {
-            valueCase_ = 9;
+          case 66: {
+            valueCase_ = 8;
             value_ = input.readBytes();
             break;
           }
@@ -135,13 +128,13 @@ private static final long serialVersionUID = 0L;
   public enum ValueCase
       implements com.google.protobuf.Internal.EnumLite,
           com.google.protobuf.AbstractMessage.InternalOneOfEnum {
-    BOOLEAN_VALUE(3),
-    INT_VALUE(4),
-    BIGINT_VALUE(5),
-    FLOAT_VALUE(6),
-    DOUBLE_VALUE(7),
-    TEXT_VALUE(8),
-    BLOB_VALUE(9),
+    BOOLEAN_VALUE(2),
+    INT_VALUE(3),
+    BIGINT_VALUE(4),
+    FLOAT_VALUE(5),
+    DOUBLE_VALUE(6),
+    TEXT_VALUE(7),
+    BLOB_VALUE(8),
     VALUE_NOT_SET(0);
     private final int value;
     private ValueCase(int value) {
@@ -159,13 +152,13 @@ private static final long serialVersionUID = 0L;
 
     public static ValueCase forNumber(int value) {
       switch (value) {
-        case 3: return BOOLEAN_VALUE;
-        case 4: return INT_VALUE;
-        case 5: return BIGINT_VALUE;
-        case 6: return FLOAT_VALUE;
-        case 7: return DOUBLE_VALUE;
-        case 8: return TEXT_VALUE;
-        case 9: return BLOB_VALUE;
+        case 2: return BOOLEAN_VALUE;
+        case 3: return INT_VALUE;
+        case 4: return BIGINT_VALUE;
+        case 5: return FLOAT_VALUE;
+        case 6: return DOUBLE_VALUE;
+        case 7: return TEXT_VALUE;
+        case 8: return BLOB_VALUE;
         case 0: return VALUE_NOT_SET;
         default: return null;
       }
@@ -219,98 +212,79 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int TYPE_FIELD_NUMBER = 2;
-  private int type_;
+  public static final int BOOLEAN_VALUE_FIELD_NUMBER = 2;
   /**
-   * <code>.rpc.DataType type = 2;</code>
-   * @return The enum numeric value on the wire for type.
-   */
-  @java.lang.Override public int getTypeValue() {
-    return type_;
-  }
-  /**
-   * <code>.rpc.DataType type = 2;</code>
-   * @return The type.
-   */
-  @java.lang.Override public com.scalar.db.rpc.DataType getType() {
-    @SuppressWarnings("deprecation")
-    com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.valueOf(type_);
-    return result == null ? com.scalar.db.rpc.DataType.UNRECOGNIZED : result;
-  }
-
-  public static final int BOOLEAN_VALUE_FIELD_NUMBER = 3;
-  /**
-   * <code>bool boolean_value = 3;</code>
+   * <code>bool boolean_value = 2;</code>
    * @return The booleanValue.
    */
   @java.lang.Override
   public boolean getBooleanValue() {
-    if (valueCase_ == 3) {
+    if (valueCase_ == 2) {
       return (java.lang.Boolean) value_;
     }
     return false;
   }
 
-  public static final int INT_VALUE_FIELD_NUMBER = 4;
+  public static final int INT_VALUE_FIELD_NUMBER = 3;
   /**
-   * <code>int32 int_value = 4;</code>
+   * <code>int32 int_value = 3;</code>
    * @return The intValue.
    */
   @java.lang.Override
   public int getIntValue() {
-    if (valueCase_ == 4) {
+    if (valueCase_ == 3) {
       return (java.lang.Integer) value_;
     }
     return 0;
   }
 
-  public static final int BIGINT_VALUE_FIELD_NUMBER = 5;
+  public static final int BIGINT_VALUE_FIELD_NUMBER = 4;
   /**
-   * <code>int64 bigint_value = 5;</code>
+   * <code>int64 bigint_value = 4;</code>
    * @return The bigintValue.
    */
   @java.lang.Override
   public long getBigintValue() {
-    if (valueCase_ == 5) {
+    if (valueCase_ == 4) {
       return (java.lang.Long) value_;
     }
     return 0L;
   }
 
-  public static final int FLOAT_VALUE_FIELD_NUMBER = 6;
+  public static final int FLOAT_VALUE_FIELD_NUMBER = 5;
   /**
-   * <code>float float_value = 6;</code>
+   * <code>float float_value = 5;</code>
    * @return The floatValue.
    */
   @java.lang.Override
   public float getFloatValue() {
-    if (valueCase_ == 6) {
+    if (valueCase_ == 5) {
       return (java.lang.Float) value_;
     }
     return 0F;
   }
 
-  public static final int DOUBLE_VALUE_FIELD_NUMBER = 7;
+  public static final int DOUBLE_VALUE_FIELD_NUMBER = 6;
   /**
-   * <code>double double_value = 7;</code>
+   * <code>double double_value = 6;</code>
    * @return The doubleValue.
    */
   @java.lang.Override
   public double getDoubleValue() {
-    if (valueCase_ == 7) {
+    if (valueCase_ == 6) {
       return (java.lang.Double) value_;
     }
     return 0D;
   }
 
-  public static final int TEXT_VALUE_FIELD_NUMBER = 8;
+  public static final int TEXT_VALUE_FIELD_NUMBER = 7;
   /**
-   * <code>string text_value = 8;</code>
+   * <code>string text_value = 7;</code>
    * @return The textValue.
    */
   public java.lang.String getTextValue() {
     java.lang.Object ref = "";
-    if (valueCase_ == 8) {
+    if (valueCase_ == 7) {
       ref = value_;
     }
     if (ref instanceof java.lang.String) {
@@ -319,27 +293,27 @@ private static final long serialVersionUID = 0L;
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      if (valueCase_ == 8) {
+      if (valueCase_ == 7) {
         value_ = s;
       }
       return s;
     }
   }
   /**
-   * <code>string text_value = 8;</code>
+   * <code>string text_value = 7;</code>
    * @return The bytes for textValue.
    */
   public com.google.protobuf.ByteString
       getTextValueBytes() {
     java.lang.Object ref = "";
-    if (valueCase_ == 8) {
+    if (valueCase_ == 7) {
       ref = value_;
     }
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      if (valueCase_ == 8) {
+      if (valueCase_ == 7) {
         value_ = b;
       }
       return b;
@@ -348,14 +322,14 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int BLOB_VALUE_FIELD_NUMBER = 9;
+  public static final int BLOB_VALUE_FIELD_NUMBER = 8;
   /**
-   * <code>bytes blob_value = 9;</code>
+   * <code>bytes blob_value = 8;</code>
    * @return The blobValue.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString getBlobValue() {
-    if (valueCase_ == 9) {
+    if (valueCase_ == 8) {
       return (com.google.protobuf.ByteString) value_;
     }
     return com.google.protobuf.ByteString.EMPTY;
@@ -378,35 +352,32 @@ private static final long serialVersionUID = 0L;
     if (!getNameBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 1, name_);
     }
-    if (type_ != com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN.getNumber()) {
-      output.writeEnum(2, type_);
+    if (valueCase_ == 2) {
+      output.writeBool(
+          2, (boolean)((java.lang.Boolean) value_));
     }
     if (valueCase_ == 3) {
-      output.writeBool(
-          3, (boolean)((java.lang.Boolean) value_));
+      output.writeInt32(
+          3, (int)((java.lang.Integer) value_));
     }
     if (valueCase_ == 4) {
-      output.writeInt32(
-          4, (int)((java.lang.Integer) value_));
+      output.writeInt64(
+          4, (long)((java.lang.Long) value_));
     }
     if (valueCase_ == 5) {
-      output.writeInt64(
-          5, (long)((java.lang.Long) value_));
+      output.writeFloat(
+          5, (float)((java.lang.Float) value_));
     }
     if (valueCase_ == 6) {
-      output.writeFloat(
-          6, (float)((java.lang.Float) value_));
+      output.writeDouble(
+          6, (double)((java.lang.Double) value_));
     }
     if (valueCase_ == 7) {
-      output.writeDouble(
-          7, (double)((java.lang.Double) value_));
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 7, value_);
     }
     if (valueCase_ == 8) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 8, value_);
-    }
-    if (valueCase_ == 9) {
       output.writeBytes(
-          9, (com.google.protobuf.ByteString) value_);
+          8, (com.google.protobuf.ByteString) value_);
     }
     unknownFields.writeTo(output);
   }
@@ -420,42 +391,38 @@ private static final long serialVersionUID = 0L;
     if (!getNameBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, name_);
     }
-    if (type_ != com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN.getNumber()) {
+    if (valueCase_ == 2) {
       size += com.google.protobuf.CodedOutputStream
-        .computeEnumSize(2, type_);
+        .computeBoolSize(
+            2, (boolean)((java.lang.Boolean) value_));
     }
     if (valueCase_ == 3) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(
-            3, (boolean)((java.lang.Boolean) value_));
+        .computeInt32Size(
+            3, (int)((java.lang.Integer) value_));
     }
     if (valueCase_ == 4) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(
-            4, (int)((java.lang.Integer) value_));
+        .computeInt64Size(
+            4, (long)((java.lang.Long) value_));
     }
     if (valueCase_ == 5) {
       size += com.google.protobuf.CodedOutputStream
-        .computeInt64Size(
-            5, (long)((java.lang.Long) value_));
+        .computeFloatSize(
+            5, (float)((java.lang.Float) value_));
     }
     if (valueCase_ == 6) {
       size += com.google.protobuf.CodedOutputStream
-        .computeFloatSize(
-            6, (float)((java.lang.Float) value_));
+        .computeDoubleSize(
+            6, (double)((java.lang.Double) value_));
     }
     if (valueCase_ == 7) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeDoubleSize(
-            7, (double)((java.lang.Double) value_));
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(7, value_);
     }
     if (valueCase_ == 8) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(8, value_);
-    }
-    if (valueCase_ == 9) {
       size += com.google.protobuf.CodedOutputStream
         .computeBytesSize(
-            9, (com.google.protobuf.ByteString) value_);
+            8, (com.google.protobuf.ByteString) value_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -474,36 +441,35 @@ private static final long serialVersionUID = 0L;
 
     if (!getName()
         .equals(other.getName())) return false;
-    if (type_ != other.type_) return false;
     if (!getValueCase().equals(other.getValueCase())) return false;
     switch (valueCase_) {
-      case 3:
+      case 2:
         if (getBooleanValue()
             != other.getBooleanValue()) return false;
         break;
-      case 4:
+      case 3:
         if (getIntValue()
             != other.getIntValue()) return false;
         break;
-      case 5:
+      case 4:
         if (getBigintValue()
             != other.getBigintValue()) return false;
         break;
-      case 6:
+      case 5:
         if (java.lang.Float.floatToIntBits(getFloatValue())
             != java.lang.Float.floatToIntBits(
                 other.getFloatValue())) return false;
         break;
-      case 7:
+      case 6:
         if (java.lang.Double.doubleToLongBits(getDoubleValue())
             != java.lang.Double.doubleToLongBits(
                 other.getDoubleValue())) return false;
         break;
-      case 8:
+      case 7:
         if (!getTextValue()
             .equals(other.getTextValue())) return false;
         break;
-      case 9:
+      case 8:
         if (!getBlobValue()
             .equals(other.getBlobValue())) return false;
         break;
@@ -523,38 +489,36 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAME_FIELD_NUMBER;
     hash = (53 * hash) + getName().hashCode();
-    hash = (37 * hash) + TYPE_FIELD_NUMBER;
-    hash = (53 * hash) + type_;
     switch (valueCase_) {
-      case 3:
+      case 2:
         hash = (37 * hash) + BOOLEAN_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
             getBooleanValue());
         break;
-      case 4:
+      case 3:
         hash = (37 * hash) + INT_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getIntValue();
         break;
-      case 5:
+      case 4:
         hash = (37 * hash) + BIGINT_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getBigintValue());
         break;
-      case 6:
+      case 5:
         hash = (37 * hash) + FLOAT_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + java.lang.Float.floatToIntBits(
             getFloatValue());
         break;
-      case 7:
+      case 6:
         hash = (37 * hash) + DOUBLE_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             java.lang.Double.doubleToLongBits(getDoubleValue()));
         break;
-      case 8:
+      case 7:
         hash = (37 * hash) + TEXT_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getTextValue().hashCode();
         break;
-      case 9:
+      case 8:
         hash = (37 * hash) + BLOB_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + getBlobValue().hashCode();
         break;
@@ -696,8 +660,6 @@ private static final long serialVersionUID = 0L;
       super.clear();
       name_ = "";
 
-      type_ = 0;
-
       valueCase_ = 0;
       value_ = null;
       return this;
@@ -727,7 +689,9 @@ private static final long serialVersionUID = 0L;
     public com.scalar.db.rpc.Value buildPartial() {
       com.scalar.db.rpc.Value result = new com.scalar.db.rpc.Value(this);
       result.name_ = name_;
-      result.type_ = type_;
+      if (valueCase_ == 2) {
+        result.value_ = value_;
+      }
       if (valueCase_ == 3) {
         result.value_ = value_;
       }
@@ -744,9 +708,6 @@ private static final long serialVersionUID = 0L;
         result.value_ = value_;
       }
       if (valueCase_ == 8) {
-        result.value_ = value_;
-      }
-      if (valueCase_ == 9) {
         result.value_ = value_;
       }
       result.valueCase_ = valueCase_;
@@ -802,9 +763,6 @@ private static final long serialVersionUID = 0L;
         name_ = other.name_;
         onChanged();
       }
-      if (other.type_ != 0) {
-        setTypeValue(other.getTypeValue());
-      }
       switch (other.getValueCase()) {
         case BOOLEAN_VALUE: {
           setBooleanValue(other.getBooleanValue());
@@ -827,7 +785,7 @@ private static final long serialVersionUID = 0L;
           break;
         }
         case TEXT_VALUE: {
-          valueCase_ = 8;
+          valueCase_ = 7;
           value_ = other.value_;
           onChanged();
           break;
@@ -960,86 +918,66 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private int type_ = 0;
     /**
-     * <code>.rpc.DataType type = 2;</code>
-     * @return The enum numeric value on the wire for type.
-     */
-    @java.lang.Override public int getTypeValue() {
-      return type_;
-    }
-    /**
-     * <code>.rpc.DataType type = 2;</code>
-     * @param value The enum numeric value on the wire for type to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTypeValue(int value) {
-      
-      type_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.rpc.DataType type = 2;</code>
-     * @return The type.
-     */
-    @java.lang.Override
-    public com.scalar.db.rpc.DataType getType() {
-      @SuppressWarnings("deprecation")
-      com.scalar.db.rpc.DataType result = com.scalar.db.rpc.DataType.valueOf(type_);
-      return result == null ? com.scalar.db.rpc.DataType.UNRECOGNIZED : result;
-    }
-    /**
-     * <code>.rpc.DataType type = 2;</code>
-     * @param value The type to set.
-     * @return This builder for chaining.
-     */
-    public Builder setType(com.scalar.db.rpc.DataType value) {
-      if (value == null) {
-        throw new NullPointerException();
-      }
-      
-      type_ = value.getNumber();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>.rpc.DataType type = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearType() {
-      
-      type_ = 0;
-      onChanged();
-      return this;
-    }
-
-    /**
-     * <code>bool boolean_value = 3;</code>
+     * <code>bool boolean_value = 2;</code>
      * @return The booleanValue.
      */
     public boolean getBooleanValue() {
-      if (valueCase_ == 3) {
+      if (valueCase_ == 2) {
         return (java.lang.Boolean) value_;
       }
       return false;
     }
     /**
-     * <code>bool boolean_value = 3;</code>
+     * <code>bool boolean_value = 2;</code>
      * @param value The booleanValue to set.
      * @return This builder for chaining.
      */
     public Builder setBooleanValue(boolean value) {
+      valueCase_ = 2;
+      value_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool boolean_value = 2;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBooleanValue() {
+      if (valueCase_ == 2) {
+        valueCase_ = 0;
+        value_ = null;
+        onChanged();
+      }
+      return this;
+    }
+
+    /**
+     * <code>int32 int_value = 3;</code>
+     * @return The intValue.
+     */
+    public int getIntValue() {
+      if (valueCase_ == 3) {
+        return (java.lang.Integer) value_;
+      }
+      return 0;
+    }
+    /**
+     * <code>int32 int_value = 3;</code>
+     * @param value The intValue to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIntValue(int value) {
       valueCase_ = 3;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bool boolean_value = 3;</code>
+     * <code>int32 int_value = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearBooleanValue() {
+    public Builder clearIntValue() {
       if (valueCase_ == 3) {
         valueCase_ = 0;
         value_ = null;
@@ -1049,31 +987,31 @@ private static final long serialVersionUID = 0L;
     }
 
     /**
-     * <code>int32 int_value = 4;</code>
-     * @return The intValue.
+     * <code>int64 bigint_value = 4;</code>
+     * @return The bigintValue.
      */
-    public int getIntValue() {
+    public long getBigintValue() {
       if (valueCase_ == 4) {
-        return (java.lang.Integer) value_;
+        return (java.lang.Long) value_;
       }
-      return 0;
+      return 0L;
     }
     /**
-     * <code>int32 int_value = 4;</code>
-     * @param value The intValue to set.
+     * <code>int64 bigint_value = 4;</code>
+     * @param value The bigintValue to set.
      * @return This builder for chaining.
      */
-    public Builder setIntValue(int value) {
+    public Builder setBigintValue(long value) {
       valueCase_ = 4;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>int32 int_value = 4;</code>
+     * <code>int64 bigint_value = 4;</code>
      * @return This builder for chaining.
      */
-    public Builder clearIntValue() {
+    public Builder clearBigintValue() {
       if (valueCase_ == 4) {
         valueCase_ = 0;
         value_ = null;
@@ -1083,31 +1021,31 @@ private static final long serialVersionUID = 0L;
     }
 
     /**
-     * <code>int64 bigint_value = 5;</code>
-     * @return The bigintValue.
+     * <code>float float_value = 5;</code>
+     * @return The floatValue.
      */
-    public long getBigintValue() {
+    public float getFloatValue() {
       if (valueCase_ == 5) {
-        return (java.lang.Long) value_;
+        return (java.lang.Float) value_;
       }
-      return 0L;
+      return 0F;
     }
     /**
-     * <code>int64 bigint_value = 5;</code>
-     * @param value The bigintValue to set.
+     * <code>float float_value = 5;</code>
+     * @param value The floatValue to set.
      * @return This builder for chaining.
      */
-    public Builder setBigintValue(long value) {
+    public Builder setFloatValue(float value) {
       valueCase_ = 5;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>int64 bigint_value = 5;</code>
+     * <code>float float_value = 5;</code>
      * @return This builder for chaining.
      */
-    public Builder clearBigintValue() {
+    public Builder clearFloatValue() {
       if (valueCase_ == 5) {
         valueCase_ = 0;
         value_ = null;
@@ -1117,31 +1055,31 @@ private static final long serialVersionUID = 0L;
     }
 
     /**
-     * <code>float float_value = 6;</code>
-     * @return The floatValue.
+     * <code>double double_value = 6;</code>
+     * @return The doubleValue.
      */
-    public float getFloatValue() {
+    public double getDoubleValue() {
       if (valueCase_ == 6) {
-        return (java.lang.Float) value_;
+        return (java.lang.Double) value_;
       }
-      return 0F;
+      return 0D;
     }
     /**
-     * <code>float float_value = 6;</code>
-     * @param value The floatValue to set.
+     * <code>double double_value = 6;</code>
+     * @param value The doubleValue to set.
      * @return This builder for chaining.
      */
-    public Builder setFloatValue(float value) {
+    public Builder setDoubleValue(double value) {
       valueCase_ = 6;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>float float_value = 6;</code>
+     * <code>double double_value = 6;</code>
      * @return This builder for chaining.
      */
-    public Builder clearFloatValue() {
+    public Builder clearDoubleValue() {
       if (valueCase_ == 6) {
         valueCase_ = 0;
         value_ = null;
@@ -1151,54 +1089,20 @@ private static final long serialVersionUID = 0L;
     }
 
     /**
-     * <code>double double_value = 7;</code>
-     * @return The doubleValue.
-     */
-    public double getDoubleValue() {
-      if (valueCase_ == 7) {
-        return (java.lang.Double) value_;
-      }
-      return 0D;
-    }
-    /**
-     * <code>double double_value = 7;</code>
-     * @param value The doubleValue to set.
-     * @return This builder for chaining.
-     */
-    public Builder setDoubleValue(double value) {
-      valueCase_ = 7;
-      value_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>double double_value = 7;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearDoubleValue() {
-      if (valueCase_ == 7) {
-        valueCase_ = 0;
-        value_ = null;
-        onChanged();
-      }
-      return this;
-    }
-
-    /**
-     * <code>string text_value = 8;</code>
+     * <code>string text_value = 7;</code>
      * @return The textValue.
      */
     @java.lang.Override
     public java.lang.String getTextValue() {
       java.lang.Object ref = "";
-      if (valueCase_ == 8) {
+      if (valueCase_ == 7) {
         ref = value_;
       }
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        if (valueCase_ == 8) {
+        if (valueCase_ == 7) {
           value_ = s;
         }
         return s;
@@ -1207,21 +1111,21 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string text_value = 8;</code>
+     * <code>string text_value = 7;</code>
      * @return The bytes for textValue.
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
         getTextValueBytes() {
       java.lang.Object ref = "";
-      if (valueCase_ == 8) {
+      if (valueCase_ == 7) {
         ref = value_;
       }
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        if (valueCase_ == 8) {
+        if (valueCase_ == 7) {
           value_ = b;
         }
         return b;
@@ -1230,7 +1134,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string text_value = 8;</code>
+     * <code>string text_value = 7;</code>
      * @param value The textValue to set.
      * @return This builder for chaining.
      */
@@ -1239,17 +1143,17 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
     throw new NullPointerException();
   }
-  valueCase_ = 8;
+  valueCase_ = 7;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>string text_value = 8;</code>
+     * <code>string text_value = 7;</code>
      * @return This builder for chaining.
      */
     public Builder clearTextValue() {
-      if (valueCase_ == 8) {
+      if (valueCase_ == 7) {
         valueCase_ = 0;
         value_ = null;
         onChanged();
@@ -1257,7 +1161,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string text_value = 8;</code>
+     * <code>string text_value = 7;</code>
      * @param value The bytes for textValue to set.
      * @return This builder for chaining.
      */
@@ -1267,24 +1171,24 @@ private static final long serialVersionUID = 0L;
     throw new NullPointerException();
   }
   checkByteStringIsUtf8(value);
-      valueCase_ = 8;
+      valueCase_ = 7;
       value_ = value;
       onChanged();
       return this;
     }
 
     /**
-     * <code>bytes blob_value = 9;</code>
+     * <code>bytes blob_value = 8;</code>
      * @return The blobValue.
      */
     public com.google.protobuf.ByteString getBlobValue() {
-      if (valueCase_ == 9) {
+      if (valueCase_ == 8) {
         return (com.google.protobuf.ByteString) value_;
       }
       return com.google.protobuf.ByteString.EMPTY;
     }
     /**
-     * <code>bytes blob_value = 9;</code>
+     * <code>bytes blob_value = 8;</code>
      * @param value The blobValue to set.
      * @return This builder for chaining.
      */
@@ -1292,17 +1196,17 @@ private static final long serialVersionUID = 0L;
       if (value == null) {
     throw new NullPointerException();
   }
-  valueCase_ = 9;
+  valueCase_ = 8;
       value_ = value;
       onChanged();
       return this;
     }
     /**
-     * <code>bytes blob_value = 9;</code>
+     * <code>bytes blob_value = 8;</code>
      * @return This builder for chaining.
      */
     public Builder clearBlobValue() {
-      if (valueCase_ == 9) {
+      if (valueCase_ == 8) {
         valueCase_ = 0;
         value_ = null;
         onChanged();

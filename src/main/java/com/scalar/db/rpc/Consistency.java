@@ -94,7 +94,7 @@ public enum Consistency
   }
   public static final com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.getDescriptor().getEnumTypes().get(1);
+    return com.scalar.db.rpc.ScalarDbProto.getDescriptor().getEnumTypes().get(0);
   }
 
   private static final Consistency[] VALUES = values();

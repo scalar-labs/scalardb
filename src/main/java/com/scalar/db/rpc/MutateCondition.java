@@ -119,13 +119,13 @@ private static final long serialVersionUID = 0L;
      */
     PUT_IF_NOT_EXISTS(2),
     /**
-     * <code>DELETE_IF = 4;</code>
+     * <code>DELETE_IF = 3;</code>
      */
-    DELETE_IF(4),
+    DELETE_IF(3),
     /**
-     * <code>DELETE_IF_EXISTS = 5;</code>
+     * <code>DELETE_IF_EXISTS = 4;</code>
      */
-    DELETE_IF_EXISTS(5),
+    DELETE_IF_EXISTS(4),
     UNRECOGNIZED(-1),
     ;
 
@@ -142,13 +142,13 @@ private static final long serialVersionUID = 0L;
      */
     public static final int PUT_IF_NOT_EXISTS_VALUE = 2;
     /**
-     * <code>DELETE_IF = 4;</code>
+     * <code>DELETE_IF = 3;</code>
      */
-    public static final int DELETE_IF_VALUE = 4;
+    public static final int DELETE_IF_VALUE = 3;
     /**
-     * <code>DELETE_IF_EXISTS = 5;</code>
+     * <code>DELETE_IF_EXISTS = 4;</code>
      */
-    public static final int DELETE_IF_EXISTS_VALUE = 5;
+    public static final int DELETE_IF_EXISTS_VALUE = 4;
 
 
     public final int getNumber() {
@@ -178,8 +178,8 @@ private static final long serialVersionUID = 0L;
         case 0: return PUT_IF;
         case 1: return PUT_IF_EXISTS;
         case 2: return PUT_IF_NOT_EXISTS;
-        case 4: return DELETE_IF;
-        case 5: return DELETE_IF_EXISTS;
+        case 3: return DELETE_IF;
+        case 4: return DELETE_IF_EXISTS;
         default: return null;
       }
     }

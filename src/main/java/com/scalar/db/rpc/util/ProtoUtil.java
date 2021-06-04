@@ -81,20 +81,20 @@ public final class ProtoUtil {
   }
 
   private static Value<?> toValue(com.scalar.db.rpc.Value value) {
-    switch (value.getType()) {
-      case DATA_TYPE_BOOLEAN:
+    switch (value.getValueCase()) {
+      case BOOLEAN_VALUE:
         return new BooleanValue(value.getName(), value.getBooleanValue());
-      case DATA_TYPE_INT:
+      case INT_VALUE:
         return new IntValue(value.getName(), value.getIntValue());
-      case DATA_TYPE_BIGINT:
+      case BIGINT_VALUE:
         return new BigIntValue(value.getName(), value.getBigintValue());
-      case DATA_TYPE_FLOAT:
+      case FLOAT_VALUE:
         return new FloatValue(value.getName(), value.getFloatValue());
-      case DATA_TYPE_DOUBLE:
+      case DOUBLE_VALUE:
         return new DoubleValue(value.getName(), value.getDoubleValue());
-      case DATA_TYPE_TEXT:
+      case TEXT_VALUE:
         return new TextValue(value.getName(), value.getTextValue());
-      case DATA_TYPE_BLOB:
+      case BLOB_VALUE:
         return new BlobValue(value.getName(), value.getBlobValue().toByteArray());
       default:
         throw new AssertionError();
@@ -105,43 +105,36 @@ public final class ProtoUtil {
     if (value instanceof BooleanValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_BOOLEAN)
           .setBooleanValue(value.getAsBoolean())
           .build();
     } else if (value instanceof IntValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_INT)
           .setIntValue(value.getAsInt())
           .build();
     } else if (value instanceof BigIntValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_BIGINT)
           .setBigintValue(value.getAsLong())
           .build();
     } else if (value instanceof FloatValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_FLOAT)
           .setFloatValue(value.getAsFloat())
           .build();
     } else if (value instanceof DoubleValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_DOUBLE)
           .setDoubleValue(value.getAsDouble())
           .build();
     } else if (value instanceof TextValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_TEXT)
           .setTextValue(value.getAsString().orElse(""))
           .build();
     } else if (value instanceof BlobValue) {
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setType(com.scalar.db.rpc.DataType.DATA_TYPE_BLOB)
           .setBlobValue(ByteString.copyFrom(value.getAsBytes().orElse(new byte[0])))
           .build();
     } else {

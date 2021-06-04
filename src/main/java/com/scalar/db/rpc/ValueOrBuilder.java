@@ -20,60 +20,49 @@ public interface ValueOrBuilder extends
       getNameBytes();
 
   /**
-   * <code>.rpc.DataType type = 2;</code>
-   * @return The enum numeric value on the wire for type.
-   */
-  int getTypeValue();
-  /**
-   * <code>.rpc.DataType type = 2;</code>
-   * @return The type.
-   */
-  com.scalar.db.rpc.DataType getType();
-
-  /**
-   * <code>bool boolean_value = 3;</code>
+   * <code>bool boolean_value = 2;</code>
    * @return The booleanValue.
    */
   boolean getBooleanValue();
 
   /**
-   * <code>int32 int_value = 4;</code>
+   * <code>int32 int_value = 3;</code>
    * @return The intValue.
    */
   int getIntValue();
 
   /**
-   * <code>int64 bigint_value = 5;</code>
+   * <code>int64 bigint_value = 4;</code>
    * @return The bigintValue.
    */
   long getBigintValue();
 
   /**
-   * <code>float float_value = 6;</code>
+   * <code>float float_value = 5;</code>
    * @return The floatValue.
    */
   float getFloatValue();
 
   /**
-   * <code>double double_value = 7;</code>
+   * <code>double double_value = 6;</code>
    * @return The doubleValue.
    */
   double getDoubleValue();
 
   /**
-   * <code>string text_value = 8;</code>
+   * <code>string text_value = 7;</code>
    * @return The textValue.
    */
   java.lang.String getTextValue();
   /**
-   * <code>string text_value = 8;</code>
+   * <code>string text_value = 7;</code>
    * @return The bytes for textValue.
    */
   com.google.protobuf.ByteString
       getTextValueBytes();
 
   /**
-   * <code>bytes blob_value = 9;</code>
+   * <code>bytes blob_value = 8;</code>
    * @return The blobValue.
    */
   com.google.protobuf.ByteString getBlobValue();

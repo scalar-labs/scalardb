@@ -1,36 +1,25 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
-
 option java_multiple_files = true;
 option java_package = "com.scalar.db.rpc";
 option java_outer_classname = "ScalarDbProto";
 
 package rpc;
 
-// Common messages and enums
+import "google/protobuf/empty.proto";
 
-enum DataType {
-  DATA_TYPE_BOOLEAN = 0;
-  DATA_TYPE_INT = 1;
-  DATA_TYPE_BIGINT = 2;
-  DATA_TYPE_FLOAT = 3;
-  DATA_TYPE_DOUBLE = 4;
-  DATA_TYPE_TEXT = 5;
-  DATA_TYPE_BLOB = 6;
-}
+// Common
 
 message Value {
   string name = 1;
-  DataType type = 2;
   oneof value {
-    bool boolean_value = 3;
-    int32 int_value = 4;
-    int64 bigint_value = 5;
-    float float_value = 6;
-    double double_value = 7;
-    string text_value = 8;
-    bytes blob_value = 9;
+    bool boolean_value = 2;
+    int32 int_value = 3;
+    int64 bigint_value = 4;
+    float float_value = 5;
+    double double_value = 6;
+    string text_value = 7;
+    bytes blob_value = 8;
   }
 }
 
@@ -96,8 +85,8 @@ message MutateCondition {
     PUT_IF = 0;
     PUT_IF_EXISTS = 1;
     PUT_IF_NOT_EXISTS = 2;
-    DELETE_IF = 4;
-    DELETE_IF_EXISTS = 5;
+    DELETE_IF = 3;
+    DELETE_IF_EXISTS = 4;
   }
   Type type = 1;
   repeated ConditionalExpression expression = 2;
@@ -122,7 +111,7 @@ message Result {
   repeated Value value = 1;
 }
 
-// A service and messages for DistributedStorage
+// DistributedStorage
 
 service DistributedStorage {
   rpc Get (GetRequest) returns (GetResponse) {
@@ -174,7 +163,7 @@ message MutateRequest {
   repeated Mutation mutations = 1;
 }
 
-// A service and messages for DistributedStorageAdmin
+// DistributedStorageAdmin
 
 service DistributedStorageAdmin {
   rpc CreateTable (CreateTableRequest) returns (google.protobuf.Empty) {
@@ -185,6 +174,16 @@ service DistributedStorageAdmin {
   }
   rpc GetTableMetadata (GetTableMetadataRequest) returns (GetTableMetadataResponse) {
   }
+}
+
+enum DataType {
+  DATA_TYPE_BOOLEAN = 0;
+  DATA_TYPE_INT = 1;
+  DATA_TYPE_BIGINT = 2;
+  DATA_TYPE_FLOAT = 3;
+  DATA_TYPE_DOUBLE = 4;
+  DATA_TYPE_TEXT = 5;
+  DATA_TYPE_BLOB = 6;
 }
 
 message TableMetadata {

@@ -14,7 +14,6 @@ import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.rpc.util.ProtoUtil;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,6 @@ public class DistributedStorageAdminService
               request.getOptionsMap());
           responseObserver.onNext(Empty.newBuilder().build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -53,7 +51,6 @@ public class DistributedStorageAdminService
           admin.dropTable(request.getNamespace(), request.getTable());
           responseObserver.onNext(Empty.newBuilder().build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -65,7 +62,6 @@ public class DistributedStorageAdminService
           admin.truncateTable(request.getNamespace(), request.getTable());
           responseObserver.onNext(Empty.newBuilder().build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -83,14 +79,14 @@ public class DistributedStorageAdminService
           }
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
 
-  private static void execute(Callable<Void> callable, StreamObserver<?> responseObserver) {
+  private static void execute(
+      ThrowableRunnable<Exception> runnable, StreamObserver<?> responseObserver) {
     try {
-      callable.call();
+      runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
       LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(

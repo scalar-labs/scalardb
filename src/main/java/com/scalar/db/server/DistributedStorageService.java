@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +87,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -121,7 +119,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -157,7 +154,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -180,7 +176,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           closeScanner(request.getScannerId());
           responseObserver.onNext(Empty.newBuilder().build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
@@ -245,14 +240,14 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           }
           responseObserver.onNext(Empty.newBuilder().build());
           responseObserver.onCompleted();
-          return null;
         },
         responseObserver);
   }
 
-  private static void execute(Callable<Void> callable, StreamObserver<?> responseObserver) {
+  private static void execute(
+      ThrowableRunnable<Exception> runnable, StreamObserver<?> responseObserver) {
     try {
-      callable.call();
+      runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
       LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(
