@@ -29,7 +29,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
-import com.scalar.db.exception.transaction.InvalidUsageException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.IntValue;
@@ -1290,7 +1289,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void commit_DeleteGivenWithoutRead_ShouldThrowInvalidUsageException() {
+  public void commit_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
     // Arrange
     Delete delete = prepareDelete(0, 0, TABLE_1);
     transaction = manager.start();
@@ -1299,11 +1298,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction.delete(delete);
     assertThatCode(() -> transaction.commit())
         .isInstanceOf(CommitException.class)
-        .hasCauseInstanceOf(InvalidUsageException.class);
+        .hasCauseInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void commit_DeleteGivenForNonExisting_ShouldThrowInvalidUsageException()
+  public void commit_DeleteGivenForNonExisting_ShouldThrowIllegalArgumentException()
       throws CrudException {
     // Arrange
     Get get = prepareGet(0, 0, TABLE_1);
@@ -1315,7 +1314,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction.delete(delete);
     assertThatCode(() -> transaction.commit())
         .isInstanceOf(CommitException.class)
-        .hasCauseInstanceOf(InvalidUsageException.class);
+        .hasCauseInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

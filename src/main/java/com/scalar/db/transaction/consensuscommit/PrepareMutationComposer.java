@@ -17,7 +17,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.InvalidUsageException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
@@ -86,7 +85,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
 
   private void add(Delete base, TransactionResult result) {
     if (result == null) {
-      throw new InvalidUsageException(
+      throw new IllegalArgumentException(
           "the record to be deleted must be existing " + "and read beforehand");
     }
 
