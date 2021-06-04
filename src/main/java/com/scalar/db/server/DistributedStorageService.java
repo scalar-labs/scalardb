@@ -259,6 +259,9 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       LOGGER.error("an internal error happened during the execution", e);
       responseObserver.onError(
           Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+      if (e instanceof Error) {
+        throw (Error) e;
+      }
     }
   }
 

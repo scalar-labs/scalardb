@@ -84,17 +84,20 @@ public class DistributedStorageAdminService
   }
 
   private static void execute(
-      ThrowableRunnable<Exception> runnable, StreamObserver<?> responseObserver) {
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
     try {
       runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
       LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
-    } catch (Exception e) {
+    } catch (Throwable e) {
       LOGGER.error("an internal error happened during the execution", e);
       responseObserver.onError(
           Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+      if (e instanceof Error) {
+        throw (Error) e;
+      }
     }
   }
 }
