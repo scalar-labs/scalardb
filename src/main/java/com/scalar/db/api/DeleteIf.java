@@ -28,7 +28,18 @@ public class DeleteIf implements MutationCondition {
   public DeleteIf(ConditionalExpression... expressions) {
     checkNotNull(expressions);
     this.expressions = new ArrayList<>(expressions.length);
-    Arrays.stream(expressions).forEach(v -> this.expressions.add(v));
+    this.expressions.addAll(Arrays.asList(expressions));
+  }
+
+  /**
+   * Constructs a {@code DeleteIf} with the specified list of conditional expressions.
+   *
+   * @param expressions a list of expressions specified with {@code ConditionalExpression}s
+   */
+  public DeleteIf(List<ConditionalExpression> expressions) {
+    checkNotNull(expressions);
+    this.expressions = new ArrayList<>(expressions.size());
+    this.expressions.addAll(expressions);
   }
 
   /**
