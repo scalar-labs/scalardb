@@ -33,16 +33,16 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
                 new CacheLoader<TableName, Optional<TableMetadata>>() {
                   @Override
                   public Optional<TableMetadata> load(@Nonnull TableName tableName) {
-                    GetTableMetadataResponse tableMetadata =
+                    GetTableMetadataResponse response =
                         stub.getTableMetadata(
                             GetTableMetadataRequest.newBuilder()
                                 .setNamespace(tableName.namespace)
                                 .setTable(tableName.table)
                                 .build());
-                    if (!tableMetadata.hasTableMetadata()) {
+                    if (!response.hasTableMetadata()) {
                       return Optional.empty();
                     }
-                    return Optional.of(ProtoUtil.toTableMetadata(tableMetadata.getTableMetadata()));
+                    return Optional.of(ProtoUtil.toTableMetadata(response.getTableMetadata()));
                   }
                 });
   }

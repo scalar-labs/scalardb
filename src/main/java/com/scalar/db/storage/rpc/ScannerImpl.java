@@ -38,14 +38,14 @@ public class ScannerImpl implements Scanner {
     this.stub = stub;
     this.metadata = metadata;
 
-    OpenScannerResponse openScannerResponse =
+    OpenScannerResponse response =
         stub.openScanner(OpenScannerRequest.newBuilder().setScan(ProtoUtil.toScan(scan)).build());
-    scannerId = openScannerResponse.getScannerId();
+    scannerId = response.getScannerId();
     results =
-        openScannerResponse.getResultList().stream()
+        response.getResultList().stream()
             .map(r -> ProtoUtil.toResult(r, metadata))
             .collect(Collectors.toList());
-    hasMoreResults = openScannerResponse.getHasMoreResults();
+    hasMoreResults = response.getHasMoreResults();
   }
 
   @Override
@@ -57,13 +57,13 @@ public class ScannerImpl implements Scanner {
           }
           Result result = results.remove(0);
           if (results.isEmpty() && hasMoreResults) {
-            ScanNextResponse scanNextResponse =
+            ScanNextResponse response =
                 stub.scanNext(ScanNextRequest.newBuilder().setScannerId(scannerId).build());
             results =
-                scanNextResponse.getResultList().stream()
+                response.getResultList().stream()
                     .map(r -> ProtoUtil.toResult(r, metadata))
                     .collect(Collectors.toList());
-            hasMoreResults = scanNextResponse.getHasMoreResults();
+            hasMoreResults = response.getHasMoreResults();
           }
           return Optional.of(result);
         });

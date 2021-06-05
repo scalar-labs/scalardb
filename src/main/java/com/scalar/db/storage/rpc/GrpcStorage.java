@@ -100,11 +100,11 @@ public class GrpcStorage implements DistributedStorage {
         () -> {
           Utility.setTargetToIfNot(get, Optional.empty(), namespace, tableName);
 
-          GetResponse getResponse =
+          GetResponse response =
               stub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
-          if (getResponse.hasResult()) {
+          if (response.hasResult()) {
             TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
-            return Optional.of(ProtoUtil.toResult(getResponse.getResult(), tableMetadata));
+            return Optional.of(ProtoUtil.toResult(response.getResult(), tableMetadata));
           }
           return Optional.empty();
         });
