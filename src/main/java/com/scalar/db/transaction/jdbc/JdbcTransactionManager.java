@@ -16,6 +16,7 @@ import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
@@ -81,17 +82,18 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
 
   @Override
   public JdbcTransaction start() throws TransactionException {
-    try {
-      return new JdbcTransaction(
-          jdbcService, dataSource.getConnection(), rdbEngine, namespace, tableName);
-    } catch (SQLException e) {
-      throw new TransactionException("failed to start the transaction", e);
-    }
+    String txId = UUID.randomUUID().toString();
+    return start(txId);
   }
 
   @Override
   public JdbcTransaction start(String txId) throws TransactionException {
-    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
+    try {
+      return new JdbcTransaction(
+          txId, jdbcService, dataSource.getConnection(), rdbEngine, namespace, tableName);
+    } catch (SQLException e) {
+      throw new TransactionException("failed to start the transaction", e);
+    }
   }
 
   @Deprecated
@@ -103,7 +105,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation) throws TransactionException {
-    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
+    return start(txId);
   }
 
   @Deprecated
@@ -123,19 +125,19 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Override
   public JdbcTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
-    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
+    return start(txId);
   }
 
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
-    throw new UnsupportedOperationException("doesn't support starting transaction with txId");
+    return start(txId);
   }
 
   @Override
   public TransactionState getState(String txId) {
-    throw new UnsupportedOperationException("doesn't support this operation");
+    return TransactionState.UNKNOWN; // always returns UNKNOWN
   }
 
   @Override

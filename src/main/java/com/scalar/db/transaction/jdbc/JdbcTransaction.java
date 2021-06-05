@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 public class JdbcTransaction implements DistributedTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransaction.class);
 
+  private final String txId;
   private final JdbcService jdbcService;
   private final Connection connection;
   private final RdbEngine rdbEngine;
@@ -44,11 +45,13 @@ public class JdbcTransaction implements DistributedTransaction {
   private Optional<String> tableName;
 
   JdbcTransaction(
+      String txId,
       JdbcService jdbcService,
       Connection connection,
       RdbEngine rdbEngine,
       Optional<String> namespace,
       Optional<String> tableName) {
+    this.txId = txId;
     this.jdbcService = jdbcService;
     this.connection = connection;
     this.rdbEngine = rdbEngine;
@@ -58,7 +61,7 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public String getId() {
-    throw new UnsupportedOperationException("doesn't support this operation");
+    return txId;
   }
 
   @Override
