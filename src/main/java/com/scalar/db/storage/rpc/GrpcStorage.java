@@ -123,49 +123,31 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    execute(
-        () -> {
-          Utility.setTargetToIfNot(put, Optional.empty(), namespace, tableName);
-
-          stub.mutate(MutateRequest.newBuilder().addMutations(ProtoUtil.toMutation(put)).build());
-          return null;
-        });
+    mutate(put);
   }
 
   @Override
   public void put(List<Put> puts) throws ExecutionException {
-    execute(
-        () -> {
-          Utility.setTargetToIfNot(puts, Optional.empty(), namespace, tableName);
-
-          MutateRequest.Builder builder = MutateRequest.newBuilder();
-          puts.forEach(p -> builder.addMutations(ProtoUtil.toMutation(p)));
-          stub.mutate(builder.build());
-          return null;
-        });
+    mutate(puts);
   }
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    execute(
-        () -> {
-          Utility.setTargetToIfNot(delete, Optional.empty(), namespace, tableName);
-
-          stub.mutate(
-              MutateRequest.newBuilder().addMutations(ProtoUtil.toMutation(delete)).build());
-          return null;
-        });
+    mutate(delete);
   }
 
   @Override
   public void delete(List<Delete> deletes) throws ExecutionException {
+    mutate(deletes);
+  }
+
+  private void mutate(Mutation mutation) throws ExecutionException {
     execute(
         () -> {
-          Utility.setTargetToIfNot(deletes, Optional.empty(), namespace, tableName);
+          Utility.setTargetToIfNot(mutation, Optional.empty(), namespace, tableName);
 
-          MutateRequest.Builder builder = MutateRequest.newBuilder();
-          deletes.forEach(d -> builder.addMutations(ProtoUtil.toMutation(d)));
-          stub.mutate(builder.build());
+          stub.mutate(
+              MutateRequest.newBuilder().addMutations(ProtoUtil.toMutation(mutation)).build());
           return null;
         });
   }
