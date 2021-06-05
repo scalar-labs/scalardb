@@ -20,7 +20,6 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.InvalidUsageException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -192,7 +191,7 @@ public class PrepareMutationComposerTest {
   }
 
   @Test
-  public void delete_DeleteAndNullResultGiven_ShouldThrowInvalidUsageException() {
+  public void delete_DeleteAndNullResultGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Delete delete = prepareDelete();
 
@@ -201,6 +200,6 @@ public class PrepareMutationComposerTest {
             () -> {
               composer.add(delete, null);
             })
-        .isInstanceOf(InvalidUsageException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
