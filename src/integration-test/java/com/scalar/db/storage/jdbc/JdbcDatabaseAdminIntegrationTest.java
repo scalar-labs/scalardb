@@ -10,7 +10,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class JdbcAdminIntegrationTest extends AdminIntegrationTestBase {
+public class JdbcDatabaseAdminIntegrationTest extends AdminIntegrationTestBase {
 
   private static TestEnv testEnv;
   private static DistributedStorageAdmin admin;
