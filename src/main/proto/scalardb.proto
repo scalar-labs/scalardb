@@ -12,14 +12,20 @@ import "google/protobuf/empty.proto";
 
 message Value {
   string name = 1;
+  message TextValue {
+    optional string value = 1;
+  }
+  message BlobValue {
+    optional bytes value = 1;
+  }
   oneof value {
     bool boolean_value = 2;
     int32 int_value = 3;
     int64 bigint_value = 4;
     float float_value = 5;
     double double_value = 6;
-    string text_value = 7;
-    bytes blob_value = 8;
+    TextValue text_value = 7;
+    BlobValue blob_value = 8;
   }
 }
 

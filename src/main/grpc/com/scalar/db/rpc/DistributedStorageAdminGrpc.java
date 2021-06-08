@@ -1,24 +1,11 @@
 package com.scalar.db.rpc;
 
 import static io.grpc.MethodDescriptor.generateFullMethodName;
-import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncUnaryCall;
-import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
-import static io.grpc.stub.ClientCalls.blockingUnaryCall;
-import static io.grpc.stub.ClientCalls.futureUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
 
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.31.1)",
+    value = "by gRPC proto compiler (version 1.38.0)",
     comments = "Source: scalardb.proto")
 public final class DistributedStorageAdminGrpc {
 
@@ -203,56 +190,56 @@ public final class DistributedStorageAdminGrpc {
      */
     public void createTable(com.scalar.db.rpc.CreateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnimplementedUnaryCall(getCreateTableMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateTableMethod(), responseObserver);
     }
 
     /**
      */
     public void dropTable(com.scalar.db.rpc.DropTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnimplementedUnaryCall(getDropTableMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropTableMethod(), responseObserver);
     }
 
     /**
      */
     public void truncateTable(com.scalar.db.rpc.TruncateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnimplementedUnaryCall(getTruncateTableMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getTruncateTableMethod(), responseObserver);
     }
 
     /**
      */
     public void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse> responseObserver) {
-      asyncUnimplementedUnaryCall(getGetTableMetadataMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTableMetadataMethod(), responseObserver);
     }
 
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             getCreateTableMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.CreateTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_CREATE_TABLE)))
           .addMethod(
             getDropTableMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.DropTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_DROP_TABLE)))
           .addMethod(
             getTruncateTableMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.TruncateTableRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_TRUNCATE_TABLE)))
           .addMethod(
             getGetTableMetadataMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.GetTableMetadataRequest,
                 com.scalar.db.rpc.GetTableMetadataResponse>(
@@ -279,7 +266,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public void createTable(com.scalar.db.rpc.CreateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getCreateTableMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -287,7 +274,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public void dropTable(com.scalar.db.rpc.DropTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDropTableMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -295,7 +282,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public void truncateTable(com.scalar.db.rpc.TruncateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getTruncateTableMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -303,7 +290,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public void getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetTableMetadataMethod(), getCallOptions()), request, responseObserver);
     }
   }
@@ -325,28 +312,28 @@ public final class DistributedStorageAdminGrpc {
     /**
      */
     public com.google.protobuf.Empty createTable(com.scalar.db.rpc.CreateTableRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getCreateTableMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.google.protobuf.Empty dropTable(com.scalar.db.rpc.DropTableRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDropTableMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.google.protobuf.Empty truncateTable(com.scalar.db.rpc.TruncateTableRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getTruncateTableMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.scalar.db.rpc.GetTableMetadataResponse getTableMetadata(com.scalar.db.rpc.GetTableMetadataRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetTableMetadataMethod(), getCallOptions(), request);
     }
   }
@@ -369,7 +356,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> createTable(
         com.scalar.db.rpc.CreateTableRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getCreateTableMethod(), getCallOptions()), request);
     }
 
@@ -377,7 +364,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> dropTable(
         com.scalar.db.rpc.DropTableRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDropTableMethod(), getCallOptions()), request);
     }
 
@@ -385,7 +372,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> truncateTable(
         com.scalar.db.rpc.TruncateTableRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getTruncateTableMethod(), getCallOptions()), request);
     }
 
@@ -393,7 +380,7 @@ public final class DistributedStorageAdminGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.GetTableMetadataResponse> getTableMetadata(
         com.scalar.db.rpc.GetTableMetadataRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetTableMetadataMethod(), getCallOptions()), request);
     }
   }

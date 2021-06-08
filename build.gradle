@@ -75,7 +75,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestScalarDbServer {
+    integrationTestGrpc {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -83,6 +83,8 @@ sourceSets {
             include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/jdbc/test/*.java'
             include '**/com/scalar/db/storage/rpc/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithGrpcStorageIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
@@ -99,14 +101,14 @@ configurations {
     integrationTestJdbcRuntime.extendsFrom testRuntime
     integrationTestMultiStorageCompile.extendsFrom testCompile
     integrationTestMultiStorageRuntime.extendsFrom testRuntime
-    integrationTestScalarDbServerCompile.extendsFrom testCompile
-    integrationTestScalarDbServerRuntime.extendsFrom testRuntime
+    integrationTestGrpcCompile.extendsFrom testCompile
+    integrationTestGrpcRuntime.extendsFrom testRuntime
 }
 
 def awssdkVersion = "2.14.24"
-def grpcVersion = '1.31.1'
-def protobufVersion = '3.13.0'
-def protocVersion = '3.13.0'
+def grpcVersion = '1.38.0'
+def protobufVersion = '3.17.2'
+def protocVersion = '3.17.2'
 
 dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
@@ -217,11 +219,11 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
-task integrationTestScalarDbServer(type: Test) {
-    description = 'Runs the integration tests for Scalar DB server.'
+task integrationTestGrpc(type: Test) {
+    description = 'Runs the integration tests for gRPC.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
-    classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestGrpc.output.classesDirs
+    classpath = sourceSets.integrationTestGrpc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
@@ -231,7 +233,7 @@ check.dependsOn -= integrationTestCosmos
 check.dependsOn -= integrationTestDynamo
 check.dependsOn -= integrationTestJdbc
 check.dependsOn -= integrationTestMultiStorage
-check.dependsOn -= integrationTestScalarDbServer
+check.dependsOn -= integrationTestGrpc
 
 task copyTestJarsToTestLib(type: Copy) {
     from configurations.testCompile

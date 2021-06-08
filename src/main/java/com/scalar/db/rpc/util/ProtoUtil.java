@@ -93,9 +93,17 @@ public final class ProtoUtil {
       case DOUBLE_VALUE:
         return new DoubleValue(value.getName(), value.getDoubleValue());
       case TEXT_VALUE:
-        return new TextValue(value.getName(), value.getTextValue());
+        if (value.getTextValue().hasValue()) {
+          return new TextValue(value.getName(), value.getTextValue().getValue());
+        } else {
+          return new TextValue(value.getName(), (String) null);
+        }
       case BLOB_VALUE:
-        return new BlobValue(value.getName(), value.getBlobValue().toByteArray());
+        if (value.getBlobValue().hasValue()) {
+          return new BlobValue(value.getName(), value.getBlobValue().getValue().toByteArray());
+        } else {
+          return new BlobValue(value.getName(), null);
+        }
       default:
         throw new AssertionError();
     }
@@ -128,14 +136,20 @@ public final class ProtoUtil {
           .setDoubleValue(value.getAsDouble())
           .build();
     } else if (value instanceof TextValue) {
+      com.scalar.db.rpc.Value.TextValue.Builder textValueBuilder =
+          com.scalar.db.rpc.Value.TextValue.newBuilder();
+      value.getAsString().ifPresent(textValueBuilder::setValue);
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setTextValue(value.getAsString().orElse(""))
+          .setTextValue(textValueBuilder)
           .build();
     } else if (value instanceof BlobValue) {
+      com.scalar.db.rpc.Value.BlobValue.Builder blobValueBuilder =
+          com.scalar.db.rpc.Value.BlobValue.newBuilder();
+      value.getAsBytes().ifPresent(v -> blobValueBuilder.setValue(ByteString.copyFrom(v)));
       return com.scalar.db.rpc.Value.newBuilder()
           .setName(value.getName())
-          .setBlobValue(ByteString.copyFrom(value.getAsBytes().orElse(new byte[0])))
+          .setBlobValue(blobValueBuilder)
           .build();
     } else {
       throw new AssertionError();

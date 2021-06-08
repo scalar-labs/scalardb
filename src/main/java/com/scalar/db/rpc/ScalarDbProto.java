@@ -20,6 +20,16 @@ public final class ScalarDbProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_rpc_Value_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_rpc_Value_TextValue_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_rpc_Value_TextValue_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_rpc_Value_BlobValue_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_rpc_Value_BlobValue_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_rpc_Key_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -154,100 +164,103 @@ public final class ScalarDbProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\016scalardb.proto\022\003rpc\032\033google/protobuf/e" +
-      "mpty.proto\"\277\001\n\005Value\022\014\n\004name\030\001 \001(\t\022\027\n\rbo" +
+      "mpty.proto\"\301\002\n\005Value\022\014\n\004name\030\001 \001(\t\022\027\n\rbo" +
       "olean_value\030\002 \001(\010H\000\022\023\n\tint_value\030\003 \001(\005H\000" +
       "\022\026\n\014bigint_value\030\004 \001(\003H\000\022\025\n\013float_value\030" +
-      "\005 \001(\002H\000\022\026\n\014double_value\030\006 \001(\001H\000\022\024\n\ntext_" +
-      "value\030\007 \001(\tH\000\022\024\n\nblob_value\030\010 \001(\014H\000B\007\n\005v" +
-      "alue\" \n\003Key\022\031\n\005value\030\001 \003(\0132\n.rpc.Value\"\245" +
-      "\001\n\003Get\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t" +
-      "\022\037\n\rpartition_key\030\003 \001(\0132\010.rpc.Key\022 \n\016clu" +
-      "stering_key\030\004 \001(\0132\010.rpc.Key\022%\n\013consisten" +
-      "cy\030\005 \001(\0162\020.rpc.Consistency\022\022\n\nprojection" +
-      "\030\006 \003(\t\"3\n\010Ordering\022\014\n\004name\030\001 \001(\t\022\031\n\005orde" +
-      "r\030\002 \001(\0162\n.rpc.Order\"\262\002\n\004Scan\022\021\n\tnamespac" +
-      "e\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\037\n\rpartition_key\030" +
-      "\003 \001(\0132\010.rpc.Key\022%\n\013consistency\030\004 \001(\0162\020.r" +
-      "pc.Consistency\022\022\n\nprojection\030\005 \003(\t\022&\n\024st" +
-      "art_clustering_key\030\006 \001(\0132\010.rpc.Key\022\027\n\017st" +
-      "art_inclusive\030\007 \001(\010\022$\n\022end_clustering_ke" +
-      "y\030\010 \001(\0132\010.rpc.Key\022\025\n\rend_inclusive\030\t \001(\010" +
-      "\022\037\n\010ordering\030\n \003(\0132\r.rpc.Ordering\022\r\n\005lim" +
-      "it\030\013 \001(\005\"\265\001\n\025ConditionalExpression\022\014\n\004na" +
-      "me\030\001 \001(\t\022\031\n\005value\030\002 \001(\0132\n.rpc.Value\0225\n\010o" +
-      "perator\030\003 \001(\0162#.rpc.ConditionalExpressio" +
-      "n.Operator\"<\n\010Operator\022\006\n\002EQ\020\000\022\006\n\002NE\020\001\022\006" +
-      "\n\002GT\020\002\022\007\n\003GTE\020\003\022\006\n\002LT\020\004\022\007\n\003LTE\020\005\"\315\001\n\017Mut" +
-      "ateCondition\022\'\n\004type\030\001 \001(\0162\031.rpc.MutateC" +
-      "ondition.Type\022.\n\nexpression\030\002 \003(\0132\032.rpc." +
-      "ConditionalExpression\"a\n\004Type\022\n\n\006PUT_IF\020" +
-      "\000\022\021\n\rPUT_IF_EXISTS\020\001\022\025\n\021PUT_IF_NOT_EXIST" +
-      "S\020\002\022\r\n\tDELETE_IF\020\003\022\024\n\020DELETE_IF_EXISTS\020\004" +
-      "\"\231\002\n\010Mutation\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005tabl" +
-      "e\030\002 \001(\t\022\037\n\rpartition_key\030\003 \001(\0132\010.rpc.Key" +
-      "\022 \n\016clustering_key\030\004 \001(\0132\010.rpc.Key\022%\n\013co" +
-      "nsistency\030\005 \001(\0162\020.rpc.Consistency\022\'\n\tcon" +
-      "dition\030\006 \001(\0132\024.rpc.MutateCondition\022 \n\004ty" +
-      "pe\030\007 \001(\0162\022.rpc.Mutation.Type\022\031\n\005value\030\010 " +
-      "\003(\0132\n.rpc.Value\"\033\n\004Type\022\007\n\003PUT\020\000\022\n\n\006DELE" +
-      "TE\020\001\"#\n\006Result\022\031\n\005value\030\001 \003(\0132\n.rpc.Valu" +
-      "e\"#\n\nGetRequest\022\025\n\003get\030\001 \001(\0132\010.rpc.Get\"*" +
-      "\n\013GetResponse\022\033\n\006result\030\001 \001(\0132\013.rpc.Resu" +
-      "lt\"B\n\022OpenScannerRequest\022\027\n\004scan\030\001 \001(\0132\t" +
-      ".rpc.Scan\022\023\n\013fetch_count\030\002 \001(\005\"`\n\023OpenSc" +
-      "annerResponse\022\022\n\nscanner_id\030\001 \001(\t\022\033\n\006res" +
-      "ult\030\002 \003(\0132\013.rpc.Result\022\030\n\020has_more_resul" +
-      "ts\030\003 \001(\010\":\n\017ScanNextRequest\022\022\n\nscanner_i" +
-      "d\030\001 \001(\t\022\023\n\013fetch_count\030\002 \001(\005\"I\n\020ScanNext" +
-      "Response\022\033\n\006result\030\001 \003(\0132\013.rpc.Result\022\030\n" +
-      "\020has_more_results\030\002 \001(\010\")\n\023CloseScannerR" +
-      "equest\022\022\n\nscanner_id\030\001 \001(\t\"1\n\rMutateRequ" +
-      "est\022 \n\tmutations\030\001 \003(\0132\r.rpc.Mutation\"\333\002" +
-      "\n\rTableMetadata\022.\n\006column\030\001 \003(\0132\036.rpc.Ta" +
-      "bleMetadata.ColumnEntry\022\032\n\022partition_key" +
-      "_name\030\002 \003(\t\022\033\n\023clustering_key_name\030\003 \003(\t" +
-      "\022A\n\020clustering_order\030\004 \003(\0132\'.rpc.TableMe" +
-      "tadata.ClusteringOrderEntry\022\034\n\024secondary" +
-      "_index_name\030\005 \003(\t\032<\n\013ColumnEntry\022\013\n\003key\030" +
-      "\001 \001(\t\022\034\n\005value\030\002 \001(\0162\r.rpc.DataType:\0028\001\032" +
-      "B\n\024ClusteringOrderEntry\022\013\n\003key\030\001 \001(\t\022\031\n\005" +
-      "value\030\002 \001(\0162\n.rpc.Order:\0028\001\"\311\001\n\022CreateTa" +
-      "bleRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002" +
-      " \001(\t\022*\n\016table_metadata\030\003 \001(\0132\022.rpc.Table" +
-      "Metadata\0225\n\007options\030\004 \003(\0132$.rpc.CreateTa" +
-      "bleRequest.OptionsEntry\032.\n\014OptionsEntry\022" +
-      "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"4\n\020DropT" +
-      "ableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030" +
-      "\002 \001(\t\"8\n\024TruncateTableRequest\022\021\n\tnamespa" +
-      "ce\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\";\n\027GetTableMetad" +
-      "ataRequest\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002" +
-      " \001(\t\"F\n\030GetTableMetadataResponse\022*\n\016tabl" +
-      "e_metadata\030\001 \001(\0132\022.rpc.TableMetadata*a\n\013" +
-      "Consistency\022\032\n\026CONSISTENCY_SEQUENTIAL\020\000\022" +
-      "\030\n\024CONSISTENCY_EVENTUAL\020\001\022\034\n\030CONSISTENCY" +
-      "_LINEARIZABLE\020\002*&\n\005Order\022\r\n\tORDER_ASC\020\000\022" +
-      "\016\n\nORDER_DESC\020\001*\235\001\n\010DataType\022\025\n\021DATA_TYP" +
-      "E_BOOLEAN\020\000\022\021\n\rDATA_TYPE_INT\020\001\022\024\n\020DATA_T" +
-      "YPE_BIGINT\020\002\022\023\n\017DATA_TYPE_FLOAT\020\003\022\024\n\020DAT" +
-      "A_TYPE_DOUBLE\020\004\022\022\n\016DATA_TYPE_TEXT\020\005\022\022\n\016D" +
-      "ATA_TYPE_BLOB\020\0062\273\002\n\022DistributedStorage\022*" +
-      "\n\003Get\022\017.rpc.GetRequest\032\020.rpc.GetResponse" +
-      "\"\000\022B\n\013OpenScanner\022\027.rpc.OpenScannerReque" +
-      "st\032\030.rpc.OpenScannerResponse\"\000\0229\n\010ScanNe" +
-      "xt\022\024.rpc.ScanNextRequest\032\025.rpc.ScanNextR" +
-      "esponse\"\000\022B\n\014CloseScanner\022\030.rpc.CloseSca" +
-      "nnerRequest\032\026.google.protobuf.Empty\"\000\0226\n" +
-      "\006Mutate\022\022.rpc.MutateRequest\032\026.google.pro" +
-      "tobuf.Empty\"\0002\262\002\n\027DistributedStorageAdmi" +
-      "n\022@\n\013CreateTable\022\027.rpc.CreateTableReques" +
-      "t\032\026.google.protobuf.Empty\"\000\022<\n\tDropTable" +
-      "\022\025.rpc.DropTableRequest\032\026.google.protobu" +
-      "f.Empty\"\000\022D\n\rTruncateTable\022\031.rpc.Truncat" +
-      "eTableRequest\032\026.google.protobuf.Empty\"\000\022" +
-      "Q\n\020GetTableMetadata\022\034.rpc.GetTableMetada" +
-      "taRequest\032\035.rpc.GetTableMetadataResponse" +
-      "\"\000B$\n\021com.scalar.db.rpcB\rScalarDbProtoP\001" +
-      "b\006proto3"
+      "\005 \001(\002H\000\022\026\n\014double_value\030\006 \001(\001H\000\022*\n\ntext_" +
+      "value\030\007 \001(\0132\024.rpc.Value.TextValueH\000\022*\n\nb" +
+      "lob_value\030\010 \001(\0132\024.rpc.Value.BlobValueH\000\032" +
+      ")\n\tTextValue\022\022\n\005value\030\001 \001(\tH\000\210\001\001B\010\n\006_val" +
+      "ue\032)\n\tBlobValue\022\022\n\005value\030\001 \001(\014H\000\210\001\001B\010\n\006_" +
+      "valueB\007\n\005value\" \n\003Key\022\031\n\005value\030\001 \003(\0132\n.r" +
+      "pc.Value\"\245\001\n\003Get\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005t" +
+      "able\030\002 \001(\t\022\037\n\rpartition_key\030\003 \001(\0132\010.rpc." +
+      "Key\022 \n\016clustering_key\030\004 \001(\0132\010.rpc.Key\022%\n" +
+      "\013consistency\030\005 \001(\0162\020.rpc.Consistency\022\022\n\n" +
+      "projection\030\006 \003(\t\"3\n\010Ordering\022\014\n\004name\030\001 \001" +
+      "(\t\022\031\n\005order\030\002 \001(\0162\n.rpc.Order\"\262\002\n\004Scan\022\021" +
+      "\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022\037\n\rpart" +
+      "ition_key\030\003 \001(\0132\010.rpc.Key\022%\n\013consistency" +
+      "\030\004 \001(\0162\020.rpc.Consistency\022\022\n\nprojection\030\005" +
+      " \003(\t\022&\n\024start_clustering_key\030\006 \001(\0132\010.rpc" +
+      ".Key\022\027\n\017start_inclusive\030\007 \001(\010\022$\n\022end_clu" +
+      "stering_key\030\010 \001(\0132\010.rpc.Key\022\025\n\rend_inclu" +
+      "sive\030\t \001(\010\022\037\n\010ordering\030\n \003(\0132\r.rpc.Order" +
+      "ing\022\r\n\005limit\030\013 \001(\005\"\265\001\n\025ConditionalExpres" +
+      "sion\022\014\n\004name\030\001 \001(\t\022\031\n\005value\030\002 \001(\0132\n.rpc." +
+      "Value\0225\n\010operator\030\003 \001(\0162#.rpc.Conditiona" +
+      "lExpression.Operator\"<\n\010Operator\022\006\n\002EQ\020\000" +
+      "\022\006\n\002NE\020\001\022\006\n\002GT\020\002\022\007\n\003GTE\020\003\022\006\n\002LT\020\004\022\007\n\003LTE" +
+      "\020\005\"\315\001\n\017MutateCondition\022\'\n\004type\030\001 \001(\0162\031.r" +
+      "pc.MutateCondition.Type\022.\n\nexpression\030\002 " +
+      "\003(\0132\032.rpc.ConditionalExpression\"a\n\004Type\022" +
+      "\n\n\006PUT_IF\020\000\022\021\n\rPUT_IF_EXISTS\020\001\022\025\n\021PUT_IF" +
+      "_NOT_EXISTS\020\002\022\r\n\tDELETE_IF\020\003\022\024\n\020DELETE_I" +
+      "F_EXISTS\020\004\"\231\002\n\010Mutation\022\021\n\tnamespace\030\001 \001" +
+      "(\t\022\r\n\005table\030\002 \001(\t\022\037\n\rpartition_key\030\003 \001(\013" +
+      "2\010.rpc.Key\022 \n\016clustering_key\030\004 \001(\0132\010.rpc" +
+      ".Key\022%\n\013consistency\030\005 \001(\0162\020.rpc.Consiste" +
+      "ncy\022\'\n\tcondition\030\006 \001(\0132\024.rpc.MutateCondi" +
+      "tion\022 \n\004type\030\007 \001(\0162\022.rpc.Mutation.Type\022\031" +
+      "\n\005value\030\010 \003(\0132\n.rpc.Value\"\033\n\004Type\022\007\n\003PUT" +
+      "\020\000\022\n\n\006DELETE\020\001\"#\n\006Result\022\031\n\005value\030\001 \003(\0132" +
+      "\n.rpc.Value\"#\n\nGetRequest\022\025\n\003get\030\001 \001(\0132\010" +
+      ".rpc.Get\"*\n\013GetResponse\022\033\n\006result\030\001 \001(\0132" +
+      "\013.rpc.Result\"B\n\022OpenScannerRequest\022\027\n\004sc" +
+      "an\030\001 \001(\0132\t.rpc.Scan\022\023\n\013fetch_count\030\002 \001(\005" +
+      "\"`\n\023OpenScannerResponse\022\022\n\nscanner_id\030\001 " +
+      "\001(\t\022\033\n\006result\030\002 \003(\0132\013.rpc.Result\022\030\n\020has_" +
+      "more_results\030\003 \001(\010\":\n\017ScanNextRequest\022\022\n" +
+      "\nscanner_id\030\001 \001(\t\022\023\n\013fetch_count\030\002 \001(\005\"I" +
+      "\n\020ScanNextResponse\022\033\n\006result\030\001 \003(\0132\013.rpc" +
+      ".Result\022\030\n\020has_more_results\030\002 \001(\010\")\n\023Clo" +
+      "seScannerRequest\022\022\n\nscanner_id\030\001 \001(\t\"1\n\r" +
+      "MutateRequest\022 \n\tmutations\030\001 \003(\0132\r.rpc.M" +
+      "utation\"\333\002\n\rTableMetadata\022.\n\006column\030\001 \003(" +
+      "\0132\036.rpc.TableMetadata.ColumnEntry\022\032\n\022par" +
+      "tition_key_name\030\002 \003(\t\022\033\n\023clustering_key_" +
+      "name\030\003 \003(\t\022A\n\020clustering_order\030\004 \003(\0132\'.r" +
+      "pc.TableMetadata.ClusteringOrderEntry\022\034\n" +
+      "\024secondary_index_name\030\005 \003(\t\032<\n\013ColumnEnt" +
+      "ry\022\013\n\003key\030\001 \001(\t\022\034\n\005value\030\002 \001(\0162\r.rpc.Dat" +
+      "aType:\0028\001\032B\n\024ClusteringOrderEntry\022\013\n\003key" +
+      "\030\001 \001(\t\022\031\n\005value\030\002 \001(\0162\n.rpc.Order:\0028\001\"\311\001" +
+      "\n\022CreateTableRequest\022\021\n\tnamespace\030\001 \001(\t\022" +
+      "\r\n\005table\030\002 \001(\t\022*\n\016table_metadata\030\003 \001(\0132\022" +
+      ".rpc.TableMetadata\0225\n\007options\030\004 \003(\0132$.rp" +
+      "c.CreateTableRequest.OptionsEntry\032.\n\014Opt" +
+      "ionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028" +
+      "\001\"4\n\020DropTableRequest\022\021\n\tnamespace\030\001 \001(\t" +
+      "\022\r\n\005table\030\002 \001(\t\"8\n\024TruncateTableRequest\022" +
+      "\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\";\n\027Get" +
+      "TableMetadataRequest\022\021\n\tnamespace\030\001 \001(\t\022" +
+      "\r\n\005table\030\002 \001(\t\"F\n\030GetTableMetadataRespon" +
+      "se\022*\n\016table_metadata\030\001 \001(\0132\022.rpc.TableMe" +
+      "tadata*a\n\013Consistency\022\032\n\026CONSISTENCY_SEQ" +
+      "UENTIAL\020\000\022\030\n\024CONSISTENCY_EVENTUAL\020\001\022\034\n\030C" +
+      "ONSISTENCY_LINEARIZABLE\020\002*&\n\005Order\022\r\n\tOR" +
+      "DER_ASC\020\000\022\016\n\nORDER_DESC\020\001*\235\001\n\010DataType\022\025" +
+      "\n\021DATA_TYPE_BOOLEAN\020\000\022\021\n\rDATA_TYPE_INT\020\001" +
+      "\022\024\n\020DATA_TYPE_BIGINT\020\002\022\023\n\017DATA_TYPE_FLOA" +
+      "T\020\003\022\024\n\020DATA_TYPE_DOUBLE\020\004\022\022\n\016DATA_TYPE_T" +
+      "EXT\020\005\022\022\n\016DATA_TYPE_BLOB\020\0062\273\002\n\022Distribute" +
+      "dStorage\022*\n\003Get\022\017.rpc.GetRequest\032\020.rpc.G" +
+      "etResponse\"\000\022B\n\013OpenScanner\022\027.rpc.OpenSc" +
+      "annerRequest\032\030.rpc.OpenScannerResponse\"\000" +
+      "\0229\n\010ScanNext\022\024.rpc.ScanNextRequest\032\025.rpc" +
+      ".ScanNextResponse\"\000\022B\n\014CloseScanner\022\030.rp" +
+      "c.CloseScannerRequest\032\026.google.protobuf." +
+      "Empty\"\000\0226\n\006Mutate\022\022.rpc.MutateRequest\032\026." +
+      "google.protobuf.Empty\"\0002\262\002\n\027DistributedS" +
+      "torageAdmin\022@\n\013CreateTable\022\027.rpc.CreateT" +
+      "ableRequest\032\026.google.protobuf.Empty\"\000\022<\n" +
+      "\tDropTable\022\025.rpc.DropTableRequest\032\026.goog" +
+      "le.protobuf.Empty\"\000\022D\n\rTruncateTable\022\031.r" +
+      "pc.TruncateTableRequest\032\026.google.protobu" +
+      "f.Empty\"\000\022Q\n\020GetTableMetadata\022\034.rpc.GetT" +
+      "ableMetadataRequest\032\035.rpc.GetTableMetada" +
+      "taResponse\"\000B$\n\021com.scalar.db.rpcB\rScala" +
+      "rDbProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -260,6 +273,18 @@ public final class ScalarDbProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_Value_descriptor,
         new java.lang.String[] { "Name", "BooleanValue", "IntValue", "BigintValue", "FloatValue", "DoubleValue", "TextValue", "BlobValue", "Value", });
+    internal_static_rpc_Value_TextValue_descriptor =
+      internal_static_rpc_Value_descriptor.getNestedTypes().get(0);
+    internal_static_rpc_Value_TextValue_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_rpc_Value_TextValue_descriptor,
+        new java.lang.String[] { "Value", "Value", });
+    internal_static_rpc_Value_BlobValue_descriptor =
+      internal_static_rpc_Value_descriptor.getNestedTypes().get(1);
+    internal_static_rpc_Value_BlobValue_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_rpc_Value_BlobValue_descriptor,
+        new java.lang.String[] { "Value", "Value", });
     internal_static_rpc_Key_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_rpc_Key_fieldAccessorTable = new

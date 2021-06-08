@@ -81,14 +81,31 @@ private static final long serialVersionUID = 0L;
             break;
           }
           case 58: {
-            java.lang.String s = input.readStringRequireUtf8();
+            com.scalar.db.rpc.Value.TextValue.Builder subBuilder = null;
+            if (valueCase_ == 7) {
+              subBuilder = ((com.scalar.db.rpc.Value.TextValue) value_).toBuilder();
+            }
+            value_ =
+                input.readMessage(com.scalar.db.rpc.Value.TextValue.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom((com.scalar.db.rpc.Value.TextValue) value_);
+              value_ = subBuilder.buildPartial();
+            }
             valueCase_ = 7;
-            value_ = s;
             break;
           }
           case 66: {
+            com.scalar.db.rpc.Value.BlobValue.Builder subBuilder = null;
+            if (valueCase_ == 8) {
+              subBuilder = ((com.scalar.db.rpc.Value.BlobValue) value_).toBuilder();
+            }
+            value_ =
+                input.readMessage(com.scalar.db.rpc.Value.BlobValue.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom((com.scalar.db.rpc.Value.BlobValue) value_);
+              value_ = subBuilder.buildPartial();
+            }
             valueCase_ = 8;
-            value_ = input.readBytes();
             break;
           }
           default: {
@@ -121,6 +138,1136 @@ private static final long serialVersionUID = 0L;
     return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.scalar.db.rpc.Value.class, com.scalar.db.rpc.Value.Builder.class);
+  }
+
+  public interface TextValueOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:rpc.Value.TextValue)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional string value = 1;</code>
+     * @return Whether the value field is set.
+     */
+    boolean hasValue();
+    /**
+     * <code>optional string value = 1;</code>
+     * @return The value.
+     */
+    java.lang.String getValue();
+    /**
+     * <code>optional string value = 1;</code>
+     * @return The bytes for value.
+     */
+    com.google.protobuf.ByteString
+        getValueBytes();
+  }
+  /**
+   * Protobuf type {@code rpc.Value.TextValue}
+   */
+  public static final class TextValue extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:rpc.Value.TextValue)
+      TextValueOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use TextValue.newBuilder() to construct.
+    private TextValue(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private TextValue() {
+      value_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new TextValue();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TextValue(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000001;
+              value_ = s;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.scalar.db.rpc.Value.TextValue.class, com.scalar.db.rpc.Value.TextValue.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int VALUE_FIELD_NUMBER = 1;
+    private volatile java.lang.Object value_;
+    /**
+     * <code>optional string value = 1;</code>
+     * @return Whether the value field is set.
+     */
+    @java.lang.Override
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>optional string value = 1;</code>
+     * @return The value.
+     */
+    @java.lang.Override
+    public java.lang.String getValue() {
+      java.lang.Object ref = value_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        value_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>optional string value = 1;</code>
+     * @return The bytes for value.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getValueBytes() {
+      java.lang.Object ref = value_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        value_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, value_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, value_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.scalar.db.rpc.Value.TextValue)) {
+        return super.equals(obj);
+      }
+      com.scalar.db.rpc.Value.TextValue other = (com.scalar.db.rpc.Value.TextValue) obj;
+
+      if (hasValue() != other.hasValue()) return false;
+      if (hasValue()) {
+        if (!getValue()
+            .equals(other.getValue())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasValue()) {
+        hash = (37 * hash) + VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + getValue().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.TextValue parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.scalar.db.rpc.Value.TextValue prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code rpc.Value.TextValue}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:rpc.Value.TextValue)
+        com.scalar.db.rpc.Value.TextValueOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.scalar.db.rpc.Value.TextValue.class, com.scalar.db.rpc.Value.TextValue.Builder.class);
+      }
+
+      // Construct using com.scalar.db.rpc.Value.TextValue.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        value_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_TextValue_descriptor;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.TextValue getDefaultInstanceForType() {
+        return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.TextValue build() {
+        com.scalar.db.rpc.Value.TextValue result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.TextValue buildPartial() {
+        com.scalar.db.rpc.Value.TextValue result = new com.scalar.db.rpc.Value.TextValue(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.value_ = value_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.scalar.db.rpc.Value.TextValue) {
+          return mergeFrom((com.scalar.db.rpc.Value.TextValue)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.scalar.db.rpc.Value.TextValue other) {
+        if (other == com.scalar.db.rpc.Value.TextValue.getDefaultInstance()) return this;
+        if (other.hasValue()) {
+          bitField0_ |= 0x00000001;
+          value_ = other.value_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.scalar.db.rpc.Value.TextValue parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.scalar.db.rpc.Value.TextValue) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object value_ = "";
+      /**
+       * <code>optional string value = 1;</code>
+       * @return Whether the value field is set.
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>optional string value = 1;</code>
+       * @return The value.
+       */
+      public java.lang.String getValue() {
+        java.lang.Object ref = value_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          value_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string value = 1;</code>
+       * @return The bytes for value.
+       */
+      public com.google.protobuf.ByteString
+          getValueBytes() {
+        java.lang.Object ref = value_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          value_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string value = 1;</code>
+       * @param value The value to set.
+       * @return This builder for chaining.
+       */
+      public Builder setValue(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        value_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string value = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearValue() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        value_ = getDefaultInstance().getValue();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string value = 1;</code>
+       * @param value The bytes for value to set.
+       * @return This builder for chaining.
+       */
+      public Builder setValueBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        bitField0_ |= 0x00000001;
+        value_ = value;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:rpc.Value.TextValue)
+    }
+
+    // @@protoc_insertion_point(class_scope:rpc.Value.TextValue)
+    private static final com.scalar.db.rpc.Value.TextValue DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.scalar.db.rpc.Value.TextValue();
+    }
+
+    public static com.scalar.db.rpc.Value.TextValue getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<TextValue>
+        PARSER = new com.google.protobuf.AbstractParser<TextValue>() {
+      @java.lang.Override
+      public TextValue parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new TextValue(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<TextValue> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TextValue> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.scalar.db.rpc.Value.TextValue getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface BlobValueOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:rpc.Value.BlobValue)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional bytes value = 1;</code>
+     * @return Whether the value field is set.
+     */
+    boolean hasValue();
+    /**
+     * <code>optional bytes value = 1;</code>
+     * @return The value.
+     */
+    com.google.protobuf.ByteString getValue();
+  }
+  /**
+   * Protobuf type {@code rpc.Value.BlobValue}
+   */
+  public static final class BlobValue extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:rpc.Value.BlobValue)
+      BlobValueOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use BlobValue.newBuilder() to construct.
+    private BlobValue(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BlobValue() {
+      value_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new BlobValue();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BlobValue(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              bitField0_ |= 0x00000001;
+              value_ = input.readBytes();
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.scalar.db.rpc.Value.BlobValue.class, com.scalar.db.rpc.Value.BlobValue.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int VALUE_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString value_;
+    /**
+     * <code>optional bytes value = 1;</code>
+     * @return Whether the value field is set.
+     */
+    @java.lang.Override
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>optional bytes value = 1;</code>
+     * @return The value.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getValue() {
+      return value_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        output.writeBytes(1, value_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, value_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.scalar.db.rpc.Value.BlobValue)) {
+        return super.equals(obj);
+      }
+      com.scalar.db.rpc.Value.BlobValue other = (com.scalar.db.rpc.Value.BlobValue) obj;
+
+      if (hasValue() != other.hasValue()) return false;
+      if (hasValue()) {
+        if (!getValue()
+            .equals(other.getValue())) return false;
+      }
+      if (!unknownFields.equals(other.unknownFields)) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasValue()) {
+        hash = (37 * hash) + VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + getValue().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.scalar.db.rpc.Value.BlobValue parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.scalar.db.rpc.Value.BlobValue prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code rpc.Value.BlobValue}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:rpc.Value.BlobValue)
+        com.scalar.db.rpc.Value.BlobValueOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.scalar.db.rpc.Value.BlobValue.class, com.scalar.db.rpc.Value.BlobValue.Builder.class);
+      }
+
+      // Construct using com.scalar.db.rpc.Value.BlobValue.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        value_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_Value_BlobValue_descriptor;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.BlobValue getDefaultInstanceForType() {
+        return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.BlobValue build() {
+        com.scalar.db.rpc.Value.BlobValue result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.scalar.db.rpc.Value.BlobValue buildPartial() {
+        com.scalar.db.rpc.Value.BlobValue result = new com.scalar.db.rpc.Value.BlobValue(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.value_ = value_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.scalar.db.rpc.Value.BlobValue) {
+          return mergeFrom((com.scalar.db.rpc.Value.BlobValue)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.scalar.db.rpc.Value.BlobValue other) {
+        if (other == com.scalar.db.rpc.Value.BlobValue.getDefaultInstance()) return this;
+        if (other.hasValue()) {
+          setValue(other.getValue());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.scalar.db.rpc.Value.BlobValue parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (com.scalar.db.rpc.Value.BlobValue) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private com.google.protobuf.ByteString value_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes value = 1;</code>
+       * @return Whether the value field is set.
+       */
+      @java.lang.Override
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>optional bytes value = 1;</code>
+       * @return The value.
+       */
+      @java.lang.Override
+      public com.google.protobuf.ByteString getValue() {
+        return value_;
+      }
+      /**
+       * <code>optional bytes value = 1;</code>
+       * @param value The value to set.
+       * @return This builder for chaining.
+       */
+      public Builder setValue(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        value_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes value = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearValue() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        value_ = getDefaultInstance().getValue();
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:rpc.Value.BlobValue)
+    }
+
+    // @@protoc_insertion_point(class_scope:rpc.Value.BlobValue)
+    private static final com.scalar.db.rpc.Value.BlobValue DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.scalar.db.rpc.Value.BlobValue();
+    }
+
+    public static com.scalar.db.rpc.Value.BlobValue getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BlobValue>
+        PARSER = new com.google.protobuf.AbstractParser<BlobValue>() {
+      @java.lang.Override
+      public BlobValue parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BlobValue(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BlobValue> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BlobValue> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.scalar.db.rpc.Value.BlobValue getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
   }
 
   private int valueCase_ = 0;
@@ -215,6 +1362,14 @@ private static final long serialVersionUID = 0L;
   public static final int BOOLEAN_VALUE_FIELD_NUMBER = 2;
   /**
    * <code>bool boolean_value = 2;</code>
+   * @return Whether the booleanValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasBooleanValue() {
+    return valueCase_ == 2;
+  }
+  /**
+   * <code>bool boolean_value = 2;</code>
    * @return The booleanValue.
    */
   @java.lang.Override
@@ -226,6 +1381,14 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int INT_VALUE_FIELD_NUMBER = 3;
+  /**
+   * <code>int32 int_value = 3;</code>
+   * @return Whether the intValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasIntValue() {
+    return valueCase_ == 3;
+  }
   /**
    * <code>int32 int_value = 3;</code>
    * @return The intValue.
@@ -241,6 +1404,14 @@ private static final long serialVersionUID = 0L;
   public static final int BIGINT_VALUE_FIELD_NUMBER = 4;
   /**
    * <code>int64 bigint_value = 4;</code>
+   * @return Whether the bigintValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasBigintValue() {
+    return valueCase_ == 4;
+  }
+  /**
+   * <code>int64 bigint_value = 4;</code>
    * @return The bigintValue.
    */
   @java.lang.Override
@@ -252,6 +1423,14 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int FLOAT_VALUE_FIELD_NUMBER = 5;
+  /**
+   * <code>float float_value = 5;</code>
+   * @return Whether the floatValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasFloatValue() {
+    return valueCase_ == 5;
+  }
   /**
    * <code>float float_value = 5;</code>
    * @return The floatValue.
@@ -267,6 +1446,14 @@ private static final long serialVersionUID = 0L;
   public static final int DOUBLE_VALUE_FIELD_NUMBER = 6;
   /**
    * <code>double double_value = 6;</code>
+   * @return Whether the doubleValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasDoubleValue() {
+    return valueCase_ == 6;
+  }
+  /**
+   * <code>double double_value = 6;</code>
    * @return The doubleValue.
    */
   @java.lang.Override
@@ -279,60 +1466,64 @@ private static final long serialVersionUID = 0L;
 
   public static final int TEXT_VALUE_FIELD_NUMBER = 7;
   /**
-   * <code>string text_value = 7;</code>
-   * @return The textValue.
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   * @return Whether the textValue field is set.
    */
-  public java.lang.String getTextValue() {
-    java.lang.Object ref = "";
-    if (valueCase_ == 7) {
-      ref = value_;
-    }
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      if (valueCase_ == 7) {
-        value_ = s;
-      }
-      return s;
-    }
+  @java.lang.Override
+  public boolean hasTextValue() {
+    return valueCase_ == 7;
   }
   /**
-   * <code>string text_value = 7;</code>
-   * @return The bytes for textValue.
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   * @return The textValue.
    */
-  public com.google.protobuf.ByteString
-      getTextValueBytes() {
-    java.lang.Object ref = "";
+  @java.lang.Override
+  public com.scalar.db.rpc.Value.TextValue getTextValue() {
     if (valueCase_ == 7) {
-      ref = value_;
+       return (com.scalar.db.rpc.Value.TextValue) value_;
     }
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      if (valueCase_ == 7) {
-        value_ = b;
-      }
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
+    return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
+  }
+  /**
+   * <code>.rpc.Value.TextValue text_value = 7;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.Value.TextValueOrBuilder getTextValueOrBuilder() {
+    if (valueCase_ == 7) {
+       return (com.scalar.db.rpc.Value.TextValue) value_;
     }
+    return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
   }
 
   public static final int BLOB_VALUE_FIELD_NUMBER = 8;
   /**
-   * <code>bytes blob_value = 8;</code>
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+   * @return Whether the blobValue field is set.
+   */
+  @java.lang.Override
+  public boolean hasBlobValue() {
+    return valueCase_ == 8;
+  }
+  /**
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
    * @return The blobValue.
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString getBlobValue() {
+  public com.scalar.db.rpc.Value.BlobValue getBlobValue() {
     if (valueCase_ == 8) {
-      return (com.google.protobuf.ByteString) value_;
+       return (com.scalar.db.rpc.Value.BlobValue) value_;
     }
-    return com.google.protobuf.ByteString.EMPTY;
+    return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
+  }
+  /**
+   * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+   */
+  @java.lang.Override
+  public com.scalar.db.rpc.Value.BlobValueOrBuilder getBlobValueOrBuilder() {
+    if (valueCase_ == 8) {
+       return (com.scalar.db.rpc.Value.BlobValue) value_;
+    }
+    return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
   }
 
   private byte memoizedIsInitialized = -1;
@@ -373,11 +1564,10 @@ private static final long serialVersionUID = 0L;
           6, (double)((java.lang.Double) value_));
     }
     if (valueCase_ == 7) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 7, value_);
+      output.writeMessage(7, (com.scalar.db.rpc.Value.TextValue) value_);
     }
     if (valueCase_ == 8) {
-      output.writeBytes(
-          8, (com.google.protobuf.ByteString) value_);
+      output.writeMessage(8, (com.scalar.db.rpc.Value.BlobValue) value_);
     }
     unknownFields.writeTo(output);
   }
@@ -417,12 +1607,12 @@ private static final long serialVersionUID = 0L;
             6, (double)((java.lang.Double) value_));
     }
     if (valueCase_ == 7) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(7, value_);
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(7, (com.scalar.db.rpc.Value.TextValue) value_);
     }
     if (valueCase_ == 8) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(
-            8, (com.google.protobuf.ByteString) value_);
+        .computeMessageSize(8, (com.scalar.db.rpc.Value.BlobValue) value_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -705,10 +1895,18 @@ private static final long serialVersionUID = 0L;
         result.value_ = value_;
       }
       if (valueCase_ == 7) {
-        result.value_ = value_;
+        if (textValueBuilder_ == null) {
+          result.value_ = value_;
+        } else {
+          result.value_ = textValueBuilder_.build();
+        }
       }
       if (valueCase_ == 8) {
-        result.value_ = value_;
+        if (blobValueBuilder_ == null) {
+          result.value_ = value_;
+        } else {
+          result.value_ = blobValueBuilder_.build();
+        }
       }
       result.valueCase_ = valueCase_;
       onBuilt();
@@ -785,13 +1983,11 @@ private static final long serialVersionUID = 0L;
           break;
         }
         case TEXT_VALUE: {
-          valueCase_ = 7;
-          value_ = other.value_;
-          onChanged();
+          mergeTextValue(other.getTextValue());
           break;
         }
         case BLOB_VALUE: {
-          setBlobValue(other.getBlobValue());
+          mergeBlobValue(other.getBlobValue());
           break;
         }
         case VALUE_NOT_SET: {
@@ -920,6 +2116,13 @@ private static final long serialVersionUID = 0L;
 
     /**
      * <code>bool boolean_value = 2;</code>
+     * @return Whether the booleanValue field is set.
+     */
+    public boolean hasBooleanValue() {
+      return valueCase_ == 2;
+    }
+    /**
+     * <code>bool boolean_value = 2;</code>
      * @return The booleanValue.
      */
     public boolean getBooleanValue() {
@@ -952,6 +2155,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    /**
+     * <code>int32 int_value = 3;</code>
+     * @return Whether the intValue field is set.
+     */
+    public boolean hasIntValue() {
+      return valueCase_ == 3;
+    }
     /**
      * <code>int32 int_value = 3;</code>
      * @return The intValue.
@@ -988,6 +2198,13 @@ private static final long serialVersionUID = 0L;
 
     /**
      * <code>int64 bigint_value = 4;</code>
+     * @return Whether the bigintValue field is set.
+     */
+    public boolean hasBigintValue() {
+      return valueCase_ == 4;
+    }
+    /**
+     * <code>int64 bigint_value = 4;</code>
      * @return The bigintValue.
      */
     public long getBigintValue() {
@@ -1020,6 +2237,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    /**
+     * <code>float float_value = 5;</code>
+     * @return Whether the floatValue field is set.
+     */
+    public boolean hasFloatValue() {
+      return valueCase_ == 5;
+    }
     /**
      * <code>float float_value = 5;</code>
      * @return The floatValue.
@@ -1056,6 +2280,13 @@ private static final long serialVersionUID = 0L;
 
     /**
      * <code>double double_value = 6;</code>
+     * @return Whether the doubleValue field is set.
+     */
+    public boolean hasDoubleValue() {
+      return valueCase_ == 6;
+    }
+    /**
+     * <code>double double_value = 6;</code>
      * @return The doubleValue.
      */
     public double getDoubleValue() {
@@ -1088,130 +2319,286 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Value.TextValue, com.scalar.db.rpc.Value.TextValue.Builder, com.scalar.db.rpc.Value.TextValueOrBuilder> textValueBuilder_;
     /**
-     * <code>string text_value = 7;</code>
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
+     * @return Whether the textValue field is set.
+     */
+    @java.lang.Override
+    public boolean hasTextValue() {
+      return valueCase_ == 7;
+    }
+    /**
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      * @return The textValue.
      */
     @java.lang.Override
-    public java.lang.String getTextValue() {
-      java.lang.Object ref = "";
-      if (valueCase_ == 7) {
-        ref = value_;
-      }
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+    public com.scalar.db.rpc.Value.TextValue getTextValue() {
+      if (textValueBuilder_ == null) {
         if (valueCase_ == 7) {
-          value_ = s;
+          return (com.scalar.db.rpc.Value.TextValue) value_;
         }
-        return s;
+        return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
       } else {
-        return (java.lang.String) ref;
+        if (valueCase_ == 7) {
+          return textValueBuilder_.getMessage();
+        }
+        return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
       }
     }
     /**
-     * <code>string text_value = 7;</code>
-     * @return The bytes for textValue.
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getTextValueBytes() {
-      java.lang.Object ref = "";
-      if (valueCase_ == 7) {
-        ref = value_;
-      }
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        if (valueCase_ == 7) {
-          value_ = b;
+    public Builder setTextValue(com.scalar.db.rpc.Value.TextValue value) {
+      if (textValueBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
         }
-        return b;
+        value_ = value;
+        onChanged();
       } else {
-        return (com.google.protobuf.ByteString) ref;
+        textValueBuilder_.setMessage(value);
       }
+      valueCase_ = 7;
+      return this;
     }
     /**
-     * <code>string text_value = 7;</code>
-     * @param value The textValue to set.
-     * @return This builder for chaining.
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder setTextValue(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  valueCase_ = 7;
-      value_ = value;
-      onChanged();
+        com.scalar.db.rpc.Value.TextValue.Builder builderForValue) {
+      if (textValueBuilder_ == null) {
+        value_ = builderForValue.build();
+        onChanged();
+      } else {
+        textValueBuilder_.setMessage(builderForValue.build());
+      }
+      valueCase_ = 7;
       return this;
     }
     /**
-     * <code>string text_value = 7;</code>
-     * @return This builder for chaining.
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
+     */
+    public Builder mergeTextValue(com.scalar.db.rpc.Value.TextValue value) {
+      if (textValueBuilder_ == null) {
+        if (valueCase_ == 7 &&
+            value_ != com.scalar.db.rpc.Value.TextValue.getDefaultInstance()) {
+          value_ = com.scalar.db.rpc.Value.TextValue.newBuilder((com.scalar.db.rpc.Value.TextValue) value_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          value_ = value;
+        }
+        onChanged();
+      } else {
+        if (valueCase_ == 7) {
+          textValueBuilder_.mergeFrom(value);
+        }
+        textValueBuilder_.setMessage(value);
+      }
+      valueCase_ = 7;
+      return this;
+    }
+    /**
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
     public Builder clearTextValue() {
-      if (valueCase_ == 7) {
-        valueCase_ = 0;
-        value_ = null;
-        onChanged();
+      if (textValueBuilder_ == null) {
+        if (valueCase_ == 7) {
+          valueCase_ = 0;
+          value_ = null;
+          onChanged();
+        }
+      } else {
+        if (valueCase_ == 7) {
+          valueCase_ = 0;
+          value_ = null;
+        }
+        textValueBuilder_.clear();
       }
       return this;
     }
     /**
-     * <code>string text_value = 7;</code>
-     * @param value The bytes for textValue to set.
-     * @return This builder for chaining.
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
      */
-    public Builder setTextValueBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
+    public com.scalar.db.rpc.Value.TextValue.Builder getTextValueBuilder() {
+      return getTextValueFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.Value.TextValueOrBuilder getTextValueOrBuilder() {
+      if ((valueCase_ == 7) && (textValueBuilder_ != null)) {
+        return textValueBuilder_.getMessageOrBuilder();
+      } else {
+        if (valueCase_ == 7) {
+          return (com.scalar.db.rpc.Value.TextValue) value_;
+        }
+        return com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.Value.TextValue text_value = 7;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Value.TextValue, com.scalar.db.rpc.Value.TextValue.Builder, com.scalar.db.rpc.Value.TextValueOrBuilder> 
+        getTextValueFieldBuilder() {
+      if (textValueBuilder_ == null) {
+        if (!(valueCase_ == 7)) {
+          value_ = com.scalar.db.rpc.Value.TextValue.getDefaultInstance();
+        }
+        textValueBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.Value.TextValue, com.scalar.db.rpc.Value.TextValue.Builder, com.scalar.db.rpc.Value.TextValueOrBuilder>(
+                (com.scalar.db.rpc.Value.TextValue) value_,
+                getParentForChildren(),
+                isClean());
+        value_ = null;
+      }
       valueCase_ = 7;
-      value_ = value;
-      onChanged();
-      return this;
+      onChanged();;
+      return textValueBuilder_;
     }
 
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Value.BlobValue, com.scalar.db.rpc.Value.BlobValue.Builder, com.scalar.db.rpc.Value.BlobValueOrBuilder> blobValueBuilder_;
     /**
-     * <code>bytes blob_value = 8;</code>
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     * @return Whether the blobValue field is set.
+     */
+    @java.lang.Override
+    public boolean hasBlobValue() {
+      return valueCase_ == 8;
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      * @return The blobValue.
      */
-    public com.google.protobuf.ByteString getBlobValue() {
-      if (valueCase_ == 8) {
-        return (com.google.protobuf.ByteString) value_;
+    @java.lang.Override
+    public com.scalar.db.rpc.Value.BlobValue getBlobValue() {
+      if (blobValueBuilder_ == null) {
+        if (valueCase_ == 8) {
+          return (com.scalar.db.rpc.Value.BlobValue) value_;
+        }
+        return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
+      } else {
+        if (valueCase_ == 8) {
+          return blobValueBuilder_.getMessage();
+        }
+        return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
       }
-      return com.google.protobuf.ByteString.EMPTY;
     }
     /**
-     * <code>bytes blob_value = 8;</code>
-     * @param value The blobValue to set.
-     * @return This builder for chaining.
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
-    public Builder setBlobValue(com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  valueCase_ = 8;
-      value_ = value;
-      onChanged();
+    public Builder setBlobValue(com.scalar.db.rpc.Value.BlobValue value) {
+      if (blobValueBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        value_ = value;
+        onChanged();
+      } else {
+        blobValueBuilder_.setMessage(value);
+      }
+      valueCase_ = 8;
       return this;
     }
     /**
-     * <code>bytes blob_value = 8;</code>
-     * @return This builder for chaining.
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     */
+    public Builder setBlobValue(
+        com.scalar.db.rpc.Value.BlobValue.Builder builderForValue) {
+      if (blobValueBuilder_ == null) {
+        value_ = builderForValue.build();
+        onChanged();
+      } else {
+        blobValueBuilder_.setMessage(builderForValue.build());
+      }
+      valueCase_ = 8;
+      return this;
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     */
+    public Builder mergeBlobValue(com.scalar.db.rpc.Value.BlobValue value) {
+      if (blobValueBuilder_ == null) {
+        if (valueCase_ == 8 &&
+            value_ != com.scalar.db.rpc.Value.BlobValue.getDefaultInstance()) {
+          value_ = com.scalar.db.rpc.Value.BlobValue.newBuilder((com.scalar.db.rpc.Value.BlobValue) value_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          value_ = value;
+        }
+        onChanged();
+      } else {
+        if (valueCase_ == 8) {
+          blobValueBuilder_.mergeFrom(value);
+        }
+        blobValueBuilder_.setMessage(value);
+      }
+      valueCase_ = 8;
+      return this;
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
      */
     public Builder clearBlobValue() {
-      if (valueCase_ == 8) {
-        valueCase_ = 0;
-        value_ = null;
-        onChanged();
+      if (blobValueBuilder_ == null) {
+        if (valueCase_ == 8) {
+          valueCase_ = 0;
+          value_ = null;
+          onChanged();
+        }
+      } else {
+        if (valueCase_ == 8) {
+          valueCase_ = 0;
+          value_ = null;
+        }
+        blobValueBuilder_.clear();
       }
       return this;
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     */
+    public com.scalar.db.rpc.Value.BlobValue.Builder getBlobValueBuilder() {
+      return getBlobValueFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     */
+    @java.lang.Override
+    public com.scalar.db.rpc.Value.BlobValueOrBuilder getBlobValueOrBuilder() {
+      if ((valueCase_ == 8) && (blobValueBuilder_ != null)) {
+        return blobValueBuilder_.getMessageOrBuilder();
+      } else {
+        if (valueCase_ == 8) {
+          return (com.scalar.db.rpc.Value.BlobValue) value_;
+        }
+        return com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.rpc.Value.BlobValue blob_value = 8;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilderV3<
+        com.scalar.db.rpc.Value.BlobValue, com.scalar.db.rpc.Value.BlobValue.Builder, com.scalar.db.rpc.Value.BlobValueOrBuilder> 
+        getBlobValueFieldBuilder() {
+      if (blobValueBuilder_ == null) {
+        if (!(valueCase_ == 8)) {
+          value_ = com.scalar.db.rpc.Value.BlobValue.getDefaultInstance();
+        }
+        blobValueBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            com.scalar.db.rpc.Value.BlobValue, com.scalar.db.rpc.Value.BlobValue.Builder, com.scalar.db.rpc.Value.BlobValueOrBuilder>(
+                (com.scalar.db.rpc.Value.BlobValue) value_,
+                getParentForChildren(),
+                isClean());
+        value_ = null;
+      }
+      valueCase_ = 8;
+      onChanged();;
+      return blobValueBuilder_;
     }
     @java.lang.Override
     public final Builder setUnknownFields(

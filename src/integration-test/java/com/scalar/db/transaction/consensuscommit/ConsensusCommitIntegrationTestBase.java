@@ -1838,11 +1838,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
-    /*
     assertThat(result1.isPresent()).isTrue();
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.isPresent()).isFalse();
-    */
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2)
         .isInstanceOf(CommitException.class)

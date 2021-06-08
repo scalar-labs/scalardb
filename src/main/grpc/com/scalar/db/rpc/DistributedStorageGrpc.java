@@ -1,24 +1,11 @@
 package com.scalar.db.rpc;
 
 import static io.grpc.MethodDescriptor.generateFullMethodName;
-import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ClientCalls.asyncUnaryCall;
-import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
-import static io.grpc.stub.ClientCalls.blockingUnaryCall;
-import static io.grpc.stub.ClientCalls.futureUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncClientStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncServerStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
 
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.31.1)",
+    value = "by gRPC proto compiler (version 1.38.0)",
     comments = "Source: scalardb.proto")
 public final class DistributedStorageGrpc {
 
@@ -234,70 +221,70 @@ public final class DistributedStorageGrpc {
      */
     public void get(com.scalar.db.rpc.GetRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetResponse> responseObserver) {
-      asyncUnimplementedUnaryCall(getGetMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMethod(), responseObserver);
     }
 
     /**
      */
     public void openScanner(com.scalar.db.rpc.OpenScannerRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.OpenScannerResponse> responseObserver) {
-      asyncUnimplementedUnaryCall(getOpenScannerMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getOpenScannerMethod(), responseObserver);
     }
 
     /**
      */
     public void scanNext(com.scalar.db.rpc.ScanNextRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanNextResponse> responseObserver) {
-      asyncUnimplementedUnaryCall(getScanNextMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getScanNextMethod(), responseObserver);
     }
 
     /**
      */
     public void closeScanner(com.scalar.db.rpc.CloseScannerRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnimplementedUnaryCall(getCloseScannerMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCloseScannerMethod(), responseObserver);
     }
 
     /**
      */
     public void mutate(com.scalar.db.rpc.MutateRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnimplementedUnaryCall(getMutateMethod(), responseObserver);
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getMutateMethod(), responseObserver);
     }
 
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             getGetMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.GetRequest,
                 com.scalar.db.rpc.GetResponse>(
                   this, METHODID_GET)))
           .addMethod(
             getOpenScannerMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.OpenScannerRequest,
                 com.scalar.db.rpc.OpenScannerResponse>(
                   this, METHODID_OPEN_SCANNER)))
           .addMethod(
             getScanNextMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.ScanNextRequest,
                 com.scalar.db.rpc.ScanNextResponse>(
                   this, METHODID_SCAN_NEXT)))
           .addMethod(
             getCloseScannerMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.CloseScannerRequest,
                 com.google.protobuf.Empty>(
                   this, METHODID_CLOSE_SCANNER)))
           .addMethod(
             getMutateMethod(),
-            asyncUnaryCall(
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
               new MethodHandlers<
                 com.scalar.db.rpc.MutateRequest,
                 com.google.protobuf.Empty>(
@@ -324,7 +311,7 @@ public final class DistributedStorageGrpc {
      */
     public void get(com.scalar.db.rpc.GetRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetResponse> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -332,7 +319,7 @@ public final class DistributedStorageGrpc {
      */
     public void openScanner(com.scalar.db.rpc.OpenScannerRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.OpenScannerResponse> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getOpenScannerMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -340,7 +327,7 @@ public final class DistributedStorageGrpc {
      */
     public void scanNext(com.scalar.db.rpc.ScanNextRequest request,
         io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanNextResponse> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getScanNextMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -348,7 +335,7 @@ public final class DistributedStorageGrpc {
      */
     public void closeScanner(com.scalar.db.rpc.CloseScannerRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getCloseScannerMethod(), getCallOptions()), request, responseObserver);
     }
 
@@ -356,7 +343,7 @@ public final class DistributedStorageGrpc {
      */
     public void mutate(com.scalar.db.rpc.MutateRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      asyncUnaryCall(
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getMutateMethod(), getCallOptions()), request, responseObserver);
     }
   }
@@ -378,35 +365,35 @@ public final class DistributedStorageGrpc {
     /**
      */
     public com.scalar.db.rpc.GetResponse get(com.scalar.db.rpc.GetRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.scalar.db.rpc.OpenScannerResponse openScanner(com.scalar.db.rpc.OpenScannerRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getOpenScannerMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.scalar.db.rpc.ScanNextResponse scanNext(com.scalar.db.rpc.ScanNextRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getScanNextMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.google.protobuf.Empty closeScanner(com.scalar.db.rpc.CloseScannerRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getCloseScannerMethod(), getCallOptions(), request);
     }
 
     /**
      */
     public com.google.protobuf.Empty mutate(com.scalar.db.rpc.MutateRequest request) {
-      return blockingUnaryCall(
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getMutateMethod(), getCallOptions(), request);
     }
   }
@@ -429,7 +416,7 @@ public final class DistributedStorageGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.GetResponse> get(
         com.scalar.db.rpc.GetRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetMethod(), getCallOptions()), request);
     }
 
@@ -437,7 +424,7 @@ public final class DistributedStorageGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.OpenScannerResponse> openScanner(
         com.scalar.db.rpc.OpenScannerRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getOpenScannerMethod(), getCallOptions()), request);
     }
 
@@ -445,7 +432,7 @@ public final class DistributedStorageGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.ScanNextResponse> scanNext(
         com.scalar.db.rpc.ScanNextRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getScanNextMethod(), getCallOptions()), request);
     }
 
@@ -453,7 +440,7 @@ public final class DistributedStorageGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> closeScanner(
         com.scalar.db.rpc.CloseScannerRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getCloseScannerMethod(), getCallOptions()), request);
     }
 
@@ -461,7 +448,7 @@ public final class DistributedStorageGrpc {
      */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> mutate(
         com.scalar.db.rpc.MutateRequest request) {
-      return futureUnaryCall(
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getMutateMethod(), getCallOptions()), request);
     }
   }
