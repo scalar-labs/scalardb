@@ -110,47 +110,28 @@ public final class ProtoUtil {
   }
 
   private static com.scalar.db.rpc.Value toValue(Value<?> value) {
+    com.scalar.db.rpc.Value.Builder builder =
+        com.scalar.db.rpc.Value.newBuilder().setName(value.getName());
     if (value instanceof BooleanValue) {
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setBooleanValue(value.getAsBoolean())
-          .build();
+      return builder.setBooleanValue(value.getAsBoolean()).build();
     } else if (value instanceof IntValue) {
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setIntValue(value.getAsInt())
-          .build();
+      return builder.setIntValue(value.getAsInt()).build();
     } else if (value instanceof BigIntValue) {
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setBigintValue(value.getAsLong())
-          .build();
+      return builder.setBigintValue(value.getAsLong()).build();
     } else if (value instanceof FloatValue) {
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setFloatValue(value.getAsFloat())
-          .build();
+      return builder.setFloatValue(value.getAsFloat()).build();
     } else if (value instanceof DoubleValue) {
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setDoubleValue(value.getAsDouble())
-          .build();
+      return builder.setDoubleValue(value.getAsDouble()).build();
     } else if (value instanceof TextValue) {
       com.scalar.db.rpc.Value.TextValue.Builder textValueBuilder =
           com.scalar.db.rpc.Value.TextValue.newBuilder();
       value.getAsString().ifPresent(textValueBuilder::setValue);
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setTextValue(textValueBuilder)
-          .build();
+      return builder.setTextValue(textValueBuilder).build();
     } else if (value instanceof BlobValue) {
       com.scalar.db.rpc.Value.BlobValue.Builder blobValueBuilder =
           com.scalar.db.rpc.Value.BlobValue.newBuilder();
       value.getAsBytes().ifPresent(v -> blobValueBuilder.setValue(ByteString.copyFrom(v)));
-      return com.scalar.db.rpc.Value.newBuilder()
-          .setName(value.getName())
-          .setBlobValue(blobValueBuilder)
-          .build();
+      return builder.setBlobValue(blobValueBuilder).build();
     } else {
       throw new AssertionError();
     }

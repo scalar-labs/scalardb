@@ -210,32 +210,21 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           } else {
             boolean hasPut = false;
             boolean hasDelete = false;
-            boolean mixed = false;
             for (Mutation mutation : mutations) {
               if (mutation instanceof Put) {
-                if (hasDelete) {
-                  mixed = true;
-                  break;
-                }
                 hasPut = true;
               } else {
-                if (hasPut) {
-                  mixed = true;
-                  break;
-                }
                 hasDelete = true;
               }
             }
+            boolean mixed = hasPut & hasDelete;
 
             if (mixed) {
               storage.mutate(mutations);
+            } else if (hasPut) {
+              storage.put(mutations.stream().map(m -> (Put) m).collect(Collectors.toList()));
             } else {
-              if (hasPut) {
-                storage.put(mutations.stream().map(m -> (Put) m).collect(Collectors.toList()));
-              } else {
-                storage.delete(
-                    mutations.stream().map(m -> (Delete) m).collect(Collectors.toList()));
-              }
+              storage.delete(mutations.stream().map(m -> (Delete) m).collect(Collectors.toList()));
             }
           }
           responseObserver.onNext(Empty.newBuilder().build());
