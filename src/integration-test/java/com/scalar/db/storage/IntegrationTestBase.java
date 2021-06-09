@@ -1119,13 +1119,13 @@ public abstract class IntegrationTestBase {
     return deletes;
   }
 
-  private List<Result> scanAll(Scan scan) throws Exception {
+  protected List<Result> scanAll(Scan scan) throws Exception {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
   }
 
-  private void assertScanResultWithoutOrdering(
+  protected void assertScanResultWithoutOrdering(
       List<Result> actual,
       int expectedPartitionKeyValue,
       String checkedColumn,
