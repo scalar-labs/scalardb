@@ -13,7 +13,6 @@ import static org.mockito.Mockito.verify;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
@@ -23,7 +22,6 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
@@ -64,8 +62,6 @@ public abstract class ConsensusCommitIntegrationTestBase {
   // assume that recovery is a spied object
   private RecoveryHandler recovery;
 
-  private ConsensusCommit transaction;
-
   protected void setUp(
       ConsensusCommitManager manager,
       DistributedStorage storage,
@@ -82,7 +78,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     populateRecords(TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
 
     // Act
@@ -99,7 +95,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     populateRecords(TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
 
     // Act
@@ -116,7 +112,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, ExecutionException, CommitException, UnknownTransactionStatusException {
     // Arrange
     populateRecords(TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
 
     // Act
@@ -134,7 +130,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
           throws CrudException, ExecutionException, CommitException,
               UnknownTransactionStatusException {
     // Arrange
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
 
     // Act
@@ -152,7 +148,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     populateRecords(TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Get get = prepareGet(0, 4, TABLE_1);
 
     // Act
@@ -167,7 +163,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     populateRecords(TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     Scan scan = prepareScan(0, 4, 4, TABLE_1);
 
     // Act
@@ -183,7 +179,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, current, TransactionState.COMMITTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -233,7 +229,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -284,7 +280,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, prepared_at, null);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -328,7 +324,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, prepared_at, null);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -383,7 +379,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, current, TransactionState.COMMITTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeRecoveryHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -451,7 +447,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeRecoveryHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -519,7 +515,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, current, TransactionState.COMMITTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -563,7 +559,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -614,7 +610,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, prepared_at, null);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -658,7 +654,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, prepared_at, null);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     assertThatThrownBy(
@@ -713,7 +709,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, current, TransactionState.COMMITTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeRecoveryHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -775,7 +771,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
         storage, TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeRecoveryHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -841,14 +837,14 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void getAndScan_CommitHappenedInBetween_ShouldReadRepeatably()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
     transaction.commit();
 
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
 
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
     transaction2.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
     transaction2.commit();
@@ -868,7 +864,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     Put put = preparePut(0, 0, TABLE_1).withValue(expected);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     transaction.put(put);
@@ -889,7 +885,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     populateRecords(TABLE_1);
     Get get = prepareGet(0, 0, TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -914,11 +910,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     populateRecords(TABLE_1);
     List<Put> puts = preparePuts(TABLE_1);
     puts.get(0).withValue(new IntValue(BALANCE, 1100));
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act Assert
     transaction.put(puts.get(0));
-    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
   }
 
   @Test
@@ -931,7 +927,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     List<Put> puts = preparePuts(TABLE_1);
     puts.get(0).withValue(balance);
     puts.get(1).withValue(balance);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     transaction.put(puts.get(0));
@@ -953,7 +949,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     List<Put> puts = preparePuts(TABLE_1);
     puts.get(0).withValue(balance);
     puts.get(NUM_TYPES).withValue(balance); // next account
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     transaction.put(puts.get(0));
@@ -1024,7 +1020,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     puts1.get(from).withValue(expected);
     puts2.get(to).withValue(expected);
 
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeCommitHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -1041,7 +1037,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act Assert
     transaction.put(puts1.get(from));
     transaction.put(puts2.get(to));
-    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1086,7 +1082,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       populateRecords(table2);
     }
 
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     List<Get> gets1 = prepareGets(table1);
     List<Delete> deletes1 = prepareDeletes(table1);
     List<Get> gets2 = differentTables ? prepareGets(table2) : gets1;
@@ -1103,7 +1099,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
                 .doesNotThrowAnyException());
 
     // Act
-    assertThatThrownBy(() -> transaction.commit()).isInstanceOf(CommitException.class);
+    assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
     verify(recovery).rollback(any(Snapshot.class));
@@ -1255,7 +1251,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     puts1.get(from).withValue(expected);
     puts1.get(to).withValue(expected);
 
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.setBeforeCommitHook(
         () -> {
           ConsensusCommit another = manager.start();
@@ -1273,7 +1269,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act Assert
     transaction.put(puts1.get(from));
     transaction.put(puts1.get(to));
-    assertThatCode(() -> transaction.commit()).doesNotThrowAnyException();
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
     List<Get> gets1 = prepareGets(TABLE_1);
@@ -1292,11 +1288,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void commit_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
     // Arrange
     Delete delete = prepareDelete(0, 0, TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act Assert
     transaction.delete(delete);
-    assertThatCode(() -> transaction.commit())
+    assertThatCode(transaction::commit)
         .isInstanceOf(CommitException.class)
         .hasCauseInstanceOf(IllegalArgumentException.class);
   }
@@ -1307,12 +1303,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     Get get = prepareGet(0, 0, TABLE_1);
     Delete delete = prepareDelete(0, 0, TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act Assert
     transaction.get(get);
     transaction.delete(delete);
-    assertThatCode(() -> transaction.commit())
+    assertThatCode(transaction::commit)
         .isInstanceOf(CommitException.class)
         .hasCauseInstanceOf(IllegalArgumentException.class);
   }
@@ -1324,7 +1320,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     populateRecords(TABLE_1);
     Get get = prepareGet(0, 0, TABLE_1);
     Delete delete = prepareDelete(0, 0, TABLE_1);
-    transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -1442,13 +1438,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
         Arrays.asList(
             preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
             preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
@@ -1500,15 +1496,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
         Arrays.asList(
             preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
             preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
-    DistributedTransaction transaction =
+    ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -1561,15 +1557,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
         Arrays.asList(
             preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
             preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
-    DistributedTransaction transaction =
+    ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -1614,15 +1610,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException(
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
           String table1, String table2) throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -1644,20 +1640,21 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2).isInstanceOf(CommitException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
   public void
       commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         TABLE_1, TABLE_1);
   }
 
@@ -1665,7 +1662,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void
       commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         TABLE_1, TABLE_2);
   }
 
@@ -1677,7 +1674,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     coordinator.putState(state);
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(ANY_ID_1, Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -1691,7 +1688,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get1_2);
     assertThat(result1.isPresent()).isFalse();
@@ -1716,15 +1714,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException(
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
           String table1, String table2) throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
@@ -1746,7 +1744,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
     assertThat(result1.isPresent()).isFalse();
@@ -1754,7 +1753,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2)
-        .isInstanceOf(CommitException.class)
+        .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
@@ -1762,7 +1761,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void
       commit_WriteSkewOnNonExistingRecordsInSameTableWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         TABLE_1, TABLE_1);
   }
 
@@ -1770,21 +1769,21 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void
       commit_WriteSkewOnNonExistingRecordsInDifferentTablesWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException()
           throws CrudException {
-    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitException(
+    commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraRead_OneShouldCommitTheOtherShouldThrowCommitConflictException(
         TABLE_1, TABLE_2);
   }
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowCommitConflictException()
           throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
     int count1 = results1.size();
@@ -1800,26 +1799,27 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(results1).isEmpty();
     assertThat(results2).isEmpty();
-    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isFalse();
-    assertThat(thrown1).isInstanceOf(CommitException.class);
-    assertThat(thrown2).isInstanceOf(CommitException.class);
+    assertThat(thrown1).isInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitConflictException()
           throws CrudException {
     // Arrange
     // no records
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
     int count1 = results1.size();
@@ -1835,7 +1835,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(results1).isEmpty();
     assertThat(results2).isEmpty();
-    transaction = manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
     assertThat(result1.isPresent()).isTrue();
@@ -1843,28 +1844,28 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2)
-        .isInstanceOf(CommitException.class)
+        .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
   @Test
   public void
-      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitException()
+      commit_WriteSkewWithScanOnExistingRecordsWithSerializableWithExtraRead_ShouldThrowCommitConflictException()
           throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     List<Put> puts =
         Arrays.asList(
             preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)),
             preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, 1)));
-    DistributedTransaction transaction =
+    ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     transaction.put(puts);
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 =
+    ConsensusCommit transaction1 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
-    DistributedTransaction transaction2 =
+    ConsensusCommit transaction2 =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     List<Result> results1 = transaction1.scan(prepareScan(0, 0, 1, TABLE_1));
     int count1 = results1.size();
@@ -1885,7 +1886,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2)
-        .isInstanceOf(CommitException.class)
+        .isInstanceOf(CommitConflictException.class)
         .hasCauseInstanceOf(CommitConflictException.class);
   }
 
@@ -1893,12 +1894,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
     int balance1 = 0;
     if (result1.isPresent()) {
@@ -1906,13 +1907,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
     }
     transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance1 + 1)));
 
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
     transaction2.delete(prepareDelete(0, 0, TABLE_1));
     transaction2.commit();
 
     // the same transaction processing as transaction1
-    DistributedTransaction transaction3 = manager.start();
+    ConsensusCommit transaction3 = manager.start();
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
@@ -1936,26 +1937,22 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void deleteAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
-    Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
-    int balance1 = 0;
-    if (result1.isPresent()) {
-      balance1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
-    }
+    ConsensusCommit transaction1 = manager.start();
+    transaction1.get(prepareGet(0, 0, TABLE_1));
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
 
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
     transaction2.delete(prepareDelete(0, 0, TABLE_1));
     transaction2.commit();
 
     // the same transaction processing as transaction1
-    DistributedTransaction transaction3 = manager.start();
+    ConsensusCommit transaction3 = manager.start();
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
@@ -1979,12 +1976,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void get_DeleteCalledBefore_ShouldReturnEmpty()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
@@ -2000,12 +1997,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void scan_DeleteCalledBefore_ShouldReturnEmpty()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
     List<Result> resultBefore = transaction1.scan(scan);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
@@ -2021,12 +2018,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void delete_PutCalledBefore_ShouldDelete()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
@@ -2034,7 +2031,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     Optional<Result> resultAfter = transaction2.get(get);
     transaction2.commit();
     assertThat(resultBefore.isPresent()).isTrue();
@@ -2045,12 +2042,12 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void put_DeleteCalledBefore_ShouldPut()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
     transaction.commit();
 
     // Act
-    DistributedTransaction transaction1 = manager.start();
+    ConsensusCommit transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
@@ -2058,7 +2055,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
-    DistributedTransaction transaction2 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
     Optional<Result> resultAfter = transaction2.get(get);
     transaction2.commit();
     assertThat(resultBefore.isPresent()).isTrue();
@@ -2067,10 +2064,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException()
-      throws CrudException, AbortException {
+  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
 
     // Act
@@ -2084,9 +2080,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void scan_NonOverlappingPutGivenBefore_ShouldScan()
-      throws CommitException, UnknownTransactionStatusException, CrudException {
+      throws CommitException, UnknownTransactionStatusException {
     // Arrange
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
 
     // Act
@@ -2145,7 +2141,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   private void populateRecords(String table)
       throws CommitException, UnknownTransactionStatusException {
-    DistributedTransaction transaction = manager.start();
+    ConsensusCommit transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
             i ->
@@ -2159,11 +2155,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
                                   .forNamespace(NAMESPACE)
                                   .forTable(table)
                                   .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
-                          try {
-                            transaction.put(put);
-                          } catch (CrudException e) {
-                            throw new RuntimeException(e);
-                          }
+                          transaction.put(put);
                         }));
     transaction.commit();
   }
