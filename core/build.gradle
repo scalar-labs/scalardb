@@ -1,0 +1,186 @@
+sourceSets {
+    integrationTest {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/jdbc/test/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestCassandra {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/cassandra/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCassandraIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestCosmos {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/cosmos/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithCosmosIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestDynamo {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/dynamo/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithDynamoIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbc {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/jdbc/*.java'
+            include '**/com/scalar/db/storage/jdbc/test/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
+            include '**/com/scalar/db/transaction/jdbc/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestMultiStorage {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/multistorage/*.java'
+            include '**/com/scalar/db/storage/jdbc/test/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithMultiStorageIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraImplementation.extendsFrom testImplementation
+    integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosImplementation.extendsFrom testImplementation
+    integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoImplementation.extendsFrom testImplementation
+    integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcImplementation.extendsFrom testImplementation
+    integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestMultiStorageImplementation.extendsFrom testImplementation
+    integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+def awssdkVersion = "2.14.24"
+
+dependencies {
+    implementation project(':rpc')
+    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
+    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
+    implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
+    implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
+    implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
+    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
+    implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
+    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
+    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
+}
+
+task integrationTestCassandra(type: Test) {
+    description = 'Runs the integration tests for Cassandra.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
+    classpath = sourceSets.integrationTestCassandra.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
+task integrationTestCosmos(type: Test) {
+    description = 'Runs the integration tests for Cosmos DB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
+    classpath = sourceSets.integrationTestCosmos.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
+task integrationTestDynamo(type: Test) {
+    description = 'Runs the integration tests for DynamoDB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
+    classpath = sourceSets.integrationTestDynamo.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
+task integrationTestJdbc(type: Test) {
+    description = 'Runs the integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
+task integrationTestMultiStorage(type: Test) {
+    description = 'Runs the integration tests for multi-storage.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
+    classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
+// build should not depend on the integration tests
+check.dependsOn -= integrationTestCassandra
+check.dependsOn -= integrationTestCosmos
+check.dependsOn -= integrationTestDynamo
+check.dependsOn -= integrationTestJdbc
+check.dependsOn -= integrationTestMultiStorage
+
+task copyTestJarsToTestLib(type: Copy) {
+    configurations.testImplementation.canBeResolved true
+    from configurations.testImplementation
+    into file("$buildDir/test-libs")
+}
+
+test.dependsOn += copyTestJarsToTestLib
+
+task copyDependencies(type: Copy) {
+    configurations.api.canBeResolved true
+    configurations.implementation.canBeResolved true
+    from(configurations.api + configurations.implementation)
+    into file("$buildDir/libs")
+    duplicatesStrategy 'exclude'
+}
+
+archivesBaseName = "scalardb"
+
+// for archiving and uploading to maven central
+//apply from: 'archive.gradle'
