@@ -1,0 +1,50 @@
+plugins {
+    id 'application'
+}
+
+sourceSets {
+    integrationTestScalarDbServer {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations {
+    integrationTestScalarDbServerImplementation.extendsFrom testImplementation
+    integrationTestScalarDbServerRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+def protobufVersion = '3.17.2'
+
+dependencies {
+    implementation project(':core')
+    implementation project(':rpc')
+    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
+    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: '4.1.4'
+    testImplementation project(':core').sourceSets.integrationTest.output
+}
+
+application {
+    mainClassName = 'com.scalar.db.server.ScalarDbServer'
+    startScripts.applicationName = 'scalardb-server'
+}
+
+task integrationTestScalarDbServer(type: Test) {
+    description = 'Runs the integration tests for the Scalar DB server.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
+    classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
+// build should not depend on the integration tests
+check.dependsOn -= integrationTestScalarDbServer
+
+archivesBaseName = "scalardb-server"
