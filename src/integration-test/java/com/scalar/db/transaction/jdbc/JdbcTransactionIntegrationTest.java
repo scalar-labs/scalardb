@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -48,7 +47,7 @@ public class JdbcTransactionIntegrationTest {
   public void get_GetGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
     populateRecords();
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
 
     // Act
@@ -63,7 +62,7 @@ public class JdbcTransactionIntegrationTest {
   public void scan_ScanGivenForCommittedRecord_ShouldReturnRecord() throws TransactionException {
     // Arrange
     populateRecords();
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     Scan scan = prepareScan(0, 0, 0, NAMESPACE, TABLE);
 
     // Act
@@ -78,7 +77,7 @@ public class JdbcTransactionIntegrationTest {
   public void get_GetGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     populateRecords();
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     Get get = prepareGet(0, 4, NAMESPACE, TABLE);
 
     // Act
@@ -93,7 +92,7 @@ public class JdbcTransactionIntegrationTest {
   public void scan_ScanGivenForNonExisting_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     populateRecords();
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     Scan scan = prepareScan(0, 4, 4, NAMESPACE, TABLE);
 
     // Act
@@ -109,7 +108,7 @@ public class JdbcTransactionIntegrationTest {
     // Arrange
     IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
     Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
 
     // Act
     transaction.put(put);
@@ -117,7 +116,7 @@ public class JdbcTransactionIntegrationTest {
 
     // Assert
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
-    DistributedTransaction another = manager.start();
+    JdbcTransaction another = manager.start();
     Result result = another.get(get).get();
     another.commit();
     assertThat(result.getValue(BALANCE).get()).isEqualTo(expected);
@@ -129,7 +128,7 @@ public class JdbcTransactionIntegrationTest {
     // Arrange
     populateRecords();
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -140,7 +139,7 @@ public class JdbcTransactionIntegrationTest {
     transaction.commit();
 
     // Assert
-    DistributedTransaction another = manager.start();
+    JdbcTransaction another = manager.start();
     Result actual = another.get(get).get();
     another.commit();
 
@@ -162,7 +161,7 @@ public class JdbcTransactionIntegrationTest {
     prepareTransfer(from, to, amount).commit();
 
     // Assert
-    DistributedTransaction another = null;
+    JdbcTransaction another = null;
     try {
       another = manager.start();
       assertThat(another.get(gets.get(from)).get().getValue(BALANCE))
@@ -183,7 +182,7 @@ public class JdbcTransactionIntegrationTest {
     populateRecords();
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
     Delete delete = prepareDelete(0, 0, NAMESPACE, TABLE);
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
 
     // Act
     Optional<Result> result = transaction.get(get);
@@ -192,15 +191,15 @@ public class JdbcTransactionIntegrationTest {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    DistributedTransaction another = manager.start();
+    JdbcTransaction another = manager.start();
     Optional<Result> result1 = another.get(get);
     another.commit();
     assertThat(result1.isPresent()).isFalse();
   }
 
-  private DistributedTransaction prepareTransfer(int fromId, int toId, int amount)
+  private JdbcTransaction prepareTransfer(int fromId, int toId, int amount)
       throws TransactionException {
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     List<Get> gets = prepareGets(NAMESPACE, TABLE);
 
     Optional<Result> result1 = transaction.get(gets.get(fromId));
@@ -218,27 +217,26 @@ public class JdbcTransactionIntegrationTest {
   }
 
   private void populateRecords() throws TransactionException {
-    DistributedTransaction transaction = manager.start();
+    JdbcTransaction transaction = manager.start();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
-                        Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
-                        Put put =
-                            new Put(partitionKey, clusteringKey)
-                                .forNamespace(NAMESPACE)
-                                .forTable(TABLE)
-                                .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
-                        try {
-                          transaction.put(put);
-                        } catch (CrudException e) {
-                          throw new RuntimeException(e);
-                        }
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(
+                        j -> {
+                          Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
+                          Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
+                          Put put =
+                              new Put(partitionKey, clusteringKey)
+                                  .forNamespace(NAMESPACE)
+                                  .forTable(TABLE)
+                                  .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
+                          try {
+                            transaction.put(put);
+                          } catch (CrudException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }));
     transaction.commit();
   }
 
@@ -255,13 +253,9 @@ public class JdbcTransactionIntegrationTest {
     List<Get> gets = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        gets.add(prepareGet(i, j, namespace, table));
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> gets.add(prepareGet(i, j, namespace, table))));
     return gets;
   }
 
@@ -288,13 +282,9 @@ public class JdbcTransactionIntegrationTest {
     List<Put> puts = new ArrayList<>();
     IntStream.range(0, NUM_ACCOUNTS)
         .forEach(
-            i -> {
-              IntStream.range(0, NUM_TYPES)
-                  .forEach(
-                      j -> {
-                        puts.add(preparePut(i, j, namespace, table));
-                      });
-            });
+            i ->
+                IntStream.range(0, NUM_TYPES)
+                    .forEach(j -> puts.add(preparePut(i, j, namespace, table))));
     return puts;
   }
 
