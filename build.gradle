@@ -85,6 +85,7 @@ sourceSets {
             include '**/com/scalar/db/storage/rpc/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithGrpcStorageIntegrationTest.java'
+            include '**/com/scalar/db/transaction/rpc/*.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }

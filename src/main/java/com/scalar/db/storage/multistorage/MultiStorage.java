@@ -164,7 +164,7 @@ public class MultiStorage implements DistributedStorage {
   }
 
   private DistributedStorage getStorage(Operation operation) {
-    Utility.setTargetToIfNot(operation, Optional.empty(), namespace, tableName);
+    Utility.setTargetToIfNot(operation, namespace, tableName);
     String fullTaleName = operation.forFullTableName().get();
     DistributedStorage storage = tableStorageMap.get(fullTaleName);
     if (storage != null) {

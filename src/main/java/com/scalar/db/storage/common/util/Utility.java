@@ -17,10 +17,22 @@ public final class Utility {
 
   public static void setTargetToIfNot(
       List<? extends Operation> operations,
+      Optional<String> namespace,
+      Optional<String> tableName) {
+    operations.forEach(o -> setTargetToIfNot(o, namespace, tableName));
+  }
+
+  public static void setTargetToIfNot(
+      List<? extends Operation> operations,
       Optional<String> namespacePrefix,
       Optional<String> namespace,
       Optional<String> tableName) {
     operations.forEach(o -> setTargetToIfNot(o, namespacePrefix, namespace, tableName));
+  }
+
+  public static void setTargetToIfNot(
+      Operation operation, Optional<String> namespace, Optional<String> tableName) {
+    setTargetToIfNot(operation, Optional.empty(), namespace, tableName);
   }
 
   public static void setTargetToIfNot(

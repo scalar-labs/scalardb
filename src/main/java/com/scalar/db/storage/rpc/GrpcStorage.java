@@ -98,7 +98,7 @@ public class GrpcStorage implements DistributedStorage {
   public Optional<Result> get(Get get) throws ExecutionException {
     return execute(
         () -> {
-          Utility.setTargetToIfNot(get, Optional.empty(), namespace, tableName);
+          Utility.setTargetToIfNot(get, namespace, tableName);
 
           GetResponse response =
               stub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
@@ -114,7 +114,7 @@ public class GrpcStorage implements DistributedStorage {
   public Scanner scan(Scan scan) throws ExecutionException {
     return execute(
         () -> {
-          Utility.setTargetToIfNot(scan, Optional.empty(), namespace, tableName);
+          Utility.setTargetToIfNot(scan, namespace, tableName);
 
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
           return new ScannerImpl(scan, stub, tableMetadata);
@@ -144,7 +144,7 @@ public class GrpcStorage implements DistributedStorage {
   private void mutate(Mutation mutation) throws ExecutionException {
     execute(
         () -> {
-          Utility.setTargetToIfNot(mutation, Optional.empty(), namespace, tableName);
+          Utility.setTargetToIfNot(mutation, namespace, tableName);
 
           stub.mutate(
               MutateRequest.newBuilder().addMutations(ProtoUtil.toMutation(mutation)).build());
@@ -156,7 +156,7 @@ public class GrpcStorage implements DistributedStorage {
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
     execute(
         () -> {
-          Utility.setTargetToIfNot(mutations, Optional.empty(), namespace, tableName);
+          Utility.setTargetToIfNot(mutations, namespace, tableName);
 
           MutateRequest.Builder builder = MutateRequest.newBuilder();
           mutations.forEach(m -> builder.addMutations(ProtoUtil.toMutation(m)));

@@ -57,6 +57,7 @@ public class ScalarDbServer implements Callable<Integer> {
         ServerBuilder.forPort(config.getPort())
             .addService(injector.getInstance(DistributedStorageService.class))
             .addService(injector.getInstance(DistributedStorageAdminService.class))
+            .addService(injector.getInstance(DistributedTransactionService.class))
             .addService(new HealthService())
             .addService(ProtoReflectionService.newInstance())
             .build()
