@@ -112,7 +112,7 @@ def protocVersion = '3.17.2'
 
 dependencies {
     implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
-    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.8.0'
+    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
     implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
     implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
     implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
