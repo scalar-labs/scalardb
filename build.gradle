@@ -4,7 +4,7 @@ plugins {
     id 'idea'
     id 'jacoco'
     id 'java-library-distribution'
-    id 'com.google.protobuf' version '0.8.8'
+    id 'com.google.protobuf' version '0.8.16'
     id 'application'
 }
 
@@ -92,18 +92,18 @@ sourceSets {
 }
 
 configurations {
-    integrationTestCassandraCompile.extendsFrom testCompile
-    integrationTestCassandraRuntime.extendsFrom testRuntime
-    integrationTestCosmosCompile.extendsFrom testCompile
-    integrationTestCosmosRuntime.extendsFrom testRuntime
-    integrationTestDynamoCompile.extendsFrom testCompile
-    integrationTestDynamoRuntime.extendsFrom testRuntime
-    integrationTestJdbcCompile.extendsFrom testCompile
-    integrationTestJdbcRuntime.extendsFrom testRuntime
-    integrationTestMultiStorageCompile.extendsFrom testCompile
-    integrationTestMultiStorageRuntime.extendsFrom testRuntime
-    integrationTestGrpcCompile.extendsFrom testCompile
-    integrationTestGrpcRuntime.extendsFrom testRuntime
+    integrationTestCassandraImplementation.extendsFrom testImplementation
+    integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosImplementation.extendsFrom testImplementation
+    integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoImplementation.extendsFrom testImplementation
+    integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcImplementation.extendsFrom testImplementation
+    integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestMultiStorageImplementation.extendsFrom testImplementation
+    integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestGrpcImplementation.extendsFrom testImplementation
+    integrationTestGrpcRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 def awssdkVersion = "2.14.24"
@@ -112,28 +112,28 @@ def protobufVersion = '3.17.2'
 def protocVersion = '3.17.2'
 
 dependencies {
-    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
-    compile group: 'com.azure', name: 'azure-cosmos', version: '4.8.0'
-    compile group: 'org.jooq', name: 'jooq', version: '3.13.2'
-    compile group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
-    compile group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
-    compile group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
-    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
-    compile group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
-    compile group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
-    compile group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
-    compile group: 'com.google.guava', name: 'guava', version: '24.1-jre'
-    compile group: 'com.google.inject', name: 'guice', version: '5.0.1'
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    compile group: 'io.grpc', name: 'grpc-netty', version: "${grpcVersion}"
-    compile group: 'io.grpc', name: 'grpc-protobuf', version: "${grpcVersion}"
-    compile group: 'io.grpc', name: 'grpc-stub', version: "${grpcVersion}"
-    compile group: 'io.grpc', name: 'grpc-services', version: "${grpcVersion}"
-    compile group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
-    compile group: 'info.picocli', name: 'picocli', version: '4.1.4'
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
+    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
+    implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
+    implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
+    implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
+    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
+    implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
+    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
+    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
+    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
+    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    implementation group: 'io.grpc', name: 'grpc-netty', version: "${grpcVersion}"
+    implementation group: 'io.grpc', name: 'grpc-protobuf', version: "${grpcVersion}"
+    implementation group: 'io.grpc', name: 'grpc-stub', version: "${grpcVersion}"
+    implementation group: 'io.grpc', name: 'grpc-services', version: "${grpcVersion}"
+    implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: '4.1.4'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
 }
 
 protobuf {
@@ -154,6 +154,16 @@ test {
 
 javadoc {
     options.addStringOption("notimestamp", "com.scalar.db")
+}
+
+distZip {
+    archiveName = "${project.name}.zip"
+    duplicatesStrategy 'exclude'
+}
+
+distTar {
+    archiveName = "${project.name}.tar"
+    duplicatesStrategy 'exclude'
 }
 
 task sourcesJar(type: Jar) {
@@ -237,7 +247,8 @@ check.dependsOn -= integrationTestMultiStorage
 check.dependsOn -= integrationTestGrpc
 
 task copyTestJarsToTestLib(type: Copy) {
-    from configurations.testCompile
+    configurations.testImplementation.canBeResolved true
+    from configurations.testImplementation
     into file("$buildDir/test-libs")
 }
 
