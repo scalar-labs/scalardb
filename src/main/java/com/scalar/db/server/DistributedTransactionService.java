@@ -2,12 +2,10 @@ package com.scalar.db.server;
 
 import com.google.inject.Inject;
 import com.google.protobuf.Empty;
-import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
@@ -39,7 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,36 +144,8 @@ public class DistributedTransactionService
           for (com.scalar.db.rpc.Mutation mutation : request.getMutationsList()) {
             mutations.add(ProtoUtil.toMutation(mutation));
           }
-
-          if (mutations.size() == 1) {
-            Mutation mutation = mutations.get(0);
-            if (mutation instanceof Put) {
-              transaction.put((Put) mutation);
-            } else {
-              transaction.delete((Delete) mutation);
-            }
-          } else {
-            boolean hasPut = false;
-            boolean hasDelete = false;
-            for (Mutation mutation : mutations) {
-              if (mutation instanceof Put) {
-                hasPut = true;
-              } else {
-                hasDelete = true;
-              }
-            }
-            boolean mixed = hasPut & hasDelete;
-
-            if (mixed) {
-              transaction.mutate(mutations);
-            } else if (hasPut) {
-              transaction.put(mutations.stream().map(m -> (Put) m).collect(Collectors.toList()));
-            } else {
-              transaction.delete(
-                  mutations.stream().map(m -> (Delete) m).collect(Collectors.toList()));
-            }
-          }
-          responseObserver.onNext(Empty.newBuilder().build());
+          transaction.mutate(mutations);
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -192,7 +161,7 @@ public class DistributedTransactionService
           } finally {
             activeTransactions.remove(transaction.getId());
           }
-          responseObserver.onNext(Empty.newBuilder().build());
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -208,7 +177,7 @@ public class DistributedTransactionService
           } finally {
             activeTransactions.remove(transaction.getId());
           }
-          responseObserver.onNext(Empty.newBuilder().build());
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -253,12 +222,12 @@ public class DistributedTransactionService
     } catch (UnknownTransactionStatusException e) {
       LOGGER.error("an unknown transaction error happened during the execution", e);
       responseObserver.onError(Status.UNKNOWN.withDescription(e.getMessage()).asRuntimeException());
-    } catch (Throwable e) {
-      LOGGER.error("an internal error happened during the execution", e);
+    } catch (Throwable t) {
+      LOGGER.error("an internal error happened during the execution", t);
       responseObserver.onError(
-          Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
-      if (e instanceof Error) {
-        throw (Error) e;
+          Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
+      if (t instanceof Error) {
+        throw (Error) t;
       }
     }
   }
