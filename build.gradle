@@ -165,6 +165,10 @@ distTar {
     duplicatesStrategy 'exclude'
 }
 
+installDist {
+    duplicatesStrategy 'exclude'
+}
+
 task sourcesJar(type: Jar) {
     classifier = 'sources'
     from sourceSets.main.allSource
