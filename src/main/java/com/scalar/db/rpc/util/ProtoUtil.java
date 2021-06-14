@@ -16,6 +16,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
@@ -472,6 +473,31 @@ public final class ProtoUtil {
         return com.scalar.db.rpc.DataType.DATA_TYPE_TEXT;
       case BLOB:
         return com.scalar.db.rpc.DataType.DATA_TYPE_BLOB;
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  public static com.scalar.db.rpc.TransactionState toTransactionState(TransactionState state) {
+    switch (state) {
+      case COMMITTED:
+        return com.scalar.db.rpc.TransactionState.TRANSACTION_STATE_COMMITTED;
+      case ABORTED:
+        return com.scalar.db.rpc.TransactionState.TRANSACTION_STATE_ABORTED;
+      case UNKNOWN:
+      default:
+        return com.scalar.db.rpc.TransactionState.TRANSACTION_STATE_UNKNOWN;
+    }
+  }
+
+  public static TransactionState toTransactionState(com.scalar.db.rpc.TransactionState state) {
+    switch (state) {
+      case TRANSACTION_STATE_COMMITTED:
+        return TransactionState.COMMITTED;
+      case TRANSACTION_STATE_ABORTED:
+        return TransactionState.ABORTED;
+      case TRANSACTION_STATE_UNKNOWN:
+        return TransactionState.UNKNOWN;
       default:
         throw new AssertionError();
     }

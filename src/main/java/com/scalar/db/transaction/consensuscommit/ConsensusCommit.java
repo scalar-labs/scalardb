@@ -8,7 +8,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -17,6 +16,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.storage.common.util.Utility;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -99,7 +99,7 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    setTargetToIfNot(get);
+    Utility.setTargetToIfNot(get, namespace, tableName);
     get.clearProjections(); // project all
     try {
       return crud.get(get);
@@ -122,7 +122,7 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    setTargetToIfNot(scan);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
     scan.clearProjections(); // project all
     try {
       return crud.scan(scan);
@@ -134,26 +134,26 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void put(Put put) {
-    setTargetToIfNot(put);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     crud.put(put);
   }
 
   @Override
   public void put(List<Put> puts) {
     checkArgument(puts.size() != 0);
-    puts.forEach(p -> put(p));
+    puts.forEach(this::put);
   }
 
   @Override
   public void delete(Delete delete) {
-    setTargetToIfNot(delete);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     crud.delete(delete);
   }
 
   @Override
   public void delete(List<Delete> deletes) {
     checkArgument(deletes.size() != 0);
-    deletes.forEach(d -> delete(d));
+    deletes.forEach(this::delete);
   }
 
   @Override
@@ -209,17 +209,5 @@ public class ConsensusCommit implements DistributedTransaction {
     LOGGER.info("recover uncommitted record");
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
-  }
-
-  private void setTargetToIfNot(Operation operation) {
-    if (!operation.forNamespace().isPresent()) {
-      operation.forNamespace(namespace.orElse(null));
-    }
-    if (!operation.forTable().isPresent()) {
-      operation.forTable(tableName.orElse(null));
-    }
-    if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
-      throw new IllegalArgumentException("operation has no target namespace and table name");
-    }
   }
 }

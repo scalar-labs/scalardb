@@ -68,7 +68,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void get_StorageThrowIllegalArgumentException_ShouldThrowInvalidArgumentError()
+  public void get_StorageThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
       throws ExecutionException {
     // Arrange
     GetRequest request = GetRequest.newBuilder().build();
@@ -86,7 +86,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void get_StorageThrowExecutionException_ShouldThrowInternalError()
+  public void get_StorageThrowsExecutionException_ShouldThrowInternalError()
       throws ExecutionException {
     // Arrange
     GetRequest request = GetRequest.newBuilder().build();
@@ -123,7 +123,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void scan_StorageThrowIllegalArgumentException_ShouldThrowInvalidArgumentError()
+  public void scan_StorageThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
       throws ExecutionException {
     // Arrange
     OpenScannerRequest request = OpenScannerRequest.newBuilder().build();
@@ -141,7 +141,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void scan_StorageThrowExecutionException_ShouldThrowInternalError()
+  public void scan_StorageThrowsExecutionException_ShouldThrowInternalError()
       throws ExecutionException {
     // Arrange
     OpenScannerRequest request = OpenScannerRequest.newBuilder().build();
@@ -272,7 +272,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void mutate_StorageThrowIllegalArgumentException_ShouldThrowInvalidArgumentError()
+  public void mutate_StorageThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
       throws ExecutionException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
@@ -294,7 +294,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void mutate_StorageThrowNoMutationException_ShouldThrowFailedPreconditionError()
+  public void mutate_StorageThrowsNoMutationException_ShouldThrowFailedPreconditionError()
       throws ExecutionException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
@@ -316,7 +316,7 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void mutate_StorageThrowExecutionException_ShouldThrowInternalError()
+  public void mutate_StorageThrowsExecutionException_ShouldThrowInternalError()
       throws ExecutionException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();

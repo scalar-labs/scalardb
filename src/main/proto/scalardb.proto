@@ -225,3 +225,75 @@ message GetTableMetadataRequest {
 message GetTableMetadataResponse {
   TableMetadata table_metadata = 1;
 }
+
+// A service and messages for DistributedTransaction
+
+service DistributedTransaction {
+  rpc Start (StartTransactionRequest) returns (StartTransactionResponse) {
+  }
+  rpc Get (TransactionalGetRequest) returns (TransactionalGetResponse) {
+  }
+  rpc Scan (TransactionalScanRequest) returns (TransactionalScanResponse) {
+  }
+  rpc Mutate (TransactionalMutateRequest) returns (google.protobuf.Empty) {
+  }
+  rpc Commit (CommitRequest) returns (google.protobuf.Empty) {
+  }
+  rpc Abort (AbortRequest) returns (google.protobuf.Empty) {
+  }
+  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  }
+}
+
+message StartTransactionRequest {
+  string transaction_id = 1;
+}
+
+message StartTransactionResponse {
+  string transaction_id = 1;
+}
+
+message TransactionalGetRequest {
+  string transaction_id = 1;
+  Get get = 2;
+}
+
+message TransactionalGetResponse {
+  Result result = 1;
+}
+
+message TransactionalScanRequest {
+  string transaction_id = 1;
+  Scan scan = 2;
+}
+
+message TransactionalScanResponse {
+  repeated Result result = 1;
+}
+
+message TransactionalMutateRequest {
+  string transaction_id = 1;
+  repeated Mutation mutations = 2;
+}
+
+message CommitRequest {
+  string transaction_id = 1;
+}
+
+message AbortRequest {
+  string transaction_id = 1;
+}
+
+message GetTransactionStateRequest {
+  string transaction_id = 1;
+}
+
+enum TransactionState {
+  TRANSACTION_STATE_COMMITTED = 0;
+  TRANSACTION_STATE_ABORTED = 1;
+  TRANSACTION_STATE_UNKNOWN = 2;
+}
+
+message GetTransactionStateResponse {
+  TransactionState state = 1;
+}

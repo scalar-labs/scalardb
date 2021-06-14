@@ -2,7 +2,6 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
@@ -56,8 +55,7 @@ public class ResultInterpreter {
     values.put(name, convert(value, name, metadata.getColumnDataType(name)));
   }
 
-  private Value<?> convert(Object recordValue, String name, DataType dataType)
-      throws UnsupportedTypeException {
+  private Value<?> convert(Object recordValue, String name, DataType dataType) {
     // When recordValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver
     switch (dataType) {
