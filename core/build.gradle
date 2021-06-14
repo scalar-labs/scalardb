@@ -72,6 +72,24 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
+
+
+
+    integrationTestHBase {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
+            include '**/com/scalar/db/storage/hbase/*.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
+            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithHBaseIntegrationTest.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+
+
+
 }
 
 configurations {
@@ -87,6 +105,10 @@ configurations {
     integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+
+
+    integrationTestHBaseImplementation.extendsFrom testImplementation
+    integrationTestHBaseRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 def awssdkVersion = "2.14.24"
@@ -96,6 +118,7 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+
     implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
     implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
     implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
@@ -106,6 +129,16 @@ dependencies {
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
     implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
     implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
+
+
+
+    implementation(group: 'org.apache.phoenix', name: 'phoenix-server-hbase-2.4', version: '5.1.2') {
+        exclude group: 'org.apache.hbase'
+        exclude group: 'org.apache.omid'
+    }
+    implementation fileTree("hbase-libs") { include '*.jar' }
+
+
 }
 
 task integrationTestCassandra(type: Test) {
@@ -157,12 +190,31 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
+
+
+
+task integrationTestHBase(type: Test) {
+    description = 'Runs the integration tests for HBase.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestHBase.output.classesDirs
+    classpath = sourceSets.integrationTestHBase.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+}
+
+
+
+
 // build should not depend on the integration tests
 check.dependsOn -= integrationTestCassandra
 check.dependsOn -= integrationTestCosmos
 check.dependsOn -= integrationTestDynamo
 check.dependsOn -= integrationTestJdbc
 check.dependsOn -= integrationTestMultiStorage
+
+
+check.dependsOn -= integrationTestHBase
+
+
 
 task copyTestJarsToTestLib(type: Copy) {
     configurations.testImplementation.canBeResolved true

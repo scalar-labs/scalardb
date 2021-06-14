@@ -13,6 +13,8 @@ import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
+import com.scalar.db.storage.hbase.HBase;
+import com.scalar.db.storage.hbase.HBaseAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
@@ -102,6 +104,10 @@ public class DatabaseConfig {
         case "grpc":
           storageClass = GrpcStorage.class;
           adminClass = GrpcAdmin.class;
+          break;
+        case "hbase":
+          storageClass = HBase.class;
+          adminClass = HBaseAdmin.class;
           break;
         default:
           throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
