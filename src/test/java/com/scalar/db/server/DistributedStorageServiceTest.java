@@ -173,7 +173,7 @@ public class DistributedStorageServiceTest {
     storageService.mutate(request, responseObserver);
 
     // Assert
-    verify(storage).put(any(Put.class));
+    verify(storage).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -197,7 +197,7 @@ public class DistributedStorageServiceTest {
     storageService.mutate(request, responseObserver);
 
     // Assert
-    verify(storage).put(anyList());
+    verify(storage).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -218,7 +218,7 @@ public class DistributedStorageServiceTest {
     storageService.mutate(request, responseObserver);
 
     // Assert
-    verify(storage).delete(any(Delete.class));
+    verify(storage).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -242,7 +242,7 @@ public class DistributedStorageServiceTest {
     storageService.mutate(request, responseObserver);
 
     // Assert
-    verify(storage).delete(anyList());
+    verify(storage).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -282,7 +282,7 @@ public class DistributedStorageServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(IllegalArgumentException.class).when(storage).put(any(Put.class));
+    doThrow(IllegalArgumentException.class).when(storage).mutate(anyList());
 
     // Act
     storageService.mutate(request, responseObserver);
@@ -304,7 +304,7 @@ public class DistributedStorageServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(NoMutationException.class).when(storage).put(any(Put.class));
+    doThrow(NoMutationException.class).when(storage).mutate(anyList());
 
     // Act
     storageService.mutate(request, responseObserver);
@@ -326,7 +326,7 @@ public class DistributedStorageServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(ExecutionException.class).when(storage).put(any(Put.class));
+    doThrow(ExecutionException.class).when(storage).mutate(anyList());
 
     // Act
     storageService.mutate(request, responseObserver);

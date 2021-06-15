@@ -328,7 +328,7 @@ public class DistributedTransactionServiceTest {
     transactionService.mutate(request, responseObserver);
 
     // Assert
-    verify(transaction).put(any(Put.class));
+    verify(transaction).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -360,7 +360,7 @@ public class DistributedTransactionServiceTest {
     transactionService.mutate(request, responseObserver);
 
     // Assert
-    verify(transaction).put(anyList());
+    verify(transaction).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -389,7 +389,7 @@ public class DistributedTransactionServiceTest {
     transactionService.mutate(request, responseObserver);
 
     // Assert
-    verify(transaction).delete(any(Delete.class));
+    verify(transaction).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -421,7 +421,7 @@ public class DistributedTransactionServiceTest {
     transactionService.mutate(request, responseObserver);
 
     // Assert
-    verify(transaction).delete(anyList());
+    verify(transaction).mutate(anyList());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -477,7 +477,7 @@ public class DistributedTransactionServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(IllegalArgumentException.class).when(transaction).put(any(Put.class));
+    doThrow(IllegalArgumentException.class).when(transaction).mutate(anyList());
 
     // Act
     transactionService.mutate(request, responseObserver);
@@ -507,7 +507,7 @@ public class DistributedTransactionServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(CrudConflictException.class).when(transaction).put(any(Put.class));
+    doThrow(CrudConflictException.class).when(transaction).mutate(anyList());
 
     // Act
     transactionService.mutate(request, responseObserver);
@@ -537,7 +537,7 @@ public class DistributedTransactionServiceTest {
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    doThrow(CrudException.class).when(transaction).put(any(Put.class));
+    doThrow(CrudException.class).when(transaction).mutate(anyList());
 
     // Act
     transactionService.mutate(request, responseObserver);

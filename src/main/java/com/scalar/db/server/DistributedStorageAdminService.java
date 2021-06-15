@@ -38,7 +38,7 @@ public class DistributedStorageAdminService
               request.getTable(),
               ProtoUtil.toTableMetadata(request.getTableMetadata()),
               request.getOptionsMap());
-          responseObserver.onNext(Empty.newBuilder().build());
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -49,7 +49,7 @@ public class DistributedStorageAdminService
     execute(
         () -> {
           admin.dropTable(request.getNamespace(), request.getTable());
-          responseObserver.onNext(Empty.newBuilder().build());
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -60,7 +60,7 @@ public class DistributedStorageAdminService
     execute(
         () -> {
           admin.truncateTable(request.getNamespace(), request.getTable());
-          responseObserver.onNext(Empty.newBuilder().build());
+          responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
         responseObserver);
@@ -91,12 +91,12 @@ public class DistributedStorageAdminService
       LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
-    } catch (Throwable e) {
-      LOGGER.error("an internal error happened during the execution", e);
+    } catch (Throwable t) {
+      LOGGER.error("an internal error happened during the execution", t);
       responseObserver.onError(
-          Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
-      if (e instanceof Error) {
-        throw (Error) e;
+          Status.INTERNAL.withDescription(t.getMessage()).asRuntimeException());
+      if (t instanceof Error) {
+        throw (Error) t;
       }
     }
   }
