@@ -164,14 +164,6 @@ check.dependsOn -= integrationTestDynamo
 check.dependsOn -= integrationTestJdbc
 check.dependsOn -= integrationTestMultiStorage
 
-task copyTestJarsToTestLib(type: Copy) {
-    configurations.testImplementation.canBeResolved true
-    from configurations.testImplementation
-    into file("$buildDir/test-libs")
-}
-
-test.dependsOn += copyTestJarsToTestLib
-
 task copyDependencies(type: Copy) {
     configurations.api.canBeResolved true
     configurations.implementation.canBeResolved true
