@@ -8,7 +8,6 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 

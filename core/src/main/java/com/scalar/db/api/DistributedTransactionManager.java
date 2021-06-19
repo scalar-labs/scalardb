@@ -1,7 +1,6 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.TransactionException;
-
 import java.util.Optional;
 
 public interface DistributedTransactionManager {
@@ -70,7 +69,7 @@ public interface DistributedTransactionManager {
    */
   @Deprecated
   DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
-    throws TransactionException;
+      throws TransactionException;
 
   /**
    * Starts a new transaction with Serializable isolation level and the specified {@link
@@ -96,7 +95,7 @@ public interface DistributedTransactionManager {
    */
   @Deprecated
   DistributedTransaction start(String txId, SerializableStrategy strategy)
-    throws TransactionException;
+      throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID, {@link Isolation} level and {@link
@@ -112,7 +111,7 @@ public interface DistributedTransactionManager {
    */
   @Deprecated
   DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
-    throws TransactionException;
+      throws TransactionException;
 
   /**
    * Returns the state of a given transaction.

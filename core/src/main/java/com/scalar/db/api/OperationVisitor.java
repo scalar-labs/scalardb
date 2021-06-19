@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-
 /**
  * A visitor class for {@link Operation}s
  *

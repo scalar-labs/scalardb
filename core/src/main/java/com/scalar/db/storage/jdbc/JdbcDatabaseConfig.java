@@ -1,14 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.Immutable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class JdbcDatabaseConfig extends DatabaseConfig {

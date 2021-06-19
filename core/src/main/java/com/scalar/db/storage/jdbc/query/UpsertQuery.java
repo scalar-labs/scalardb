@@ -3,7 +3,6 @@ package com.scalar.db.storage.jdbc.query;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
-
 import java.util.Map;
 import java.util.Optional;
 

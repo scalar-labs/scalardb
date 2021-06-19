@@ -172,6 +172,15 @@ task copyDependencies(type: Copy) {
     duplicatesStrategy 'exclude'
 }
 
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
 archivesBaseName = "scalardb"
 
 // for archiving and uploading to maven central

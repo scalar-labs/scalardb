@@ -42,6 +42,9 @@ jobs:
       # run check!
       - run: gradle check
 
+      # check code format!
+      - run: gradle spotlessCheck
+
       - run:
           name: Save Gradle test reports
           command: |

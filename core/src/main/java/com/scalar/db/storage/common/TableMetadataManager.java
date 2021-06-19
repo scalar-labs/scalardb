@@ -19,5 +19,5 @@ public interface TableMetadataManager {
    * @param table a table
    * @return a table metadata. null if the table is not found.
    */
-  TableMetadata getTableMetadata(String namespace , String table);
+  TableMetadata getTableMetadata(String namespace, String table);
 }
