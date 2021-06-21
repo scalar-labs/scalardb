@@ -1,13 +1,10 @@
-# Java Gradle CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-java/ for more details
-#
 version: 2
 workflows:
   version: 2
-  build_and_tests:
+  scalardb-ci:
     jobs:
-      - build
+      - check
+      - integration-test-for-cassandra
       - integration-test-for-cosmos
       - integration-test-for-dynamo
       - integration-test-for-jdbc-mysql
@@ -16,7 +13,47 @@ workflows:
       - integration-test-for-multi-storage
       - integration-test-for-scalardb-server
 jobs:
-  build:
+  check:
+    docker:
+      - image: circleci/openjdk:8-jdk
+
+    working_directory: ~/repo
+
+    environment:
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "core/build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: gradle dependencies
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "core/build.gradle" }}
+
+      # run check!
+      - run: gradle check
+
+      - run:
+          name: Save Gradle test reports
+          command: |
+            mkdir -p /tmp/gradle_test_reports
+            cp -a core/build/reports/tests/test /tmp/gradle_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_test_reports
+          destination: gradle_test_reports
+
+  integration-test-for-cassandra:
     docker:
       - image: circleci/openjdk:8-jdk
       - image: cassandra:3.11
@@ -27,14 +64,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -65,24 +100,7 @@ jobs:
           command: dockerize -wait tcp://localhost:9042 -timeout 1m
 
       # run tests!
-      - run: gradle test
       - run: gradle integrationTestCassandra
-
-      - run:
-          name: Run short verification
-          command: |
-            gradle jar
-            gradle testJar
-            cqlsh -f scripts/sample_schema/tx_transfer.cql
-            # run with 2 requesters for 30 seconds
-            java -cp "core/build/test-libs/*:core/build/libs/*" com.scalar.db.verification.TransactionVerification -c 2 -t 30
-
-      - run:
-          name: Save Gradle test reports
-          command: |
-            mkdir -p /tmp/gradle_test_reports
-            cp -a core/build/reports/tests/test /tmp/gradle_test_reports/
-          when: always
 
       - run:
           name: Save Gradle integration test reports
@@ -90,10 +108,6 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
           when: always
-
-      - store_artifacts:
-          path: /tmp/gradle_test_reports
-          destination: gradle_test_reports
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -106,14 +120,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -147,14 +159,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -190,14 +200,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -237,14 +245,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -286,14 +292,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -342,14 +346,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -401,14 +403,12 @@ jobs:
     working_directory: ~/repo
 
     environment:
-      # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
     steps:
       - checkout
 
-      # Download and cache dependencies
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "server/build.gradle" }}
