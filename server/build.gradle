@@ -47,4 +47,13 @@ task integrationTestScalarDbServer(type: Test) {
 // build should not depend on the integration tests
 check.dependsOn -= integrationTestScalarDbServer
 
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
 archivesBaseName = "scalardb-server"

@@ -1,9 +1,21 @@
+buildscript {
+    repositories {
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.14.0'
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'eclipse'
     apply plugin: 'idea'
 //    apply plugin: 'jacoco'
     apply plugin: 'java-library-distribution'
+    apply plugin: 'com.diffplug.spotless'
 
     repositories {
         mavenCentral()

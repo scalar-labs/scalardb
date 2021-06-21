@@ -14,11 +14,10 @@ import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
-
-import javax.annotation.concurrent.NotThreadSafe;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A visitor class to execute a conditional mutation.

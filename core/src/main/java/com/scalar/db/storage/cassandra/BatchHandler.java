@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
@@ -10,13 +12,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
+import java.util.List;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.ThreadSafe;
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * An executor for a batch statement
