@@ -4,9 +4,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/*.java'
-            include '**/com/scalar/db/storage/jdbc/test/*.java'
-            include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
         }
         resources.srcDir file('src/integration-test/resources')
     }
