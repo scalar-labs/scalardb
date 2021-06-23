@@ -1,4 +1,4 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.server;
 
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
@@ -18,9 +18,13 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.server.ScalarDbServer;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.transaction.consensuscommit.CommitHandler;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.RecoveryHandler;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Optional;
@@ -30,7 +34,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class ConsensusCommitWithGrpcStorageIntegrationTest
+public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     extends ConsensusCommitIntegrationTestBase {
 
   private static final String MYSQL_CONTACT_POINT = "jdbc:mysql://localhost:3306/";

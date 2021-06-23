@@ -41,7 +41,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   }
 
   @VisibleForTesting
-  ConsensusCommitManager(
+  public ConsensusCommitManager(
       DistributedStorage storage,
       DatabaseConfig config,
       Coordinator coordinator,
