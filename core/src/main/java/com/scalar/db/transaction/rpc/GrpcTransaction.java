@@ -14,28 +14,26 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.rpc.AbortRequest;
-import com.scalar.db.rpc.CommitRequest;
-import com.scalar.db.rpc.DistributedTransactionGrpc;
-import com.scalar.db.rpc.TransactionalGetRequest;
-import com.scalar.db.rpc.TransactionalGetResponse;
-import com.scalar.db.rpc.TransactionalMutateRequest;
-import com.scalar.db.rpc.TransactionalScanRequest;
-import com.scalar.db.rpc.TransactionalScanResponse;
+import com.scalar.db.rpc.TransactionRequest;
+import com.scalar.db.rpc.TransactionRequest.Command;
+import com.scalar.db.rpc.TransactionRequest.Mutations;
+import com.scalar.db.rpc.TransactionResponse;
+import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.Utility;
-import io.grpc.Status.Code;
-import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class GrpcTransaction implements DistributedTransaction {
 
   private final String txId;
-  private final DistributedTransactionGrpc.DistributedTransactionBlockingStub stub;
+  private final StreamObserver<TransactionRequest> transaction;
+  private final GrpcTransactionStreamObserver observer;
   private final GrpcTableMetadataManager metadataManager;
 
   private Optional<String> namespace;
@@ -43,12 +41,14 @@ public class GrpcTransaction implements DistributedTransaction {
 
   public GrpcTransaction(
       String txId,
-      DistributedTransactionGrpc.DistributedTransactionBlockingStub stub,
+      StreamObserver<TransactionRequest> transaction,
+      GrpcTransactionStreamObserver observer,
       GrpcTableMetadataManager metadataManager,
       Optional<String> namespace,
       Optional<String> tableName) {
     this.txId = txId;
-    this.stub = stub;
+    this.transaction = transaction;
+    this.observer = observer;
     this.metadataManager = metadataManager;
     this.namespace = namespace;
     this.tableName = tableName;
@@ -91,16 +91,20 @@ public class GrpcTransaction implements DistributedTransaction {
         () -> {
           Utility.setTargetToIfNot(get, namespace, tableName);
 
-          TransactionalGetResponse response =
-              stub.get(
-                  TransactionalGetRequest.newBuilder()
-                      .setTransactionId(txId)
+          TransactionResponse response =
+              sendRequest(
+                  TransactionRequest.newBuilder()
+                      .setCommand(Command.GET)
                       .setGet(ProtoUtil.toGet(get))
                       .build());
-          if (response.hasResult()) {
+          throwIfErrorCrud(response);
+
+          if (response.hasResults() && !response.getResults().getResultList().isEmpty()) {
             TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
-            return Optional.of(ProtoUtil.toResult(response.getResult(), tableMetadata));
+            return Optional.of(
+                ProtoUtil.toResult(response.getResults().getResultList().get(0), tableMetadata));
           }
+
           return Optional.empty();
         });
   }
@@ -111,14 +115,20 @@ public class GrpcTransaction implements DistributedTransaction {
         () -> {
           Utility.setTargetToIfNot(scan, namespace, tableName);
 
-          TransactionalScanResponse response =
-              stub.scan(
-                  TransactionalScanRequest.newBuilder()
-                      .setTransactionId(txId)
+          TransactionResponse response =
+              sendRequest(
+                  TransactionRequest.newBuilder()
+                      .setCommand(Command.SCAN)
                       .setScan(ProtoUtil.toScan(scan))
                       .build());
+          throwIfErrorCrud(response);
+
+          if (!response.hasResults()) {
+            return Collections.emptyList();
+          }
+
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-          return response.getResultList().stream()
+          return response.getResults().getResultList().stream()
               .map(r -> ProtoUtil.toResult(r, tableMetadata))
               .collect(Collectors.toList());
         });
@@ -149,11 +159,16 @@ public class GrpcTransaction implements DistributedTransaction {
         () -> {
           Utility.setTargetToIfNot(mutation, namespace, tableName);
 
-          stub.mutate(
-              TransactionalMutateRequest.newBuilder()
-                  .setTransactionId(txId)
-                  .addMutations(ProtoUtil.toMutation(mutation))
-                  .build());
+          TransactionResponse response =
+              sendRequest(
+                  TransactionRequest.newBuilder()
+                      .setCommand(Command.MUTATION)
+                      .setMutations(
+                          Mutations.newBuilder()
+                              .addMutation(ProtoUtil.toMutation(mutation))
+                              .build())
+                      .build());
+          throwIfErrorCrud(response);
           return null;
         });
   }
@@ -164,47 +179,102 @@ public class GrpcTransaction implements DistributedTransaction {
         () -> {
           Utility.setTargetToIfNot(mutations, namespace, tableName);
 
-          TransactionalMutateRequest.Builder builder =
-              TransactionalMutateRequest.newBuilder().setTransactionId(txId);
-          mutations.forEach(m -> builder.addMutations(ProtoUtil.toMutation(m)));
-          stub.mutate(builder.build());
+          TransactionRequest.Mutations.Builder mutationsBuilder =
+              TransactionRequest.Mutations.newBuilder();
+          mutations.forEach(m -> mutationsBuilder.addMutation(ProtoUtil.toMutation(m)));
+          TransactionResponse response =
+              sendRequest(
+                  TransactionRequest.newBuilder()
+                      .setCommand(Command.MUTATION)
+                      .setMutations(mutationsBuilder.build())
+                      .build());
+          throwIfErrorCrud(response);
           return null;
         });
   }
 
-  private static <T> T executeCrud(Supplier<T> supplier) throws CrudException {
-    try {
-      return supplier.get();
-    } catch (StatusRuntimeException e) {
-      if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-        throw new IllegalArgumentException(e.getMessage());
-      } else if (e.getStatus().getCode() == Code.FAILED_PRECONDITION) {
-        throw new CrudConflictException(e.getMessage());
+  private static void throwIfErrorCrud(TransactionResponse response) throws CrudException {
+    if (response.hasError()) {
+      switch (response.getError().getErrorCode()) {
+        case INVALID_ARGUMENT:
+          throw new IllegalArgumentException(response.getError().getMessage());
+        case CONFLICT:
+          throw new CrudConflictException(response.getError().getMessage());
+        default:
+          throw new CrudException(response.getError().getMessage());
       }
-      throw new CrudException(e.getMessage());
+    }
+  }
+
+  private static <T> T executeCrud(ThrowableSupplier<T, Throwable> throwableSupplier)
+      throws CrudException {
+    try {
+      return throwableSupplier.get();
+    } catch (CrudException | IllegalArgumentException e) {
+      throw e;
+    } catch (Throwable t) {
+      if (t instanceof Error) {
+        throw (Error) t;
+      }
+      throw new CrudException(t.getMessage(), t);
     }
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
     try {
-      stub.commit(CommitRequest.newBuilder().setTransactionId(txId).build());
-    } catch (StatusRuntimeException e) {
-      if (e.getStatus().getCode() == Code.FAILED_PRECONDITION) {
-        throw new CommitConflictException(e.getMessage());
-      } else if (e.getStatus().getCode() == Code.UNKNOWN) {
-        throw new UnknownTransactionStatusException(e.getMessage());
+      TransactionResponse response =
+          sendRequest(TransactionRequest.newBuilder().setCommand(Command.COMMIT).build());
+      if (response.hasError()) {
+        switch (response.getError().getErrorCode()) {
+          case INVALID_ARGUMENT:
+            throw new IllegalArgumentException(response.getError().getMessage());
+          case CONFLICT:
+            throw new CommitConflictException(response.getError().getMessage());
+          case UNKNOWN_TRANSACTION:
+            throw new UnknownTransactionStatusException(response.getError().getMessage());
+          default:
+            throw new CommitException(response.getError().getMessage());
+        }
       }
-      throw new CommitException(e.getMessage());
+    } catch (CommitException | UnknownTransactionStatusException | IllegalArgumentException e) {
+      throw e;
+    } catch (Throwable t) {
+      if (t instanceof Error) {
+        throw (Error) t;
+      }
+      throw new CommitException(t.getMessage(), t);
     }
   }
 
   @Override
   public void abort() throws AbortException {
     try {
-      stub.abort(AbortRequest.newBuilder().setTransactionId(txId).build());
-    } catch (StatusRuntimeException e) {
-      throw new AbortException(e.getMessage());
+      TransactionResponse response =
+          sendRequest(TransactionRequest.newBuilder().setCommand(Command.ABORT).build());
+      if (response.hasError()) {
+        if (response.getError().getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(response.getError().getMessage());
+        }
+        throw new AbortException(response.getError().getMessage());
+      }
+    } catch (AbortException | IllegalArgumentException e) {
+      throw e;
+    } catch (Throwable t) {
+      if (t instanceof Error) {
+        throw (Error) t;
+      }
+      throw new AbortException(t.getMessage(), t);
     }
+  }
+
+  private TransactionResponse sendRequest(TransactionRequest request) throws Throwable {
+    observer.init();
+    transaction.onNext(request);
+    observer.await();
+    if (observer.hasError()) {
+      throw observer.getError();
+    }
+    return observer.getResponse();
   }
 }

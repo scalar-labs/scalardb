@@ -19,6 +19,7 @@ import com.scalar.db.rpc.OpenScannerResponse;
 import com.scalar.db.rpc.ScanNextRequest;
 import com.scalar.db.rpc.ScanNextResponse;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;

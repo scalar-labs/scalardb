@@ -99,6 +99,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraWriteInteg
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
+    transaction.commit();
   }
 
   @Test
@@ -153,6 +154,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraWriteInteg
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    transaction.commit();
   }
 
   @Test
@@ -202,6 +204,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraWriteInteg
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).isInstanceOf(CommitConflictException.class);
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
+    transaction.commit();
   }
 
   @BeforeClass

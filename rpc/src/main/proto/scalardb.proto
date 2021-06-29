@@ -229,59 +229,52 @@ message GetTableMetadataResponse {
 // A service and messages for DistributedTransaction
 
 service DistributedTransaction {
-  rpc Start (StartTransactionRequest) returns (StartTransactionResponse) {
+  rpc Transaction (stream TransactionRequest) returns (stream TransactionResponse) {
   }
-  rpc Get (TransactionalGetRequest) returns (TransactionalGetResponse) {
-  }
-  rpc Scan (TransactionalScanRequest) returns (TransactionalScanResponse) {
-  }
-  rpc Mutate (TransactionalMutateRequest) returns (google.protobuf.Empty) {
-  }
-  rpc Commit (CommitRequest) returns (google.protobuf.Empty) {
-  }
-  rpc Abort (AbortRequest) returns (google.protobuf.Empty) {
-  }
-  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  rpc GetState (GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
 }
 
-message StartTransactionRequest {
-  string transaction_id = 1;
+message TransactionRequest {
+  enum Command {
+    START = 0;
+    GET = 1;
+    SCAN = 2;
+    MUTATION = 3;
+    COMMIT = 4;
+    ABORT = 5;
+  }
+  Command command = 1;
+  message Mutations {
+    repeated Mutation mutation = 1;
+  }
+  oneof argument {
+    string transaction_id = 2;
+    Get get = 3;
+    Scan scan = 4;
+    Mutations mutations = 5;
+  }
 }
 
-message StartTransactionResponse {
-  string transaction_id = 1;
-}
-
-message TransactionalGetRequest {
-  string transaction_id = 1;
-  Get get = 2;
-}
-
-message TransactionalGetResponse {
-  Result result = 1;
-}
-
-message TransactionalScanRequest {
-  string transaction_id = 1;
-  Scan scan = 2;
-}
-
-message TransactionalScanResponse {
-  repeated Result result = 1;
-}
-
-message TransactionalMutateRequest {
-  string transaction_id = 1;
-  repeated Mutation mutations = 2;
-}
-
-message CommitRequest {
-  string transaction_id = 1;
-}
-
-message AbortRequest {
-  string transaction_id = 1;
+message TransactionResponse {
+  message Results {
+    repeated Result result = 1;
+  }
+  message Error {
+    enum ErrorCode {
+      INVALID_ARGUMENT = 0;
+      CONFLICT = 1;
+      UNKNOWN_TRANSACTION = 2;
+      OTHER = 3;
+    }
+    ErrorCode error_code = 1;
+    string message = 2;
+  }
+  oneof response {
+    string transaction_id = 1;
+    Results results = 2;
+    Error error = 3;
+  }
 }
 
 message GetTransactionStateRequest {
