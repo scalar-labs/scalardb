@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.File;
 import java.io.IOException;
@@ -74,17 +75,19 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
         getProperties().getProperty(TRANSACTION_MANAGER_TYPE, DEFAULT_TRANSACTION_MANAGER_TYPE);
     if (!transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_CONSENSUS_COMMIT)
         && !transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_JDBC)) {
-      LOGGER.warn(
-          "the specified value of '{}' is invalid. using the default value: {}",
-          TRANSACTION_MANAGER_TYPE,
-          DEFAULT_TRANSACTION_MANAGER_TYPE);
+      if (!transactionManagerType.isEmpty()) {
+        LOGGER.warn(
+            "the specified value of '{}' is invalid. using the default value: {}",
+            TRANSACTION_MANAGER_TYPE,
+            DEFAULT_TRANSACTION_MANAGER_TYPE);
+      }
       transactionManagerType = DEFAULT_TRANSACTION_MANAGER_TYPE;
     }
   }
 
   private int getInt(String name, int defaultValue) {
     String value = getProperties().getProperty(name);
-    if (value == null) {
+    if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
     }
     try {
@@ -100,7 +103,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
 
   private boolean getBoolean(String name, boolean defaultValue) {
     String value = getProperties().getProperty(name);
-    if (value == null) {
+    if (Strings.isNullOrEmpty(value)) {
       return defaultValue;
     }
     return Boolean.parseBoolean(value);

@@ -1,5 +1,6 @@
 plugins {
     id 'application'
+    id 'com.palantir.docker' version '0.25.0'
 }
 
 sourceSets {
@@ -26,6 +27,7 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
     implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.30'
     implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
     implementation group: 'info.picocli', name: 'picocli', version: '4.1.4'
     testImplementation project(':core').sourceSets.integrationTest.output
@@ -34,6 +36,11 @@ dependencies {
 application {
     mainClassName = 'com.scalar.db.server.ScalarDbServer'
     startScripts.applicationName = 'scalardb-server'
+}
+
+docker {
+    name "ghcr.io/scalar-labs/scalardb-server:$version"
+    files tasks.distTar.outputs, 'conf/log4j.properties'
 }
 
 task integrationTestScalarDbServer(type: Test) {
