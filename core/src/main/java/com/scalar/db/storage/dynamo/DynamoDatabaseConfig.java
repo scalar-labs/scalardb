@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +38,11 @@ public class DynamoDatabaseConfig extends DatabaseConfig {
 
     super.load();
 
-    endpointOverride = Optional.ofNullable(getProperties().getProperty(ENDPOINT_OVERRIDE));
+    if (!Strings.isNullOrEmpty(getProperties().getProperty(ENDPOINT_OVERRIDE))) {
+      endpointOverride = Optional.of(getProperties().getProperty(ENDPOINT_OVERRIDE));
+    } else {
+      endpointOverride = Optional.empty();
+    }
   }
 
   public Optional<String> getEndpointOverride() {
