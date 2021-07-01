@@ -40,7 +40,7 @@ application {
 
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:$version"
-    files tasks.distTar.outputs, 'conf/database.properties.tmpl', 'conf/log4j.properties'
+    files tasks.distTar.outputs, 'conf/log4j.properties'
 }
 
 task integrationTestScalarDbServer(type: Test) {
