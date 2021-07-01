@@ -83,6 +83,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
+    transaction.commit();
 
     // Assert
     assertThat(result.isPresent()).isTrue();
@@ -99,6 +100,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     List<Result> results = transaction.scan(scan);
+    transaction.commit();
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
@@ -115,6 +117,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
+    transaction.commit();
 
     // Assert
     assertThat(result.isPresent()).isFalse();
@@ -129,6 +132,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     List<Result> results = transaction.scan(scan);
+    transaction.commit();
 
     // Assert
     assertThat(results.size()).isEqualTo(0);
@@ -153,6 +157,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Act
     Result result2 = transaction1.scan(prepareScan(0, 0, 0, TABLE_1)).get(0);
     Optional<Result> result3 = transaction1.get(prepareGet(0, 0, TABLE_1));
+    transaction1.commit();
 
     // Assert
     assertThat(result1.get()).isEqualTo(result2);
@@ -174,6 +179,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Get get = prepareGet(0, 0, TABLE_1);
     GrpcTransaction another = manager.start();
     TransactionResult result = new TransactionResult(another.get(get).get());
+    another.commit();
     assertThat(result.getValue(BALANCE).get()).isEqualTo(expected);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
@@ -198,6 +204,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Assert
     GrpcTransaction another = manager.start();
     TransactionResult actual = new TransactionResult(another.get(get).get());
+    another.commit();
     assertThat(actual.getValue(BALANCE).get()).isEqualTo(expected);
     assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
@@ -245,6 +252,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(fromBalance));
     assertThat(another.get(toGets.get(to)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(toBalance));
+    another.commit();
   }
 
   @Test
@@ -301,6 +309,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     assertThat(another.get(gets2.get(to)).get().getValue(BALANCE)).isEqualTo(Optional.of(expected));
     assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(expected));
+    another.commit();
   }
 
   @Test
@@ -358,6 +367,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount)));
     assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount)));
+    another.commit();
   }
 
   @Test
@@ -410,6 +420,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount2)));
     assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
+    another.commit();
   }
 
   @Test
@@ -463,6 +474,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount2)));
     assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
+    another.commit();
   }
 
   @Test
@@ -521,6 +533,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(expected));
     assertThat(another.get(gets2.get(anotherTo)).get().getValue(BALANCE))
         .isEqualTo(Optional.of(expected));
+    another.commit();
   }
 
   @Test
@@ -567,6 +580,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     GrpcTransaction another = manager.start();
     assertThat(another.get(get).isPresent()).isFalse();
+    another.commit();
   }
 
   private void commit_ConflictingDeletesGivenForExisting_ShouldCommitOneAndAbortTheOther(
@@ -600,6 +614,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
         .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE)));
     assertThat(another.get(gets2.get(account2)).isPresent()).isFalse();
     assertThat(another.get(gets1.get(account3)).isPresent()).isFalse();
+    another.commit();
   }
 
   @Test
@@ -647,6 +662,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     assertThat(another.get(gets2.get(account2)).isPresent()).isFalse();
     assertThat(another.get(gets2.get(account3)).isPresent()).isFalse();
     assertThat(another.get(gets1.get(account4)).isPresent()).isFalse();
+    another.commit();
   }
 
   @Test
@@ -696,6 +712,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction = manager.start();
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
+    transaction.commit();
     // the results can not be produced by executing the transactions serially
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
@@ -755,6 +772,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.commit();
     assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
   }
 
@@ -792,6 +810,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.commit();
     assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
   }
 

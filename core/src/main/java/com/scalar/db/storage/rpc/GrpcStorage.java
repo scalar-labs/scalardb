@@ -147,7 +147,7 @@ public class GrpcStorage implements DistributedStorage {
           Utility.setTargetToIfNot(mutation, namespace, tableName);
 
           stub.mutate(
-              MutateRequest.newBuilder().addMutations(ProtoUtil.toMutation(mutation)).build());
+              MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
           return null;
         });
   }
@@ -159,7 +159,7 @@ public class GrpcStorage implements DistributedStorage {
           Utility.setTargetToIfNot(mutations, namespace, tableName);
 
           MutateRequest.Builder builder = MutateRequest.newBuilder();
-          mutations.forEach(m -> builder.addMutations(ProtoUtil.toMutation(m)));
+          mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
           stub.mutate(builder.build());
           return null;
         });

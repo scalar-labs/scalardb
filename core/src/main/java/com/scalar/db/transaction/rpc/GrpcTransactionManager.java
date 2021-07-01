@@ -12,17 +12,15 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
-import com.scalar.db.rpc.StartTransactionRequest;
-import com.scalar.db.rpc.StartTransactionResponse;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +28,8 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
 
   private final ManagedChannel channel;
-  private final DistributedTransactionGrpc.DistributedTransactionBlockingStub stub;
+  private final DistributedTransactionGrpc.DistributedTransactionStub stub;
+  private final DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
   private final GrpcTableMetadataManager metadataManager;
 
   private Optional<String> namespace;
@@ -42,7 +41,8 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
             .usePlaintext()
             .build();
-    stub = DistributedTransactionGrpc.newBlockingStub(channel);
+    stub = DistributedTransactionGrpc.newStub(channel);
+    blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new GrpcTableMetadataManager(DistributedStorageAdminGrpc.newBlockingStub(channel));
     namespace = Optional.empty();
@@ -51,10 +51,12 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
 
   @VisibleForTesting
   GrpcTransactionManager(
-      DistributedTransactionGrpc.DistributedTransactionBlockingStub stub,
+      DistributedTransactionGrpc.DistributedTransactionStub stub,
+      DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub,
       GrpcTableMetadataManager metadataManager) {
     channel = null;
     this.stub = stub;
+    this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
     namespace = Optional.empty();
     tableName = Optional.empty();
@@ -88,24 +90,16 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
 
   @Override
   public GrpcTransaction start() throws TransactionException {
-    return execute(
-        () -> {
-          StartTransactionResponse response =
-              stub.start(StartTransactionRequest.newBuilder().build());
-          return new GrpcTransaction(
-              response.getTransactionId(), stub, metadataManager, namespace, tableName);
-        });
+    GrpcTransactionService service = new GrpcTransactionService(stub, metadataManager);
+    String transactionId = service.startTransaction();
+    return new GrpcTransaction(transactionId, service, namespace, tableName);
   }
 
   @Override
   public GrpcTransaction start(String txId) throws TransactionException {
-    return execute(
-        () -> {
-          StartTransactionResponse response =
-              stub.start(StartTransactionRequest.newBuilder().setTransactionId(txId).build());
-          return new GrpcTransaction(
-              response.getTransactionId(), stub, metadataManager, namespace, tableName);
-        });
+    GrpcTransactionService service = new GrpcTransactionService(stub, metadataManager);
+    String transactionId = service.startTransaction(txId);
+    return new GrpcTransaction(transactionId, service, namespace, tableName);
   }
 
   @Deprecated
@@ -152,19 +146,26 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return execute(
         () -> {
           GetTransactionStateResponse response =
-              stub.getState(GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
+              blockingStub.getState(
+                  GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtil.toTransactionState(response.getState());
         });
   }
 
-  private static <T> T execute(Supplier<T> supplier) throws TransactionException {
+  private static <T> T execute(ThrowableSupplier<T, Throwable> throwableSupplier)
+      throws TransactionException {
     try {
-      return supplier.get();
+      return throwableSupplier.get();
     } catch (StatusRuntimeException e) {
       if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
         throw new IllegalArgumentException(e.getMessage());
       }
       throw new TransactionException(e.getMessage());
+    } catch (Throwable t) {
+      if (t instanceof Error) {
+        throw (Error) t;
+      }
+      throw new TransactionException(t.getMessage(), t);
     }
   }
 

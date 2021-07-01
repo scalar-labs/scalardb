@@ -12,6 +12,7 @@ import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.GetTableMetadataResponse.Builder;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;

@@ -96,6 +96,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     transaction = manager.start();
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
+    transaction.commit();
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
@@ -149,6 +150,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     GrpcTransaction transaction = manager.start();
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
+    transaction.commit();
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isTrue();
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
@@ -199,6 +201,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     GrpcTransaction transaction = manager.start();
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
+    transaction.commit();
     assertThat(result1.isPresent()).isTrue();
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.isPresent()).isFalse();
@@ -237,6 +240,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     transaction = manager.start();
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
+    transaction.commit();
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 3));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
