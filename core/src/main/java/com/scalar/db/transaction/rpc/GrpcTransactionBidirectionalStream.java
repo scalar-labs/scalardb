@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
 
 public class GrpcTransactionBidirectionalStream implements StreamObserver<TransactionResponse> {
 
-  private final StreamObserver<TransactionRequest> transactionObserver;
+  private final StreamObserver<TransactionRequest> requestObserver;
   private final GrpcTableMetadataManager metadataManager;
 
   private final AtomicBoolean finished = new AtomicBoolean();
@@ -47,7 +47,7 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
 
   public GrpcTransactionBidirectionalStream(
       DistributedTransactionStub stub, GrpcTableMetadataManager metadataManager) {
-    transactionObserver = stub.transaction(this);
+    requestObserver = stub.transaction(this);
     this.metadataManager = metadataManager;
   }
 
@@ -69,7 +69,7 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
 
   private void sendRequest(TransactionRequest request) {
     init();
-    transactionObserver.onNext(request);
+    requestObserver.onNext(request);
     await();
   }
 
