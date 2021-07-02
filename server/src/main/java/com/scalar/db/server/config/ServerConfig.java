@@ -1,5 +1,6 @@
 package com.scalar.db.server.config;
 
+import com.google.common.base.Strings;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,8 +15,10 @@ public class ServerConfig {
   public static final String PREFIX = "scalar.db.server.";
   public static final String PORT = PREFIX + "port";
 
+  public static final int DEFAULT_PORT = 60051;
+
   private final Properties props;
-  private int port = 60051;
+  private int port = DEFAULT_PORT;
 
   public ServerConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -37,9 +40,10 @@ public class ServerConfig {
   }
 
   private void load() {
-    if (props.contains(PORT)) {
+    String portValue = props.getProperty(PORT);
+    if (!Strings.isNullOrEmpty(portValue)) {
       try {
-        port = Integer.parseInt(props.getProperty(PORT));
+        port = Integer.parseInt(portValue);
       } catch (NumberFormatException e) {
         LOGGER.warn(
             "the specified value of '{}' is not a number. using the default value: {}", PORT, port);
