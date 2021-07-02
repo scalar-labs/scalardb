@@ -18,18 +18,18 @@ import java.util.Optional;
 public class GrpcTransaction implements DistributedTransaction {
 
   private final String txId;
-  private final GrpcTransactionService service;
+  private final GrpcTransactionBidirectionalStream stream;
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   public GrpcTransaction(
       String txId,
-      GrpcTransactionService service,
+      GrpcTransactionBidirectionalStream stream,
       Optional<String> namespace,
       Optional<String> tableName) {
     this.txId = txId;
-    this.service = service;
+    this.stream = stream;
     this.namespace = namespace;
     this.tableName = tableName;
   }
@@ -68,19 +68,19 @@ public class GrpcTransaction implements DistributedTransaction {
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     Utility.setTargetToIfNot(get, namespace, tableName);
-    return service.get(get);
+    return stream.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     Utility.setTargetToIfNot(scan, namespace, tableName);
-    return service.scan(scan);
+    return stream.scan(scan);
   }
 
   @Override
   public void put(Put put) throws CrudException {
     Utility.setTargetToIfNot(put, namespace, tableName);
-    service.mutate(put);
+    stream.mutate(put);
   }
 
   @Override
@@ -91,7 +91,7 @@ public class GrpcTransaction implements DistributedTransaction {
   @Override
   public void delete(Delete delete) throws CrudException {
     Utility.setTargetToIfNot(delete, namespace, tableName);
-    service.mutate(delete);
+    stream.mutate(delete);
   }
 
   @Override
@@ -102,16 +102,16 @@ public class GrpcTransaction implements DistributedTransaction {
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
     Utility.setTargetToIfNot(mutations, namespace, tableName);
-    service.mutate(mutations);
+    stream.mutate(mutations);
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    service.commit();
+    stream.commit();
   }
 
   @Override
   public void abort() throws AbortException {
-    service.abort();
+    stream.abort();
   }
 }

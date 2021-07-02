@@ -24,6 +24,8 @@ import com.scalar.db.rpc.TransactionalMutateRequest;
 import com.scalar.db.rpc.TransactionalScanRequest;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
-public class GrpcTransactionService implements StreamObserver<TransactionResponse> {
+public class GrpcTransactionBidirectionalStream implements StreamObserver<TransactionResponse> {
 
   private final StreamObserver<TransactionRequest> transactionObserver;
   private final GrpcTableMetadataManager metadataManager;
@@ -43,7 +45,7 @@ public class GrpcTransactionService implements StreamObserver<TransactionRespons
   private Throwable error;
   private CountDownLatch latch;
 
-  public GrpcTransactionService(
+  public GrpcTransactionBidirectionalStream(
       DistributedTransactionStub stub, GrpcTableMetadataManager metadataManager) {
     transactionObserver = stub.transaction(this);
     this.metadataManager = metadataManager;
