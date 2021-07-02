@@ -1,4 +1,4 @@
-package com.scalar.db.service;
+package com.scalar.db.server.service;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -9,6 +9,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.DistributedStorageAdminService;
 import com.scalar.db.server.DistributedStorageService;
 import com.scalar.db.server.DistributedTransactionService;
+import com.scalar.db.service.StorageModule;
+import com.scalar.db.service.TransactionModule;
 
 public class ServerModule extends AbstractModule {
   private final Injector storageInjector;

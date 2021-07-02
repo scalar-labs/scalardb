@@ -1,4 +1,4 @@
-package com.scalar.db.config;
+package com.scalar.db.server.config;
 
 import java.io.File;
 import java.io.FileInputStream;
