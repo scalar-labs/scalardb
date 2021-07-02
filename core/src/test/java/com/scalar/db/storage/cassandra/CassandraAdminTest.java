@@ -2,6 +2,7 @@ package com.scalar.db.storage.cassandra;
 
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +20,8 @@ public class CassandraAdminTest {
 
   @Test
   public void
-      getTableMetadata_ConstructedWithoutNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix() {
+      getTableMetadata_ConstructedWithoutNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix()
+          throws ExecutionException {
     // Arrange
     Optional<String> namespacePrefix = Optional.empty();
     String namespace = "ns";
@@ -35,7 +37,8 @@ public class CassandraAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithNamespacePrefix() {
+  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithNamespacePrefix()
+      throws ExecutionException {
     // Arrange
     Optional<String> namespacePrefix = Optional.of("prefix");
     String namespace = "ns";

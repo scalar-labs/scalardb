@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DropTableRequest;
@@ -35,7 +36,8 @@ public class DistributedStorageAdminServiceTest {
   }
 
   @Test
-  public void createTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly() {
+  public void createTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     CreateTableRequest request =
         CreateTableRequest.newBuilder()
@@ -62,7 +64,8 @@ public class DistributedStorageAdminServiceTest {
   }
 
   @Test
-  public void dropTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly() {
+  public void dropTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     DropTableRequest request =
         DropTableRequest.newBuilder().setNamespace("namespace").setTable("table").build();
@@ -79,7 +82,8 @@ public class DistributedStorageAdminServiceTest {
   }
 
   @Test
-  public void truncateTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly() {
+  public void truncateTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     TruncateTableRequest request =
         TruncateTableRequest.newBuilder().setNamespace("namespace").setTable("table").build();
@@ -96,7 +100,8 @@ public class DistributedStorageAdminServiceTest {
   }
 
   @Test
-  public void getTableMetadata_IsCalledWithProperArguments_AdminShouldBeCalledProperly() {
+  public void getTableMetadata_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     GetTableMetadataRequest request =
         GetTableMetadataRequest.newBuilder().setNamespace("namespace").setTable("table").build();

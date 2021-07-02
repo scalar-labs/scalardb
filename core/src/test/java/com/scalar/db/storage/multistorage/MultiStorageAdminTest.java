@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.exception.storage.ExecutionException;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
@@ -40,7 +41,8 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable1_ShouldReturnMetadataFromAdmin1() {
+  public void getTableMetadata_ForTable1_ShouldReturnMetadataFromAdmin1()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -53,7 +55,8 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable2_ShouldReturnMetadataFromAdmin2() {
+  public void getTableMetadata_ForTable2_ShouldReturnMetadataFromAdmin2()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -66,7 +69,8 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable3_ShouldReturnMetadataFromDefaultAdmin() {
+  public void getTableMetadata_ForTable3_ShouldReturnMetadataFromDefaultAdmin()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
@@ -79,7 +83,8 @@ public class MultiStorageAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromAdmin2() {
+  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromAdmin2()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;

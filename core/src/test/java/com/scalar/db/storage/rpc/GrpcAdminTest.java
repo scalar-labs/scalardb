@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import java.util.Collections;
@@ -29,7 +30,8 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void createTable_IsCalledWithProperArguments_StubShouldBeCalledProperly() {
+  public void createTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
@@ -49,7 +51,8 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void dropTable_IsCalledWithProperArguments_StubShouldBeCalledProperly() {
+  public void dropTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
@@ -62,7 +65,8 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void truncateTable_IsCalledWithProperArguments_StubShouldBeCalledProperly() {
+  public void truncateTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
@@ -75,7 +79,8 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly() {
+  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";

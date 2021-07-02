@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.net.URI;
 import java.util.Arrays;
@@ -48,7 +49,8 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
 
   @Test
   @Override
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     // Fow now, the clustering order is always ASC in the DynamoDB adapter

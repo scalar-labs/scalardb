@@ -6,6 +6,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageModule;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,22 +74,23 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options) {
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public void dropTable(String namespace, String table) {
+  public void dropTable(String namespace, String table) throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public void truncateTable(String namespace, String table) {
+  public void truncateTable(String namespace, String table) throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) {
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return getAdmin(namespace, table).getTableMetadata(namespace, table);
   }
 
