@@ -116,6 +116,12 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
 
   private void throwIfErrorForStart() throws TransactionException {
     if (hasError()) {
+      if (error instanceof StatusRuntimeException) {
+        StatusRuntimeException e = (StatusRuntimeException) error;
+        if (e.getStatus() == Status.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(e.getMessage());
+        }
+      }
       if (error instanceof Error) {
         throw (Error) error;
       }

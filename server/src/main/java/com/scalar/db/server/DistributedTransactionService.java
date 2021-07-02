@@ -66,7 +66,6 @@ public class DistributedTransactionService
               .build());
       responseObserver.onCompleted();
     } catch (IllegalArgumentException | IllegalStateException e) {
-      LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
@@ -122,6 +121,8 @@ public class DistributedTransactionService
                         .setTransactionId(transaction.getId())
                         .build())
                 .build());
+      } catch (IllegalArgumentException e) {
+        respondInvalidArgumentError(e.getMessage());
       } catch (Throwable t) {
         LOGGER.error("an internal error happened when starting a transaction", t);
         respondInternalError(t.getMessage());
@@ -252,7 +253,6 @@ public class DistributedTransactionService
       try {
         runnable.run();
       } catch (IllegalArgumentException | IllegalStateException e) {
-        LOGGER.error("an invalid argument error happened during the execution", e);
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.INVALID_ARGUMENT)
@@ -265,7 +265,6 @@ public class DistributedTransactionService
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {
-        LOGGER.error("an unknown transaction error happened during the execution", e);
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.UNKNOWN_TRANSACTION)
