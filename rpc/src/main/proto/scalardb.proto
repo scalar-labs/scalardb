@@ -122,11 +122,7 @@ message Result {
 service DistributedStorage {
   rpc Get (GetRequest) returns (GetResponse) {
   }
-  rpc OpenScanner (OpenScannerRequest) returns (OpenScannerResponse) {
-  }
-  rpc ScanNext (ScanNextRequest) returns (ScanNextResponse) {
-  }
-  rpc CloseScanner (CloseScannerRequest) returns (google.protobuf.Empty) {
+  rpc Scan (stream ScanRequest) returns (stream ScanResponse) {
   }
   rpc Mutate (MutateRequest) returns (google.protobuf.Empty) {
   }
@@ -140,29 +136,14 @@ message GetResponse {
   Result result = 1;
 }
 
-message OpenScannerRequest {
+message ScanRequest {
   Scan scan = 1;
-  int32 fetch_count = 2;
+  optional int32 fetch_count = 2;
 }
 
-message OpenScannerResponse {
-  string scanner_id = 1;
+message ScanResponse {
   repeated Result result = 2;
   bool has_more_results = 3;
-}
-
-message ScanNextRequest {
-  string scanner_id = 1;
-  int32 fetch_count = 2;
-}
-
-message ScanNextResponse {
-  repeated Result result = 1;
-  bool has_more_results = 2;
-}
-
-message CloseScannerRequest {
-  string scanner_id = 1;
 }
 
 message MutateRequest {

@@ -3,8 +3,8 @@
 
 package com.scalar.db.rpc;
 
-public interface OpenScannerRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:rpc.OpenScannerRequest)
+public interface ScanRequestOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:rpc.ScanRequest)
     com.google.protobuf.MessageOrBuilder {
 
   /**
@@ -23,7 +23,12 @@ public interface OpenScannerRequestOrBuilder extends
   com.scalar.db.rpc.ScanOrBuilder getScanOrBuilder();
 
   /**
-   * <code>int32 fetch_count = 2;</code>
+   * <code>optional int32 fetch_count = 2;</code>
+   * @return Whether the fetchCount field is set.
+   */
+  boolean hasFetchCount();
+  /**
+   * <code>optional int32 fetch_count = 2;</code>
    * @return The fetchCount.
    */
   int getFetchCount();
