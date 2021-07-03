@@ -14,7 +14,9 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.Utility;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class GrpcTransaction implements DistributedTransaction {
 
   private final String txId;

@@ -20,6 +20,7 @@ import com.scalar.db.rpc.TransactionRequest;
 import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TransactionalGetRequest;
+import com.scalar.db.rpc.TransactionalGetResponse;
 import com.scalar.db.rpc.TransactionalMutateRequest;
 import com.scalar.db.rpc.TransactionalScanRequest;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
@@ -29,21 +30,20 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class GrpcTransactionBidirectionalStream implements StreamObserver<TransactionResponse> {
 
   private final StreamObserver<TransactionRequest> requestObserver;
   private final GrpcTableMetadataManager metadataManager;
-
+  private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finished = new AtomicBoolean();
-
-  private TransactionResponse response;
-  private Throwable error;
-  private CountDownLatch latch;
 
   public GrpcTransactionBidirectionalStream(
       DistributedTransactionStub stub, GrpcTableMetadataManager metadataManager) {
@@ -53,41 +53,33 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
 
   @Override
   public void onNext(TransactionResponse response) {
-    this.response = response;
-    latch.countDown();
+    try {
+      queue.put(new ResponseOrError(response));
+    } catch (InterruptedException ignored) {
+      // InterruptedException should not be thrown
+    }
   }
 
   @Override
   public void onError(Throwable t) {
-    error = t;
-    finished.set(true);
-    latch.countDown();
+    try {
+      queue.put(new ResponseOrError(t));
+    } catch (InterruptedException ignored) {
+      // InterruptedException should not be thrown
+    }
   }
 
   @Override
   public void onCompleted() {}
 
-  private void sendRequest(TransactionRequest request) {
-    init();
+  private ResponseOrError sendRequest(TransactionRequest request) {
     requestObserver.onNext(request);
-    await();
-  }
-
-  private void init() {
-    latch = new CountDownLatch(1);
-    response = null;
-    error = null;
-  }
-
-  private void await() {
     try {
-      latch.await();
+      return queue.take();
     } catch (InterruptedException ignored) {
+      // InterruptedException should not be thrown
+      return null;
     }
-  }
-
-  private boolean hasError() {
-    return error != null;
   }
 
   private void throwIfTransactionFinished() {
@@ -109,13 +101,16 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
     } else {
       request = StartTransactionRequest.newBuilder().setTransactionId(transactionId).build();
     }
-    sendRequest(TransactionRequest.newBuilder().setStartTransactionRequest(request).build());
-    throwIfErrorForStart();
-    return response.getStartTransactionResponse().getTransactionId();
+    ResponseOrError responseOrError =
+        sendRequest(TransactionRequest.newBuilder().setStartTransactionRequest(request).build());
+    throwIfErrorForStart(responseOrError);
+    return responseOrError.getResponse().getStartTransactionResponse().getTransactionId();
   }
 
-  private void throwIfErrorForStart() throws TransactionException {
-    if (hasError()) {
+  private void throwIfErrorForStart(ResponseOrError responseOrError) throws TransactionException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
       if (error instanceof StatusRuntimeException) {
         StatusRuntimeException e = (StatusRuntimeException) error;
         if (e.getStatus() == Status.INVALID_ARGUMENT) {
@@ -128,6 +123,7 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
       throw new TransactionException(error.getMessage());
     }
 
+    TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       if (response.getError().getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
         throw new IllegalArgumentException(response.getError().getMessage());
@@ -139,17 +135,19 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
   public Optional<Result> get(Get get) throws CrudException {
     throwIfTransactionFinished();
 
-    sendRequest(
-        TransactionRequest.newBuilder()
-            .setTransactionalGetRequest(
-                TransactionalGetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
-            .build());
-    throwIfErrorForCrud();
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setTransactionalGetRequest(
+                    TransactionalGetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
+                .build());
+    throwIfErrorForCrud(responseOrError);
 
-    if (response.getTransactionalGetResponse().hasResult()) {
+    TransactionalGetResponse transactionalGetResponse =
+        responseOrError.getResponse().getTransactionalGetResponse();
+    if (transactionalGetResponse.hasResult()) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
-      return Optional.of(
-          ProtoUtil.toResult(response.getTransactionalGetResponse().getResult(), tableMetadata));
+      return Optional.of(ProtoUtil.toResult(transactionalGetResponse.getResult(), tableMetadata));
     }
 
     return Optional.empty();
@@ -158,15 +156,16 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
   public List<Result> scan(Scan scan) throws CrudException {
     throwIfTransactionFinished();
 
-    sendRequest(
-        TransactionRequest.newBuilder()
-            .setTransactionalScanRequest(
-                TransactionalScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
-            .build());
-    throwIfErrorForCrud();
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setTransactionalScanRequest(
+                    TransactionalScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
+                .build());
+    throwIfErrorForCrud(responseOrError);
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-    return response.getTransactionalScanResponse().getResultList().stream()
+    return responseOrError.getResponse().getTransactionalScanResponse().getResultList().stream()
         .map(r -> ProtoUtil.toResult(r, tableMetadata))
         .collect(Collectors.toList());
   }
@@ -174,12 +173,14 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
   public void mutate(Mutation mutation) throws CrudException {
     throwIfTransactionFinished();
 
-    sendRequest(
-        TransactionRequest.newBuilder()
-            .setTransactionalMutateRequest(
-                TransactionalMutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)))
-            .build());
-    throwIfErrorForCrud();
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setTransactionalMutateRequest(
+                    TransactionalMutateRequest.newBuilder()
+                        .addMutation(ProtoUtil.toMutation(mutation)))
+                .build());
+    throwIfErrorForCrud(responseOrError);
   }
 
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
@@ -187,18 +188,22 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
 
     TransactionalMutateRequest.Builder builder = TransactionalMutateRequest.newBuilder();
     mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
-    sendRequest(TransactionRequest.newBuilder().setTransactionalMutateRequest(builder).build());
-    throwIfErrorForCrud();
+    ResponseOrError responseOrError =
+        sendRequest(TransactionRequest.newBuilder().setTransactionalMutateRequest(builder).build());
+    throwIfErrorForCrud(responseOrError);
   }
 
-  private void throwIfErrorForCrud() throws CrudException {
-    if (hasError()) {
+  private void throwIfErrorForCrud(ResponseOrError responseOrError) throws CrudException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
       throw new CrudException(error.getMessage());
     }
 
+    TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       switch (response.getError().getErrorCode()) {
         case INVALID_ARGUMENT:
@@ -214,32 +219,37 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
   public void commit() throws CommitException, UnknownTransactionStatusException {
     throwIfTransactionFinished();
 
-    sendRequest(
-        TransactionRequest.newBuilder()
-            .setCommitRequest(CommitRequest.getDefaultInstance())
-            .build());
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setCommitRequest(CommitRequest.getDefaultInstance())
+                .build());
     finished.set(true);
-    throwIfErrorForCommit();
+    throwIfErrorForCommit(responseOrError);
   }
 
-  private void throwIfErrorForCommit() throws CommitException, UnknownTransactionStatusException {
-    if (hasError()) {
+  private void throwIfErrorForCommit(ResponseOrError responseOrError)
+      throws CommitException, UnknownTransactionStatusException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
       throw new CommitException(error.getMessage());
     }
 
-    if (response.hasError()) {
-      switch (response.getError().getErrorCode()) {
+    if (responseOrError.getResponse().hasError()) {
+      switch (responseOrError.getResponse().getError().getErrorCode()) {
         case INVALID_ARGUMENT:
-          throw new IllegalArgumentException(response.getError().getMessage());
+          throw new IllegalArgumentException(responseOrError.getResponse().getError().getMessage());
         case CONFLICT:
-          throw new CommitConflictException(response.getError().getMessage());
+          throw new CommitConflictException(responseOrError.getResponse().getError().getMessage());
         case UNKNOWN_TRANSACTION:
-          throw new UnknownTransactionStatusException(response.getError().getMessage());
+          throw new UnknownTransactionStatusException(
+              responseOrError.getResponse().getError().getMessage());
         default:
-          throw new CommitException(response.getError().getMessage());
+          throw new CommitException(responseOrError.getResponse().getError().getMessage());
       }
     }
   }
@@ -249,25 +259,58 @@ public class GrpcTransactionBidirectionalStream implements StreamObserver<Transa
       return;
     }
 
-    sendRequest(
-        TransactionRequest.newBuilder().setAbortRequest(AbortRequest.getDefaultInstance()).build());
+    ResponseOrError responseOrError =
+        sendRequest(
+            TransactionRequest.newBuilder()
+                .setAbortRequest(AbortRequest.getDefaultInstance())
+                .build());
     finished.set(true);
-    throwIfErrorForAbort();
+    throwIfErrorForAbort(responseOrError);
   }
 
-  private void throwIfErrorForAbort() throws AbortException {
-    if (hasError()) {
+  private void throwIfErrorForAbort(ResponseOrError responseOrError) throws AbortException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
       throw new AbortException(error.getMessage());
     }
 
+    TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
       if (response.getError().getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
         throw new IllegalArgumentException(response.getError().getMessage());
       }
       throw new AbortException(response.getError().getMessage());
+    }
+  }
+
+  private static class ResponseOrError {
+    private final TransactionResponse response;
+    private final Throwable error;
+
+    public ResponseOrError(TransactionResponse response) {
+      this.response = response;
+      this.error = null;
+    }
+
+    public ResponseOrError(Throwable error) {
+      this.response = null;
+      this.error = error;
+    }
+
+    private boolean isError() {
+      return error != null;
+    }
+
+    public TransactionResponse getResponse() {
+      return response;
+    }
+
+    public Throwable getError() {
+      return error;
     }
   }
 }
