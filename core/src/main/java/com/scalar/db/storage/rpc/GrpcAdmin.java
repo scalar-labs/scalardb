@@ -5,15 +5,19 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtil;
 import io.grpc.ManagedChannel;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,30 +51,49 @@ public class GrpcAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options) {
-    stub.createTable(
-        CreateTableRequest.newBuilder()
-            .setNamespace(namespace)
-            .setTable(table)
-            .setTableMetadata(ProtoUtil.toTableMetadata(metadata))
-            .putAllOptions(options)
-            .build());
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    execute(
+        () ->
+            stub.createTable(
+                CreateTableRequest.newBuilder()
+                    .setNamespace(namespace)
+                    .setTable(table)
+                    .setTableMetadata(ProtoUtil.toTableMetadata(metadata))
+                    .putAllOptions(options)
+                    .build()));
   }
 
   @Override
-  public void dropTable(String namespace, String table) {
-    stub.dropTable(DropTableRequest.newBuilder().setNamespace(namespace).setTable(table).build());
+  public void dropTable(String namespace, String table) throws ExecutionException {
+    execute(
+        () ->
+            stub.dropTable(
+                DropTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
   }
 
   @Override
-  public void truncateTable(String namespace, String table) {
-    stub.truncateTable(
-        TruncateTableRequest.newBuilder().setNamespace(namespace).setTable(table).build());
+  public void truncateTable(String namespace, String table) throws ExecutionException {
+    execute(
+        () ->
+            stub.truncateTable(
+                TruncateTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) {
-    return metadataManager.getTableMetadata(namespace, table);
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+    return execute(() -> metadataManager.getTableMetadata(namespace, table));
+  }
+
+  private static <T> T execute(Supplier<T> supplier) throws ExecutionException {
+    try {
+      return supplier.get();
+    } catch (StatusRuntimeException e) {
+      if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+        throw new IllegalArgumentException(e.getMessage());
+      }
+      throw new ExecutionException(e.getMessage());
+    }
   }
 
   @Override
