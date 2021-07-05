@@ -8,94 +8,94 @@ public interface TransactionRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.rpc.StartTransactionRequest start_transaction_request = 1;</code>
-   * @return Whether the startTransactionRequest field is set.
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * @return Whether the startRequest field is set.
    */
-  boolean hasStartTransactionRequest();
+  boolean hasStartRequest();
   /**
-   * <code>.rpc.StartTransactionRequest start_transaction_request = 1;</code>
-   * @return The startTransactionRequest.
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
+   * @return The startRequest.
    */
-  com.scalar.db.rpc.StartTransactionRequest getStartTransactionRequest();
+  com.scalar.db.rpc.TransactionRequest.StartRequest getStartRequest();
   /**
-   * <code>.rpc.StartTransactionRequest start_transaction_request = 1;</code>
+   * <code>.rpc.TransactionRequest.StartRequest start_request = 1;</code>
    */
-  com.scalar.db.rpc.StartTransactionRequestOrBuilder getStartTransactionRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.StartRequestOrBuilder getStartRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionalGetRequest transactional_get_request = 2;</code>
-   * @return Whether the transactionalGetRequest field is set.
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * @return Whether the getRequest field is set.
    */
-  boolean hasTransactionalGetRequest();
+  boolean hasGetRequest();
   /**
-   * <code>.rpc.TransactionalGetRequest transactional_get_request = 2;</code>
-   * @return The transactionalGetRequest.
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
+   * @return The getRequest.
    */
-  com.scalar.db.rpc.TransactionalGetRequest getTransactionalGetRequest();
+  com.scalar.db.rpc.TransactionRequest.GetRequest getGetRequest();
   /**
-   * <code>.rpc.TransactionalGetRequest transactional_get_request = 2;</code>
+   * <code>.rpc.TransactionRequest.GetRequest get_request = 2;</code>
    */
-  com.scalar.db.rpc.TransactionalGetRequestOrBuilder getTransactionalGetRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.GetRequestOrBuilder getGetRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionalScanRequest transactional_scan_request = 3;</code>
-   * @return Whether the transactionalScanRequest field is set.
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * @return Whether the scanRequest field is set.
    */
-  boolean hasTransactionalScanRequest();
+  boolean hasScanRequest();
   /**
-   * <code>.rpc.TransactionalScanRequest transactional_scan_request = 3;</code>
-   * @return The transactionalScanRequest.
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
+   * @return The scanRequest.
    */
-  com.scalar.db.rpc.TransactionalScanRequest getTransactionalScanRequest();
+  com.scalar.db.rpc.TransactionRequest.ScanRequest getScanRequest();
   /**
-   * <code>.rpc.TransactionalScanRequest transactional_scan_request = 3;</code>
+   * <code>.rpc.TransactionRequest.ScanRequest scan_request = 3;</code>
    */
-  com.scalar.db.rpc.TransactionalScanRequestOrBuilder getTransactionalScanRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.ScanRequestOrBuilder getScanRequestOrBuilder();
 
   /**
-   * <code>.rpc.TransactionalMutateRequest transactional_mutate_request = 4;</code>
-   * @return Whether the transactionalMutateRequest field is set.
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * @return Whether the mutateRequest field is set.
    */
-  boolean hasTransactionalMutateRequest();
+  boolean hasMutateRequest();
   /**
-   * <code>.rpc.TransactionalMutateRequest transactional_mutate_request = 4;</code>
-   * @return The transactionalMutateRequest.
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
+   * @return The mutateRequest.
    */
-  com.scalar.db.rpc.TransactionalMutateRequest getTransactionalMutateRequest();
+  com.scalar.db.rpc.TransactionRequest.MutateRequest getMutateRequest();
   /**
-   * <code>.rpc.TransactionalMutateRequest transactional_mutate_request = 4;</code>
+   * <code>.rpc.TransactionRequest.MutateRequest mutate_request = 4;</code>
    */
-  com.scalar.db.rpc.TransactionalMutateRequestOrBuilder getTransactionalMutateRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.MutateRequestOrBuilder getMutateRequestOrBuilder();
 
   /**
-   * <code>.rpc.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return Whether the commitRequest field is set.
    */
   boolean hasCommitRequest();
   /**
-   * <code>.rpc.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    * @return The commitRequest.
    */
-  com.scalar.db.rpc.CommitRequest getCommitRequest();
+  com.scalar.db.rpc.TransactionRequest.CommitRequest getCommitRequest();
   /**
-   * <code>.rpc.CommitRequest commit_request = 5;</code>
+   * <code>.rpc.TransactionRequest.CommitRequest commit_request = 5;</code>
    */
-  com.scalar.db.rpc.CommitRequestOrBuilder getCommitRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.CommitRequestOrBuilder getCommitRequestOrBuilder();
 
   /**
-   * <code>.rpc.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return Whether the abortRequest field is set.
    */
   boolean hasAbortRequest();
   /**
-   * <code>.rpc.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    * @return The abortRequest.
    */
-  com.scalar.db.rpc.AbortRequest getAbortRequest();
+  com.scalar.db.rpc.TransactionRequest.AbortRequest getAbortRequest();
   /**
-   * <code>.rpc.AbortRequest abort_request = 6;</code>
+   * <code>.rpc.TransactionRequest.AbortRequest abort_request = 6;</code>
    */
-  com.scalar.db.rpc.AbortRequestOrBuilder getAbortRequestOrBuilder();
+  com.scalar.db.rpc.TransactionRequest.AbortRequestOrBuilder getAbortRequestOrBuilder();
 
   public com.scalar.db.rpc.TransactionRequest.RequestCase getRequestCase();
 }

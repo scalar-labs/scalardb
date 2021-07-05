@@ -8,49 +8,49 @@ public interface TransactionResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.rpc.StartTransactionResponse start_transaction_response = 1;</code>
-   * @return Whether the startTransactionResponse field is set.
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
+   * @return Whether the startResponse field is set.
    */
-  boolean hasStartTransactionResponse();
+  boolean hasStartResponse();
   /**
-   * <code>.rpc.StartTransactionResponse start_transaction_response = 1;</code>
-   * @return The startTransactionResponse.
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
+   * @return The startResponse.
    */
-  com.scalar.db.rpc.StartTransactionResponse getStartTransactionResponse();
+  com.scalar.db.rpc.TransactionResponse.StartResponse getStartResponse();
   /**
-   * <code>.rpc.StartTransactionResponse start_transaction_response = 1;</code>
+   * <code>.rpc.TransactionResponse.StartResponse start_response = 1;</code>
    */
-  com.scalar.db.rpc.StartTransactionResponseOrBuilder getStartTransactionResponseOrBuilder();
+  com.scalar.db.rpc.TransactionResponse.StartResponseOrBuilder getStartResponseOrBuilder();
 
   /**
-   * <code>.rpc.TransactionalGetResponse transactional_get_response = 2;</code>
-   * @return Whether the transactionalGetResponse field is set.
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
+   * @return Whether the getResponse field is set.
    */
-  boolean hasTransactionalGetResponse();
+  boolean hasGetResponse();
   /**
-   * <code>.rpc.TransactionalGetResponse transactional_get_response = 2;</code>
-   * @return The transactionalGetResponse.
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
+   * @return The getResponse.
    */
-  com.scalar.db.rpc.TransactionalGetResponse getTransactionalGetResponse();
+  com.scalar.db.rpc.TransactionResponse.GetResponse getGetResponse();
   /**
-   * <code>.rpc.TransactionalGetResponse transactional_get_response = 2;</code>
+   * <code>.rpc.TransactionResponse.GetResponse get_response = 2;</code>
    */
-  com.scalar.db.rpc.TransactionalGetResponseOrBuilder getTransactionalGetResponseOrBuilder();
+  com.scalar.db.rpc.TransactionResponse.GetResponseOrBuilder getGetResponseOrBuilder();
 
   /**
-   * <code>.rpc.TransactionalScanResponse transactional_scan_response = 3;</code>
-   * @return Whether the transactionalScanResponse field is set.
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
+   * @return Whether the scanResponse field is set.
    */
-  boolean hasTransactionalScanResponse();
+  boolean hasScanResponse();
   /**
-   * <code>.rpc.TransactionalScanResponse transactional_scan_response = 3;</code>
-   * @return The transactionalScanResponse.
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
+   * @return The scanResponse.
    */
-  com.scalar.db.rpc.TransactionalScanResponse getTransactionalScanResponse();
+  com.scalar.db.rpc.TransactionResponse.ScanResponse getScanResponse();
   /**
-   * <code>.rpc.TransactionalScanResponse transactional_scan_response = 3;</code>
+   * <code>.rpc.TransactionResponse.ScanResponse scan_response = 3;</code>
    */
-  com.scalar.db.rpc.TransactionalScanResponseOrBuilder getTransactionalScanResponseOrBuilder();
+  com.scalar.db.rpc.TransactionResponse.ScanResponseOrBuilder getScanResponseOrBuilder();
 
   /**
    * <code>.rpc.TransactionResponse.Error error = 4;</code>

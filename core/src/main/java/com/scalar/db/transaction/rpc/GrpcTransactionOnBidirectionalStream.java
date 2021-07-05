@@ -12,17 +12,17 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.rpc.AbortRequest;
-import com.scalar.db.rpc.CommitRequest;
 import com.scalar.db.rpc.DistributedTransactionGrpc.DistributedTransactionStub;
-import com.scalar.db.rpc.StartTransactionRequest;
 import com.scalar.db.rpc.TransactionRequest;
+import com.scalar.db.rpc.TransactionRequest.AbortRequest;
+import com.scalar.db.rpc.TransactionRequest.CommitRequest;
+import com.scalar.db.rpc.TransactionRequest.GetRequest;
+import com.scalar.db.rpc.TransactionRequest.MutateRequest;
+import com.scalar.db.rpc.TransactionRequest.ScanRequest;
+import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
-import com.scalar.db.rpc.TransactionalGetRequest;
-import com.scalar.db.rpc.TransactionalGetResponse;
-import com.scalar.db.rpc.TransactionalMutateRequest;
-import com.scalar.db.rpc.TransactionalScanRequest;
+import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
 import io.grpc.Status;
@@ -95,16 +95,16 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
     throwIfTransactionFinished();
 
-    StartTransactionRequest request;
+    StartRequest request;
     if (transactionId == null) {
-      request = StartTransactionRequest.getDefaultInstance();
+      request = StartRequest.getDefaultInstance();
     } else {
-      request = StartTransactionRequest.newBuilder().setTransactionId(transactionId).build();
+      request = StartRequest.newBuilder().setTransactionId(transactionId).build();
     }
     ResponseOrError responseOrError =
-        sendRequest(TransactionRequest.newBuilder().setStartTransactionRequest(request).build());
+        sendRequest(TransactionRequest.newBuilder().setStartRequest(request).build());
     throwIfErrorForStart(responseOrError);
-    return responseOrError.getResponse().getStartTransactionResponse().getTransactionId();
+    return responseOrError.getResponse().getStartResponse().getTransactionId();
   }
 
   private void throwIfErrorForStart(ResponseOrError responseOrError) throws TransactionException {
@@ -138,16 +138,14 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
     ResponseOrError responseOrError =
         sendRequest(
             TransactionRequest.newBuilder()
-                .setTransactionalGetRequest(
-                    TransactionalGetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
+                .setGetRequest(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
                 .build());
     throwIfErrorForCrud(responseOrError);
 
-    TransactionalGetResponse transactionalGetResponse =
-        responseOrError.getResponse().getTransactionalGetResponse();
-    if (transactionalGetResponse.hasResult()) {
+    GetResponse getResponse = responseOrError.getResponse().getGetResponse();
+    if (getResponse.hasResult()) {
       TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
-      return Optional.of(ProtoUtil.toResult(transactionalGetResponse.getResult(), tableMetadata));
+      return Optional.of(ProtoUtil.toResult(getResponse.getResult(), tableMetadata));
     }
 
     return Optional.empty();
@@ -159,13 +157,12 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
     ResponseOrError responseOrError =
         sendRequest(
             TransactionRequest.newBuilder()
-                .setTransactionalScanRequest(
-                    TransactionalScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
+                .setScanRequest(ScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
                 .build());
     throwIfErrorForCrud(responseOrError);
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-    return responseOrError.getResponse().getTransactionalScanResponse().getResultList().stream()
+    return responseOrError.getResponse().getScanResponse().getResultList().stream()
         .map(r -> ProtoUtil.toResult(r, tableMetadata))
         .collect(Collectors.toList());
   }
@@ -176,9 +173,8 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
     ResponseOrError responseOrError =
         sendRequest(
             TransactionRequest.newBuilder()
-                .setTransactionalMutateRequest(
-                    TransactionalMutateRequest.newBuilder()
-                        .addMutation(ProtoUtil.toMutation(mutation)))
+                .setMutateRequest(
+                    MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)))
                 .build());
     throwIfErrorForCrud(responseOrError);
   }
@@ -186,10 +182,10 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
     throwIfTransactionFinished();
 
-    TransactionalMutateRequest.Builder builder = TransactionalMutateRequest.newBuilder();
+    MutateRequest.Builder builder = MutateRequest.newBuilder();
     mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
     ResponseOrError responseOrError =
-        sendRequest(TransactionRequest.newBuilder().setTransactionalMutateRequest(builder).build());
+        sendRequest(TransactionRequest.newBuilder().setMutateRequest(builder).build());
     throwIfErrorForCrud(responseOrError);
   }
 

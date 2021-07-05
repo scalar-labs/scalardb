@@ -11,22 +11,22 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.rpc.AbortRequest;
-import com.scalar.db.rpc.CommitRequest;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
-import com.scalar.db.rpc.StartTransactionRequest;
-import com.scalar.db.rpc.StartTransactionResponse;
 import com.scalar.db.rpc.TransactionRequest;
+import com.scalar.db.rpc.TransactionRequest.AbortRequest;
+import com.scalar.db.rpc.TransactionRequest.CommitRequest;
+import com.scalar.db.rpc.TransactionRequest.GetRequest;
+import com.scalar.db.rpc.TransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TransactionRequest.RequestCase;
+import com.scalar.db.rpc.TransactionRequest.ScanRequest;
+import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
-import com.scalar.db.rpc.TransactionalGetRequest;
-import com.scalar.db.rpc.TransactionalGetResponse;
-import com.scalar.db.rpc.TransactionalMutateRequest;
-import com.scalar.db.rpc.TransactionalScanRequest;
-import com.scalar.db.rpc.TransactionalScanResponse;
+import com.scalar.db.rpc.TransactionResponse.GetResponse;
+import com.scalar.db.rpc.TransactionResponse.ScanResponse;
+import com.scalar.db.rpc.TransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
@@ -94,7 +94,7 @@ public class DistributedTransactionService
 
     @Override
     public void onNext(TransactionRequest request) {
-      if (request.getRequestCase() == RequestCase.START_TRANSACTION_REQUEST) {
+      if (request.getRequestCase() == RequestCase.START_REQUEST) {
         startTransaction(request);
       } else {
         executeTransaction(request);
@@ -108,7 +108,7 @@ public class DistributedTransactionService
       }
 
       try {
-        StartTransactionRequest request = transactionRequest.getStartTransactionRequest();
+        StartRequest request = transactionRequest.getStartRequest();
         if (!request.hasTransactionId()) {
           transaction = manager.start();
         } else {
@@ -116,10 +116,8 @@ public class DistributedTransactionService
         }
         responseObserver.onNext(
             TransactionResponse.newBuilder()
-                .setStartTransactionResponse(
-                    StartTransactionResponse.newBuilder()
-                        .setTransactionId(transaction.getId())
-                        .build())
+                .setStartResponse(
+                    StartResponse.newBuilder().setTransactionId(transaction.getId()).build())
                 .build());
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
@@ -142,14 +140,14 @@ public class DistributedTransactionService
 
       boolean completed = false;
       switch (request.getRequestCase()) {
-        case TRANSACTIONAL_GET_REQUEST:
-          get(request.getTransactionalGetRequest(), responseBuilder);
+        case GET_REQUEST:
+          get(request.getGetRequest(), responseBuilder);
           break;
-        case TRANSACTIONAL_SCAN_REQUEST:
-          scan(request.getTransactionalScanRequest(), responseBuilder);
+        case SCAN_REQUEST:
+          scan(request.getScanRequest(), responseBuilder);
           break;
-        case TRANSACTIONAL_MUTATE_REQUEST:
-          mutate(request.getTransactionalMutateRequest(), responseBuilder);
+        case MUTATE_REQUEST:
+          mutate(request.getMutateRequest(), responseBuilder);
           break;
         case COMMIT_REQUEST:
           commit(request.getCommitRequest(), responseBuilder);
@@ -183,33 +181,31 @@ public class DistributedTransactionService
     @Override
     public void onCompleted() {}
 
-    private void get(TransactionalGetRequest request, TransactionResponse.Builder responseBuilder) {
+    private void get(GetRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
             Get get = ProtoUtil.toGet(request.getGet());
             Optional<Result> result = transaction.get(get);
-            TransactionalGetResponse.Builder builder = TransactionalGetResponse.newBuilder();
+            GetResponse.Builder builder = GetResponse.newBuilder();
             result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
-            responseBuilder.setTransactionalGetResponse(builder);
+            responseBuilder.setGetResponse(builder);
           },
           responseBuilder);
     }
 
-    private void scan(
-        TransactionalScanRequest request, TransactionResponse.Builder responseBuilder) {
+    private void scan(ScanRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
             Scan scan = ProtoUtil.toScan(request.getScan());
             List<Result> results = transaction.scan(scan);
-            TransactionalScanResponse.Builder builder = TransactionalScanResponse.newBuilder();
+            ScanResponse.Builder builder = ScanResponse.newBuilder();
             results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
-            responseBuilder.setTransactionalScanResponse(builder);
+            responseBuilder.setScanResponse(builder);
           },
           responseBuilder);
     }
 
-    private void mutate(
-        TransactionalMutateRequest request, TransactionResponse.Builder responseBuilder) {
+    private void mutate(MutateRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () ->
               transaction.mutate(
