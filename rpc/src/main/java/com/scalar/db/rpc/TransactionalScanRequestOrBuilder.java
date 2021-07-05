@@ -8,18 +8,6 @@ public interface TransactionalScanRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string transaction_id = 1;</code>
-   * @return The transactionId.
-   */
-  java.lang.String getTransactionId();
-  /**
-   * <code>string transaction_id = 1;</code>
-   * @return The bytes for transactionId.
-   */
-  com.google.protobuf.ByteString
-      getTransactionIdBytes();
-
-  /**
    * <code>.rpc.Scan scan = 2;</code>
    * @return Whether the scan field is set.
    */

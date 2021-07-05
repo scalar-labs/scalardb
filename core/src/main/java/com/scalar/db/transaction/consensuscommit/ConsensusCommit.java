@@ -19,10 +19,10 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.Utility;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO : make it thread-safe
 /**
  * A transaction manager that implements a transaction protocol on the basis of two-phase commit on
  * the consensus of an underlining storage.
@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
  * variant of snapshot isolation (SI). This snapshot isolation could cause read skew anomalies in
  * addition to write skew and read-only anomalies, which are known to be usual SI anomalies.
  */
+@NotThreadSafe
 public class ConsensusCommit implements DistributedTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;

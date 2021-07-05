@@ -1,4 +1,4 @@
-package com.scalar.db.server;
+package com.scalar.db.util;
 
 @FunctionalInterface
 public interface ThrowableRunnable<T extends Throwable> {

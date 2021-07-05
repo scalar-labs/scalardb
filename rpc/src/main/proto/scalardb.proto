@@ -166,7 +166,7 @@ message CloseScannerRequest {
 }
 
 message MutateRequest {
-  repeated Mutation mutations = 1;
+  repeated Mutation mutation = 1;
 }
 
 // DistributedStorageAdmin
@@ -229,24 +229,44 @@ message GetTableMetadataResponse {
 // A service and messages for DistributedTransaction
 
 service DistributedTransaction {
-  rpc Start (StartTransactionRequest) returns (StartTransactionResponse) {
+  rpc Transaction (stream TransactionRequest) returns (stream TransactionResponse) {
   }
-  rpc Get (TransactionalGetRequest) returns (TransactionalGetResponse) {
+  rpc GetState (GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
-  rpc Scan (TransactionalScanRequest) returns (TransactionalScanResponse) {
+}
+
+message TransactionRequest {
+  oneof request {
+    StartTransactionRequest start_transaction_request = 1;
+    TransactionalGetRequest transactional_get_request = 2;
+    TransactionalScanRequest transactional_scan_request = 3;
+    TransactionalMutateRequest transactional_mutate_request = 4;
+    CommitRequest commit_request = 5;
+    AbortRequest abort_request = 6;
   }
-  rpc Mutate (TransactionalMutateRequest) returns (google.protobuf.Empty) {
+}
+
+message TransactionResponse {
+  message Error {
+    enum ErrorCode {
+      INVALID_ARGUMENT = 0;
+      CONFLICT = 1;
+      UNKNOWN_TRANSACTION = 2;
+      OTHER = 3;
+    }
+    ErrorCode error_code = 1;
+    string message = 2;
   }
-  rpc Commit (CommitRequest) returns (google.protobuf.Empty) {
-  }
-  rpc Abort (AbortRequest) returns (google.protobuf.Empty) {
-  }
-  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  oneof response {
+    StartTransactionResponse start_transaction_response = 1;
+    TransactionalGetResponse transactional_get_response = 2;
+    TransactionalScanResponse transactional_scan_response = 3;
+    Error error = 4;
   }
 }
 
 message StartTransactionRequest {
-  string transaction_id = 1;
+  optional string transaction_id = 1;
 }
 
 message StartTransactionResponse {
@@ -254,7 +274,6 @@ message StartTransactionResponse {
 }
 
 message TransactionalGetRequest {
-  string transaction_id = 1;
   Get get = 2;
 }
 
@@ -263,7 +282,6 @@ message TransactionalGetResponse {
 }
 
 message TransactionalScanRequest {
-  string transaction_id = 1;
   Scan scan = 2;
 }
 
@@ -272,16 +290,13 @@ message TransactionalScanResponse {
 }
 
 message TransactionalMutateRequest {
-  string transaction_id = 1;
-  repeated Mutation mutations = 2;
+  repeated Mutation mutation = 2;
 }
 
 message CommitRequest {
-  string transaction_id = 1;
 }
 
 message AbortRequest {
-  string transaction_id = 1;
 }
 
 message GetTransactionStateRequest {

@@ -163,9 +163,7 @@ public class DistributedStorageServiceTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
-        MutateRequest.newBuilder()
-            .addMutations(ProtoUtil.toMutation(new Put(partitionKey)))
-            .build();
+        MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
 
@@ -185,7 +183,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutations(
+            .addAllMutation(
                 Arrays.asList(
                     ProtoUtil.toMutation(new Put(partitionKey)),
                     ProtoUtil.toMutation(new Put(partitionKey))))
@@ -209,7 +207,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addMutations(ProtoUtil.toMutation(new Delete(partitionKey)))
+            .addMutation(ProtoUtil.toMutation(new Delete(partitionKey)))
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -230,7 +228,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutations(
+            .addAllMutation(
                 Arrays.asList(
                     ProtoUtil.toMutation(new Delete(partitionKey)),
                     ProtoUtil.toMutation(new Delete(partitionKey))))
@@ -254,7 +252,7 @@ public class DistributedStorageServiceTest {
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
         MutateRequest.newBuilder()
-            .addAllMutations(
+            .addAllMutation(
                 Arrays.asList(
                     ProtoUtil.toMutation(new Put(partitionKey)),
                     ProtoUtil.toMutation(new Delete(partitionKey))))
@@ -277,9 +275,7 @@ public class DistributedStorageServiceTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
-        MutateRequest.newBuilder()
-            .addMutations(ProtoUtil.toMutation(new Put(partitionKey)))
-            .build();
+        MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
     doThrow(IllegalArgumentException.class).when(storage).mutate(anyList());
@@ -299,9 +295,7 @@ public class DistributedStorageServiceTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
-        MutateRequest.newBuilder()
-            .addMutations(ProtoUtil.toMutation(new Put(partitionKey)))
-            .build();
+        MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
     doThrow(NoMutationException.class).when(storage).mutate(anyList());
@@ -321,9 +315,7 @@ public class DistributedStorageServiceTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
-        MutateRequest.newBuilder()
-            .addMutations(ProtoUtil.toMutation(new Put(partitionKey)))
-            .build();
+        MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
     doThrow(ExecutionException.class).when(storage).mutate(anyList());
