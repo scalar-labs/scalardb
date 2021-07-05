@@ -10,6 +10,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CoordinatorException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.Before;
@@ -126,6 +127,47 @@ public class ConsensusCommitManagerTest {
 
     // Act
     TransactionState actual = manager.getState(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(TransactionState.UNKNOWN);
+  }
+
+  @Test
+  public void abort_CommitHandlerReturnsAborted_ShouldReturnTheState()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    TransactionState expected = TransactionState.ABORTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.abort(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void abort_CommitHandlerReturnsCommitted_ShouldReturnTheState()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    TransactionState expected = TransactionState.COMMITTED;
+    when(commit.abort(ANY_TX_ID)).thenReturn(expected);
+
+    // Act
+    TransactionState actual = manager.abort(ANY_TX_ID);
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void abort_CommitHandlerThrowsUnknownTransactionStatusException_ShouldReturnUnknown()
+      throws UnknownTransactionStatusException {
+    // Arrange
+    when(commit.abort(ANY_TX_ID)).thenThrow(UnknownTransactionStatusException.class);
+
+    // Act
+    TransactionState actual = manager.abort(ANY_TX_ID);
 
     // Assert
     assertThat(actual).isEqualTo(TransactionState.UNKNOWN);

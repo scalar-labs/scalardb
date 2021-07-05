@@ -11,6 +11,7 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.CoordinatorException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import java.util.UUID;
@@ -158,6 +159,16 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     }
     // Either no state exists or the exception is thrown
     return TransactionState.UNKNOWN;
+  }
+
+  @Override
+  public TransactionState abort(String txId) {
+    checkArgument(!Strings.isNullOrEmpty(txId));
+    try {
+      return commit.abort(txId);
+    } catch (UnknownTransactionStatusException ignored) {
+      return TransactionState.UNKNOWN;
+    }
   }
 
   @Override

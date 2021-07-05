@@ -209,6 +209,16 @@ public final class ScalarDbProto {
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_rpc_AbortRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_rpc_AbortRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_rpc_AbortResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_rpc_AbortResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -319,35 +329,39 @@ public final class ScalarDbProto {
       "TION\020\002\022\t\n\005OTHER\020\003B\n\n\010response\"4\n\032GetTran" +
       "sactionStateRequest\022\026\n\016transaction_id\030\001 " +
       "\001(\t\"C\n\033GetTransactionStateResponse\022$\n\005st" +
-      "ate\030\001 \001(\0162\025.rpc.TransactionState*a\n\013Cons" +
-      "istency\022\032\n\026CONSISTENCY_SEQUENTIAL\020\000\022\030\n\024C" +
-      "ONSISTENCY_EVENTUAL\020\001\022\034\n\030CONSISTENCY_LIN" +
-      "EARIZABLE\020\002*&\n\005Order\022\r\n\tORDER_ASC\020\000\022\016\n\nO" +
-      "RDER_DESC\020\001*\235\001\n\010DataType\022\025\n\021DATA_TYPE_BO" +
-      "OLEAN\020\000\022\021\n\rDATA_TYPE_INT\020\001\022\024\n\020DATA_TYPE_" +
-      "BIGINT\020\002\022\023\n\017DATA_TYPE_FLOAT\020\003\022\024\n\020DATA_TY" +
-      "PE_DOUBLE\020\004\022\022\n\016DATA_TYPE_TEXT\020\005\022\022\n\016DATA_" +
-      "TYPE_BLOB\020\006*q\n\020TransactionState\022\037\n\033TRANS" +
-      "ACTION_STATE_COMMITTED\020\000\022\035\n\031TRANSACTION_" +
-      "STATE_ABORTED\020\001\022\035\n\031TRANSACTION_STATE_UNK" +
-      "NOWN\020\0022\253\001\n\022DistributedStorage\022*\n\003Get\022\017.r" +
-      "pc.GetRequest\032\020.rpc.GetResponse\"\000\0221\n\004Sca" +
-      "n\022\020.rpc.ScanRequest\032\021.rpc.ScanResponse\"\000" +
-      "(\0010\001\0226\n\006Mutate\022\022.rpc.MutateRequest\032\026.goo" +
-      "gle.protobuf.Empty\"\0002\262\002\n\027DistributedStor" +
-      "ageAdmin\022@\n\013CreateTable\022\027.rpc.CreateTabl" +
-      "eRequest\032\026.google.protobuf.Empty\"\000\022<\n\tDr" +
-      "opTable\022\025.rpc.DropTableRequest\032\026.google." +
-      "protobuf.Empty\"\000\022D\n\rTruncateTable\022\031.rpc." +
-      "TruncateTableRequest\032\026.google.protobuf.E" +
-      "mpty\"\000\022Q\n\020GetTableMetadata\022\034.rpc.GetTabl" +
-      "eMetadataRequest\032\035.rpc.GetTableMetadataR" +
-      "esponse\"\0002\261\001\n\026DistributedTransaction\022F\n\013" +
-      "Transaction\022\027.rpc.TransactionRequest\032\030.r" +
-      "pc.TransactionResponse\"\000(\0010\001\022O\n\010GetState" +
-      "\022\037.rpc.GetTransactionStateRequest\032 .rpc." +
-      "GetTransactionStateResponse\"\000B$\n\021com.sca" +
-      "lar.db.rpcB\rScalarDbProtoP\001b\006proto3"
+      "ate\030\001 \001(\0162\025.rpc.TransactionState\"&\n\014Abor" +
+      "tRequest\022\026\n\016transaction_id\030\001 \001(\t\"5\n\rAbor" +
+      "tResponse\022$\n\005state\030\001 \001(\0162\025.rpc.Transacti" +
+      "onState*a\n\013Consistency\022\032\n\026CONSISTENCY_SE" +
+      "QUENTIAL\020\000\022\030\n\024CONSISTENCY_EVENTUAL\020\001\022\034\n\030" +
+      "CONSISTENCY_LINEARIZABLE\020\002*&\n\005Order\022\r\n\tO" +
+      "RDER_ASC\020\000\022\016\n\nORDER_DESC\020\001*\235\001\n\010DataType\022" +
+      "\025\n\021DATA_TYPE_BOOLEAN\020\000\022\021\n\rDATA_TYPE_INT\020" +
+      "\001\022\024\n\020DATA_TYPE_BIGINT\020\002\022\023\n\017DATA_TYPE_FLO" +
+      "AT\020\003\022\024\n\020DATA_TYPE_DOUBLE\020\004\022\022\n\016DATA_TYPE_" +
+      "TEXT\020\005\022\022\n\016DATA_TYPE_BLOB\020\006*q\n\020Transactio" +
+      "nState\022\037\n\033TRANSACTION_STATE_COMMITTED\020\000\022" +
+      "\035\n\031TRANSACTION_STATE_ABORTED\020\001\022\035\n\031TRANSA" +
+      "CTION_STATE_UNKNOWN\020\0022\253\001\n\022DistributedSto" +
+      "rage\022*\n\003Get\022\017.rpc.GetRequest\032\020.rpc.GetRe" +
+      "sponse\"\000\0221\n\004Scan\022\020.rpc.ScanRequest\032\021.rpc" +
+      ".ScanResponse\"\000(\0010\001\0226\n\006Mutate\022\022.rpc.Muta" +
+      "teRequest\032\026.google.protobuf.Empty\"\0002\262\002\n\027" +
+      "DistributedStorageAdmin\022@\n\013CreateTable\022\027" +
+      ".rpc.CreateTableRequest\032\026.google.protobu" +
+      "f.Empty\"\000\022<\n\tDropTable\022\025.rpc.DropTableRe" +
+      "quest\032\026.google.protobuf.Empty\"\000\022D\n\rTrunc" +
+      "ateTable\022\031.rpc.TruncateTableRequest\032\026.go" +
+      "ogle.protobuf.Empty\"\000\022Q\n\020GetTableMetadat" +
+      "a\022\034.rpc.GetTableMetadataRequest\032\035.rpc.Ge" +
+      "tTableMetadataResponse\"\0002\343\001\n\026Distributed" +
+      "Transaction\022F\n\013Transaction\022\027.rpc.Transac" +
+      "tionRequest\032\030.rpc.TransactionResponse\"\000(" +
+      "\0010\001\022O\n\010GetState\022\037.rpc.GetTransactionStat" +
+      "eRequest\032 .rpc.GetTransactionStateRespon" +
+      "se\"\000\0220\n\005Abort\022\021.rpc.AbortRequest\032\022.rpc.A" +
+      "bortResponse\"\000B$\n\021com.scalar.db.rpcB\rSca" +
+      "larDbProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -587,6 +601,18 @@ public final class ScalarDbProto {
     internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetTransactionStateResponse_descriptor,
+        new java.lang.String[] { "State", });
+    internal_static_rpc_AbortRequest_descriptor =
+      getDescriptor().getMessageTypes().get(24);
+    internal_static_rpc_AbortRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_rpc_AbortRequest_descriptor,
+        new java.lang.String[] { "TransactionId", });
+    internal_static_rpc_AbortResponse_descriptor =
+      getDescriptor().getMessageTypes().get(25);
+    internal_static_rpc_AbortResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_rpc_AbortResponse_descriptor,
         new java.lang.String[] { "State", });
     com.google.protobuf.EmptyProto.getDescriptor();
   }

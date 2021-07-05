@@ -8,6 +8,8 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.rpc.AbortRequest;
+import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
@@ -152,6 +154,16 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
           GetTransactionStateResponse response =
               blockingStub.getState(
                   GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
+          return ProtoUtil.toTransactionState(response.getState());
+        });
+  }
+
+  @Override
+  public TransactionState abort(String txId) throws TransactionException {
+    return execute(
+        () -> {
+          AbortResponse response =
+              blockingStub.abort(AbortRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtil.toTransactionState(response.getState());
         });
   }

@@ -141,6 +141,11 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   }
 
   @Override
+  public TransactionState abort(String txId) {
+    return TransactionState.UNKNOWN; // always returns UNKNOWN
+  }
+
+  @Override
   public void close() {
     try {
       dataSource.close();

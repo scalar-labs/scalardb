@@ -123,6 +123,15 @@ public interface DistributedTransactionManager {
   TransactionState getState(String txId) throws TransactionException;
 
   /**
+   * Aborts a given transaction.
+   *
+   * @param txId a transaction ID
+   * @return {@link TransactionState}
+   * @throws TransactionException if aborting the given transaction failed
+   */
+  TransactionState abort(String txId) throws TransactionException;
+
+  /**
    * Closes connections to the cluster. The connections are shared among multiple services such as
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */

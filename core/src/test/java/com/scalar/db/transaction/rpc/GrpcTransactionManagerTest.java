@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
@@ -67,5 +68,38 @@ public class GrpcTransactionManagerTest {
 
     // Act Assert
     assertThatThrownBy(() -> manager.getState(ANY_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void abort_IsCalledWithoutAnyArguments_StubShouldBeCalledProperly()
+      throws TransactionException {
+    // Arrange
+    AbortResponse response = mock(AbortResponse.class);
+    when(response.getState()).thenReturn(TransactionState.TRANSACTION_STATE_ABORTED);
+    when(blockingStub.abort(any())).thenReturn(response);
+
+    // Act
+    manager.abort(ANY_ID);
+
+    // Assert
+    verify(blockingStub).abort(any());
+  }
+
+  @Test
+  public void abort_StubThrowsInvalidArgumentError_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    when(blockingStub.abort(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.abort(ANY_ID)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void abort_StubThrowsInternalError_ShouldThrowTransactionException() {
+    // Arrange
+    when(blockingStub.abort(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.abort(ANY_ID)).isInstanceOf(TransactionException.class);
   }
 }

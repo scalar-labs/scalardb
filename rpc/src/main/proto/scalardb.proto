@@ -214,6 +214,8 @@ service DistributedTransaction {
   }
   rpc GetState (GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
+  rpc Abort (AbortRequest) returns (AbortResponse) {
+  }
 }
 
 message TransactionRequest {
@@ -281,16 +283,24 @@ message TransactionResponse {
   }
 }
 
-message GetTransactionStateRequest {
-  string transaction_id = 1;
-}
-
 enum TransactionState {
   TRANSACTION_STATE_COMMITTED = 0;
   TRANSACTION_STATE_ABORTED = 1;
   TRANSACTION_STATE_UNKNOWN = 2;
 }
 
+message GetTransactionStateRequest {
+  string transaction_id = 1;
+}
+
 message GetTransactionStateResponse {
+  TransactionState state = 1;
+}
+
+message AbortRequest {
+  string transaction_id = 1;
+}
+
+message AbortResponse {
   TransactionState state = 1;
 }
