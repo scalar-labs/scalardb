@@ -38,14 +38,14 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class GrpcTransactionBidirectionalStream implements StreamObserver<TransactionResponse> {
+public class GrpcTransactionOnBidirectionalStream implements StreamObserver<TransactionResponse> {
 
   private final StreamObserver<TransactionRequest> requestObserver;
   private final GrpcTableMetadataManager metadataManager;
   private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finished = new AtomicBoolean();
 
-  public GrpcTransactionBidirectionalStream(
+  public GrpcTransactionOnBidirectionalStream(
       DistributedTransactionStub stub, GrpcTableMetadataManager metadataManager) {
     requestObserver = stub.transaction(this);
     this.metadataManager = metadataManager;

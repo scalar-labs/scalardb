@@ -20,14 +20,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class GrpcTransaction implements DistributedTransaction {
 
   private final String txId;
-  private final GrpcTransactionBidirectionalStream stream;
+  private final GrpcTransactionOnBidirectionalStream stream;
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   public GrpcTransaction(
       String txId,
-      GrpcTransactionBidirectionalStream stream,
+      GrpcTransactionOnBidirectionalStream stream,
       Optional<String> namespace,
       Optional<String> tableName) {
     this.txId = txId;

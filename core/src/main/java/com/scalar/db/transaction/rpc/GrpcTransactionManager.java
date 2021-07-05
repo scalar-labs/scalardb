@@ -92,16 +92,16 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
 
   @Override
   public GrpcTransaction start() throws TransactionException {
-    GrpcTransactionBidirectionalStream stream =
-        new GrpcTransactionBidirectionalStream(stub, metadataManager);
+    GrpcTransactionOnBidirectionalStream stream =
+        new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
     String transactionId = stream.startTransaction();
     return new GrpcTransaction(transactionId, stream, namespace, tableName);
   }
 
   @Override
   public GrpcTransaction start(String txId) throws TransactionException {
-    GrpcTransactionBidirectionalStream stream =
-        new GrpcTransactionBidirectionalStream(stub, metadataManager);
+    GrpcTransactionOnBidirectionalStream stream =
+        new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
     String transactionId = stream.startTransaction(txId);
     return new GrpcTransaction(transactionId, stream, namespace, tableName);
   }
