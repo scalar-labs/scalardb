@@ -30,6 +30,7 @@ $ cd docs/getting-started
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
+In this tutorial we use a json file named `emoney-storage.json` filled with the json object below . 
 
 ```json
 {
@@ -47,7 +48,7 @@ Here is a database schema for the sample application. For the supported data typ
 }
 ```
 
-Then, download the scalar schema standalone loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+To be able to store the schema in the database, download the scalar schema standalone loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
 For Cassandra
 ```
@@ -138,6 +139,7 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 ```
 
 Now we can run the application.
+If you run those command in the getting-started repository do not forget to create an empty file named `setting.gradle`.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
 $ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
@@ -147,6 +149,7 @@ $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 
 ## Set up database schema with transaction
 
 To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme.
+You can modify the json file `emoney-storage.json` by the json object bellow.
 
 ```json
 {
