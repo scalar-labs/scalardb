@@ -26,7 +26,7 @@ dependencies {
 * Sample applications by contributors/collaborators
   * [Q&A application (From Indetail Engineering team)](https://github.com/indetail-blockchain/getting-started-with-scalardb)
 
-## Contributing 
+## Contributing
 This library is mainly maintained by the Scalar Engineering Team, but of course we appreciate any help.
 
 * For asking questions, finding answers and helping other users, please go to [stackoverflow](https://stackoverflow.com/) and use [scalardb](https://stackoverflow.com/questions/tagged/scalardb) tag.
