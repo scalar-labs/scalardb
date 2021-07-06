@@ -30,7 +30,7 @@ $ cd docs/getting-started
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
-You can create a JSON file `emoney-transaction.json` by the JSON object below.
+You can create a JSON file `emoney-storage.json` with the JSON below.
 
 ```json
 {
@@ -147,8 +147,8 @@ $ ../../gradlew run --args="-mode storage -action pay -amount 100 -to merchant1 
 
 ## Set up database schema for transaction
 
-To apply transaction, we can just add a key `transaction` and value as `true` in Scalar DB scheme.
-You can modify the JSON file `emoney-storage.json` by the json object bellow.
+To use transaction, we can just add a key `transaction` and value as `true` in the Scalar DB scheme we used.
+You can create a JSON file `emoney-transaction.json` with the JSON bellow.
 
 ```json
 {
