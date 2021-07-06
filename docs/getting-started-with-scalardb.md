@@ -30,7 +30,7 @@ $ cd docs/getting-started
 
 First of all, you need to define how the data will be organized (a.k.a database schema) in the application with Scalar DB database schema.
 Here is a database schema for the sample application. For the supported data types, please see [this doc](schema.md) for more details.
-In this tutorial we use a json file named `emoney-storage.json` filled with the json object below . 
+In this tutorial we use a json file named `emoney-storage.json` filled with the json object below. 
 
 ```json
 {
@@ -139,7 +139,6 @@ public class ElectronicMoneyWithStorage extends ElectronicMoney {
 ```
 
 Now we can run the application.
-If you run those command in the getting-started repository do not forget to create an empty file named `setting.gradle`.
 ```
 $ ../../gradlew run --args="-mode storage -action charge -amount 1000 -to user1"
 $ ../../gradlew run --args="-mode storage -action charge -amount 0 -to merchant1"
