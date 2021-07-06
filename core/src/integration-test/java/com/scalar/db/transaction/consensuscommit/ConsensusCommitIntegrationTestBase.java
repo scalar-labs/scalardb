@@ -2094,6 +2094,30 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(thrown).doesNotThrowAnyException();
   }
 
+  @Test
+  public void start_CorrectTransactionIdGiven_ShouldNotThrowAnyExceptions() {
+    // Arrange
+    String transactionId = ANY_ID_1;
+
+    // Act Assert
+    assertThatCode(
+            () -> {
+              ConsensusCommit transaction = manager.start(transactionId);
+              transaction.commit();
+            })
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  public void start_EmptyTransactionIdGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    String transactionId = "";
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.start(transactionId))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   private ConsensusCommit prepareTransfer(
       int fromId, String fromTable, int toId, String toTable, int amount) throws CrudException {
     boolean differentTables = !toTable.equals(fromTable);

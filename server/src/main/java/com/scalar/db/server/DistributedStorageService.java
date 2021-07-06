@@ -19,6 +19,7 @@ import com.scalar.db.rpc.OpenScannerResponse;
 import com.scalar.db.rpc.ScanNextRequest;
 import com.scalar.db.rpc.ScanNextResponse;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
@@ -192,8 +193,8 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   public void mutate(MutateRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
-          List<Mutation> mutations = new ArrayList<>(request.getMutationsCount());
-          for (com.scalar.db.rpc.Mutation mutation : request.getMutationsList()) {
+          List<Mutation> mutations = new ArrayList<>(request.getMutationCount());
+          for (com.scalar.db.rpc.Mutation mutation : request.getMutationList()) {
             mutations.add(ProtoUtil.toMutation(mutation));
           }
           storage.mutate(mutations);

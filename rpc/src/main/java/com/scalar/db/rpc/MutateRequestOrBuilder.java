@@ -8,26 +8,26 @@ public interface MutateRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>repeated .rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutation = 1;</code>
    */
   java.util.List<com.scalar.db.rpc.Mutation> 
-      getMutationsList();
+      getMutationList();
   /**
-   * <code>repeated .rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutation = 1;</code>
    */
-  com.scalar.db.rpc.Mutation getMutations(int index);
+  com.scalar.db.rpc.Mutation getMutation(int index);
   /**
-   * <code>repeated .rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutation = 1;</code>
    */
-  int getMutationsCount();
+  int getMutationCount();
   /**
-   * <code>repeated .rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutation = 1;</code>
    */
   java.util.List<? extends com.scalar.db.rpc.MutationOrBuilder> 
-      getMutationsOrBuilderList();
+      getMutationOrBuilderList();
   /**
-   * <code>repeated .rpc.Mutation mutations = 1;</code>
+   * <code>repeated .rpc.Mutation mutation = 1;</code>
    */
-  com.scalar.db.rpc.MutationOrBuilder getMutationsOrBuilder(
+  com.scalar.db.rpc.MutationOrBuilder getMutationOrBuilder(
       int index);
 }

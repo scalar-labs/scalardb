@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.io.IOException;
@@ -48,7 +49,8 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable1_ShouldReturnMetadataFromCassandra() {
+  public void getTableMetadata_ForTable1_ShouldReturnMetadataFromCassandra()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -87,7 +89,7 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable2_ShouldReturnMetadataFromMySql() {
+  public void getTableMetadata_ForTable2_ShouldReturnMetadataFromMySql() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -119,7 +121,8 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable3_ShouldReturnMetadataFromDefaultAdmin() {
+  public void getTableMetadata_ForTable3_ShouldReturnMetadataFromDefaultAdmin()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
@@ -158,7 +161,7 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForWrongTable_ShouldReturnNull() {
+  public void getTableMetadata_ForWrongTable_ShouldReturnNull() throws ExecutionException {
     // Arrange
     String namespace = "wrong_ns";
     String table = "wrong_table";
@@ -171,7 +174,8 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromMySql() {
+  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromMySql()
+      throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;

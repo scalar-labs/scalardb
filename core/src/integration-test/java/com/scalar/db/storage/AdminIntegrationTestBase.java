@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Iterator;
 import org.junit.Test;
@@ -32,13 +33,15 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_MetadataShouldNotBeNull() {
+  public void getTableMetadata_CorrectTableGiven_MetadataShouldNotBeNull()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
     assertThat(tableMetadata).isNotNull();
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectPartitionKeyNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectPartitionKeyNames()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getPartitionKeyNames().size()).isEqualTo(2);
@@ -48,7 +51,8 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringKeyNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringKeyNames()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getClusteringKeyNames().size()).isEqualTo(2);
@@ -58,7 +62,8 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnNames()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getColumnNames().size()).isEqualTo(11);
@@ -76,7 +81,8 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnDataTypes() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectColumnDataTypes()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getColumnDataType(COL_NAME1)).isEqualTo(DataType.INT);
@@ -93,7 +99,8 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectClusteringOrders()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
@@ -110,7 +117,8 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectSecondaryIndexNames() {
+  public void getTableMetadata_CorrectTableGiven_ShouldReturnCorrectSecondaryIndexNames()
+      throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata(NAMESPACE, TABLE);
 
     assertThat(tableMetadata.getSecondaryIndexNames().size()).isEqualTo(2);
@@ -119,7 +127,7 @@ public abstract class AdminIntegrationTestBase {
   }
 
   @Test
-  public void getTableMetadata_WrongTableGiven_ShouldReturnNull() {
+  public void getTableMetadata_WrongTableGiven_ShouldReturnNull() throws ExecutionException {
     TableMetadata tableMetadata = admin.getTableMetadata("wrong_ns", "wrong_table");
     assertThat(tableMetadata).isNull();
   }

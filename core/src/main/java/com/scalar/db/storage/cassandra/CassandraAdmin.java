@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -33,22 +34,23 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options) {
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public void dropTable(String namespace, String table) {
+  public void dropTable(String namespace, String table) throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public void truncateTable(String namespace, String table) {
+  public void truncateTable(String namespace, String table) throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) {
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return metadataManager.getTableMetadata(fullNamespace(namespace), table);
   }
 

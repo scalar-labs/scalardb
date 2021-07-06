@@ -16,7 +16,6 @@ private static final long serialVersionUID = 0L;
     super(builder);
   }
   private CommitRequest() {
-    transactionId_ = "";
   }
 
   @java.lang.Override
@@ -49,12 +48,6 @@ private static final long serialVersionUID = 0L;
           case 0:
             done = true;
             break;
-          case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            transactionId_ = s;
-            break;
-          }
           default: {
             if (!parseUnknownField(
                 input, unknownFields, extensionRegistry, tag)) {
@@ -87,44 +80,6 @@ private static final long serialVersionUID = 0L;
             com.scalar.db.rpc.CommitRequest.class, com.scalar.db.rpc.CommitRequest.Builder.class);
   }
 
-  public static final int TRANSACTION_ID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object transactionId_;
-  /**
-   * <code>string transaction_id = 1;</code>
-   * @return The transactionId.
-   */
-  @java.lang.Override
-  public java.lang.String getTransactionId() {
-    java.lang.Object ref = transactionId_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      transactionId_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string transaction_id = 1;</code>
-   * @return The bytes for transactionId.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getTransactionIdBytes() {
-    java.lang.Object ref = transactionId_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      transactionId_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -139,9 +94,6 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getTransactionIdBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transactionId_);
-    }
     unknownFields.writeTo(output);
   }
 
@@ -151,9 +103,6 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!getTransactionIdBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transactionId_);
-    }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
     return size;
@@ -169,8 +118,6 @@ private static final long serialVersionUID = 0L;
     }
     com.scalar.db.rpc.CommitRequest other = (com.scalar.db.rpc.CommitRequest) obj;
 
-    if (!getTransactionId()
-        .equals(other.getTransactionId())) return false;
     if (!unknownFields.equals(other.unknownFields)) return false;
     return true;
   }
@@ -182,8 +129,6 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + TRANSACTION_ID_FIELD_NUMBER;
-    hash = (53 * hash) + getTransactionId().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -317,8 +262,6 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      transactionId_ = "";
-
       return this;
     }
 
@@ -345,7 +288,6 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.scalar.db.rpc.CommitRequest buildPartial() {
       com.scalar.db.rpc.CommitRequest result = new com.scalar.db.rpc.CommitRequest(this);
-      result.transactionId_ = transactionId_;
       onBuilt();
       return result;
     }
@@ -394,10 +336,6 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.scalar.db.rpc.CommitRequest other) {
       if (other == com.scalar.db.rpc.CommitRequest.getDefaultInstance()) return this;
-      if (!other.getTransactionId().isEmpty()) {
-        transactionId_ = other.transactionId_;
-        onChanged();
-      }
       this.mergeUnknownFields(other.unknownFields);
       onChanged();
       return this;
@@ -424,82 +362,6 @@ private static final long serialVersionUID = 0L;
           mergeFrom(parsedMessage);
         }
       }
-      return this;
-    }
-
-    private java.lang.Object transactionId_ = "";
-    /**
-     * <code>string transaction_id = 1;</code>
-     * @return The transactionId.
-     */
-    public java.lang.String getTransactionId() {
-      java.lang.Object ref = transactionId_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        transactionId_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string transaction_id = 1;</code>
-     * @return The bytes for transactionId.
-     */
-    public com.google.protobuf.ByteString
-        getTransactionIdBytes() {
-      java.lang.Object ref = transactionId_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        transactionId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string transaction_id = 1;</code>
-     * @param value The transactionId to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTransactionId(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      transactionId_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string transaction_id = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTransactionId() {
-      
-      transactionId_ = getDefaultInstance().getTransactionId();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string transaction_id = 1;</code>
-     * @param value The bytes for transactionId to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTransactionIdBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      transactionId_ = value;
-      onChanged();
       return this;
     }
     @java.lang.Override
