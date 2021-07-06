@@ -137,12 +137,12 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
 
   @Override
   public TransactionState getState(String txId) {
-    return TransactionState.UNKNOWN; // always returns UNKNOWN
+    throw new UnsupportedOperationException("this methods is not supported in JDBC transaction");
   }
 
   @Override
   public TransactionState abort(String txId) {
-    return TransactionState.UNKNOWN; // always returns UNKNOWN
+    throw new UnsupportedOperationException("this methods is not supported in JDBC transaction");
   }
 
   @Override
