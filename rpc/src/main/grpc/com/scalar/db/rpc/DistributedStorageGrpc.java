@@ -45,97 +45,35 @@ public final class DistributedStorageGrpc {
     return getGetMethod;
   }
 
-  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.OpenScannerRequest,
-      com.scalar.db.rpc.OpenScannerResponse> getOpenScannerMethod;
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanRequest,
+      com.scalar.db.rpc.ScanResponse> getScanMethod;
 
   @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "OpenScanner",
-      requestType = com.scalar.db.rpc.OpenScannerRequest.class,
-      responseType = com.scalar.db.rpc.OpenScannerResponse.class,
-      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.OpenScannerRequest,
-      com.scalar.db.rpc.OpenScannerResponse> getOpenScannerMethod() {
-    io.grpc.MethodDescriptor<com.scalar.db.rpc.OpenScannerRequest, com.scalar.db.rpc.OpenScannerResponse> getOpenScannerMethod;
-    if ((getOpenScannerMethod = DistributedStorageGrpc.getOpenScannerMethod) == null) {
+      fullMethodName = SERVICE_NAME + '/' + "Scan",
+      requestType = com.scalar.db.rpc.ScanRequest.class,
+      responseType = com.scalar.db.rpc.ScanResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanRequest,
+      com.scalar.db.rpc.ScanResponse> getScanMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanRequest, com.scalar.db.rpc.ScanResponse> getScanMethod;
+    if ((getScanMethod = DistributedStorageGrpc.getScanMethod) == null) {
       synchronized (DistributedStorageGrpc.class) {
-        if ((getOpenScannerMethod = DistributedStorageGrpc.getOpenScannerMethod) == null) {
-          DistributedStorageGrpc.getOpenScannerMethod = getOpenScannerMethod =
-              io.grpc.MethodDescriptor.<com.scalar.db.rpc.OpenScannerRequest, com.scalar.db.rpc.OpenScannerResponse>newBuilder()
-              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "OpenScanner"))
+        if ((getScanMethod = DistributedStorageGrpc.getScanMethod) == null) {
+          DistributedStorageGrpc.getScanMethod = getScanMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.ScanRequest, com.scalar.db.rpc.ScanResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Scan"))
               .setSampledToLocalTracing(true)
               .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.scalar.db.rpc.OpenScannerRequest.getDefaultInstance()))
+                  com.scalar.db.rpc.ScanRequest.getDefaultInstance()))
               .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.scalar.db.rpc.OpenScannerResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DistributedStorageMethodDescriptorSupplier("OpenScanner"))
+                  com.scalar.db.rpc.ScanResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageMethodDescriptorSupplier("Scan"))
               .build();
         }
       }
     }
-    return getOpenScannerMethod;
-  }
-
-  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanNextRequest,
-      com.scalar.db.rpc.ScanNextResponse> getScanNextMethod;
-
-  @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "ScanNext",
-      requestType = com.scalar.db.rpc.ScanNextRequest.class,
-      responseType = com.scalar.db.rpc.ScanNextResponse.class,
-      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanNextRequest,
-      com.scalar.db.rpc.ScanNextResponse> getScanNextMethod() {
-    io.grpc.MethodDescriptor<com.scalar.db.rpc.ScanNextRequest, com.scalar.db.rpc.ScanNextResponse> getScanNextMethod;
-    if ((getScanNextMethod = DistributedStorageGrpc.getScanNextMethod) == null) {
-      synchronized (DistributedStorageGrpc.class) {
-        if ((getScanNextMethod = DistributedStorageGrpc.getScanNextMethod) == null) {
-          DistributedStorageGrpc.getScanNextMethod = getScanNextMethod =
-              io.grpc.MethodDescriptor.<com.scalar.db.rpc.ScanNextRequest, com.scalar.db.rpc.ScanNextResponse>newBuilder()
-              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ScanNext"))
-              .setSampledToLocalTracing(true)
-              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.scalar.db.rpc.ScanNextRequest.getDefaultInstance()))
-              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.scalar.db.rpc.ScanNextResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DistributedStorageMethodDescriptorSupplier("ScanNext"))
-              .build();
-        }
-      }
-    }
-    return getScanNextMethod;
-  }
-
-  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CloseScannerRequest,
-      com.google.protobuf.Empty> getCloseScannerMethod;
-
-  @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "CloseScanner",
-      requestType = com.scalar.db.rpc.CloseScannerRequest.class,
-      responseType = com.google.protobuf.Empty.class,
-      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.CloseScannerRequest,
-      com.google.protobuf.Empty> getCloseScannerMethod() {
-    io.grpc.MethodDescriptor<com.scalar.db.rpc.CloseScannerRequest, com.google.protobuf.Empty> getCloseScannerMethod;
-    if ((getCloseScannerMethod = DistributedStorageGrpc.getCloseScannerMethod) == null) {
-      synchronized (DistributedStorageGrpc.class) {
-        if ((getCloseScannerMethod = DistributedStorageGrpc.getCloseScannerMethod) == null) {
-          DistributedStorageGrpc.getCloseScannerMethod = getCloseScannerMethod =
-              io.grpc.MethodDescriptor.<com.scalar.db.rpc.CloseScannerRequest, com.google.protobuf.Empty>newBuilder()
-              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CloseScanner"))
-              .setSampledToLocalTracing(true)
-              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.scalar.db.rpc.CloseScannerRequest.getDefaultInstance()))
-              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.google.protobuf.Empty.getDefaultInstance()))
-              .setSchemaDescriptor(new DistributedStorageMethodDescriptorSupplier("CloseScanner"))
-              .build();
-        }
-      }
-    }
-    return getCloseScannerMethod;
+    return getScanMethod;
   }
 
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.MutateRequest,
@@ -226,23 +164,9 @@ public final class DistributedStorageGrpc {
 
     /**
      */
-    public void openScanner(com.scalar.db.rpc.OpenScannerRequest request,
-        io.grpc.stub.StreamObserver<com.scalar.db.rpc.OpenScannerResponse> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getOpenScannerMethod(), responseObserver);
-    }
-
-    /**
-     */
-    public void scanNext(com.scalar.db.rpc.ScanNextRequest request,
-        io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanNextResponse> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getScanNextMethod(), responseObserver);
-    }
-
-    /**
-     */
-    public void closeScanner(com.scalar.db.rpc.CloseScannerRequest request,
-        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCloseScannerMethod(), responseObserver);
+    public io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanRequest> scan(
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanResponse> responseObserver) {
+      return io.grpc.stub.ServerCalls.asyncUnimplementedStreamingCall(getScanMethod(), responseObserver);
     }
 
     /**
@@ -262,26 +186,12 @@ public final class DistributedStorageGrpc {
                 com.scalar.db.rpc.GetResponse>(
                   this, METHODID_GET)))
           .addMethod(
-            getOpenScannerMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
+            getScanMethod(),
+            io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
               new MethodHandlers<
-                com.scalar.db.rpc.OpenScannerRequest,
-                com.scalar.db.rpc.OpenScannerResponse>(
-                  this, METHODID_OPEN_SCANNER)))
-          .addMethod(
-            getScanNextMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.ScanNextRequest,
-                com.scalar.db.rpc.ScanNextResponse>(
-                  this, METHODID_SCAN_NEXT)))
-          .addMethod(
-            getCloseScannerMethod(),
-            io.grpc.stub.ServerCalls.asyncUnaryCall(
-              new MethodHandlers<
-                com.scalar.db.rpc.CloseScannerRequest,
-                com.google.protobuf.Empty>(
-                  this, METHODID_CLOSE_SCANNER)))
+                com.scalar.db.rpc.ScanRequest,
+                com.scalar.db.rpc.ScanResponse>(
+                  this, METHODID_SCAN)))
           .addMethod(
             getMutateMethod(),
             io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -317,26 +227,10 @@ public final class DistributedStorageGrpc {
 
     /**
      */
-    public void openScanner(com.scalar.db.rpc.OpenScannerRequest request,
-        io.grpc.stub.StreamObserver<com.scalar.db.rpc.OpenScannerResponse> responseObserver) {
-      io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getOpenScannerMethod(), getCallOptions()), request, responseObserver);
-    }
-
-    /**
-     */
-    public void scanNext(com.scalar.db.rpc.ScanNextRequest request,
-        io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanNextResponse> responseObserver) {
-      io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getScanNextMethod(), getCallOptions()), request, responseObserver);
-    }
-
-    /**
-     */
-    public void closeScanner(com.scalar.db.rpc.CloseScannerRequest request,
-        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
-      io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getCloseScannerMethod(), getCallOptions()), request, responseObserver);
+    public io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanRequest> scan(
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanResponse> responseObserver) {
+      return io.grpc.stub.ClientCalls.asyncBidiStreamingCall(
+          getChannel().newCall(getScanMethod(), getCallOptions()), responseObserver);
     }
 
     /**
@@ -371,27 +265,6 @@ public final class DistributedStorageGrpc {
 
     /**
      */
-    public com.scalar.db.rpc.OpenScannerResponse openScanner(com.scalar.db.rpc.OpenScannerRequest request) {
-      return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getOpenScannerMethod(), getCallOptions(), request);
-    }
-
-    /**
-     */
-    public com.scalar.db.rpc.ScanNextResponse scanNext(com.scalar.db.rpc.ScanNextRequest request) {
-      return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getScanNextMethod(), getCallOptions(), request);
-    }
-
-    /**
-     */
-    public com.google.protobuf.Empty closeScanner(com.scalar.db.rpc.CloseScannerRequest request) {
-      return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getCloseScannerMethod(), getCallOptions(), request);
-    }
-
-    /**
-     */
     public com.google.protobuf.Empty mutate(com.scalar.db.rpc.MutateRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getMutateMethod(), getCallOptions(), request);
@@ -422,30 +295,6 @@ public final class DistributedStorageGrpc {
 
     /**
      */
-    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.OpenScannerResponse> openScanner(
-        com.scalar.db.rpc.OpenScannerRequest request) {
-      return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getOpenScannerMethod(), getCallOptions()), request);
-    }
-
-    /**
-     */
-    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.ScanNextResponse> scanNext(
-        com.scalar.db.rpc.ScanNextRequest request) {
-      return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getScanNextMethod(), getCallOptions()), request);
-    }
-
-    /**
-     */
-    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> closeScanner(
-        com.scalar.db.rpc.CloseScannerRequest request) {
-      return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getCloseScannerMethod(), getCallOptions()), request);
-    }
-
-    /**
-     */
     public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> mutate(
         com.scalar.db.rpc.MutateRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -454,10 +303,8 @@ public final class DistributedStorageGrpc {
   }
 
   private static final int METHODID_GET = 0;
-  private static final int METHODID_OPEN_SCANNER = 1;
-  private static final int METHODID_SCAN_NEXT = 2;
-  private static final int METHODID_CLOSE_SCANNER = 3;
-  private static final int METHODID_MUTATE = 4;
+  private static final int METHODID_MUTATE = 1;
+  private static final int METHODID_SCAN = 2;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -480,18 +327,6 @@ public final class DistributedStorageGrpc {
           serviceImpl.get((com.scalar.db.rpc.GetRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetResponse>) responseObserver);
           break;
-        case METHODID_OPEN_SCANNER:
-          serviceImpl.openScanner((com.scalar.db.rpc.OpenScannerRequest) request,
-              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.OpenScannerResponse>) responseObserver);
-          break;
-        case METHODID_SCAN_NEXT:
-          serviceImpl.scanNext((com.scalar.db.rpc.ScanNextRequest) request,
-              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanNextResponse>) responseObserver);
-          break;
-        case METHODID_CLOSE_SCANNER:
-          serviceImpl.closeScanner((com.scalar.db.rpc.CloseScannerRequest) request,
-              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
-          break;
         case METHODID_MUTATE:
           serviceImpl.mutate((com.scalar.db.rpc.MutateRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
@@ -506,6 +341,9 @@ public final class DistributedStorageGrpc {
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
+        case METHODID_SCAN:
+          return (io.grpc.stub.StreamObserver<Req>) serviceImpl.scan(
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.ScanResponse>) responseObserver);
         default:
           throw new AssertionError();
       }
@@ -558,9 +396,7 @@ public final class DistributedStorageGrpc {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new DistributedStorageFileDescriptorSupplier())
               .addMethod(getGetMethod())
-              .addMethod(getOpenScannerMethod())
-              .addMethod(getScanNextMethod())
-              .addMethod(getCloseScannerMethod())
+              .addMethod(getScanMethod())
               .addMethod(getMutateMethod())
               .build();
         }

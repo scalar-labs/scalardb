@@ -20,6 +20,7 @@ import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.Utility;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
@@ -28,7 +29,6 @@ import io.grpc.netty.NettyChannelBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,8 @@ public class GrpcStorage implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
 
   private final ManagedChannel channel;
-  private final DistributedStorageGrpc.DistributedStorageBlockingStub stub;
+  private final DistributedStorageGrpc.DistributedStorageStub stub;
+  private final DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
   private final GrpcTableMetadataManager metadataManager;
 
   private Optional<String> namespace;
@@ -50,7 +51,8 @@ public class GrpcStorage implements DistributedStorage {
         NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
             .usePlaintext()
             .build();
-    stub = DistributedStorageGrpc.newBlockingStub(channel);
+    stub = DistributedStorageGrpc.newStub(channel);
+    blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
     metadataManager =
         new GrpcTableMetadataManager(DistributedStorageAdminGrpc.newBlockingStub(channel));
     namespace = Optional.empty();
@@ -59,10 +61,12 @@ public class GrpcStorage implements DistributedStorage {
 
   @VisibleForTesting
   GrpcStorage(
-      DistributedStorageGrpc.DistributedStorageBlockingStub stub,
+      DistributedStorageGrpc.DistributedStorageStub stub,
+      DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub,
       GrpcTableMetadataManager metadataManager) {
     channel = null;
     this.stub = stub;
+    this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
     namespace = Optional.empty();
     tableName = Optional.empty();
@@ -101,7 +105,7 @@ public class GrpcStorage implements DistributedStorage {
           Utility.setTargetToIfNot(get, namespace, tableName);
 
           GetResponse response =
-              stub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
+              blockingStub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
           if (response.hasResult()) {
             TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
             return Optional.of(ProtoUtil.toResult(response.getResult(), tableMetadata));
@@ -112,13 +116,9 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    return execute(
-        () -> {
-          Utility.setTargetToIfNot(scan, namespace, tableName);
-
-          TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-          return new ScannerImpl(scan, stub, tableMetadata);
-        });
+    Utility.setTargetToIfNot(scan, namespace, tableName);
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
+    return new ScannerImpl(scan, stub, tableMetadata);
   }
 
   @Override
@@ -146,7 +146,7 @@ public class GrpcStorage implements DistributedStorage {
         () -> {
           Utility.setTargetToIfNot(mutation, namespace, tableName);
 
-          stub.mutate(
+          blockingStub.mutate(
               MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
           return null;
         });
@@ -160,12 +160,13 @@ public class GrpcStorage implements DistributedStorage {
 
           MutateRequest.Builder builder = MutateRequest.newBuilder();
           mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
-          stub.mutate(builder.build());
+          blockingStub.mutate(builder.build());
           return null;
         });
   }
 
-  static <T> T execute(Supplier<T> supplier) throws ExecutionException {
+  static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
+      throws ExecutionException {
     try {
       return supplier.get();
     } catch (StatusRuntimeException e) {

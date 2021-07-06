@@ -4,19 +4,18 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.OpenScannerResponse}
+ * Protobuf type {@code rpc.ScanResponse}
  */
-public final class OpenScannerResponse extends
+public final class ScanResponse extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.OpenScannerResponse)
-    OpenScannerResponseOrBuilder {
+    // @@protoc_insertion_point(message_implements:rpc.ScanResponse)
+    ScanResponseOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use OpenScannerResponse.newBuilder() to construct.
-  private OpenScannerResponse(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use ScanResponse.newBuilder() to construct.
+  private ScanResponse(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private OpenScannerResponse() {
-    scannerId_ = "";
+  private ScanResponse() {
     result_ = java.util.Collections.emptyList();
   }
 
@@ -24,7 +23,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new OpenScannerResponse();
+    return new ScanResponse();
   }
 
   @java.lang.Override
@@ -32,7 +31,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private OpenScannerResponse(
+  private ScanResponse(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -51,12 +50,6 @@ private static final long serialVersionUID = 0L;
           case 0:
             done = true;
             break;
-          case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            scannerId_ = s;
-            break;
-          }
           case 18: {
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
               result_ = new java.util.ArrayList<com.scalar.db.rpc.Result>();
@@ -95,53 +88,15 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_OpenScannerResponse_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_OpenScannerResponse_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.scalar.db.rpc.OpenScannerResponse.class, com.scalar.db.rpc.OpenScannerResponse.Builder.class);
-  }
-
-  public static final int SCANNER_ID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object scannerId_;
-  /**
-   * <code>string scanner_id = 1;</code>
-   * @return The scannerId.
-   */
-  @java.lang.Override
-  public java.lang.String getScannerId() {
-    java.lang.Object ref = scannerId_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      scannerId_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string scanner_id = 1;</code>
-   * @return The bytes for scannerId.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getScannerIdBytes() {
-    java.lang.Object ref = scannerId_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      scannerId_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+            com.scalar.db.rpc.ScanResponse.class, com.scalar.db.rpc.ScanResponse.Builder.class);
   }
 
   public static final int RESULT_FIELD_NUMBER = 2;
@@ -209,9 +164,6 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getScannerIdBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, scannerId_);
-    }
     for (int i = 0; i < result_.size(); i++) {
       output.writeMessage(2, result_.get(i));
     }
@@ -227,9 +179,6 @@ private static final long serialVersionUID = 0L;
     if (size != -1) return size;
 
     size = 0;
-    if (!getScannerIdBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, scannerId_);
-    }
     for (int i = 0; i < result_.size(); i++) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(2, result_.get(i));
@@ -248,13 +197,11 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.scalar.db.rpc.OpenScannerResponse)) {
+    if (!(obj instanceof com.scalar.db.rpc.ScanResponse)) {
       return super.equals(obj);
     }
-    com.scalar.db.rpc.OpenScannerResponse other = (com.scalar.db.rpc.OpenScannerResponse) obj;
+    com.scalar.db.rpc.ScanResponse other = (com.scalar.db.rpc.ScanResponse) obj;
 
-    if (!getScannerId()
-        .equals(other.getScannerId())) return false;
     if (!getResultList()
         .equals(other.getResultList())) return false;
     if (getHasMoreResults()
@@ -270,8 +217,6 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + SCANNER_ID_FIELD_NUMBER;
-    hash = (53 * hash) + getScannerId().hashCode();
     if (getResultCount() > 0) {
       hash = (37 * hash) + RESULT_FIELD_NUMBER;
       hash = (53 * hash) + getResultList().hashCode();
@@ -284,69 +229,69 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(byte[] data)
+  public static com.scalar.db.rpc.ScanResponse parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(java.io.InputStream input)
+  public static com.scalar.db.rpc.ScanResponse parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseDelimitedFrom(java.io.InputStream input)
+  public static com.scalar.db.rpc.ScanResponse parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseDelimitedFrom(
+  public static com.scalar.db.rpc.ScanResponse parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.OpenScannerResponse parseFrom(
+  public static com.scalar.db.rpc.ScanResponse parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -359,7 +304,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.scalar.db.rpc.OpenScannerResponse prototype) {
+  public static Builder newBuilder(com.scalar.db.rpc.ScanResponse prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -375,26 +320,26 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.OpenScannerResponse}
+   * Protobuf type {@code rpc.ScanResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.OpenScannerResponse)
-      com.scalar.db.rpc.OpenScannerResponseOrBuilder {
+      // @@protoc_insertion_point(builder_implements:rpc.ScanResponse)
+      com.scalar.db.rpc.ScanResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_OpenScannerResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_OpenScannerResponse_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.scalar.db.rpc.OpenScannerResponse.class, com.scalar.db.rpc.OpenScannerResponse.Builder.class);
+              com.scalar.db.rpc.ScanResponse.class, com.scalar.db.rpc.ScanResponse.Builder.class);
     }
 
-    // Construct using com.scalar.db.rpc.OpenScannerResponse.newBuilder()
+    // Construct using com.scalar.db.rpc.ScanResponse.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -413,8 +358,6 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public Builder clear() {
       super.clear();
-      scannerId_ = "";
-
       if (resultBuilder_ == null) {
         result_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -429,17 +372,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_OpenScannerResponse_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_ScanResponse_descriptor;
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.OpenScannerResponse getDefaultInstanceForType() {
-      return com.scalar.db.rpc.OpenScannerResponse.getDefaultInstance();
+    public com.scalar.db.rpc.ScanResponse getDefaultInstanceForType() {
+      return com.scalar.db.rpc.ScanResponse.getDefaultInstance();
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.OpenScannerResponse build() {
-      com.scalar.db.rpc.OpenScannerResponse result = buildPartial();
+    public com.scalar.db.rpc.ScanResponse build() {
+      com.scalar.db.rpc.ScanResponse result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -447,10 +390,9 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.OpenScannerResponse buildPartial() {
-      com.scalar.db.rpc.OpenScannerResponse result = new com.scalar.db.rpc.OpenScannerResponse(this);
+    public com.scalar.db.rpc.ScanResponse buildPartial() {
+      com.scalar.db.rpc.ScanResponse result = new com.scalar.db.rpc.ScanResponse(this);
       int from_bitField0_ = bitField0_;
-      result.scannerId_ = scannerId_;
       if (resultBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           result_ = java.util.Collections.unmodifiableList(result_);
@@ -499,20 +441,16 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.scalar.db.rpc.OpenScannerResponse) {
-        return mergeFrom((com.scalar.db.rpc.OpenScannerResponse)other);
+      if (other instanceof com.scalar.db.rpc.ScanResponse) {
+        return mergeFrom((com.scalar.db.rpc.ScanResponse)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.scalar.db.rpc.OpenScannerResponse other) {
-      if (other == com.scalar.db.rpc.OpenScannerResponse.getDefaultInstance()) return this;
-      if (!other.getScannerId().isEmpty()) {
-        scannerId_ = other.scannerId_;
-        onChanged();
-      }
+    public Builder mergeFrom(com.scalar.db.rpc.ScanResponse other) {
+      if (other == com.scalar.db.rpc.ScanResponse.getDefaultInstance()) return this;
       if (resultBuilder_ == null) {
         if (!other.result_.isEmpty()) {
           if (result_.isEmpty()) {
@@ -557,11 +495,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.OpenScannerResponse parsedMessage = null;
+      com.scalar.db.rpc.ScanResponse parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.OpenScannerResponse) e.getUnfinishedMessage();
+        parsedMessage = (com.scalar.db.rpc.ScanResponse) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -571,82 +509,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     private int bitField0_;
-
-    private java.lang.Object scannerId_ = "";
-    /**
-     * <code>string scanner_id = 1;</code>
-     * @return The scannerId.
-     */
-    public java.lang.String getScannerId() {
-      java.lang.Object ref = scannerId_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        scannerId_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string scanner_id = 1;</code>
-     * @return The bytes for scannerId.
-     */
-    public com.google.protobuf.ByteString
-        getScannerIdBytes() {
-      java.lang.Object ref = scannerId_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        scannerId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string scanner_id = 1;</code>
-     * @param value The scannerId to set.
-     * @return This builder for chaining.
-     */
-    public Builder setScannerId(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      scannerId_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string scanner_id = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearScannerId() {
-      
-      scannerId_ = getDefaultInstance().getScannerId();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string scanner_id = 1;</code>
-     * @param value The bytes for scannerId to set.
-     * @return This builder for chaining.
-     */
-    public Builder setScannerIdBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      scannerId_ = value;
-      onChanged();
-      return this;
-    }
 
     private java.util.List<com.scalar.db.rpc.Result> result_ =
       java.util.Collections.emptyList();
@@ -931,41 +793,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.OpenScannerResponse)
+    // @@protoc_insertion_point(builder_scope:rpc.ScanResponse)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.OpenScannerResponse)
-  private static final com.scalar.db.rpc.OpenScannerResponse DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:rpc.ScanResponse)
+  private static final com.scalar.db.rpc.ScanResponse DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.scalar.db.rpc.OpenScannerResponse();
+    DEFAULT_INSTANCE = new com.scalar.db.rpc.ScanResponse();
   }
 
-  public static com.scalar.db.rpc.OpenScannerResponse getDefaultInstance() {
+  public static com.scalar.db.rpc.ScanResponse getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<OpenScannerResponse>
-      PARSER = new com.google.protobuf.AbstractParser<OpenScannerResponse>() {
+  private static final com.google.protobuf.Parser<ScanResponse>
+      PARSER = new com.google.protobuf.AbstractParser<ScanResponse>() {
     @java.lang.Override
-    public OpenScannerResponse parsePartialFrom(
+    public ScanResponse parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new OpenScannerResponse(input, extensionRegistry);
+      return new ScanResponse(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<OpenScannerResponse> parser() {
+  public static com.google.protobuf.Parser<ScanResponse> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<OpenScannerResponse> getParserForType() {
+  public com.google.protobuf.Parser<ScanResponse> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.scalar.db.rpc.OpenScannerResponse getDefaultInstanceForType() {
+  public com.scalar.db.rpc.ScanResponse getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

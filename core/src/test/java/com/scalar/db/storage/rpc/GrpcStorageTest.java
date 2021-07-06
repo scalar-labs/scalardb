@@ -9,13 +9,11 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetResponse;
-import com.scalar.db.rpc.OpenScannerResponse;
 import io.grpc.Status;
 import java.util.Arrays;
 import java.util.List;
@@ -26,7 +24,8 @@ import org.mockito.MockitoAnnotations;
 
 public class GrpcStorageTest {
 
-  @Mock private DistributedStorageGrpc.DistributedStorageBlockingStub stub;
+  @Mock private DistributedStorageGrpc.DistributedStorageStub stub;
+  @Mock private DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
   @Mock private GrpcTableMetadataManager metadataManager;
 
   private GrpcStorage storage;
@@ -36,7 +35,7 @@ public class GrpcStorageTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    storage = new GrpcStorage(stub, metadataManager);
+    storage = new GrpcStorage(stub, blockingStub, metadataManager);
     storage.with("namespace", "table");
   }
 
@@ -46,13 +45,13 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Get get = new Get(partitionKey);
-    when(stub.get(any())).thenReturn(GetResponse.newBuilder().build());
+    when(blockingStub.get(any())).thenReturn(GetResponse.newBuilder().build());
 
     // Act
     storage.get(get);
 
     // Assert
-    verify(stub).get(any());
+    verify(blockingStub).get(any());
   }
 
   @Test
@@ -60,7 +59,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Get get = new Get(partitionKey);
-    when(stub.get(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.get(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -71,47 +70,10 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Get get = new Get(partitionKey);
-    when(stub.get(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.get(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(ExecutionException.class);
-  }
-
-  @Test
-  public void scan_isCalledWithProperArguments_StubShouldBeCalledProperly()
-      throws ExecutionException {
-    // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
-    Scan scan = new Scan(partitionKey);
-    when(stub.openScanner(any())).thenReturn(OpenScannerResponse.newBuilder().build());
-
-    // Act
-    storage.scan(scan);
-
-    // Assert
-    verify(stub).openScanner(any());
-  }
-
-  @Test
-  public void scan_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
-    Scan scan = new Scan(partitionKey);
-    when(stub.openScanner(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
-
-    // Act Assert
-    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void scan_StubThrowInternalError_ShouldThrowExecutionException() {
-    // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
-    Scan scan = new Scan(partitionKey);
-    when(stub.openScanner(any())).thenThrow(Status.INTERNAL.asRuntimeException());
-
-    // Act
-    assertThatThrownBy(() -> storage.scan(scan)).isInstanceOf(ExecutionException.class);
   }
 
   @Test
@@ -125,7 +87,7 @@ public class GrpcStorageTest {
     storage.put(put);
 
     // Assert
-    verify(stub).mutate(any());
+    verify(blockingStub).mutate(any());
   }
 
   @Test
@@ -133,7 +95,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Put put = new Put(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
@@ -144,7 +106,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Put put = new Put(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.put(put)).isInstanceOf(NoMutationException.class);
@@ -155,7 +117,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Put put = new Put(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.put(put)).isInstanceOf(ExecutionException.class);
@@ -173,7 +135,7 @@ public class GrpcStorageTest {
     storage.put(puts);
 
     // Assert
-    verify(stub).mutate(any());
+    verify(blockingStub).mutate(any());
   }
 
   @Test
@@ -182,7 +144,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.put(puts)).isInstanceOf(IllegalArgumentException.class);
@@ -194,7 +156,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.put(puts)).isInstanceOf(NoMutationException.class);
@@ -206,7 +168,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.put(puts)).isInstanceOf(ExecutionException.class);
@@ -223,7 +185,7 @@ public class GrpcStorageTest {
     storage.delete(delete);
 
     // Assert
-    verify(stub).mutate(any());
+    verify(blockingStub).mutate(any());
   }
 
   @Test
@@ -231,7 +193,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Delete delete = new Delete(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(IllegalArgumentException.class);
@@ -242,7 +204,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Delete delete = new Delete(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(NoMutationException.class);
@@ -253,7 +215,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     Delete delete = new Delete(partitionKey);
-    when(stub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.delete(delete)).isInstanceOf(ExecutionException.class);
@@ -271,7 +233,7 @@ public class GrpcStorageTest {
     storage.delete(deletes);
 
     // Assert
-    verify(stub).mutate(any());
+    verify(blockingStub).mutate(any());
   }
 
   @Test
@@ -280,7 +242,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.delete(deletes)).isInstanceOf(IllegalArgumentException.class);
@@ -292,7 +254,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.delete(deletes)).isInstanceOf(NoMutationException.class);
@@ -304,7 +266,7 @@ public class GrpcStorageTest {
     Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
     Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
-    when(stub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.delete(deletes)).isInstanceOf(ExecutionException.class);
@@ -321,7 +283,7 @@ public class GrpcStorageTest {
     storage.mutate(mutations);
 
     // Assert
-    verify(stub).mutate(any());
+    verify(blockingStub).mutate(any());
   }
 
   @Test
@@ -329,7 +291,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
-    when(stub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
     // Act Assert
     assertThatThrownBy(() -> storage.mutate(mutations))
@@ -341,7 +303,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
-    when(stub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.mutate(mutations)).isInstanceOf(NoMutationException.class);
@@ -352,7 +314,7 @@ public class GrpcStorageTest {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
-    when(stub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
+    when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
     // Act
     assertThatThrownBy(() -> storage.mutate(mutations)).isInstanceOf(ExecutionException.class);

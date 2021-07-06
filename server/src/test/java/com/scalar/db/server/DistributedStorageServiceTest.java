@@ -12,22 +12,18 @@ import com.google.protobuf.Empty;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
-import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
-import com.scalar.db.rpc.OpenScannerRequest;
-import com.scalar.db.rpc.OpenScannerResponse;
 import com.scalar.db.util.ProtoUtil;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.util.Arrays;
-import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -96,61 +92,6 @@ public class DistributedStorageServiceTest {
 
     // Act
     storageService.get(request, responseObserver);
-
-    // Assert
-    verify(responseObserver).onError(exceptionCaptor.capture());
-    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Status.Code.INTERNAL);
-  }
-
-  @Test
-  public void scan_IsCalledWithProperArguments_StorageShouldBeCalledProperly()
-      throws ExecutionException {
-    // Arrange
-    OpenScannerRequest request = OpenScannerRequest.newBuilder().build();
-    @SuppressWarnings("unchecked")
-    StreamObserver<OpenScannerResponse> responseObserver = mock(StreamObserver.class);
-    Scanner scanner = mock(Scanner.class);
-    when(scanner.iterator()).thenReturn(Collections.emptyIterator());
-    when(storage.scan(any())).thenReturn(scanner);
-
-    // Act
-    storageService.openScanner(request, responseObserver);
-
-    // Assert
-    verify(storage).scan(any());
-    verify(responseObserver).onNext(any());
-    verify(responseObserver).onCompleted();
-  }
-
-  @Test
-  public void scan_StorageThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
-      throws ExecutionException {
-    // Arrange
-    OpenScannerRequest request = OpenScannerRequest.newBuilder().build();
-    @SuppressWarnings("unchecked")
-    StreamObserver<OpenScannerResponse> responseObserver = mock(StreamObserver.class);
-    when(storage.scan(any())).thenThrow(IllegalArgumentException.class);
-
-    // Act
-    storageService.openScanner(request, responseObserver);
-
-    // Assert
-    verify(responseObserver).onError(exceptionCaptor.capture());
-    assertThat(exceptionCaptor.getValue().getStatus().getCode())
-        .isEqualTo(Status.Code.INVALID_ARGUMENT);
-  }
-
-  @Test
-  public void scan_StorageThrowsExecutionException_ShouldThrowInternalError()
-      throws ExecutionException {
-    // Arrange
-    OpenScannerRequest request = OpenScannerRequest.newBuilder().build();
-    @SuppressWarnings("unchecked")
-    StreamObserver<OpenScannerResponse> responseObserver = mock(StreamObserver.class);
-    when(storage.scan(any())).thenThrow(ExecutionException.class);
-
-    // Act
-    storageService.openScanner(request, responseObserver);
 
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());

@@ -80,30 +80,15 @@ public final class ScalarDbProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_rpc_GetResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_OpenScannerRequest_descriptor;
+    internal_static_rpc_ScanRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_OpenScannerRequest_fieldAccessorTable;
+      internal_static_rpc_ScanRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_OpenScannerResponse_descriptor;
+    internal_static_rpc_ScanResponse_descriptor;
   static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_OpenScannerResponse_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_ScanNextRequest_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_ScanNextRequest_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_ScanNextResponse_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_ScanNextResponse_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_rpc_CloseScannerRequest_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_rpc_CloseScannerRequest_fieldAccessorTable;
+      internal_static_rpc_ScanResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_rpc_MutateRequest_descriptor;
   static final 
@@ -276,102 +261,93 @@ public final class ScalarDbProto {
       "\020\000\022\n\n\006DELETE\020\001\"#\n\006Result\022\031\n\005value\030\001 \003(\0132" +
       "\n.rpc.Value\"#\n\nGetRequest\022\025\n\003get\030\001 \001(\0132\010" +
       ".rpc.Get\"*\n\013GetResponse\022\033\n\006result\030\001 \001(\0132" +
-      "\013.rpc.Result\"B\n\022OpenScannerRequest\022\027\n\004sc" +
-      "an\030\001 \001(\0132\t.rpc.Scan\022\023\n\013fetch_count\030\002 \001(\005" +
-      "\"`\n\023OpenScannerResponse\022\022\n\nscanner_id\030\001 " +
-      "\001(\t\022\033\n\006result\030\002 \003(\0132\013.rpc.Result\022\030\n\020has_" +
-      "more_results\030\003 \001(\010\":\n\017ScanNextRequest\022\022\n" +
-      "\nscanner_id\030\001 \001(\t\022\023\n\013fetch_count\030\002 \001(\005\"I" +
-      "\n\020ScanNextResponse\022\033\n\006result\030\001 \003(\0132\013.rpc" +
-      ".Result\022\030\n\020has_more_results\030\002 \001(\010\")\n\023Clo" +
-      "seScannerRequest\022\022\n\nscanner_id\030\001 \001(\t\"0\n\r" +
-      "MutateRequest\022\037\n\010mutation\030\001 \003(\0132\r.rpc.Mu" +
-      "tation\"\333\002\n\rTableMetadata\022.\n\006column\030\001 \003(\013" +
-      "2\036.rpc.TableMetadata.ColumnEntry\022\032\n\022part" +
-      "ition_key_name\030\002 \003(\t\022\033\n\023clustering_key_n" +
-      "ame\030\003 \003(\t\022A\n\020clustering_order\030\004 \003(\0132\'.rp" +
-      "c.TableMetadata.ClusteringOrderEntry\022\034\n\024" +
-      "secondary_index_name\030\005 \003(\t\032<\n\013ColumnEntr" +
-      "y\022\013\n\003key\030\001 \001(\t\022\034\n\005value\030\002 \001(\0162\r.rpc.Data" +
-      "Type:\0028\001\032B\n\024ClusteringOrderEntry\022\013\n\003key\030" +
-      "\001 \001(\t\022\031\n\005value\030\002 \001(\0162\n.rpc.Order:\0028\001\"\311\001\n" +
-      "\022CreateTableRequest\022\021\n\tnamespace\030\001 \001(\t\022\r" +
-      "\n\005table\030\002 \001(\t\022*\n\016table_metadata\030\003 \001(\0132\022." +
-      "rpc.TableMetadata\0225\n\007options\030\004 \003(\0132$.rpc" +
-      ".CreateTableRequest.OptionsEntry\032.\n\014Opti" +
-      "onsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001" +
-      "\"4\n\020DropTableRequest\022\021\n\tnamespace\030\001 \001(\t\022" +
-      "\r\n\005table\030\002 \001(\t\"8\n\024TruncateTableRequest\022\021" +
-      "\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\";\n\027GetT" +
-      "ableMetadataRequest\022\021\n\tnamespace\030\001 \001(\t\022\r" +
-      "\n\005table\030\002 \001(\t\"F\n\030GetTableMetadataRespons" +
-      "e\022*\n\016table_metadata\030\001 \001(\0132\022.rpc.TableMet" +
-      "adata\"\367\004\n\022TransactionRequest\022=\n\rstart_re" +
-      "quest\030\001 \001(\0132$.rpc.TransactionRequest.Sta" +
-      "rtRequestH\000\0229\n\013get_request\030\002 \001(\0132\".rpc.T" +
-      "ransactionRequest.GetRequestH\000\022;\n\014scan_r" +
-      "equest\030\003 \001(\0132#.rpc.TransactionRequest.Sc" +
-      "anRequestH\000\022?\n\016mutate_request\030\004 \001(\0132%.rp" +
-      "c.TransactionRequest.MutateRequestH\000\022?\n\016" +
-      "commit_request\030\005 \001(\0132%.rpc.TransactionRe" +
-      "quest.CommitRequestH\000\022=\n\rabort_request\030\006" +
-      " \001(\0132$.rpc.TransactionRequest.AbortReque" +
-      "stH\000\032>\n\014StartRequest\022\033\n\016transaction_id\030\001" +
-      " \001(\tH\000\210\001\001B\021\n\017_transaction_id\032#\n\nGetReque" +
-      "st\022\025\n\003get\030\002 \001(\0132\010.rpc.Get\032&\n\013ScanRequest" +
-      "\022\027\n\004scan\030\002 \001(\0132\t.rpc.Scan\0320\n\rMutateReque" +
-      "st\022\037\n\010mutation\030\002 \003(\0132\r.rpc.Mutation\032\017\n\rC" +
-      "ommitRequest\032\016\n\014AbortRequestB\t\n\007request\"" +
-      "\302\004\n\023TransactionResponse\022@\n\016start_respons" +
-      "e\030\001 \001(\0132&.rpc.TransactionResponse.StartR" +
-      "esponseH\000\022<\n\014get_response\030\002 \001(\0132$.rpc.Tr" +
-      "ansactionResponse.GetResponseH\000\022>\n\rscan_" +
-      "response\030\003 \001(\0132%.rpc.TransactionResponse" +
-      ".ScanResponseH\000\022/\n\005error\030\004 \001(\0132\036.rpc.Tra" +
-      "nsactionResponse.ErrorH\000\032\'\n\rStartRespons" +
-      "e\022\026\n\016transaction_id\030\001 \001(\t\032*\n\013GetResponse" +
-      "\022\033\n\006result\030\001 \001(\0132\013.rpc.Result\032+\n\014ScanRes" +
-      "ponse\022\033\n\006result\030\001 \003(\0132\013.rpc.Result\032\253\001\n\005E" +
-      "rror\022<\n\nerror_code\030\001 \001(\0162(.rpc.Transacti" +
-      "onResponse.Error.ErrorCode\022\017\n\007message\030\002 " +
-      "\001(\t\"S\n\tErrorCode\022\024\n\020INVALID_ARGUMENT\020\000\022\014" +
-      "\n\010CONFLICT\020\001\022\027\n\023UNKNOWN_TRANSACTION\020\002\022\t\n" +
-      "\005OTHER\020\003B\n\n\010response\"4\n\032GetTransactionSt" +
-      "ateRequest\022\026\n\016transaction_id\030\001 \001(\t\"C\n\033Ge" +
-      "tTransactionStateResponse\022$\n\005state\030\001 \001(\016" +
-      "2\025.rpc.TransactionState*a\n\013Consistency\022\032" +
-      "\n\026CONSISTENCY_SEQUENTIAL\020\000\022\030\n\024CONSISTENC" +
-      "Y_EVENTUAL\020\001\022\034\n\030CONSISTENCY_LINEARIZABLE" +
-      "\020\002*&\n\005Order\022\r\n\tORDER_ASC\020\000\022\016\n\nORDER_DESC" +
-      "\020\001*\235\001\n\010DataType\022\025\n\021DATA_TYPE_BOOLEAN\020\000\022\021" +
-      "\n\rDATA_TYPE_INT\020\001\022\024\n\020DATA_TYPE_BIGINT\020\002\022" +
-      "\023\n\017DATA_TYPE_FLOAT\020\003\022\024\n\020DATA_TYPE_DOUBLE" +
-      "\020\004\022\022\n\016DATA_TYPE_TEXT\020\005\022\022\n\016DATA_TYPE_BLOB" +
-      "\020\006*q\n\020TransactionState\022\037\n\033TRANSACTION_ST" +
-      "ATE_COMMITTED\020\000\022\035\n\031TRANSACTION_STATE_ABO" +
-      "RTED\020\001\022\035\n\031TRANSACTION_STATE_UNKNOWN\020\0022\273\002" +
-      "\n\022DistributedStorage\022*\n\003Get\022\017.rpc.GetReq" +
-      "uest\032\020.rpc.GetResponse\"\000\022B\n\013OpenScanner\022" +
-      "\027.rpc.OpenScannerRequest\032\030.rpc.OpenScann" +
-      "erResponse\"\000\0229\n\010ScanNext\022\024.rpc.ScanNextR" +
-      "equest\032\025.rpc.ScanNextResponse\"\000\022B\n\014Close" +
-      "Scanner\022\030.rpc.CloseScannerRequest\032\026.goog" +
-      "le.protobuf.Empty\"\000\0226\n\006Mutate\022\022.rpc.Muta" +
-      "teRequest\032\026.google.protobuf.Empty\"\0002\262\002\n\027" +
-      "DistributedStorageAdmin\022@\n\013CreateTable\022\027" +
-      ".rpc.CreateTableRequest\032\026.google.protobu" +
-      "f.Empty\"\000\022<\n\tDropTable\022\025.rpc.DropTableRe" +
-      "quest\032\026.google.protobuf.Empty\"\000\022D\n\rTrunc" +
-      "ateTable\022\031.rpc.TruncateTableRequest\032\026.go" +
-      "ogle.protobuf.Empty\"\000\022Q\n\020GetTableMetadat" +
-      "a\022\034.rpc.GetTableMetadataRequest\032\035.rpc.Ge" +
-      "tTableMetadataResponse\"\0002\261\001\n\026Distributed" +
-      "Transaction\022F\n\013Transaction\022\027.rpc.Transac" +
-      "tionRequest\032\030.rpc.TransactionResponse\"\000(" +
-      "\0010\001\022O\n\010GetState\022\037.rpc.GetTransactionStat" +
-      "eRequest\032 .rpc.GetTransactionStateRespon" +
-      "se\"\000B$\n\021com.scalar.db.rpcB\rScalarDbProto" +
-      "P\001b\006proto3"
+      "\013.rpc.Result\"P\n\013ScanRequest\022\027\n\004scan\030\001 \001(" +
+      "\0132\t.rpc.Scan\022\030\n\013fetch_count\030\002 \001(\005H\000\210\001\001B\016" +
+      "\n\014_fetch_count\"E\n\014ScanResponse\022\033\n\006result" +
+      "\030\002 \003(\0132\013.rpc.Result\022\030\n\020has_more_results\030" +
+      "\003 \001(\010\"0\n\rMutateRequest\022\037\n\010mutation\030\001 \003(\013" +
+      "2\r.rpc.Mutation\"\333\002\n\rTableMetadata\022.\n\006col" +
+      "umn\030\001 \003(\0132\036.rpc.TableMetadata.ColumnEntr" +
+      "y\022\032\n\022partition_key_name\030\002 \003(\t\022\033\n\023cluster" +
+      "ing_key_name\030\003 \003(\t\022A\n\020clustering_order\030\004" +
+      " \003(\0132\'.rpc.TableMetadata.ClusteringOrder" +
+      "Entry\022\034\n\024secondary_index_name\030\005 \003(\t\032<\n\013C" +
+      "olumnEntry\022\013\n\003key\030\001 \001(\t\022\034\n\005value\030\002 \001(\0162\r" +
+      ".rpc.DataType:\0028\001\032B\n\024ClusteringOrderEntr" +
+      "y\022\013\n\003key\030\001 \001(\t\022\031\n\005value\030\002 \001(\0162\n.rpc.Orde" +
+      "r:\0028\001\"\311\001\n\022CreateTableRequest\022\021\n\tnamespac" +
+      "e\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\022*\n\016table_metadata" +
+      "\030\003 \001(\0132\022.rpc.TableMetadata\0225\n\007options\030\004 " +
+      "\003(\0132$.rpc.CreateTableRequest.OptionsEntr" +
+      "y\032.\n\014OptionsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030" +
+      "\002 \001(\t:\0028\001\"4\n\020DropTableRequest\022\021\n\tnamespa" +
+      "ce\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"8\n\024TruncateTable" +
+      "Request\022\021\n\tnamespace\030\001 \001(\t\022\r\n\005table\030\002 \001(" +
+      "\t\";\n\027GetTableMetadataRequest\022\021\n\tnamespac" +
+      "e\030\001 \001(\t\022\r\n\005table\030\002 \001(\t\"F\n\030GetTableMetada" +
+      "taResponse\022*\n\016table_metadata\030\001 \001(\0132\022.rpc" +
+      ".TableMetadata\"\367\004\n\022TransactionRequest\022=\n" +
+      "\rstart_request\030\001 \001(\0132$.rpc.TransactionRe" +
+      "quest.StartRequestH\000\0229\n\013get_request\030\002 \001(" +
+      "\0132\".rpc.TransactionRequest.GetRequestH\000\022" +
+      ";\n\014scan_request\030\003 \001(\0132#.rpc.TransactionR" +
+      "equest.ScanRequestH\000\022?\n\016mutate_request\030\004" +
+      " \001(\0132%.rpc.TransactionRequest.MutateRequ" +
+      "estH\000\022?\n\016commit_request\030\005 \001(\0132%.rpc.Tran" +
+      "sactionRequest.CommitRequestH\000\022=\n\rabort_" +
+      "request\030\006 \001(\0132$.rpc.TransactionRequest.A" +
+      "bortRequestH\000\032>\n\014StartRequest\022\033\n\016transac" +
+      "tion_id\030\001 \001(\tH\000\210\001\001B\021\n\017_transaction_id\032#\n" +
+      "\nGetRequest\022\025\n\003get\030\002 \001(\0132\010.rpc.Get\032&\n\013Sc" +
+      "anRequest\022\027\n\004scan\030\002 \001(\0132\t.rpc.Scan\0320\n\rMu" +
+      "tateRequest\022\037\n\010mutation\030\002 \003(\0132\r.rpc.Muta" +
+      "tion\032\017\n\rCommitRequest\032\016\n\014AbortRequestB\t\n" +
+      "\007request\"\302\004\n\023TransactionResponse\022@\n\016star" +
+      "t_response\030\001 \001(\0132&.rpc.TransactionRespon" +
+      "se.StartResponseH\000\022<\n\014get_response\030\002 \001(\013" +
+      "2$.rpc.TransactionResponse.GetResponseH\000" +
+      "\022>\n\rscan_response\030\003 \001(\0132%.rpc.Transactio" +
+      "nResponse.ScanResponseH\000\022/\n\005error\030\004 \001(\0132" +
+      "\036.rpc.TransactionResponse.ErrorH\000\032\'\n\rSta" +
+      "rtResponse\022\026\n\016transaction_id\030\001 \001(\t\032*\n\013Ge" +
+      "tResponse\022\033\n\006result\030\001 \001(\0132\013.rpc.Result\032+" +
+      "\n\014ScanResponse\022\033\n\006result\030\001 \003(\0132\013.rpc.Res" +
+      "ult\032\253\001\n\005Error\022<\n\nerror_code\030\001 \001(\0162(.rpc." +
+      "TransactionResponse.Error.ErrorCode\022\017\n\007m" +
+      "essage\030\002 \001(\t\"S\n\tErrorCode\022\024\n\020INVALID_ARG" +
+      "UMENT\020\000\022\014\n\010CONFLICT\020\001\022\027\n\023UNKNOWN_TRANSAC" +
+      "TION\020\002\022\t\n\005OTHER\020\003B\n\n\010response\"4\n\032GetTran" +
+      "sactionStateRequest\022\026\n\016transaction_id\030\001 " +
+      "\001(\t\"C\n\033GetTransactionStateResponse\022$\n\005st" +
+      "ate\030\001 \001(\0162\025.rpc.TransactionState*a\n\013Cons" +
+      "istency\022\032\n\026CONSISTENCY_SEQUENTIAL\020\000\022\030\n\024C" +
+      "ONSISTENCY_EVENTUAL\020\001\022\034\n\030CONSISTENCY_LIN" +
+      "EARIZABLE\020\002*&\n\005Order\022\r\n\tORDER_ASC\020\000\022\016\n\nO" +
+      "RDER_DESC\020\001*\235\001\n\010DataType\022\025\n\021DATA_TYPE_BO" +
+      "OLEAN\020\000\022\021\n\rDATA_TYPE_INT\020\001\022\024\n\020DATA_TYPE_" +
+      "BIGINT\020\002\022\023\n\017DATA_TYPE_FLOAT\020\003\022\024\n\020DATA_TY" +
+      "PE_DOUBLE\020\004\022\022\n\016DATA_TYPE_TEXT\020\005\022\022\n\016DATA_" +
+      "TYPE_BLOB\020\006*q\n\020TransactionState\022\037\n\033TRANS" +
+      "ACTION_STATE_COMMITTED\020\000\022\035\n\031TRANSACTION_" +
+      "STATE_ABORTED\020\001\022\035\n\031TRANSACTION_STATE_UNK" +
+      "NOWN\020\0022\253\001\n\022DistributedStorage\022*\n\003Get\022\017.r" +
+      "pc.GetRequest\032\020.rpc.GetResponse\"\000\0221\n\004Sca" +
+      "n\022\020.rpc.ScanRequest\032\021.rpc.ScanResponse\"\000" +
+      "(\0010\001\0226\n\006Mutate\022\022.rpc.MutateRequest\032\026.goo" +
+      "gle.protobuf.Empty\"\0002\262\002\n\027DistributedStor" +
+      "ageAdmin\022@\n\013CreateTable\022\027.rpc.CreateTabl" +
+      "eRequest\032\026.google.protobuf.Empty\"\000\022<\n\tDr" +
+      "opTable\022\025.rpc.DropTableRequest\032\026.google." +
+      "protobuf.Empty\"\000\022D\n\rTruncateTable\022\031.rpc." +
+      "TruncateTableRequest\032\026.google.protobuf.E" +
+      "mpty\"\000\022Q\n\020GetTableMetadata\022\034.rpc.GetTabl" +
+      "eMetadataRequest\032\035.rpc.GetTableMetadataR" +
+      "esponse\"\0002\261\001\n\026DistributedTransaction\022F\n\013" +
+      "Transaction\022\027.rpc.TransactionRequest\032\030.r" +
+      "pc.TransactionResponse\"\000(\0010\001\022O\n\010GetState" +
+      "\022\037.rpc.GetTransactionStateRequest\032 .rpc." +
+      "GetTransactionStateResponse\"\000B$\n\021com.sca" +
+      "lar.db.rpcB\rScalarDbProtoP\001b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -456,44 +432,26 @@ public final class ScalarDbProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetResponse_descriptor,
         new java.lang.String[] { "Result", });
-    internal_static_rpc_OpenScannerRequest_descriptor =
+    internal_static_rpc_ScanRequest_descriptor =
       getDescriptor().getMessageTypes().get(11);
-    internal_static_rpc_OpenScannerRequest_fieldAccessorTable = new
+    internal_static_rpc_ScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_OpenScannerRequest_descriptor,
-        new java.lang.String[] { "Scan", "FetchCount", });
-    internal_static_rpc_OpenScannerResponse_descriptor =
+        internal_static_rpc_ScanRequest_descriptor,
+        new java.lang.String[] { "Scan", "FetchCount", "FetchCount", });
+    internal_static_rpc_ScanResponse_descriptor =
       getDescriptor().getMessageTypes().get(12);
-    internal_static_rpc_OpenScannerResponse_fieldAccessorTable = new
+    internal_static_rpc_ScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_OpenScannerResponse_descriptor,
-        new java.lang.String[] { "ScannerId", "Result", "HasMoreResults", });
-    internal_static_rpc_ScanNextRequest_descriptor =
-      getDescriptor().getMessageTypes().get(13);
-    internal_static_rpc_ScanNextRequest_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_ScanNextRequest_descriptor,
-        new java.lang.String[] { "ScannerId", "FetchCount", });
-    internal_static_rpc_ScanNextResponse_descriptor =
-      getDescriptor().getMessageTypes().get(14);
-    internal_static_rpc_ScanNextResponse_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_ScanNextResponse_descriptor,
+        internal_static_rpc_ScanResponse_descriptor,
         new java.lang.String[] { "Result", "HasMoreResults", });
-    internal_static_rpc_CloseScannerRequest_descriptor =
-      getDescriptor().getMessageTypes().get(15);
-    internal_static_rpc_CloseScannerRequest_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_rpc_CloseScannerRequest_descriptor,
-        new java.lang.String[] { "ScannerId", });
     internal_static_rpc_MutateRequest_descriptor =
-      getDescriptor().getMessageTypes().get(16);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_rpc_MutateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_MutateRequest_descriptor,
         new java.lang.String[] { "Mutation", });
     internal_static_rpc_TableMetadata_descriptor =
-      getDescriptor().getMessageTypes().get(17);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_rpc_TableMetadata_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_TableMetadata_descriptor,
@@ -511,7 +469,7 @@ public final class ScalarDbProto {
         internal_static_rpc_TableMetadata_ClusteringOrderEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_rpc_CreateTableRequest_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_rpc_CreateTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_CreateTableRequest_descriptor,
@@ -523,31 +481,31 @@ public final class ScalarDbProto {
         internal_static_rpc_CreateTableRequest_OptionsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_rpc_DropTableRequest_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_rpc_DropTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_DropTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", });
     internal_static_rpc_TruncateTableRequest_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_rpc_TruncateTableRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_TruncateTableRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", });
     internal_static_rpc_GetTableMetadataRequest_descriptor =
-      getDescriptor().getMessageTypes().get(21);
+      getDescriptor().getMessageTypes().get(18);
     internal_static_rpc_GetTableMetadataRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetTableMetadataRequest_descriptor,
         new java.lang.String[] { "Namespace", "Table", });
     internal_static_rpc_GetTableMetadataResponse_descriptor =
-      getDescriptor().getMessageTypes().get(22);
+      getDescriptor().getMessageTypes().get(19);
     internal_static_rpc_GetTableMetadataResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetTableMetadataResponse_descriptor,
         new java.lang.String[] { "TableMetadata", });
     internal_static_rpc_TransactionRequest_descriptor =
-      getDescriptor().getMessageTypes().get(23);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_rpc_TransactionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_TransactionRequest_descriptor,
@@ -589,7 +547,7 @@ public final class ScalarDbProto {
         internal_static_rpc_TransactionRequest_AbortRequest_descriptor,
         new java.lang.String[] { });
     internal_static_rpc_TransactionResponse_descriptor =
-      getDescriptor().getMessageTypes().get(24);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_rpc_TransactionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_TransactionResponse_descriptor,
@@ -619,13 +577,13 @@ public final class ScalarDbProto {
         internal_static_rpc_TransactionResponse_Error_descriptor,
         new java.lang.String[] { "ErrorCode", "Message", });
     internal_static_rpc_GetTransactionStateRequest_descriptor =
-      getDescriptor().getMessageTypes().get(25);
+      getDescriptor().getMessageTypes().get(22);
     internal_static_rpc_GetTransactionStateRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetTransactionStateRequest_descriptor,
         new java.lang.String[] { "TransactionId", });
     internal_static_rpc_GetTransactionStateResponse_descriptor =
-      getDescriptor().getMessageTypes().get(26);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_rpc_GetTransactionStateResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_rpc_GetTransactionStateResponse_descriptor,
