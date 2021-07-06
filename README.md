@@ -9,7 +9,7 @@ The library is available on [Maven Central](https://search.maven.org/search?q=a:
 
 ```
 dependencies {
-    compile group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
+    implementation group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
 }
 ```
 
