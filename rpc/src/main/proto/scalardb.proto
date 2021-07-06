@@ -236,17 +236,51 @@ service DistributedTransaction {
 }
 
 message TransactionRequest {
+  message StartRequest {
+    optional string transaction_id = 1;
+  }
+
+  message GetRequest {
+    Get get = 2;
+  }
+
+  message ScanRequest {
+    Scan scan = 2;
+  }
+
+  message MutateRequest {
+    repeated Mutation mutation = 2;
+  }
+
+  message CommitRequest {
+  }
+
+  message AbortRequest {
+  }
+
   oneof request {
-    StartTransactionRequest start_transaction_request = 1;
-    TransactionalGetRequest transactional_get_request = 2;
-    TransactionalScanRequest transactional_scan_request = 3;
-    TransactionalMutateRequest transactional_mutate_request = 4;
+    StartRequest start_request = 1;
+    GetRequest get_request = 2;
+    ScanRequest scan_request = 3;
+    MutateRequest mutate_request = 4;
     CommitRequest commit_request = 5;
     AbortRequest abort_request = 6;
   }
 }
 
 message TransactionResponse {
+  message StartResponse {
+    string transaction_id = 1;
+  }
+
+  message GetResponse {
+    Result result = 1;
+  }
+
+  message ScanResponse {
+    repeated Result result = 1;
+  }
+
   message Error {
     enum ErrorCode {
       INVALID_ARGUMENT = 0;
@@ -257,46 +291,13 @@ message TransactionResponse {
     ErrorCode error_code = 1;
     string message = 2;
   }
+
   oneof response {
-    StartTransactionResponse start_transaction_response = 1;
-    TransactionalGetResponse transactional_get_response = 2;
-    TransactionalScanResponse transactional_scan_response = 3;
+    StartResponse start_response = 1;
+    GetResponse get_response = 2;
+    ScanResponse scan_response = 3;
     Error error = 4;
   }
-}
-
-message StartTransactionRequest {
-  optional string transaction_id = 1;
-}
-
-message StartTransactionResponse {
-  string transaction_id = 1;
-}
-
-message TransactionalGetRequest {
-  Get get = 2;
-}
-
-message TransactionalGetResponse {
-  Result result = 1;
-}
-
-message TransactionalScanRequest {
-  Scan scan = 2;
-}
-
-message TransactionalScanResponse {
-  repeated Result result = 1;
-}
-
-message TransactionalMutateRequest {
-  repeated Mutation mutation = 2;
-}
-
-message CommitRequest {
-}
-
-message AbortRequest {
 }
 
 message GetTransactionStateRequest {
