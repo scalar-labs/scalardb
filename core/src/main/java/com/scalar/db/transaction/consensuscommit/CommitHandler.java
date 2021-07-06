@@ -79,7 +79,7 @@ public class CommitHandler {
     }
   }
 
-  private TransactionState abort(String id) throws UnknownTransactionStatusException {
+  public TransactionState abort(String id) throws UnknownTransactionStatusException {
     try {
       abortState(id);
       return TransactionState.ABORTED;

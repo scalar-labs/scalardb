@@ -11,6 +11,7 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
@@ -58,13 +59,35 @@ public class DistributedTransactionService
   public void getState(
       GetTransactionStateRequest request,
       StreamObserver<GetTransactionStateResponse> responseObserver) {
+    execute(
+        () -> {
+          TransactionState state = manager.getState(request.getTransactionId());
+          responseObserver.onNext(
+              GetTransactionStateResponse.newBuilder()
+                  .setState(ProtoUtil.toTransactionState(state))
+                  .build());
+          responseObserver.onCompleted();
+        },
+        responseObserver);
+  }
+
+  @Override
+  public void abort(
+      com.scalar.db.rpc.AbortRequest request, StreamObserver<AbortResponse> responseObserver) {
+    execute(
+        () -> {
+          TransactionState state = manager.abort(request.getTransactionId());
+          responseObserver.onNext(
+              AbortResponse.newBuilder().setState(ProtoUtil.toTransactionState(state)).build());
+          responseObserver.onCompleted();
+        },
+        responseObserver);
+  }
+
+  private static void execute(
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
     try {
-      TransactionState state = manager.getState(request.getTransactionId());
-      responseObserver.onNext(
-          GetTransactionStateResponse.newBuilder()
-              .setState(ProtoUtil.toTransactionState(state))
-              .build());
-      responseObserver.onCompleted();
+      runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());

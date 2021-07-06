@@ -97,6 +97,11 @@ public class TransactionService implements DistributedTransactionManager {
   }
 
   @Override
+  public TransactionState abort(String txId) throws TransactionException {
+    return manager.abort(txId);
+  }
+
+  @Override
   public void close() {
     manager.close();
   }

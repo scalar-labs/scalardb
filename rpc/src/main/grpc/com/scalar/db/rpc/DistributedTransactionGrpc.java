@@ -76,6 +76,37 @@ public final class DistributedTransactionGrpc {
     return getGetStateMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.AbortRequest,
+      com.scalar.db.rpc.AbortResponse> getAbortMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Abort",
+      requestType = com.scalar.db.rpc.AbortRequest.class,
+      responseType = com.scalar.db.rpc.AbortResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.AbortRequest,
+      com.scalar.db.rpc.AbortResponse> getAbortMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.AbortRequest, com.scalar.db.rpc.AbortResponse> getAbortMethod;
+    if ((getAbortMethod = DistributedTransactionGrpc.getAbortMethod) == null) {
+      synchronized (DistributedTransactionGrpc.class) {
+        if ((getAbortMethod = DistributedTransactionGrpc.getAbortMethod) == null) {
+          DistributedTransactionGrpc.getAbortMethod = getAbortMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.AbortRequest, com.scalar.db.rpc.AbortResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Abort"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.AbortRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.AbortResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedTransactionMethodDescriptorSupplier("Abort"))
+              .build();
+        }
+      }
+    }
+    return getAbortMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -138,6 +169,13 @@ public final class DistributedTransactionGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetStateMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void abort(com.scalar.db.rpc.AbortRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAbortMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -154,6 +192,13 @@ public final class DistributedTransactionGrpc {
                 com.scalar.db.rpc.GetTransactionStateRequest,
                 com.scalar.db.rpc.GetTransactionStateResponse>(
                   this, METHODID_GET_STATE)))
+          .addMethod(
+            getAbortMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.AbortRequest,
+                com.scalar.db.rpc.AbortResponse>(
+                  this, METHODID_ABORT)))
           .build();
     }
   }
@@ -187,6 +232,14 @@ public final class DistributedTransactionGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetStateMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void abort(com.scalar.db.rpc.AbortRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAbortMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -208,6 +261,13 @@ public final class DistributedTransactionGrpc {
     public com.scalar.db.rpc.GetTransactionStateResponse getState(com.scalar.db.rpc.GetTransactionStateRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetStateMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.scalar.db.rpc.AbortResponse abort(com.scalar.db.rpc.AbortRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAbortMethod(), getCallOptions(), request);
     }
   }
 
@@ -232,10 +292,19 @@ public final class DistributedTransactionGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetStateMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.AbortResponse> abort(
+        com.scalar.db.rpc.AbortRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAbortMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_GET_STATE = 0;
-  private static final int METHODID_TRANSACTION = 1;
+  private static final int METHODID_ABORT = 1;
+  private static final int METHODID_TRANSACTION = 2;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -257,6 +326,10 @@ public final class DistributedTransactionGrpc {
         case METHODID_GET_STATE:
           serviceImpl.getState((com.scalar.db.rpc.GetTransactionStateRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTransactionStateResponse>) responseObserver);
+          break;
+        case METHODID_ABORT:
+          serviceImpl.abort((com.scalar.db.rpc.AbortRequest) request,
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.AbortResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -324,6 +397,7 @@ public final class DistributedTransactionGrpc {
               .setSchemaDescriptor(new DistributedTransactionFileDescriptorSupplier())
               .addMethod(getTransactionMethod())
               .addMethod(getGetStateMethod())
+              .addMethod(getAbortMethod())
               .build();
         }
       }
