@@ -23,24 +23,17 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
   public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
       PREFIX + "prepared_statements_pool.max_open";
 
-  public static final String TRANSACTION_MANAGER_TYPE = PREFIX + "transaction_manager_type";
-  public static final String TRANSACTION_MANAGER_TYPE_CONSENSUS_COMMIT = "consensus-commit";
-  public static final String TRANSACTION_MANAGER_TYPE_JDBC = "jdbc";
-
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 5;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 25;
   public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
   public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
-  public static final String DEFAULT_TRANSACTION_MANAGER_TYPE =
-      TRANSACTION_MANAGER_TYPE_CONSENSUS_COMMIT;
 
   private int connectionPoolMinIdle;
   private int connectionPoolMaxIdle;
   private int connectionPoolMaxTotal;
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
-  private String transactionManagerType;
 
   public JdbcDatabaseConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -70,19 +63,6 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
         getBoolean(PREPARED_STATEMENTS_POOL_ENABLED, DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     preparedStatementsPoolMaxOpen =
         getInt(PREPARED_STATEMENTS_POOL_MAX_OPEN, DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
-
-    transactionManagerType =
-        getProperties().getProperty(TRANSACTION_MANAGER_TYPE, DEFAULT_TRANSACTION_MANAGER_TYPE);
-    if (!transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_CONSENSUS_COMMIT)
-        && !transactionManagerType.equals(TRANSACTION_MANAGER_TYPE_JDBC)) {
-      if (!transactionManagerType.isEmpty()) {
-        LOGGER.warn(
-            "the specified value of '{}' is invalid. using the default value: {}",
-            TRANSACTION_MANAGER_TYPE,
-            DEFAULT_TRANSACTION_MANAGER_TYPE);
-      }
-      transactionManagerType = DEFAULT_TRANSACTION_MANAGER_TYPE;
-    }
   }
 
   private int getInt(String name, int defaultValue) {
@@ -127,9 +107,5 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
 
   public int getPreparedStatementsPoolMaxOpen() {
     return preparedStatementsPoolMaxOpen;
-  }
-
-  public String getTransactionManagerType() {
-    return transactionManagerType;
   }
 }

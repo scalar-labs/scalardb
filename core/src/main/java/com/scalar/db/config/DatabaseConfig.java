@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
@@ -19,7 +20,10 @@ import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
+import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,6 +44,7 @@ public class DatabaseConfig {
   private Class<? extends DistributedStorage> storageClass;
   private Class<? extends DistributedStorageAdmin> adminClass;
   private Optional<String> namespacePrefix;
+  private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
   private SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
   public static final String PREFIX = "scalar.db.";
@@ -49,6 +54,7 @@ public class DatabaseConfig {
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
+  public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String CONSENSUS_COMMIT_PREFIX = PREFIX + "consensus_commit.";
   public static final String SERIALIZABLE_STRATEGY =
@@ -74,7 +80,7 @@ public class DatabaseConfig {
   }
 
   protected void load() {
-    if (props.getProperty(STORAGE) == null) {
+    if (Strings.isNullOrEmpty(props.getProperty(STORAGE))) {
       storageClass = Cassandra.class;
       adminClass = CassandraAdmin.class;
     } else {
@@ -104,7 +110,8 @@ public class DatabaseConfig {
           adminClass = GrpcAdmin.class;
           break;
         default:
-          throw new IllegalArgumentException(props.getProperty(STORAGE) + " isn't supported");
+          throw new IllegalArgumentException(
+              "storage '" + props.getProperty(STORAGE) + "' isn't supported");
       }
     }
 
@@ -112,7 +119,7 @@ public class DatabaseConfig {
       checkNotNull(props.getProperty(CONTACT_POINTS));
 
       contactPoints = Arrays.asList(props.getProperty(CONTACT_POINTS).split(","));
-      if (props.getProperty(CONTACT_PORT) == null) {
+      if (Strings.isNullOrEmpty(props.getProperty(CONTACT_PORT))) {
         contactPort = 0;
       } else {
         contactPort = Integer.parseInt(props.getProperty(CONTACT_PORT));
@@ -130,6 +137,35 @@ public class DatabaseConfig {
       username = Optional.empty();
       password = Optional.empty();
       namespacePrefix = Optional.empty();
+    }
+
+    if (Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
+      transactionManagerClass = ConsensusCommitManager.class;
+    } else {
+      switch (props.getProperty(TRANSACTION_MANAGER).toLowerCase()) {
+        case "consensus-commit":
+          transactionManagerClass = ConsensusCommitManager.class;
+          break;
+        case "jdbc":
+          if (storageClass != JdbcDatabase.class) {
+            throw new IllegalArgumentException(
+                "'jdbc' transaction manager ("
+                    + TRANSACTION_MANAGER
+                    + ") is supported only for 'jdbc' storage ("
+                    + STORAGE
+                    + ")");
+          }
+          transactionManagerClass = JdbcTransactionManager.class;
+          break;
+        case "grpc":
+          transactionManagerClass = GrpcTransactionManager.class;
+          break;
+        default:
+          throw new IllegalArgumentException(
+              "transaction manager '"
+                  + props.getProperty(TRANSACTION_MANAGER)
+                  + "' isn't supported");
+      }
     }
 
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
@@ -168,6 +204,10 @@ public class DatabaseConfig {
 
   public Optional<String> getNamespacePrefix() {
     return namespacePrefix;
+  }
+
+  public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {
+    return transactionManagerClass;
   }
 
   public Isolation getIsolation() {
