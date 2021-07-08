@@ -7,7 +7,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.storage.common.ScannerIterator;
-import io.grpc.StatusRuntimeException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,17 +30,14 @@ public class ScannerImpl implements Scanner {
 
   @Override
   public Optional<Result> one() throws ExecutionException {
-    return GrpcStorage.execute(
-        () -> {
-          if (results.isEmpty()) {
-            return Optional.empty();
-          }
-          Result result = results.remove(0);
-          if (results.isEmpty() && stream.hasMoreResults()) {
-            results = stream.next();
-          }
-          return Optional.of(result);
-        });
+    if (results.isEmpty()) {
+      return Optional.empty();
+    }
+    Result result = results.remove(0);
+    if (results.isEmpty() && stream.hasMoreResults()) {
+      results = stream.next();
+    }
+    return Optional.of(result);
   }
 
   @Override
@@ -60,11 +56,7 @@ public class ScannerImpl implements Scanner {
 
   @Override
   public void close() throws IOException {
-    try {
-      stream.closeScanner();
-    } catch (StatusRuntimeException e) {
-      throw new IOException("failed to close the scanner", e);
-    }
+    stream.closeScanner();
   }
 
   @Override

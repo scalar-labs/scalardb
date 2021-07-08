@@ -17,7 +17,6 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,12 +81,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    return execute(() -> metadataManager.getTableMetadata(namespace, table));
+    return metadataManager.getTableMetadata(namespace, table);
   }
 
-  private static <T> T execute(Supplier<T> supplier) throws ExecutionException {
+  private static void execute(Runnable supplier) throws ExecutionException {
     try {
-      return supplier.get();
+      supplier.run();
     } catch (StatusRuntimeException e) {
       if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
         throw new IllegalArgumentException(e.getMessage());

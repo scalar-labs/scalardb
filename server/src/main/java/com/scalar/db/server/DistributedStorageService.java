@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +35,12 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   private static final int DEFAULT_SCAN_FETCH_COUNT = 100;
 
   private final DistributedStorage storage;
+  private final Pauser pauser;
 
   @Inject
-  public DistributedStorageService(DistributedStorage storage) {
+  public DistributedStorageService(DistributedStorage storage, Pauser pauser) {
     this.storage = storage;
+    this.pauser = pauser;
   }
 
   @Override
@@ -55,7 +59,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
   @Override
   public StreamObserver<ScanRequest> scan(StreamObserver<ScanResponse> responseObserver) {
-    return new ScanStreamObserver(storage, responseObserver);
+    return new ScanStreamObserver(storage, responseObserver, this::preProcess, this::postProcess);
   }
 
   @Override
@@ -73,8 +77,12 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
         responseObserver);
   }
 
-  private static void execute(
-      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+  private void execute(ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+    if (!preProcess(responseObserver)) {
+      // Unavailable
+      return;
+    }
+
     try {
       runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
@@ -90,24 +98,57 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       if (t instanceof Error) {
         throw (Error) t;
       }
+    } finally {
+      postProcess();
     }
+  }
+
+  private boolean preProcess(StreamObserver<?> responseObserver) {
+    if (pauser.preProcess()) {
+      respondUnavailableError(responseObserver);
+      return false;
+    }
+    return true;
+  }
+
+  private void respondUnavailableError(StreamObserver<?> responseObserver) {
+    responseObserver.onError(
+        Status.UNAVAILABLE.withDescription("the server is paused").asRuntimeException());
+  }
+
+  private void postProcess() {
+    pauser.postProcess();
   }
 
   private static class ScanStreamObserver implements StreamObserver<ScanRequest> {
 
     private final DistributedStorage storage;
     private final StreamObserver<ScanResponse> responseObserver;
+    private final Function<StreamObserver<?>, Boolean> preProcessor;
+    private final Runnable postProcessor;
+    private final AtomicBoolean preProcessed = new AtomicBoolean();
 
     private Scanner scanner;
 
     public ScanStreamObserver(
-        DistributedStorage storage, StreamObserver<ScanResponse> responseObserver) {
+        DistributedStorage storage,
+        StreamObserver<ScanResponse> responseObserver,
+        Function<StreamObserver<?>, Boolean> preProcessor,
+        Runnable postProcessor) {
       this.storage = storage;
       this.responseObserver = responseObserver;
+      this.preProcessor = preProcessor;
+      this.postProcessor = postProcessor;
     }
 
     @Override
     public void onNext(ScanRequest request) {
+      if (preProcessed.compareAndSet(false, true)) {
+        if (!preProcessor.apply(responseObserver)) {
+          return;
+        }
+      }
+
       if (scanner == null) {
         if (!request.hasScan()) {
           respondInvalidArgumentError(
@@ -134,7 +175,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       responseObserver.onNext(builder.setHasMoreResults(hasMoreResults).build());
 
       if (!hasMoreResults) {
-        closeScanner();
+        cleanUp();
         responseObserver.onCompleted();
       }
     }
@@ -160,13 +201,13 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     @Override
     public void onError(Throwable t) {
       LOGGER.error("an error received", t);
-      closeScanner();
+      cleanUp();
     }
 
     @Override
     public void onCompleted() {
       responseObserver.onCompleted();
-      closeScanner();
+      cleanUp();
     }
 
     private List<Result> fetch(Iterator<Result> resultIterator, int fetchCount) {
@@ -180,7 +221,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       return results;
     }
 
-    private void closeScanner() {
+    private void cleanUp() {
       try {
         if (scanner != null) {
           scanner.close();
@@ -188,17 +229,19 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       } catch (IOException e) {
         LOGGER.warn("failed to close the scanner");
       }
+
+      postProcessor.run();
     }
 
     private void respondInternalError(String message) {
       responseObserver.onError(Status.INTERNAL.withDescription(message).asRuntimeException());
-      closeScanner();
+      cleanUp();
     }
 
     private void respondInvalidArgumentError(String message) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(message).asRuntimeException());
-      closeScanner();
+      cleanUp();
     }
   }
 }

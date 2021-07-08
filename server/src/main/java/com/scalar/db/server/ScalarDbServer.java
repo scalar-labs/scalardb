@@ -58,6 +58,7 @@ public class ScalarDbServer implements Callable<Integer> {
             .addService(injector.getInstance(DistributedStorageService.class))
             .addService(injector.getInstance(DistributedStorageAdminService.class))
             .addService(injector.getInstance(DistributedTransactionService.class))
+            .addService(injector.getInstance(AdminService.class))
             .addService(new HealthService())
             .addService(ProtoReflectionService.newInstance())
             .build()
@@ -71,10 +72,9 @@ public class ScalarDbServer implements Callable<Integer> {
         .addShutdownHook(
             new Thread(
                 () -> {
-                  // Use stderr here since the logger may have been reset by its JVM shutdown hook.
-                  System.err.println("*** shutting down gRPC server since JVM is shutting down");
-                  this.shutdown();
-                  System.err.println("*** server shut down");
+                  LOGGER.info("Signal received. Shutting down the server ...");
+                  shutdown();
+                  LOGGER.info("The server shut down.");
                 }));
   }
 

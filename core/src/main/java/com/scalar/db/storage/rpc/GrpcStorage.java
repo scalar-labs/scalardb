@@ -1,5 +1,7 @@
 package com.scalar.db.storage.rpc;
 
+import static com.scalar.db.util.retry.Retry.executeWithRetries;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
@@ -22,6 +24,8 @@ import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.Utility;
+import com.scalar.db.util.retry.Retry;
+import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -36,6 +40,17 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcStorage implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
+
+  private static final Retry.ExceptionFactory<ExecutionException> EXCEPTION_FACTORY =
+      (message, cause) -> {
+        if (cause == null) {
+          return new ExecutionException(message);
+        }
+        if (cause instanceof ExecutionException) {
+          return (ExecutionException) cause;
+        }
+        return new ExecutionException(message, cause);
+      };
 
   private final ManagedChannel channel;
   private final DistributedStorageGrpc.DistributedStorageStub stub;
@@ -100,10 +115,9 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public Optional<Result> get(Get get) throws ExecutionException {
+    Utility.setTargetToIfNot(get, namespace, tableName);
     return execute(
         () -> {
-          Utility.setTargetToIfNot(get, namespace, tableName);
-
           GetResponse response =
               blockingStub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
           if (response.hasResult()) {
@@ -117,8 +131,12 @@ public class GrpcStorage implements DistributedStorage {
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
     Utility.setTargetToIfNot(scan, namespace, tableName);
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-    return new ScannerImpl(scan, stub, tableMetadata);
+    return executeWithRetries(
+        () -> {
+          TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
+          return new ScannerImpl(scan, stub, tableMetadata);
+        },
+        EXCEPTION_FACTORY);
   }
 
   @Override
@@ -142,10 +160,9 @@ public class GrpcStorage implements DistributedStorage {
   }
 
   private void mutate(Mutation mutation) throws ExecutionException {
+    Utility.setTargetToIfNot(mutation, namespace, tableName);
     execute(
         () -> {
-          Utility.setTargetToIfNot(mutation, namespace, tableName);
-
           blockingStub.mutate(
               MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
           return null;
@@ -154,10 +171,9 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
+    Utility.setTargetToIfNot(mutations, namespace, tableName);
     execute(
         () -> {
-          Utility.setTargetToIfNot(mutations, namespace, tableName);
-
           MutateRequest.Builder builder = MutateRequest.newBuilder();
           mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
           blockingStub.mutate(builder.build());
@@ -165,18 +181,26 @@ public class GrpcStorage implements DistributedStorage {
         });
   }
 
-  static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
+  private static <T> T execute(ThrowableSupplier<T, ExecutionException> supplier)
       throws ExecutionException {
-    try {
-      return supplier.get();
-    } catch (StatusRuntimeException e) {
-      if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-        throw new IllegalArgumentException(e.getMessage());
-      } else if (e.getStatus().getCode() == Code.FAILED_PRECONDITION) {
-        throw new NoMutationException(e.getMessage());
-      }
-      throw new ExecutionException(e.getMessage());
-    }
+    return executeWithRetries(
+        () -> {
+          try {
+            return supplier.get();
+          } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+              throw new IllegalArgumentException(e.getMessage());
+            }
+            if (e.getStatus().getCode() == Code.FAILED_PRECONDITION) {
+              throw new NoMutationException(e.getMessage());
+            }
+            if (e.getStatus().getCode() == Code.UNAVAILABLE) {
+              throw new ServiceTemporaryUnavailableException(e.getMessage());
+            }
+            throw new ExecutionException(e.getMessage());
+          }
+        },
+        EXCEPTION_FACTORY);
   }
 
   @Override

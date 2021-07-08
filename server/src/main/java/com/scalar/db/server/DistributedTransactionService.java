@@ -34,6 +34,8 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,16 +45,19 @@ public class DistributedTransactionService
   private static final Logger LOGGER = LoggerFactory.getLogger(DistributedTransactionService.class);
 
   private final DistributedTransactionManager manager;
+  private final Pauser pauser;
 
   @Inject
-  public DistributedTransactionService(DistributedTransactionManager manager) {
+  public DistributedTransactionService(DistributedTransactionManager manager, Pauser pauser) {
     this.manager = manager;
+    this.pauser = pauser;
   }
 
   @Override
   public StreamObserver<TransactionRequest> transaction(
       StreamObserver<TransactionResponse> responseObserver) {
-    return new TransactionStreamObserver(manager, responseObserver);
+    return new TransactionStreamObserver(
+        manager, responseObserver, this::preProcess, this::postProcess);
   }
 
   @Override
@@ -84,8 +89,12 @@ public class DistributedTransactionService
         responseObserver);
   }
 
-  private static void execute(
-      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+  private void execute(ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+    if (!preProcess(responseObserver)) {
+      // Unavailable
+      return;
+    }
+
     try {
       runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
@@ -98,25 +107,57 @@ public class DistributedTransactionService
       if (t instanceof Error) {
         throw (Error) t;
       }
+    } finally {
+      postProcess();
     }
+  }
+
+  private boolean preProcess(StreamObserver<?> responseObserver) {
+    if (pauser.preProcess()) {
+      respondUnavailableError(responseObserver);
+      return false;
+    }
+    return true;
+  }
+
+  private void respondUnavailableError(StreamObserver<?> responseObserver) {
+    responseObserver.onError(
+        Status.UNAVAILABLE.withDescription("the server is paused").asRuntimeException());
+  }
+
+  private void postProcess() {
+    pauser.postProcess();
   }
 
   private static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {
 
     private final DistributedTransactionManager manager;
     private final StreamObserver<TransactionResponse> responseObserver;
+    private final Function<StreamObserver<?>, Boolean> preProcessor;
+    private final Runnable postProcessor;
+    private final AtomicBoolean preProcessed = new AtomicBoolean();
 
     private DistributedTransaction transaction;
 
     public TransactionStreamObserver(
         DistributedTransactionManager manager,
-        StreamObserver<TransactionResponse> responseObserver) {
+        StreamObserver<TransactionResponse> responseObserver,
+        Function<StreamObserver<?>, Boolean> preProcessor,
+        Runnable postProcessor) {
       this.manager = manager;
       this.responseObserver = responseObserver;
+      this.preProcessor = preProcessor;
+      this.postProcessor = postProcessor;
     }
 
     @Override
     public void onNext(TransactionRequest request) {
+      if (preProcessed.compareAndSet(false, true)) {
+        if (!preProcessor.apply(responseObserver)) {
+          return;
+        }
+      }
+
       if (request.getRequestCase() == RequestCase.START_REQUEST) {
         startTransaction(request);
       } else {
@@ -188,6 +229,7 @@ public class DistributedTransactionService
       responseObserver.onNext(responseBuilder.build());
       if (completed) {
         responseObserver.onCompleted();
+        postProcessor.run();
       }
     }
 
@@ -198,7 +240,7 @@ public class DistributedTransactionService
     @Override
     public void onError(Throwable t) {
       LOGGER.error("an error received", t);
-      abort();
+      cleanUp();
     }
 
     @Override
@@ -246,7 +288,7 @@ public class DistributedTransactionService
       execute(() -> transaction.abort(), responseBuilder);
     }
 
-    private void abort() {
+    private void cleanUp() {
       if (transaction != null) {
         try {
           transaction.abort();
@@ -254,17 +296,19 @@ public class DistributedTransactionService
           LOGGER.warn("abort failed", e);
         }
       }
+
+      postProcessor.run();
     }
 
     private void respondInternalError(String message) {
       responseObserver.onError(Status.INTERNAL.withDescription(message).asRuntimeException());
-      abort();
+      cleanUp();
     }
 
     private void respondInvalidArgumentError(String message) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(message).asRuntimeException());
-      abort();
+      cleanUp();
     }
 
     private void execute(

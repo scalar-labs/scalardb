@@ -30,6 +30,9 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.30'
     implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
     implementation group: 'info.picocli', name: 'picocli', version: '4.1.4'
+    implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: '1.0.0') {
+        exclude group: 'io.grpc'
+    }
     testImplementation project(':core').sourceSets.integrationTest.output
 }
 

@@ -30,6 +30,7 @@ public class DistributedTransactionServiceTest {
   private static final String ANY_ID = "id";
 
   @Mock private DistributedTransactionManager manager;
+  @Mock private Pauser pauser;
   @Mock private DistributedTransaction transaction;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
 
@@ -40,7 +41,7 @@ public class DistributedTransactionServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    transactionService = new DistributedTransactionService(manager);
+    transactionService = new DistributedTransactionService(manager, pauser);
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);

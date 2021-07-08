@@ -34,6 +34,7 @@ import org.mockito.MockitoAnnotations;
 public class DistributedStorageServiceTest {
 
   @Mock private DistributedStorage storage;
+  @Mock private Pauser pauser;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
 
   private DistributedStorageService storageService;
@@ -43,7 +44,7 @@ public class DistributedStorageServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    storageService = new DistributedStorageService(storage);
+    storageService = new DistributedStorageService(storage, pauser);
   }
 
   @Test
