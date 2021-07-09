@@ -14,7 +14,12 @@ import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
+import com.scalar.db.storage.rpc.GrpcAdmin;
+import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
+import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
@@ -45,6 +50,10 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getNamespacePrefix()).isNotPresent();
+    assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -66,6 +75,10 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getNamespacePrefix()).isNotPresent();
+    assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -87,6 +100,10 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getNamespacePrefix()).isNotPresent();
+    assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -110,6 +127,10 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getNamespacePrefix()).isNotPresent();
+    assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -254,6 +275,29 @@ public class DatabaseConfigTest {
   }
 
   @Test
+  public void constructor_PropertiesWithGrpcGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
+    assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
+  }
+
+  @Test
   public void constructor_WrongStorageClassGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
@@ -268,6 +312,97 @@ public class DatabaseConfigTest {
               new DatabaseConfig(props);
             })
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithConsensusCommitTransactionManagerGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
+    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithJdbcTransactionManagerAndJdbcStorageGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+    assertThat(config.getTransactionManagerClass()).isEqualTo(JdbcTransactionManager.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithJdbcTransactionManagerAndCassandraStorageGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "cassandra");
+    props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
+
+    // Act Assert
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithGrpcTransactionManagerGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
+    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getTransactionManagerClass()).isEqualTo(GrpcTransactionManager.class);
   }
 
   @Test

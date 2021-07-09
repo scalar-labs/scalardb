@@ -42,9 +42,6 @@ scalar.db.storage=jdbc
 
 # The maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit. The default is -1
 #scalar.db.jdbc.prepared_statements_pool.max_open=-1
-
-# The type of the transaction manager. "consensus-commit" or "jdbc" can be set. The default is "consensus-commit"
-#scalar.db.jdbc.transaction_manager_type=consensus-commit
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.

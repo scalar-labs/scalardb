@@ -30,9 +30,6 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_TOTAL, "200");
     props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
-    props.setProperty(
-        JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE,
-        JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE_JDBC);
 
     // Act
     JdbcDatabaseConfig config = new JdbcDatabaseConfig(props);
@@ -53,8 +50,6 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.isPreparedStatementsPoolEnabled()).isEqualTo(true);
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
-    assertThat(config.getTransactionManagerType())
-        .isEqualTo(JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE_JDBC);
   }
 
   @Test
@@ -92,8 +87,6 @@ public class JdbcDatabaseConfigTest {
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
-    assertThat(config.getTransactionManagerType())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_TRANSACTION_MANAGER_TYPE);
   }
 
   @Test
@@ -126,7 +119,6 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_TOTAL, "ccc");
     props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_ENABLED, "ddd");
     props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
-    props.setProperty(JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE, "fff");
 
     // Act
     JdbcDatabaseConfig config = new JdbcDatabaseConfig(props);
@@ -152,7 +144,5 @@ public class JdbcDatabaseConfigTest {
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
-    assertThat(config.getTransactionManagerType())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_TRANSACTION_MANAGER_TYPE);
   }
 }

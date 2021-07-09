@@ -15,7 +15,6 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
@@ -326,9 +325,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcDatabaseConfig().getProperties());
-    serverProperties.setProperty(
-        JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE,
-        JdbcDatabaseConfig.TRANSACTION_MANAGER_TYPE_JDBC);
+    serverProperties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
