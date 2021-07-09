@@ -80,10 +80,9 @@ public class DatabaseConfig {
   }
 
   protected void load() {
-    if (Strings.isNullOrEmpty(props.getProperty(STORAGE))) {
-      storageClass = Cassandra.class;
-      adminClass = CassandraAdmin.class;
-    } else {
+    storageClass = Cassandra.class;
+    adminClass = CassandraAdmin.class;
+    if (!Strings.isNullOrEmpty(props.getProperty(STORAGE))) {
       switch (props.getProperty(STORAGE).toLowerCase()) {
         case "cassandra":
           storageClass = Cassandra.class;
@@ -139,9 +138,8 @@ public class DatabaseConfig {
       namespacePrefix = Optional.empty();
     }
 
-    if (Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
-      transactionManagerClass = ConsensusCommitManager.class;
-    } else {
+    transactionManagerClass = ConsensusCommitManager.class;
+    if (!Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
       switch (props.getProperty(TRANSACTION_MANAGER).toLowerCase()) {
         case "consensus-commit":
           transactionManagerClass = ConsensusCommitManager.class;
