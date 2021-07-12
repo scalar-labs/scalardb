@@ -26,21 +26,28 @@ public final class Pauser {
    * All of the gPRC endpoints that will be paused/unpaused need to call this method before
    * processing
    *
-   * @return whether or not it's paused or not
+   * @return when it's paused, returns false. Otherwise returns trueq
    */
   public boolean preProcess() {
     boolean incremented = false;
+    // We need to increment "outstandingRequestCount" before checking "isPaused" to avoid the race
+    // condition
     if (!isPaused.get()) {
       outstandingRequestCount.increment();
       incremented = true;
     }
     if (isPaused.get()) {
+      // It's paused
       if (incremented) {
+        // We need to decrement "outstandingRequestCount" only when we incremented it
         outstandingRequestCount.decrement();
       }
-      return true;
+      return false;
     }
-    return !incremented;
+
+    // If we didn't increment "outstandingRequestCount", we assume it's still paused, otherwise it's
+    // not paused
+    return incremented;
   }
 
   /**

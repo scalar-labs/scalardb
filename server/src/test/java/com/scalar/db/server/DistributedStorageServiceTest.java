@@ -45,6 +45,7 @@ public class DistributedStorageServiceTest {
 
     // Arrange
     storageService = new DistributedStorageService(storage, pauser);
+    when(pauser.preProcess()).thenReturn(true);
   }
 
   @Test

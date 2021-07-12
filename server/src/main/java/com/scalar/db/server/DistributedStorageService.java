@@ -104,7 +104,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   }
 
   private boolean preProcess(StreamObserver<?> responseObserver) {
-    if (pauser.preProcess()) {
+    if (!pauser.preProcess()) {
       respondUnavailableError(responseObserver);
       return false;
     }

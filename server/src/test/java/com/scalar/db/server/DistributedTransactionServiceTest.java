@@ -45,6 +45,7 @@ public class DistributedTransactionServiceTest {
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);
+    when(pauser.preProcess()).thenReturn(true);
   }
 
   @Test
