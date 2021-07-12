@@ -101,6 +101,22 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
+  public void get_PauserReturnsFalse_ShouldThrowUnavailableError() {
+    // Arrange
+    GetRequest request = GetRequest.newBuilder().build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<GetResponse> responseObserver = mock(StreamObserver.class);
+    when(pauser.preProcess()).thenReturn(false);
+
+    // Act
+    storageService.get(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
+  }
+
+  @Test
   public void mutate_IsCalledWithSinglePut_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
@@ -269,5 +285,23 @@ public class DistributedStorageServiceTest {
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());
     assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Status.Code.INTERNAL);
+  }
+
+  @Test
+  public void mutate_PauserReturnsFalse_ShouldThrowUnavailableError() {
+    // Arrange
+    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    MutateRequest request =
+        MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+    when(pauser.preProcess()).thenReturn(false);
+
+    // Act
+    storageService.mutate(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
   }
 }
