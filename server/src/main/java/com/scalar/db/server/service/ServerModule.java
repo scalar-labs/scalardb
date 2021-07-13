@@ -5,10 +5,11 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.server.DistributedStorageAdminService;
-import com.scalar.db.server.DistributedStorageService;
-import com.scalar.db.server.DistributedTransactionService;
+import com.scalar.db.server.Pauser;
 import com.scalar.db.service.StorageModule;
 import com.scalar.db.service.TransactionModule;
 
@@ -23,19 +24,25 @@ public class ServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  DistributedStorageService provideDistributedStorageService() {
-    return storageInjector.getInstance(DistributedStorageService.class);
+  DistributedStorage provideDistributedStorage() {
+    return storageInjector.getInstance(DistributedStorage.class);
   }
 
   @Provides
   @Singleton
-  DistributedStorageAdminService provideDistributedStorageAdminService() {
-    return storageInjector.getInstance(DistributedStorageAdminService.class);
+  DistributedStorageAdmin provideDistributedStorageAdmin() {
+    return storageInjector.getInstance(DistributedStorageAdmin.class);
   }
 
   @Provides
   @Singleton
-  DistributedTransactionService provideDistributedTransactionService() {
-    return transactionInjector.getInstance(DistributedTransactionService.class);
+  DistributedTransactionManager provideDistributedTransactionManager() {
+    return transactionInjector.getInstance(DistributedTransactionManager.class);
+  }
+
+  @Provides
+  @Singleton
+  Pauser providePauser() {
+    return new Pauser();
   }
 }

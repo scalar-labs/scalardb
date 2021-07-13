@@ -21,11 +21,11 @@ import com.scalar.db.rpc.TransactionRequest.MutateRequest;
 import com.scalar.db.rpc.TransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
-import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
-import io.grpc.Status;
+import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
+import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
@@ -113,22 +113,17 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
       Throwable error = responseOrError.getError();
       if (error instanceof StatusRuntimeException) {
         StatusRuntimeException e = (StatusRuntimeException) error;
-        if (e.getStatus() == Status.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
+        if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(e.getMessage(), e);
+        }
+        if (e.getStatus().getCode() == Code.UNAVAILABLE) {
+          throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
         }
       }
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException(error.getMessage());
-    }
-
-    TransactionResponse response = responseOrError.getResponse();
-    if (response.hasError()) {
-      if (response.getError().getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
-        throw new IllegalArgumentException(response.getError().getMessage());
-      }
-      throw new TransactionException(response.getError().getMessage());
+      throw new TransactionException("failed to start", error);
     }
   }
 
@@ -196,7 +191,7 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CrudException(error.getMessage());
+      throw new CrudException("failed to execute crud", error);
     }
 
     TransactionResponse response = responseOrError.getResponse();
@@ -227,18 +222,15 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
   private void throwIfErrorForCommit(ResponseOrError responseOrError)
       throws CommitException, UnknownTransactionStatusException {
     if (responseOrError.isError()) {
-      finished.set(true);
       Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new CommitException(error.getMessage());
+      throw new CommitException("failed to commit", error);
     }
 
     if (responseOrError.getResponse().hasError()) {
       switch (responseOrError.getResponse().getError().getErrorCode()) {
-        case INVALID_ARGUMENT:
-          throw new IllegalArgumentException(responseOrError.getResponse().getError().getMessage());
         case CONFLICT:
           throw new CommitConflictException(responseOrError.getResponse().getError().getMessage());
         case UNKNOWN_TRANSACTION:
@@ -266,19 +258,15 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
 
   private void throwIfErrorForAbort(ResponseOrError responseOrError) throws AbortException {
     if (responseOrError.isError()) {
-      finished.set(true);
       Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException(error.getMessage());
+      throw new AbortException("failed to abort", error);
     }
 
     TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      if (response.getError().getErrorCode() == ErrorCode.INVALID_ARGUMENT) {
-        throw new IllegalArgumentException(response.getError().getMessage());
-      }
       throw new AbortException(response.getError().getMessage());
     }
   }

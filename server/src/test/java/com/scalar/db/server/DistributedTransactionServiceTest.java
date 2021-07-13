@@ -30,6 +30,7 @@ public class DistributedTransactionServiceTest {
   private static final String ANY_ID = "id";
 
   @Mock private DistributedTransactionManager manager;
+  @Mock private Pauser pauser;
   @Mock private DistributedTransaction transaction;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
 
@@ -40,10 +41,11 @@ public class DistributedTransactionServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    transactionService = new DistributedTransactionService(manager);
+    transactionService = new DistributedTransactionService(manager, pauser);
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);
+    when(pauser.preProcess()).thenReturn(true);
   }
 
   @Test
@@ -102,6 +104,23 @@ public class DistributedTransactionServiceTest {
   }
 
   @Test
+  public void getState_PauserReturnsFalse_ShouldThrowUnavailableError() {
+    // Arrange
+    GetTransactionStateRequest request =
+        GetTransactionStateRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<GetTransactionStateResponse> responseObserver = mock(StreamObserver.class);
+    when(pauser.preProcess()).thenReturn(false);
+
+    // Act
+    transactionService.getState(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
+  }
+
+  @Test
   public void abort_IsCalledWithProperArguments_ManagerShouldBeCalledProperly()
       throws TransactionException {
     // Arrange
@@ -151,5 +170,21 @@ public class DistributedTransactionServiceTest {
     // Assert
     verify(responseObserver).onError(exceptionCaptor.capture());
     assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.INTERNAL);
+  }
+
+  @Test
+  public void abort_PauserReturnsFalse_ShouldThrowUnavailableError() {
+    // Arrange
+    AbortRequest request = AbortRequest.newBuilder().setTransactionId(ANY_ID).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<AbortResponse> responseObserver = mock(StreamObserver.class);
+    when(pauser.preProcess()).thenReturn(false);
+
+    // Act
+    transactionService.abort(request, responseObserver);
+
+    // Assert
+    verify(responseObserver).onError(exceptionCaptor.capture());
+    assertThat(exceptionCaptor.getValue().getStatus().getCode()).isEqualTo(Code.UNAVAILABLE);
   }
 }

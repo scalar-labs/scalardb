@@ -3,6 +3,7 @@ package com.scalar.db.storage.rpc;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
@@ -11,6 +12,8 @@ import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -60,6 +63,14 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
     try {
       return tableMetadataCache.get(new TableName(namespace, table)).orElse(null);
     } catch (ExecutionException e) {
+      throw new StorageRuntimeException("Failed to read the table metadata", e);
+    } catch (UncheckedExecutionException e) {
+      if (e.getCause() instanceof StatusRuntimeException) {
+        StatusRuntimeException statusRuntimeException = (StatusRuntimeException) e.getCause();
+        if (statusRuntimeException.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(e.getMessage(), statusRuntimeException);
+        }
+      }
       throw new StorageRuntimeException("Failed to read the table metadata", e);
     }
   }

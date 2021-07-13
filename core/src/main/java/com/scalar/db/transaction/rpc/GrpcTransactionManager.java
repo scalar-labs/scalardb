@@ -1,5 +1,7 @@
 package com.scalar.db.transaction.rpc;
 
+import static com.scalar.db.util.retry.Retry.executeWithRetries;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -17,12 +19,16 @@ import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableSupplier;
+import com.scalar.db.util.retry.Retry;
+import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +36,17 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
+
+  private static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
+      (message, cause) -> {
+        if (cause == null) {
+          return new TransactionException(message);
+        }
+        if (cause instanceof TransactionException) {
+          return (TransactionException) cause;
+        }
+        return new TransactionException(message, cause);
+      };
 
   private final ManagedChannel channel;
   private final DistributedTransactionGrpc.DistributedTransactionStub stub;
@@ -94,18 +111,23 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
 
   @Override
   public GrpcTransaction start() throws TransactionException {
-    GrpcTransactionOnBidirectionalStream stream =
-        new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
-    String transactionId = stream.startTransaction();
-    return new GrpcTransaction(transactionId, stream, namespace, tableName);
+    return startInternal(null);
   }
 
   @Override
   public GrpcTransaction start(String txId) throws TransactionException {
-    GrpcTransactionOnBidirectionalStream stream =
-        new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
-    String transactionId = stream.startTransaction(txId);
-    return new GrpcTransaction(transactionId, stream, namespace, tableName);
+    return startInternal(Objects.requireNonNull(txId));
+  }
+
+  private GrpcTransaction startInternal(@Nullable String txId) throws TransactionException {
+    return executeWithRetries(
+        () -> {
+          GrpcTransactionOnBidirectionalStream stream =
+              new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
+          String transactionId = stream.startTransaction(txId);
+          return new GrpcTransaction(transactionId, stream, namespace, tableName);
+        },
+        EXCEPTION_FACTORY);
   }
 
   @Deprecated
@@ -168,21 +190,23 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         });
   }
 
-  private static <T> T execute(ThrowableSupplier<T, Throwable> throwableSupplier)
+  private static <T> T execute(ThrowableSupplier<T, TransactionException> supplier)
       throws TransactionException {
-    try {
-      return throwableSupplier.get();
-    } catch (StatusRuntimeException e) {
-      if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-        throw new IllegalArgumentException(e.getMessage());
-      }
-      throw new TransactionException(e.getMessage());
-    } catch (Throwable t) {
-      if (t instanceof Error) {
-        throw (Error) t;
-      }
-      throw new TransactionException(t.getMessage(), t);
-    }
+    return executeWithRetries(
+        () -> {
+          try {
+            return supplier.get();
+          } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+              throw new IllegalArgumentException(e.getMessage(), e);
+            }
+            if (e.getStatus().getCode() == Code.UNAVAILABLE) {
+              throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
+            }
+            throw new TransactionException(e.getMessage(), e);
+          }
+        },
+        EXCEPTION_FACTORY);
   }
 
   @Override

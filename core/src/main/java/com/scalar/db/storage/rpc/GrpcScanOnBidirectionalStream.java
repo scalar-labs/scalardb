@@ -8,9 +8,11 @@ import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -69,24 +71,6 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
     }
   }
 
-  private void throwIfError(ResponseOrError responseOrError) throws ExecutionException {
-    if (responseOrError.isError()) {
-      hasMoreResults.set(false);
-      Throwable error = responseOrError.getError();
-      if (error instanceof StatusRuntimeException) {
-        StatusRuntimeException e = (StatusRuntimeException) error;
-        if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
-        }
-        throw new ExecutionException(e.getMessage());
-      }
-      if (error instanceof Error) {
-        throw (Error) error;
-      }
-      throw new ExecutionException(error.getMessage());
-    }
-  }
-
   private List<Result> getResults(ScanResponse response) {
     if (!response.getHasMoreResults()) {
       hasMoreResults.set(false);
@@ -100,14 +84,35 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
     throwIfScannerHasNoMoreResults();
     ResponseOrError responseOrError =
         sendRequest(ScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)).build());
-    throwIfError(responseOrError);
+    throwIfErrorForOpenScanner(responseOrError);
     return getResults(responseOrError.getResponse());
+  }
+
+  private void throwIfErrorForOpenScanner(ResponseOrError responseOrError)
+      throws ExecutionException {
+    if (responseOrError.isError()) {
+      hasMoreResults.set(false);
+      Throwable error = responseOrError.getError();
+      if (error instanceof StatusRuntimeException) {
+        StatusRuntimeException e = (StatusRuntimeException) error;
+        if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(e.getMessage(), e);
+        }
+        if (e.getStatus().getCode() == Code.UNAVAILABLE) {
+          throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
+        }
+      }
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new ExecutionException("failed to open scanner", error);
+    }
   }
 
   public List<Result> next() throws ExecutionException {
     throwIfScannerHasNoMoreResults();
     ResponseOrError responseOrError = sendRequest(ScanRequest.getDefaultInstance());
-    throwIfError(responseOrError);
+    throwIfErrorForNext(responseOrError);
     return getResults(responseOrError.getResponse());
   }
 
@@ -115,16 +120,37 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
     throwIfScannerHasNoMoreResults();
     ResponseOrError responseOrError =
         sendRequest(ScanRequest.newBuilder().setFetchCount(fetchCount).build());
-    throwIfError(responseOrError);
+    throwIfErrorForNext(responseOrError);
     return getResults(responseOrError.getResponse());
   }
 
-  public void closeScanner() {
-    if (!hasMoreResults.get()) {
-      return;
+  private void throwIfErrorForNext(ResponseOrError responseOrError) throws ExecutionException {
+    if (responseOrError.isError()) {
+      hasMoreResults.set(false);
+      Throwable error = responseOrError.getError();
+      if (error instanceof StatusRuntimeException) {
+        StatusRuntimeException e = (StatusRuntimeException) error;
+        if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
+          throw new IllegalArgumentException(e.getMessage(), e);
+        }
+      }
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new ExecutionException("failed to next", error);
     }
-    requestObserver.onCompleted();
-    hasMoreResults.set(false);
+  }
+
+  public void closeScanner() throws IOException {
+    try {
+      if (!hasMoreResults.get()) {
+        return;
+      }
+      requestObserver.onCompleted();
+      hasMoreResults.set(false);
+    } catch (StatusRuntimeException e) {
+      throw new IOException("failed to close the scanner", e);
+    }
   }
 
   public boolean hasMoreResults() {

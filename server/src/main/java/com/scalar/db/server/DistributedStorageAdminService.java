@@ -89,7 +89,6 @@ public class DistributedStorageAdminService
     try {
       runnable.run();
     } catch (IllegalArgumentException | IllegalStateException e) {
-      LOGGER.error("an invalid argument error happened during the execution", e);
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
     } catch (Throwable t) {
