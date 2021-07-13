@@ -127,6 +127,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
+    private final AtomicBoolean cleanedUp = new AtomicBoolean();
 
     private Scanner scanner;
 
@@ -206,8 +207,10 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     @Override
     public void onCompleted() {
-      responseObserver.onCompleted();
-      cleanUp();
+      if (!cleanedUp.get()) {
+        cleanUp();
+        responseObserver.onCompleted();
+      }
     }
 
     private List<Result> fetch(Iterator<Result> resultIterator, int fetchCount) {
@@ -231,6 +234,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       }
 
       postProcessor.run();
+      cleanedUp.set(true);
     }
 
     private void respondInternalError(String message) {

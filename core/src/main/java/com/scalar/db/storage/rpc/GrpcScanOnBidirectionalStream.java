@@ -12,7 +12,6 @@ import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -71,9 +70,10 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
     }
   }
 
-  private List<Result> getResults(ScanResponse response) {
+  private List<Result> getResults(ScanResponse response) throws ExecutionException {
     if (!response.getHasMoreResults()) {
-      hasMoreResults.set(false);
+      // We can early close the scanner as it has no more results
+      closeScanner();
     }
     return response.getResultList().stream()
         .map(r -> ProtoUtil.toResult(r, metadata))
@@ -141,15 +141,15 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
     }
   }
 
-  public void closeScanner() throws IOException {
+  public void closeScanner() throws ExecutionException {
     try {
       if (!hasMoreResults.get()) {
         return;
       }
-      requestObserver.onCompleted();
       hasMoreResults.set(false);
+      requestObserver.onCompleted();
     } catch (StatusRuntimeException e) {
-      throw new IOException("failed to close the scanner", e);
+      throw new ExecutionException("failed to close the scanner", e);
     }
   }
 
