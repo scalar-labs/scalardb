@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -112,11 +114,7 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
     client.createTable(createTableRequest);
 
     // wait for the creation
-    try {
-      Thread.sleep(15000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    Uninterruptibles.sleepUninterruptibly(15000, TimeUnit.MILLISECONDS);
 
     // insert metadata
     Map<String, AttributeValue> values = new HashMap<>();
