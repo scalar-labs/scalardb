@@ -9,8 +9,6 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
-import javax.json.Json;
-import javax.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,19 +31,13 @@ public class AdminService extends AdminGrpc.AdminImplBase {
 
     if (request.getWaitOutstanding()) {
       LOGGER.warn("Pausing... waiting until outstanding requests are all finished");
-      long start = System.currentTimeMillis();
-      while (pauser.outstandingRequestsExist()) {
-        try {
-          TimeUnit.MILLISECONDS.sleep(100);
-        } catch (InterruptedException ignored) {
-        }
+      if (!pauser.await(MAX_PAUSE_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS)) {
+        pauser.unpause();
 
-        if (System.currentTimeMillis() - start >= MAX_PAUSE_WAIT_TIME_MILLIS) {
-          String message = "Failed to pause";
-          LOGGER.warn(message);
-          responseObserver.onError(Status.INTERNAL.withDescription(message).asRuntimeException());
-          return;
-        }
+        String message = "Failed to pause";
+        LOGGER.warn(message);
+        responseObserver.onError(Status.INTERNAL.withDescription(message).asRuntimeException());
+        return;
       }
     }
 
@@ -65,9 +57,8 @@ public class AdminService extends AdminGrpc.AdminImplBase {
 
   @Override
   public void stats(Empty request, StreamObserver<StatsResponse> responseObserver) {
-    JsonObject json =
-        Json.createObjectBuilder().add("outstanding", pauser.getOutstandingRequestCount()).build();
-    responseObserver.onNext(StatsResponse.newBuilder().setStats(json.toString()).build());
+    // returns empty for now
+    responseObserver.onNext(StatsResponse.newBuilder().setStats("{}").build());
     responseObserver.onCompleted();
   }
 }
