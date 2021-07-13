@@ -198,12 +198,12 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
             return supplier.get();
           } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-              throw new IllegalArgumentException(e.getMessage());
+              throw new IllegalArgumentException(e.getMessage(), e);
             }
             if (e.getStatus().getCode() == Code.UNAVAILABLE) {
-              throw new ServiceTemporaryUnavailableException(e.getMessage());
+              throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
             }
-            throw new TransactionException(e.getMessage());
+            throw new TransactionException(e.getMessage(), e);
           }
         },
         EXCEPTION_FACTORY);

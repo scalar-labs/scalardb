@@ -189,15 +189,15 @@ public class GrpcStorage implements DistributedStorage {
             return supplier.get();
           } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-              throw new IllegalArgumentException(e.getMessage());
+              throw new IllegalArgumentException(e.getMessage(), e);
             }
             if (e.getStatus().getCode() == Code.FAILED_PRECONDITION) {
-              throw new NoMutationException(e.getMessage());
+              throw new NoMutationException(e.getMessage(), e);
             }
             if (e.getStatus().getCode() == Code.UNAVAILABLE) {
-              throw new ServiceTemporaryUnavailableException(e.getMessage());
+              throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
             }
-            throw new ExecutionException(e.getMessage());
+            throw new ExecutionException(e.getMessage(), e);
           }
         },
         EXCEPTION_FACTORY);

@@ -114,12 +114,11 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
       if (error instanceof StatusRuntimeException) {
         StatusRuntimeException e = (StatusRuntimeException) error;
         if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
+          throw new IllegalArgumentException(e.getMessage(), e);
         }
         if (e.getStatus().getCode() == Code.UNAVAILABLE) {
-          throw new ServiceTemporaryUnavailableException(e.getMessage());
+          throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
         }
-        throw new TransactionException("failed to start: " + error.getMessage());
       }
       if (error instanceof Error) {
         throw (Error) error;
@@ -189,9 +188,6 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
     if (responseOrError.isError()) {
       finished.set(true);
       Throwable error = responseOrError.getError();
-      if (error instanceof StatusRuntimeException) {
-        throw new CrudException("failed to execute crud: " + error.getMessage());
-      }
       if (error instanceof Error) {
         throw (Error) error;
       }
@@ -227,9 +223,6 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
       throws CommitException, UnknownTransactionStatusException {
     if (responseOrError.isError()) {
       Throwable error = responseOrError.getError();
-      if (error instanceof StatusRuntimeException) {
-        throw new CommitException("failed to commit: " + error.getMessage());
-      }
       if (error instanceof Error) {
         throw (Error) error;
       }
@@ -266,9 +259,6 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
   private void throwIfErrorForAbort(ResponseOrError responseOrError) throws AbortException {
     if (responseOrError.isError()) {
       Throwable error = responseOrError.getError();
-      if (error instanceof StatusRuntimeException) {
-        throw new AbortException("failed to abort: " + error.getMessage());
-      }
       if (error instanceof Error) {
         throw (Error) error;
       }

@@ -96,12 +96,11 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
       if (error instanceof StatusRuntimeException) {
         StatusRuntimeException e = (StatusRuntimeException) error;
         if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
+          throw new IllegalArgumentException(e.getMessage(), e);
         }
         if (e.getStatus().getCode() == Code.UNAVAILABLE) {
-          throw new ServiceTemporaryUnavailableException(e.getMessage());
+          throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
         }
-        throw new ExecutionException("failed to open scanner: " + e.getMessage());
       }
       if (error instanceof Error) {
         throw (Error) error;
@@ -132,9 +131,8 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
       if (error instanceof StatusRuntimeException) {
         StatusRuntimeException e = (StatusRuntimeException) error;
         if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
+          throw new IllegalArgumentException(e.getMessage(), e);
         }
-        throw new ExecutionException("failed to next: " + e.getMessage());
       }
       if (error instanceof Error) {
         throw (Error) error;
@@ -151,7 +149,7 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
       requestObserver.onCompleted();
       hasMoreResults.set(false);
     } catch (StatusRuntimeException e) {
-      throw new IOException("failed to close the scanner: " + e.getMessage());
+      throw new IOException("failed to close the scanner", e);
     }
   }
 

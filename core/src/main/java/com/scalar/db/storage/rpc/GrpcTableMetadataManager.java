@@ -68,10 +68,8 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
       if (e.getCause() instanceof StatusRuntimeException) {
         StatusRuntimeException statusRuntimeException = (StatusRuntimeException) e.getCause();
         if (statusRuntimeException.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-          throw new IllegalArgumentException(e.getMessage());
+          throw new IllegalArgumentException(e.getMessage(), statusRuntimeException);
         }
-        throw new StorageRuntimeException(
-            "Failed to read the table metadata: " + statusRuntimeException.getMessage());
       }
       throw new StorageRuntimeException("Failed to read the table metadata", e);
     }
