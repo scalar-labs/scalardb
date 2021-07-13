@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -20,6 +21,7 @@ import picocli.CommandLine.Command;
 @Command(name = "scalardb-server", description = "Starts Scalar DB server.")
 public class ScalarDbServer implements Callable<Integer> {
   private static final Logger LOGGER = LoggerFactory.getLogger(ScalarDbServer.class);
+  private static final long MAX_WAIT_TIME_MILLIS = 60000; // 60 seconds
 
   @CommandLine.Option(
       names = {"--properties", "--config"},
@@ -39,8 +41,8 @@ public class ScalarDbServer implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    start();
     addShutdownHook();
+    start();
     blockUntilShutdown();
     return 0;
   }
@@ -74,14 +76,26 @@ public class ScalarDbServer implements Callable<Integer> {
                 () -> {
                   LOGGER.info("Signal received. Shutting down the server ...");
                   shutdown();
+                  blockUntilShutdown(MAX_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
                   LOGGER.info("The server shut down.");
                 }));
   }
 
-  /** Await termination on the main thread since the grpc library uses daemon threads. */
-  public void blockUntilShutdown() throws InterruptedException {
+  public void blockUntilShutdown() {
     if (server != null) {
-      server.awaitTermination();
+      try {
+        server.awaitTermination();
+      } catch (InterruptedException ignored) {
+      }
+    }
+  }
+
+  public void blockUntilShutdown(long timeout, TimeUnit unit) {
+    if (server != null) {
+      try {
+        server.awaitTermination(timeout, unit);
+      } catch (InterruptedException ignored) {
+      }
     }
   }
 
