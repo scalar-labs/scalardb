@@ -5,6 +5,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TableMetadata.Builder;
+import com.scalar.db.exception.storage.ConnectionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
@@ -37,10 +38,12 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
       try {
         com.datastax.driver.core.TableMetadata metadata =
             clusterManager.getMetadata(namespace, table);
+        if (metadata == null) {
+          return null;
+        }
         tableMetadataMap.put(fullName, createTableMetadata(metadata));
-      } catch (StorageRuntimeException e) {
-        // The specified table is not found
-        return null;
+      } catch (ConnectionException e) {
+        throw new StorageRuntimeException("Failed to read the table metadata", e);
       }
     }
 
