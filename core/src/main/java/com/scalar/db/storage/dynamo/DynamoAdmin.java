@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.storage.StorageRuntimeException;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
@@ -64,7 +65,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    return metadataManager.getTableMetadata(fullNamespace(namespace), table);
+    try {
+      return metadataManager.getTableMetadata(fullNamespace(namespace), table);
+    } catch (StorageRuntimeException e) {
+      throw new ExecutionException("getting a table metadata failed", e);
+    }
   }
 
   private String fullNamespace(String namespace) {

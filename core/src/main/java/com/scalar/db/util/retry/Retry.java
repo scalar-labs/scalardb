@@ -1,5 +1,6 @@
 package com.scalar.db.util.retry;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.util.ThrowableSupplier;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
@@ -37,10 +38,7 @@ public final class Retry {
         throw exceptionFactory.create(e.getMessage(), e);
       }
 
-      try {
-        TimeUnit.MILLISECONDS.sleep(interval);
-      } catch (InterruptedException ignored) {
-      }
+      Uninterruptibles.sleepUninterruptibly(interval, TimeUnit.MILLISECONDS);
 
       interval *= RETRY_MULTIPLIER;
       if (interval > RETRY_MAX_INTERVAL_MILLIS) {

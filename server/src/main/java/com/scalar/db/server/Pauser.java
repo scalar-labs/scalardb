@@ -1,5 +1,6 @@
 package com.scalar.db.server;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
@@ -26,10 +27,8 @@ public final class Pauser {
   public boolean await(long timeout, TimeUnit unit) {
     long start = System.currentTimeMillis();
     while (outstandingRequestCount.longValue() > 0) {
-      try {
-        TimeUnit.MILLISECONDS.sleep(100);
-      } catch (InterruptedException ignored) {
-      }
+      Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+
       if (System.currentTimeMillis() - start >= unit.toMillis(timeout)) {
         return false;
       }
