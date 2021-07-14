@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.IntegrationTestBase;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -109,11 +111,8 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
     createUserTable();
 
     // wait for the creation
-    try {
-      Thread.sleep(15000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    Uninterruptibles.sleepUninterruptibly(15000, TimeUnit.MILLISECONDS);
+
     insertMetadata();
 
     Properties props = new Properties();

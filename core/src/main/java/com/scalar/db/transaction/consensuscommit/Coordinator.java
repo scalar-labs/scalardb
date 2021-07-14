@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -19,6 +20,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -111,11 +113,8 @@ public class Coordinator {
   }
 
   private void exponentialBackoff(int counter) {
-    try {
-      Thread.sleep((long) Math.pow(2, counter) * SLEEP_BASE_MILLIS);
-    } catch (InterruptedException e) {
-      // ignore
-    }
+    Uninterruptibles.sleepUninterruptibly(
+        (long) Math.pow(2, counter) * SLEEP_BASE_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   @ThreadSafe

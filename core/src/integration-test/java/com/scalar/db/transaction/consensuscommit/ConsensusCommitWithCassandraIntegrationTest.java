@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.mockito.Mockito.spy;
 
 import com.google.common.base.Joiner;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.cassandra.Cassandra;
@@ -10,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -51,7 +53,7 @@ public class ConsensusCommitWithCassandraIntegrationTest
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() throws IOException, InterruptedException {
+  public static void setUpBeforeClass() throws IOException {
     executeStatement(createNamespaceStatement(ConsensusCommitIntegrationTestBase.NAMESPACE));
     System.out.println(createNamespaceStatement(ConsensusCommitIntegrationTestBase.NAMESPACE));
     executeStatement(
@@ -72,7 +74,7 @@ public class ConsensusCommitWithCassandraIntegrationTest
     System.out.println(createCoordinatorTableStatement(Coordinator.NAMESPACE, Coordinator.TABLE));
 
     // it's supposed to be unnecessary, but just in case schema agreement takes some time
-    Thread.sleep(1000);
+    Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
