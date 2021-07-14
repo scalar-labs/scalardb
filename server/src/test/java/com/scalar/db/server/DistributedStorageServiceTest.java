@@ -44,7 +44,7 @@ public class DistributedStorageServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    storageService = new DistributedStorageService(storage, pauser);
+    storageService = new DistributedStorageService(storage, pauser, new Metrics());
     when(pauser.preProcess()).thenReturn(true);
   }
 

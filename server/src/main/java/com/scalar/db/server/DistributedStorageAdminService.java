@@ -24,10 +24,12 @@ public class DistributedStorageAdminService
       LoggerFactory.getLogger(DistributedStorageAdminService.class);
 
   private final DistributedStorageAdmin admin;
+  private final Metrics metrics;
 
   @Inject
-  public DistributedStorageAdminService(DistributedStorageAdmin admin) {
+  public DistributedStorageAdminService(DistributedStorageAdmin admin, Metrics metrics) {
     this.admin = admin;
+    this.metrics = metrics;
   }
 
   @Override
@@ -42,7 +44,8 @@ public class DistributedStorageAdminService
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "createTable");
   }
 
   @Override
@@ -53,7 +56,8 @@ public class DistributedStorageAdminService
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "dropTable");
   }
 
   @Override
@@ -64,7 +68,8 @@ public class DistributedStorageAdminService
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "truncateTable");
   }
 
   @Override
@@ -81,13 +86,14 @@ public class DistributedStorageAdminService
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "getTableMetadata");
   }
 
-  private static void execute(
-      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+  private void execute(
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver, String method) {
     try {
-      runnable.run();
+      metrics.measure(DistributedStorageAdminService.class, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());

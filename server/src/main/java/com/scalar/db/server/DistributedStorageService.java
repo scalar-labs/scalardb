@@ -36,11 +36,13 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
   private final DistributedStorage storage;
   private final Pauser pauser;
+  private final Metrics metrics;
 
   @Inject
-  public DistributedStorageService(DistributedStorage storage, Pauser pauser) {
+  public DistributedStorageService(DistributedStorage storage, Pauser pauser, Metrics metrics) {
     this.storage = storage;
     this.pauser = pauser;
+    this.metrics = metrics;
   }
 
   @Override
@@ -54,12 +56,14 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "get");
   }
 
   @Override
   public StreamObserver<ScanRequest> scan(StreamObserver<ScanResponse> responseObserver) {
-    return new ScanStreamObserver(storage, responseObserver, this::preProcess, this::postProcess);
+    return new ScanStreamObserver(
+        storage, responseObserver, metrics, this::preProcess, this::postProcess);
   }
 
   @Override
@@ -74,17 +78,19 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "mutate");
   }
 
-  private void execute(ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+  private void execute(
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver, String method) {
     if (!preProcess(responseObserver)) {
       // Unavailable
       return;
     }
 
     try {
-      runnable.run();
+      metrics.measure(DistributedStorageService.class, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
@@ -124,6 +130,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     private final DistributedStorage storage;
     private final StreamObserver<ScanResponse> responseObserver;
+    private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
@@ -134,10 +141,12 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     public ScanStreamObserver(
         DistributedStorage storage,
         StreamObserver<ScanResponse> responseObserver,
+        Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
       this.storage = storage;
       this.responseObserver = responseObserver;
+      this.metrics = metrics;
       this.preProcessor = preProcessor;
       this.postProcessor = postProcessor;
     }
@@ -157,6 +166,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
           return;
         }
         if (!openScanner(request)) {
+          // failed to open a scanner
           return;
         }
       } else if (request.hasScan()) {
@@ -164,18 +174,13 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
         return;
       }
 
-      Iterator<Result> resultIterator = scanner.iterator();
-      List<Result> results =
-          fetch(
-              resultIterator,
-              request.hasFetchCount() ? request.getFetchCount() : DEFAULT_SCAN_FETCH_COUNT);
-      boolean hasMoreResults = resultIterator.hasNext();
+      ScanResponse response = next(request);
+      if (response == null) {
+        // failed to next
+        return;
+      }
 
-      ScanResponse.Builder builder = ScanResponse.newBuilder();
-      results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
-      ScanResponse response = builder.setHasMoreResults(hasMoreResults).build();
-
-      if (hasMoreResults) {
+      if (response.getHasMoreResults()) {
         responseObserver.onNext(response);
       } else {
         // cleans up and completes this stream if no more results
@@ -187,20 +192,60 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     private boolean openScanner(ScanRequest request) {
       try {
-        Scan scan = ProtoUtil.toScan(request.getScan());
-        scanner = storage.scan(scan);
+        metrics.measure(
+            DistributedStorageService.class,
+            "scan.openScanner",
+            () -> {
+              Scan scan = ProtoUtil.toScan(request.getScan());
+              scanner = storage.scan(scan);
+            });
         return true;
       } catch (IllegalArgumentException e) {
         respondInvalidArgumentError(e.getMessage());
-        return false;
       } catch (Throwable t) {
         LOGGER.error("an internal error happened when opening a scanner", t);
         respondInternalError(t.getMessage());
         if (t instanceof Error) {
           throw (Error) t;
         }
-        return false;
       }
+      return false;
+    }
+
+    private ScanResponse next(ScanRequest request) {
+      try {
+        return metrics.measure(
+            DistributedStorageService.class,
+            "scan.next",
+            () -> {
+              Iterator<Result> resultIterator = scanner.iterator();
+              List<Result> results =
+                  fetch(
+                      resultIterator,
+                      request.hasFetchCount() ? request.getFetchCount() : DEFAULT_SCAN_FETCH_COUNT);
+              ScanResponse.Builder builder = ScanResponse.newBuilder();
+              results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
+              return builder.setHasMoreResults(resultIterator.hasNext()).build();
+            });
+      } catch (Throwable t) {
+        LOGGER.error("an internal error happened during the execution", t);
+        respondInternalError(t.getMessage());
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+      }
+      return null;
+    }
+
+    private List<Result> fetch(Iterator<Result> resultIterator, int fetchCount) {
+      List<Result> results = new ArrayList<>(fetchCount);
+      for (int i = 0; i < fetchCount; i++) {
+        if (!resultIterator.hasNext()) {
+          break;
+        }
+        results.add(resultIterator.next());
+      }
+      return results;
     }
 
     @Override
@@ -215,17 +260,6 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
         cleanUp();
         responseObserver.onCompleted();
       }
-    }
-
-    private List<Result> fetch(Iterator<Result> resultIterator, int fetchCount) {
-      List<Result> results = new ArrayList<>(fetchCount);
-      for (int i = 0; i < fetchCount; i++) {
-        if (!resultIterator.hasNext()) {
-          break;
-        }
-        results.add(resultIterator.next());
-      }
-      return results;
     }
 
     private void cleanUp() {

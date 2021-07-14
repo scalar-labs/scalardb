@@ -1,5 +1,7 @@
 package com.scalar.db.server.service;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -9,6 +11,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.server.Metrics;
 import com.scalar.db.server.Pauser;
 import com.scalar.db.service.StorageModule;
 import com.scalar.db.service.TransactionModule;
@@ -44,5 +47,18 @@ public class ServerModule extends AbstractModule {
   @Singleton
   Pauser providePauser() {
     return new Pauser();
+  }
+
+  @Provides
+  @Singleton
+  Metrics provideMetrics() {
+    MetricRegistry metricRegistry = new MetricRegistry();
+
+    // start JMX reporter
+    JmxReporter reporter = JmxReporter.forRegistry(metricRegistry).build();
+    reporter.start();
+    Runtime.getRuntime().addShutdownHook(new Thread(reporter::stop));
+
+    return new Metrics(metricRegistry);
   }
 }
