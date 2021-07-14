@@ -173,10 +173,14 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
-      responseObserver.onNext(builder.setHasMoreResults(hasMoreResults).build());
+      ScanResponse response = builder.setHasMoreResults(hasMoreResults).build();
 
-      if (!hasMoreResults) {
+      if (hasMoreResults) {
+        responseObserver.onNext(response);
+      } else {
+        // cleans up and completes this stream if no more results
         cleanUp();
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
       }
     }
