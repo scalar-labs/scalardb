@@ -76,17 +76,17 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    getAdmin(namespace, table).createTable(namespace, table, metadata, options);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    getAdmin(namespace, table).dropTable(namespace, table);
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    getAdmin(namespace, table).truncateTable(namespace, table);
   }
 
   @Override

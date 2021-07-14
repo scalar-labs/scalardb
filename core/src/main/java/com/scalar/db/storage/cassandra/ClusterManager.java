@@ -12,8 +12,6 @@ import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ConnectionException;
-import com.scalar.db.exception.storage.StorageRuntimeException;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +69,6 @@ public class ClusterManager {
    * @param table table name
    * @return {@code TableMetadata}
    */
-  @Nonnull
   public TableMetadata getMetadata(String keyspace, String table) {
     KeyspaceMetadata metadata;
     try {
@@ -80,7 +77,7 @@ public class ClusterManager {
       throw new ConnectionException("can't get metadata from the cluster", e);
     }
     if (metadata == null || metadata.getTable(table) == null) {
-      throw new StorageRuntimeException("no table information found");
+      return null;
     }
     return metadata.getTable(table);
   }

@@ -19,7 +19,6 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ConnectionException;
-import com.scalar.db.exception.storage.StorageRuntimeException;
 import java.util.Properties;
 import org.junit.Before;
 import org.junit.Test;
@@ -187,23 +186,22 @@ public class ClusterManagerTest {
   }
 
   @Test
-  public void getMetadata_KeyspaceNotExists_ShouldThrowStorageRuntimeException() {
+  public void getMetadata_KeyspaceNotExists_ShouldReturnNull() {
     // Arrange
     manager.getSession();
     Metadata metadata = mock(Metadata.class);
     when(cluster.getMetadata()).thenReturn(metadata);
     when(metadata.getKeyspace(anyString())).thenReturn(null);
 
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
-            })
-        .isInstanceOf(StorageRuntimeException.class);
+    // Act
+    TableMetadata actual = manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
+
+    // Assert
+    assertThat(actual).isNull();
   }
 
   @Test
-  public void getMetadata_TableNotExists_ShouldThrowStorageRuntimeException() {
+  public void getMetadata_TableNotExists_ShouldReturnNull() {
     // Arrange
     manager.getSession();
     Metadata metadata = mock(Metadata.class);
@@ -213,10 +211,9 @@ public class ClusterManagerTest {
     when(keyspaceMetadata.getTable(anyString())).thenReturn(null);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
-            })
-        .isInstanceOf(StorageRuntimeException.class);
+    TableMetadata actual = manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
+
+    // Assert
+    assertThat(actual).isNull();
   }
 }
