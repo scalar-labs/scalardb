@@ -1,5 +1,6 @@
 package com.scalar.db.storage.rpc;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -36,20 +37,12 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
 
   @Override
   public void onNext(ScanResponse response) {
-    try {
-      queue.put(new ResponseOrError(response));
-    } catch (InterruptedException ignored) {
-      // InterruptedException should not be thrown
-    }
+    Uninterruptibles.putUninterruptibly(queue, new ResponseOrError(response));
   }
 
   @Override
   public void onError(Throwable t) {
-    try {
-      queue.put(new ResponseOrError(t));
-    } catch (InterruptedException ignored) {
-      // InterruptedException should not be thrown
-    }
+    Uninterruptibles.putUninterruptibly(queue, new ResponseOrError(t));
   }
 
   @Override
@@ -57,12 +50,7 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
 
   private ResponseOrError sendRequest(ScanRequest request) {
     requestObserver.onNext(request);
-    try {
-      return queue.take();
-    } catch (InterruptedException ignored) {
-      // InterruptedException should not be thrown
-      return null;
-    }
+    return Uninterruptibles.takeUninterruptibly(queue);
   }
 
   private void throwIfScannerHasNoMoreResults() {
