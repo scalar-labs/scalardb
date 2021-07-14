@@ -63,7 +63,9 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
   }
 
   @Override
-  public void onCompleted() {}
+  public void onCompleted() {
+    requestObserver.onCompleted();
+  }
 
   private ResponseOrError sendRequest(TransactionRequest request) {
     requestObserver.onNext(request);

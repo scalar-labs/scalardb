@@ -127,6 +127,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
+    private final AtomicBoolean cleanedUp = new AtomicBoolean();
 
     private Scanner scanner;
 
@@ -172,10 +173,14 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
-      responseObserver.onNext(builder.setHasMoreResults(hasMoreResults).build());
+      ScanResponse response = builder.setHasMoreResults(hasMoreResults).build();
 
-      if (!hasMoreResults) {
+      if (hasMoreResults) {
+        responseObserver.onNext(response);
+      } else {
+        // cleans up and completes this stream if no more results
         cleanUp();
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
       }
     }
@@ -206,8 +211,10 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
 
     @Override
     public void onCompleted() {
-      responseObserver.onCompleted();
-      cleanUp();
+      if (!cleanedUp.get()) {
+        cleanUp();
+        responseObserver.onCompleted();
+      }
     }
 
     private List<Result> fetch(Iterator<Result> resultIterator, int fetchCount) {
@@ -231,6 +238,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
       }
 
       postProcessor.run();
+      cleanedUp.set(true);
     }
 
     private void respondInternalError(String message) {

@@ -56,7 +56,11 @@ public class ScannerImpl implements Scanner {
 
   @Override
   public void close() throws IOException {
-    stream.closeScanner();
+    try {
+      stream.closeScanner();
+    } catch (ExecutionException e) {
+      throw new IOException("close failed", e);
+    }
   }
 
   @Override
