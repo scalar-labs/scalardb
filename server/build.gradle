@@ -33,6 +33,8 @@ dependencies {
     implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: '1.0.0') {
         exclude group: 'io.grpc'
     }
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.2'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: '4.2.2'
     testImplementation project(':core').sourceSets.integrationTest.output
 }
 

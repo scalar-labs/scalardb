@@ -25,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 public class DistributedStorageAdminServiceTest {
 
   @Mock private DistributedStorageAdmin admin;
+
   private DistributedStorageAdminService adminService;
 
   @Before
@@ -32,7 +33,7 @@ public class DistributedStorageAdminServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    adminService = new DistributedStorageAdminService(admin);
+    adminService = new DistributedStorageAdminService(admin, new Metrics());
   }
 
   @Test

@@ -41,7 +41,7 @@ public class DistributedTransactionServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    transactionService = new DistributedTransactionService(manager, pauser);
+    transactionService = new DistributedTransactionService(manager, pauser, new Metrics());
     when(manager.start()).thenReturn(transaction);
     when(manager.start(anyString())).thenReturn(transaction);
     when(transaction.getId()).thenReturn(ANY_ID);

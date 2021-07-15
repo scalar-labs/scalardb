@@ -46,18 +46,21 @@ public class DistributedTransactionService
 
   private final DistributedTransactionManager manager;
   private final Pauser pauser;
+  private final Metrics metrics;
 
   @Inject
-  public DistributedTransactionService(DistributedTransactionManager manager, Pauser pauser) {
+  public DistributedTransactionService(
+      DistributedTransactionManager manager, Pauser pauser, Metrics metrics) {
     this.manager = manager;
     this.pauser = pauser;
+    this.metrics = metrics;
   }
 
   @Override
   public StreamObserver<TransactionRequest> transaction(
       StreamObserver<TransactionResponse> responseObserver) {
     return new TransactionStreamObserver(
-        manager, responseObserver, this::preProcess, this::postProcess);
+        manager, responseObserver, metrics, this::preProcess, this::postProcess);
   }
 
   @Override
@@ -73,7 +76,8 @@ public class DistributedTransactionService
                   .build());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "getState");
   }
 
   @Override
@@ -86,17 +90,19 @@ public class DistributedTransactionService
               AbortResponse.newBuilder().setState(ProtoUtil.toTransactionState(state)).build());
           responseObserver.onCompleted();
         },
-        responseObserver);
+        responseObserver,
+        "abort");
   }
 
-  private void execute(ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver) {
+  private void execute(
+      ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver, String method) {
     if (!preProcess(responseObserver)) {
       // Unavailable
       return;
     }
 
     try {
-      runnable.run();
+      metrics.measure(DistributedTransactionService.class, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
@@ -133,6 +139,7 @@ public class DistributedTransactionService
 
     private final DistributedTransactionManager manager;
     private final StreamObserver<TransactionResponse> responseObserver;
+    private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
@@ -142,10 +149,12 @@ public class DistributedTransactionService
     public TransactionStreamObserver(
         DistributedTransactionManager manager,
         StreamObserver<TransactionResponse> responseObserver,
+        Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
       this.manager = manager;
       this.responseObserver = responseObserver;
+      this.metrics = metrics;
       this.preProcessor = preProcessor;
       this.postProcessor = postProcessor;
     }
@@ -172,12 +181,17 @@ public class DistributedTransactionService
       }
 
       try {
-        StartRequest request = transactionRequest.getStartRequest();
-        if (!request.hasTransactionId()) {
-          transaction = manager.start();
-        } else {
-          transaction = manager.start(request.getTransactionId());
-        }
+        metrics.measure(
+            DistributedTransactionService.class,
+            "transaction.start",
+            () -> {
+              StartRequest request = transactionRequest.getStartRequest();
+              if (!request.hasTransactionId()) {
+                transaction = manager.start();
+              } else {
+                transaction = manager.start(request.getTransactionId());
+              }
+            });
         responseObserver.onNext(
             TransactionResponse.newBuilder()
                 .setStartResponse(
@@ -255,7 +269,8 @@ public class DistributedTransactionService
             result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
             responseBuilder.setGetResponse(builder);
           },
-          responseBuilder);
+          responseBuilder,
+          "transaction.get");
     }
 
     private void scan(ScanRequest request, TransactionResponse.Builder responseBuilder) {
@@ -267,7 +282,8 @@ public class DistributedTransactionService
             results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
             responseBuilder.setScanResponse(builder);
           },
-          responseBuilder);
+          responseBuilder,
+          "transaction.scan");
     }
 
     private void mutate(MutateRequest request, TransactionResponse.Builder responseBuilder) {
@@ -277,15 +293,16 @@ public class DistributedTransactionService
                   request.getMutationList().stream()
                       .map(ProtoUtil::toMutation)
                       .collect(Collectors.toList())),
-          responseBuilder);
+          responseBuilder,
+          "transaction.mutate");
     }
 
     private void commit(CommitRequest unused, TransactionResponse.Builder responseBuilder) {
-      execute(() -> transaction.commit(), responseBuilder);
+      execute(() -> transaction.commit(), responseBuilder, "transaction.commit");
     }
 
     private void abort(AbortRequest unused, TransactionResponse.Builder responseBuilder) {
-      execute(() -> transaction.abort(), responseBuilder);
+      execute(() -> transaction.abort(), responseBuilder, "transaction.abort");
     }
 
     private void cleanUp() {
@@ -312,9 +329,11 @@ public class DistributedTransactionService
     }
 
     private void execute(
-        ThrowableRunnable<Throwable> runnable, TransactionResponse.Builder responseBuilder) {
+        ThrowableRunnable<Throwable> runnable,
+        TransactionResponse.Builder responseBuilder,
+        String method) {
       try {
-        runnable.run();
+        metrics.measure(DistributedTransactionService.class, method, runnable);
       } catch (IllegalArgumentException | IllegalStateException e) {
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
