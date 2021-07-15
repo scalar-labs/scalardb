@@ -36,6 +36,7 @@ public class Metrics {
     // For test
     if (metricRegistry == null) {
       runnable.run();
+      return;
     }
 
     Timer timer = metricRegistry.timer(name(klass, method));
