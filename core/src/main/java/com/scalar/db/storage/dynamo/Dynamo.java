@@ -50,7 +50,7 @@ public class Dynamo implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public Dynamo(DynamoDatabaseConfig config) {
+  public Dynamo(DynamoConfig config) {
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
     config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     client =

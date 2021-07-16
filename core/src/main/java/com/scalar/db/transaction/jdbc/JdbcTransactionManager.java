@@ -8,7 +8,7 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
@@ -33,7 +33,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   private Optional<String> tableName;
 
   @Inject
-  public JdbcTransactionManager(JdbcDatabaseConfig config) {
+  public JdbcTransactionManager(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config, true);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));

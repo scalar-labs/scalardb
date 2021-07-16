@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.Dynamo;
-import com.scalar.db.storage.dynamo.DynamoDatabaseConfig;
+import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +50,7 @@ public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitInt
   private static Optional<String> namespacePrefix;
   private static DynamoDbClient client;
   private static DistributedStorage originalStorage;
-  private static DynamoDatabaseConfig config;
+  private static DynamoConfig config;
 
   @Before
   public void setUp() {
@@ -121,14 +121,14 @@ public class ConsensusCommitWithDynamoIntegrationTest extends ConsensusCommitInt
 
     Properties props = new Properties();
     if (endpointOverride != null) {
-      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
     props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    config = new DynamoDatabaseConfig(props);
+    config = new DynamoConfig(props);
     originalStorage = new Dynamo(config);
   }
 

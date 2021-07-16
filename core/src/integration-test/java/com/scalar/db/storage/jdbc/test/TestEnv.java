@@ -4,7 +4,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
@@ -124,7 +124,7 @@ public class TestEnv implements Closeable {
 
   private final RdbEngine rdbEngine;
   private final BasicDataSource dataSource;
-  private final JdbcDatabaseConfig config;
+  private final JdbcConfig config;
 
   private final List<String> schemaList;
   private final List<String> tableList;
@@ -156,7 +156,7 @@ public class TestEnv implements Closeable {
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     namespacePrefix.ifPresent(s -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, s));
-    config = new JdbcDatabaseConfig(props);
+    config = new JdbcConfig(props);
 
     schemaList = new ArrayList<>();
     tableList = new ArrayList<>();
@@ -445,7 +445,7 @@ public class TestEnv implements Closeable {
     return dataSource;
   }
 
-  public JdbcDatabaseConfig getJdbcDatabaseConfig() {
+  public JdbcConfig getJdbcConfig() {
     return config;
   }
 

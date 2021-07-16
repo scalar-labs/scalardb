@@ -291,7 +291,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    Properties serverProperties = new Properties(testEnv.getJdbcDatabaseConfig().getProperties());
+    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     serverProperties.setProperty(DatabaseConfig.SERIALIZABLE_STRATEGY, "EXTRA_READ");
     server = new ScalarDbServer(serverProperties);

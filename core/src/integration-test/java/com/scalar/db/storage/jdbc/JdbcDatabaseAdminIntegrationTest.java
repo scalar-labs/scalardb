@@ -48,7 +48,7 @@ public class JdbcDatabaseAdminIntegrationTest extends AdminIntegrationTestBase {
     testEnv.createMetadataTable();
     testEnv.insertMetadata();
 
-    admin = new JdbcDatabaseAdmin(testEnv.getJdbcDatabaseConfig());
+    admin = new JdbcDatabaseAdmin(testEnv.getJdbcConfig());
   }
 
   @AfterClass

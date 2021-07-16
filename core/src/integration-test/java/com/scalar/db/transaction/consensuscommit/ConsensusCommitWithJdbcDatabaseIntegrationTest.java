@@ -39,8 +39,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage, testEnv.getJdbcDatabaseConfig(), coordinator, recovery, commit);
+        new ConsensusCommitManager(storage, testEnv.getJdbcConfig(), coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
@@ -93,7 +92,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    originalStorage = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
+    originalStorage = new JdbcDatabase(testEnv.getJdbcConfig());
   }
 
   @AfterClass

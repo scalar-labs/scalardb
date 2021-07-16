@@ -24,11 +24,11 @@ public final class JdbcUtils {
     }
   }
 
-  public static BasicDataSource initDataSource(JdbcDatabaseConfig config) {
+  public static BasicDataSource initDataSource(JdbcConfig config) {
     return initDataSource(config, false);
   }
 
-  public static BasicDataSource initDataSource(JdbcDatabaseConfig config, boolean transactional) {
+  public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
     String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 

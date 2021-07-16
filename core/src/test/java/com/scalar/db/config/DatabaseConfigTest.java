@@ -139,11 +139,7 @@ public class DatabaseConfigTest {
     Properties props = new Properties();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DatabaseConfig(props);
-            })
-        .isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
   }
 
   @Test
@@ -156,11 +152,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DatabaseConfig(props);
-            })
-        .isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
   }
 
   @Test
@@ -307,10 +299,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, "WrongStorage");
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DatabaseConfig(props);
-            })
+    assertThatThrownBy(() -> new DatabaseConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -382,12 +371,14 @@ public class DatabaseConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithGrpcTransactionManagerGiven_ShouldLoadProperly() {
+  public void
+      constructor_PropertiesWithGrpcTransactionManagerAndGrpcStorageGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
 
     // Act
@@ -400,9 +391,25 @@ public class DatabaseConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
+    assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
+    assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(GrpcTransactionManager.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithGrpcTransactionManagerAndCassandraStorageGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, "cassandra");
+    props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
+
+    // Act Assert
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -437,10 +444,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.ISOLATION_LEVEL, "READ_COMMITTED");
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DatabaseConfig(props);
-            })
+    assertThatThrownBy(() -> new DatabaseConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -478,10 +482,7 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DatabaseConfig(props);
-            })
+    assertThatThrownBy(() -> new DatabaseConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }
