@@ -22,9 +22,12 @@ public class ScannerImpl implements Scanner {
   private List<Result> results;
 
   public ScannerImpl(
-      Scan scan, DistributedStorageGrpc.DistributedStorageStub stub, TableMetadata metadata)
+      GrpcConfig config,
+      Scan scan,
+      DistributedStorageGrpc.DistributedStorageStub stub,
+      TableMetadata metadata)
       throws ExecutionException {
-    stream = new GrpcScanOnBidirectionalStream(stub, metadata);
+    stream = new GrpcScanOnBidirectionalStream(config, stub, metadata);
     results = stream.openScanner(scan);
   }
 

@@ -8,6 +8,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.AdminIntegrationTestBase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcAdmin;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.AfterClass;
@@ -63,7 +64,8 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    admin = new GrpcAdmin(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    admin = new GrpcAdmin(new GrpcConfig(properties));
   }
 
   @AfterClass

@@ -9,6 +9,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
+import com.scalar.db.storage.rpc.GrpcConfig;
 
 public class StorageModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -45,5 +46,11 @@ public class StorageModule extends AbstractModule {
   @Provides
   MultiStorageConfig provideMultiStorageConfig() {
     return new MultiStorageConfig(config.getProperties());
+  }
+
+  @Singleton
+  @Provides
+  GrpcConfig provideGrpcConfig() {
+    return new GrpcConfig(config.getProperties());
   }
 }

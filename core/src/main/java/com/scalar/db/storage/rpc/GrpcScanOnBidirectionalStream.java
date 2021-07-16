@@ -9,29 +9,43 @@ import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.Utility;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
+import io.grpc.stub.ClientCallStreamObserver;
+import io.grpc.stub.ClientResponseObserver;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanResponse> {
+public class GrpcScanOnBidirectionalStream
+    implements ClientResponseObserver<ScanRequest, ScanResponse> {
 
-  private final StreamObserver<ScanRequest> requestObserver;
+  private final GrpcConfig config;
   private final TableMetadata metadata;
   private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean hasMoreResults = new AtomicBoolean(true);
 
+  private ClientCallStreamObserver<ScanRequest> requestStream;
+
   public GrpcScanOnBidirectionalStream(
-      DistributedStorageGrpc.DistributedStorageStub stub, TableMetadata metadata) {
+      GrpcConfig config,
+      DistributedStorageGrpc.DistributedStorageStub stub,
+      TableMetadata metadata) {
+    this.config = config;
     this.metadata = metadata;
-    requestObserver = stub.scan(this);
+    stub.scan(this);
+  }
+
+  @Override
+  public void beforeStart(ClientCallStreamObserver<ScanRequest> requestStream) {
+    this.requestStream = requestStream;
   }
 
   @Override
@@ -48,8 +62,18 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
   public void onCompleted() {}
 
   private ResponseOrError sendRequest(ScanRequest request) {
-    requestObserver.onNext(request);
-    return Uninterruptibles.takeUninterruptibly(queue);
+    requestStream.onNext(request);
+
+    ResponseOrError responseOrError =
+        Utility.pollUninterruptibly(
+            queue, config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS);
+    if (responseOrError == null) {
+      requestStream.cancel("deadline exceeded", null);
+
+      // Should receive a CANCELED error
+      return Uninterruptibles.takeUninterruptibly(queue);
+    }
+    return responseOrError;
   }
 
   private void throwIfScannerHasNoMoreResults() {
@@ -135,7 +159,7 @@ public class GrpcScanOnBidirectionalStream implements StreamObserver<ScanRespons
         return;
       }
       hasMoreResults.set(false);
-      requestObserver.onCompleted();
+      requestStream.onCompleted();
     } catch (StatusRuntimeException e) {
       throw new ExecutionException("failed to close the scanner", e);
     }

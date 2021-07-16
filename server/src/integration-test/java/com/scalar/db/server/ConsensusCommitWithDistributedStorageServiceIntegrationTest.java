@@ -19,6 +19,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.CommitHandler;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
@@ -111,7 +112,8 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    originalStorage = new GrpcStorage(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    originalStorage = new GrpcStorage(new GrpcConfig(properties));
   }
 
   @AfterClass

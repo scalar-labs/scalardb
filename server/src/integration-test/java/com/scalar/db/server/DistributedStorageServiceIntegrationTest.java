@@ -15,6 +15,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.IntegrationTestBase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -121,7 +122,8 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    storage = new GrpcStorage(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    storage = new GrpcStorage(new GrpcConfig(properties));
   }
 
   @AfterClass

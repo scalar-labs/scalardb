@@ -1,7 +1,9 @@
 package com.scalar.db.storage.rpc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -16,6 +18,7 @@ import org.mockito.MockitoAnnotations;
 
 public class GrpcAdminTest {
 
+  @Mock private GrpcConfig config;
   @Mock private DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub;
   @Mock private GrpcTableMetadataManager metadataManager;
 
@@ -26,7 +29,9 @@ public class GrpcAdminTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    admin = new GrpcAdmin(stub, metadataManager);
+    admin = new GrpcAdmin(config, stub, metadataManager);
+    when(config.getDeadlineDurationMillis()).thenReturn(60000L);
+    when(stub.withDeadlineAfter(anyLong(), any())).thenReturn(stub);
   }
 
   @Test

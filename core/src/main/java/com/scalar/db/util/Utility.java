@@ -7,6 +7,8 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public final class Utility {
 
@@ -67,5 +69,26 @@ public final class Utility {
             metadata.getPartitionKeyNames().stream(), metadata.getClusteringKeyNames().stream())
         .filter(n -> !selection.getProjections().contains(n))
         .forEach(selection::withProjection);
+  }
+
+  public static <E> E pollUninterruptibly(BlockingQueue<E> queue, long timeout, TimeUnit unit) {
+    boolean interrupted = false;
+    try {
+      long remainingNanos = unit.toNanos(timeout);
+      long end = System.nanoTime() + remainingNanos;
+
+      while (true) {
+        try {
+          return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+          interrupted = true;
+          remainingNanos = end - System.nanoTime();
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
   }
 }
