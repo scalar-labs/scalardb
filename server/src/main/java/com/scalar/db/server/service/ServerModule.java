@@ -13,6 +13,7 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.Metrics;
 import com.scalar.db.server.Pauser;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.service.StorageModule;
 import com.scalar.db.service.TransactionModule;
 import io.prometheus.client.CollectorRegistry;
@@ -27,12 +28,14 @@ import org.slf4j.LoggerFactory;
 public class ServerModule extends AbstractModule {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerModule.class);
 
+  private final ServerConfig config;
   private final Injector storageInjector;
   private final Injector transactionInjector;
 
-  public ServerModule(DatabaseConfig config) {
-    storageInjector = Guice.createInjector(new StorageModule(config));
-    transactionInjector = Guice.createInjector(new TransactionModule(config));
+  public ServerModule(ServerConfig config, DatabaseConfig databaseConfig) {
+    this.config = config;
+    storageInjector = Guice.createInjector(new StorageModule(databaseConfig));
+    transactionInjector = Guice.createInjector(new TransactionModule(databaseConfig));
   }
 
   @Provides
@@ -77,7 +80,7 @@ public class ServerModule extends AbstractModule {
   private void startPrometheusHttpEndpoint(MetricRegistry metricRegistry) {
     CollectorRegistry.defaultRegistry.register(new DropwizardExports(metricRegistry));
 
-    Server server = new Server(8080);
+    Server server = new Server(config.getPrometheusHttpEndpointPort());
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
     server.setHandler(context);

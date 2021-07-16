@@ -6,19 +6,25 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Immutable
 public class ServerConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerConfig.class);
 
   public static final String PREFIX = "scalar.db.server.";
   public static final String PORT = PREFIX + "port";
+  public static final String PROMETHEUS_HTTP_ENDPOINT_PORT =
+      PREFIX + "prometheus_http_endpoint_port";
 
   public static final int DEFAULT_PORT = 60051;
+  public static final int DEFAULT_PROMETHEUS_HTTP_ENDPOINT_PORT = 8080;
 
   private final Properties props;
-  private int port = DEFAULT_PORT;
+  private int port;
+  private int prometheusHttpEndpointPort;
 
   public ServerConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -40,18 +46,32 @@ public class ServerConfig {
   }
 
   private void load() {
-    String portValue = props.getProperty(PORT);
-    if (!Strings.isNullOrEmpty(portValue)) {
-      try {
-        port = Integer.parseInt(portValue);
-      } catch (NumberFormatException e) {
-        LOGGER.warn(
-            "the specified value of '{}' is not a number. using the default value: {}", PORT, port);
-      }
+    port = getInt(PORT, DEFAULT_PORT);
+    prometheusHttpEndpointPort =
+        getInt(PROMETHEUS_HTTP_ENDPOINT_PORT, DEFAULT_PROMETHEUS_HTTP_ENDPOINT_PORT);
+  }
+
+  private int getInt(String name, int defaultValue) {
+    String value = getProperties().getProperty(name);
+    if (Strings.isNullOrEmpty(value)) {
+      return defaultValue;
+    }
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException ignored) {
+      LOGGER.warn(
+          "the specified value of '{}' is not a number. using the default value: {}",
+          name,
+          defaultValue);
+      return defaultValue;
     }
   }
 
   public int getPort() {
     return port;
+  }
+
+  public int getPrometheusHttpEndpointPort() {
+    return prometheusHttpEndpointPort;
   }
 }
