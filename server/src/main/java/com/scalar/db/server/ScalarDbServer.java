@@ -54,7 +54,8 @@ public class ScalarDbServer implements Callable<Integer> {
     }
 
     ServerConfig config = new ServerConfig(properties);
-    Injector injector = Guice.createInjector(new ServerModule(new DatabaseConfig(properties)));
+    Injector injector =
+        Guice.createInjector(new ServerModule(config, new DatabaseConfig(properties)));
     server =
         ServerBuilder.forPort(config.getPort())
             .addService(injector.getInstance(DistributedStorageService.class))
