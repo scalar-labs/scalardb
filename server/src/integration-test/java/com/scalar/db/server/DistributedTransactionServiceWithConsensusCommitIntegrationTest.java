@@ -1133,7 +1133,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    Properties serverProperties = new Properties(testEnv.getJdbcDatabaseConfig().getProperties());
+    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     server = new ScalarDbServer(serverProperties);
     server.start();
 

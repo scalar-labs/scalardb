@@ -52,8 +52,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage, testEnv.getJdbcDatabaseConfig(), coordinator, recovery, commit);
+        new ConsensusCommitManager(storage, testEnv.getJdbcConfig(), coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
@@ -106,7 +105,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    server = new ScalarDbServer(testEnv.getJdbcDatabaseConfig().getProperties());
+    server = new ScalarDbServer(testEnv.getJdbcConfig().getProperties());
     server.start();
 
     Properties properties = new Properties();

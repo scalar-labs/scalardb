@@ -46,7 +46,7 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    storage = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
+    storage = new JdbcDatabase(testEnv.getJdbcConfig());
   }
 
   @AfterClass

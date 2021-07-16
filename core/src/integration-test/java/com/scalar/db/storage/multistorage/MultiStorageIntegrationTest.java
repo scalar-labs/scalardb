@@ -898,7 +898,7 @@ public class MultiStorageIntegrationTest {
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    mysql = new JdbcDatabase(testEnv.getJdbcDatabaseConfig());
+    mysql = new JdbcDatabase(testEnv.getJdbcConfig());
   }
 
   private static void initMultiStorage() {

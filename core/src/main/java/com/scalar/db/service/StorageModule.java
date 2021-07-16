@@ -6,8 +6,8 @@ import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.dynamo.DynamoDatabaseConfig;
-import com.scalar.db.storage.jdbc.JdbcDatabaseConfig;
+import com.scalar.db.storage.dynamo.DynamoConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
 
 public class StorageModule extends AbstractModule {
@@ -31,14 +31,14 @@ public class StorageModule extends AbstractModule {
 
   @Singleton
   @Provides
-  DynamoDatabaseConfig provideDynamoDatabaseConfig() {
-    return new DynamoDatabaseConfig(config.getProperties());
+  DynamoConfig provideDynamoConfig() {
+    return new DynamoConfig(config.getProperties());
   }
 
   @Singleton
   @Provides
-  JdbcDatabaseConfig provideJdbcDatabaseConfig() {
-    return new JdbcDatabaseConfig(config.getProperties());
+  JdbcConfig provideJdbcConfig() {
+    return new JdbcConfig(config.getProperties());
   }
 
   @Singleton

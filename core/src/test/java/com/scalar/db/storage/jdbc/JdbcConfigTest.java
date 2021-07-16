@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
 
-public class JdbcDatabaseConfigTest {
+public class JdbcConfigTest {
 
   private static final String ANY_JDBC_URL = "jdbc:mysql://localhost:3306/";
   private static final String ANY_USERNAME = "root";
@@ -25,14 +25,14 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MIN_IDLE, "1");
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_IDLE, "100");
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_TOTAL, "200");
-    props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
-    props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "1");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "100");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "200");
+    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
+    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
 
     // Act
-    JdbcDatabaseConfig config = new JdbcDatabaseConfig(props);
+    JdbcConfig config = new JdbcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
@@ -64,7 +64,7 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
-    JdbcDatabaseConfig config = new JdbcDatabaseConfig(props);
+    JdbcConfig config = new JdbcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
@@ -78,15 +78,15 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
     assertThat(config.getConnectionPoolMaxTotal())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
     assertThat(config.isPreparedStatementsPoolEnabled())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
+        .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+        .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
   }
 
   @Test
@@ -100,8 +100,7 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act Assert
-    assertThatThrownBy(() -> new JdbcDatabaseConfig(props))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -114,14 +113,14 @@ public class JdbcDatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MIN_IDLE, "aaa");
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_IDLE, "bbb");
-    props.setProperty(JdbcDatabaseConfig.CONNECTION_POOL_MAX_TOTAL, "ccc");
-    props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_ENABLED, "ddd");
-    props.setProperty(JdbcDatabaseConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "aaa");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "bbb");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "ccc");
+    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "ddd");
+    props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
 
     // Act
-    JdbcDatabaseConfig config = new JdbcDatabaseConfig(props);
+    JdbcConfig config = new JdbcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_JDBC_URL));
@@ -135,14 +134,14 @@ public class JdbcDatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MAX_IDLE);
     assertThat(config.getConnectionPoolMaxTotal())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+        .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MAX_TOTAL);
     assertThat(config.isPreparedStatementsPoolEnabled())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
+        .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
-        .isEqualTo(JdbcDatabaseConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+        .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
   }
 }

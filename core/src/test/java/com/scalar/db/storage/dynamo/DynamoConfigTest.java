@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
 
-public class DynamoDatabaseConfigTest {
+public class DynamoConfigTest {
 
   private static final String ANY_REGION = "us-west";
   private static final String ANY_ACCESS_KEY_ID = "accessKeyId";
@@ -25,10 +25,10 @@ public class DynamoDatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
-    props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
+    props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
 
     // Act
-    DynamoDatabaseConfig config = new DynamoDatabaseConfig(props);
+    DynamoConfig config = new DynamoConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_REGION));
@@ -56,7 +56,7 @@ public class DynamoDatabaseConfigTest {
     props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
-    DynamoDatabaseConfig config = new DynamoDatabaseConfig(props);
+    DynamoConfig config = new DynamoConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_REGION));

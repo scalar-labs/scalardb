@@ -315,7 +315,7 @@ public class JdbcTransactionIntegrationTest {
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    manager = new JdbcTransactionManager(testEnv.getJdbcDatabaseConfig());
+    manager = new JdbcTransactionManager(testEnv.getJdbcConfig());
   }
 
   @AfterClass

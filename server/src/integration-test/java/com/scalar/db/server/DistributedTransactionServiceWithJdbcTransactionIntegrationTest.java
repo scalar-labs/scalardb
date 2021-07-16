@@ -324,7 +324,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    Properties serverProperties = new Properties(testEnv.getJdbcDatabaseConfig().getProperties());
+    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
     server = new ScalarDbServer(serverProperties);
     server.start();

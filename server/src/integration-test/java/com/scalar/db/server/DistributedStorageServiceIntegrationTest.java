@@ -115,7 +115,7 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    server = new ScalarDbServer(testEnv.getJdbcDatabaseConfig().getProperties());
+    server = new ScalarDbServer(testEnv.getJdbcConfig().getProperties());
     server.start();
 
     Properties properties = new Properties();

@@ -156,6 +156,14 @@ public class DatabaseConfig {
           transactionManagerClass = JdbcTransactionManager.class;
           break;
         case "grpc":
+          if (storageClass != GrpcStorage.class) {
+            throw new IllegalArgumentException(
+                "'grpc' transaction manager ("
+                    + TRANSACTION_MANAGER
+                    + ") is supported only for 'grpc' storage ("
+                    + STORAGE
+                    + ")");
+          }
           transactionManagerClass = GrpcTransactionManager.class;
           break;
         default:

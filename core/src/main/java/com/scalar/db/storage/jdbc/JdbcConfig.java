@@ -11,8 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Immutable
-public class JdbcDatabaseConfig extends DatabaseConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabaseConfig.class);
+public class JdbcConfig extends DatabaseConfig {
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "jdbc.";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
@@ -35,15 +35,15 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
 
-  public JdbcDatabaseConfig(File propertiesFile) throws IOException {
+  public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
   }
 
-  public JdbcDatabaseConfig(InputStream stream) throws IOException {
+  public JdbcConfig(InputStream stream) throws IOException {
     super(stream);
   }
 
-  public JdbcDatabaseConfig(Properties properties) {
+  public JdbcConfig(Properties properties) {
     super(properties);
   }
 
@@ -51,7 +51,7 @@ public class JdbcDatabaseConfig extends DatabaseConfig {
   protected void load() {
     String storage = getProperties().getProperty(DatabaseConfig.STORAGE);
     if (storage == null || !storage.equals("jdbc")) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be jdbc");
+      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be 'jdbc'");
     }
 
     super.load();

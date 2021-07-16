@@ -117,14 +117,14 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
 
     Properties props = new Properties();
     if (endpointOverride != null) {
-      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
     props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    storage = new Dynamo(new DynamoDatabaseConfig(props));
+    storage = new Dynamo(new DynamoConfig(props));
   }
 
   private static String namespacePrefix() {

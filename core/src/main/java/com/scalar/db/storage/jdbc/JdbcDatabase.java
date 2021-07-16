@@ -41,7 +41,7 @@ public class JdbcDatabase implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public JdbcDatabase(JdbcDatabaseConfig config) {
+  public JdbcDatabase(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
     Optional<String> namespacePrefix = config.getNamespacePrefix();
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));

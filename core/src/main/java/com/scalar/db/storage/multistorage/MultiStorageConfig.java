@@ -52,7 +52,8 @@ public class MultiStorageConfig {
   private void load() {
     String storage = props.getProperty(DatabaseConfig.STORAGE);
     if (storage == null || !storage.equals(MULTI_STORAGE)) {
-      throw new IllegalArgumentException(DatabaseConfig.STORAGE + " should be " + MULTI_STORAGE);
+      throw new IllegalArgumentException(
+          DatabaseConfig.STORAGE + " should be '" + MULTI_STORAGE + "'");
     }
 
     loadDatabaseConfigs();

@@ -57,7 +57,7 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
     testEnv.createMetadataTable();
     testEnv.insertMetadata();
 
-    server = new ScalarDbServer(testEnv.getJdbcDatabaseConfig().getProperties());
+    server = new ScalarDbServer(testEnv.getJdbcConfig().getProperties());
     server.start();
 
     Properties properties = new Properties();

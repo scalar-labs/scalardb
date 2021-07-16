@@ -161,14 +161,14 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
 
     Properties props = new Properties();
     if (endpointOverride != null) {
-      props.setProperty(DynamoDatabaseConfig.ENDPOINT_OVERRIDE, endpointOverride);
+      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
     props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    admin = new DynamoAdmin(new DynamoDatabaseConfig(props));
+    admin = new DynamoAdmin(new DynamoConfig(props));
   }
 
   @AfterClass

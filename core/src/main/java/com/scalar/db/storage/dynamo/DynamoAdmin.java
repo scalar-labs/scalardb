@@ -24,7 +24,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final DynamoTableMetadataManager metadataManager;
 
   @Inject
-  public DynamoAdmin(DynamoDatabaseConfig config) {
+  public DynamoAdmin(DynamoConfig config) {
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
     config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     this.client =
