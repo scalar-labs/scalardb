@@ -13,7 +13,7 @@ However, if the quorum of nodes of a cluster loses their data, we need a transac
 The easiest way to take a transactionally-consistent backup for Scalar DB on Cassandra is to stop a cluster, take the snapshots of all the nodes of the cluster, and start the cluster. If you implement [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing on-going transactions.
 
 To minimize mistakes when doing backup and restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy is also itegrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
+Cassy is also integrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
 ## JDBC databases
@@ -23,3 +23,10 @@ One requirement for backup in Scalar DB on JDBC databases is that backups for al
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
 For example, you can use `mysqldump` command with `--single-transaction` option in MySQL and `pg_dump` command in PostgreSQL to achieve that.
 Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
+
+## Scalar DB server
+
+Since the Scalar DB server implements [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface, we can easily pause/unpause it as mentioned in [Cassandra](#Cassandra). 
+So we can take a transactionally-consistent backup for Scalar DB by pausing the Scalar DB server, taking backups of all the tables, and unpausing the Scalar DB server.
+If you use Cassandra, you can use [Cassy](https://github.com/scalar-labs/cassy) integrated with `scalar-admin`.
+Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
