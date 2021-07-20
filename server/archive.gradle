@@ -29,10 +29,10 @@ uploadArchives {
             }
 
             pom.project {
-                name 'Scalar DB'
+                name 'Scalar DB Server'
                 packaging 'jar'
                 // optionally artifactId can be defined here
-                description 'A library that makes non-ACID distributed databases/storages ACID-compliant.'
+                description 'Scalar DB Server that is the gRPC interfarce of Scalar DB'
                 url 'https://github.com/scalar-labs/scalardb'
 
                 scm {

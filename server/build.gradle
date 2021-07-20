@@ -47,7 +47,7 @@ application {
 }
 
 docker {
-    name "ghcr.io/scalar-labs/scalardb-server:$version"
+    name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
     files tasks.distTar.outputs, 'conf/log4j.properties'
 }
 
@@ -72,3 +72,19 @@ spotless {
 }
 
 archivesBaseName = "scalardb-server"
+
+// for release
+distZip {
+    archiveFileName = "${archivesBaseName}-${project.version}.zip"
+}
+
+// for docker
+distTar {
+    archiveFileName = "${project.name}.tar"
+}
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        project.gradle.startParameter.taskNames[0].endsWith('uploadArchives')) {
+    apply from: 'archive.gradle'
+}
