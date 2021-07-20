@@ -147,4 +147,14 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       throw new StorageRuntimeException("Failed to read the table metadata", e);
     }
   }
+
+  @Override
+  public void deleteTableMetadata(String namespace, String table) {
+    //TODO To implement
+  }
+
+  @Override
+  public void addTableMetadata(TableMetadata metadata) {
+    //TODO To implement
+  }
 }

@@ -123,4 +123,15 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
         throw new UnsupportedTypeException(columnType);
     }
   }
+
+  @Override
+  public void deleteTableMetadata(String namespace, String table) {
+    //TODO To implement
+  }
+
+  @Override
+  public void addTableMetadata(TableMetadata metadata) {
+    //TODO To implement
+  }
+
 }
