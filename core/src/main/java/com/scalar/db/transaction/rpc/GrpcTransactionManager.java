@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
+  private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
   private static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -61,7 +62,11 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
   public GrpcTransactionManager(GrpcConfig config) {
     this.config = config;
     channel =
-        NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
+        NettyChannelBuilder.forAddress(
+                config.getContactPoints().get(0),
+                config.getContactPort() == 0
+                    ? DEFAULT_SCALAR_DB_SERVER_PORT
+                    : config.getContactPort())
             .usePlaintext()
             .build();
     stub = DistributedTransactionGrpc.newStub(channel);

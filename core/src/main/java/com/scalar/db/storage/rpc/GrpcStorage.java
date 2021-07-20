@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcStorage implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
+  private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
   private static final Retry.ExceptionFactory<ExecutionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -64,7 +65,11 @@ public class GrpcStorage implements DistributedStorage {
   public GrpcStorage(GrpcConfig config) {
     this.config = config;
     channel =
-        NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
+        NettyChannelBuilder.forAddress(
+                config.getContactPoints().get(0),
+                config.getContactPort() == 0
+                    ? DEFAULT_SCALAR_DB_SERVER_PORT
+                    : config.getContactPort())
             .usePlaintext()
             .build();
     stub = DistributedStorageGrpc.newStub(channel);
