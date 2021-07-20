@@ -14,7 +14,7 @@ This runs Scalar DB Server:
 
 ```
 $ cd server/build/install/server
-$ bin/scalardb-server
+$ bin/scalardb-server --config <your configuration file path>
 ```
 
 ## Docker
@@ -29,11 +29,11 @@ $ ./gradlew docker
 
 ### Run
 
-This runs the Scalar DB Server (you need to specify your local `database.properties` path with `-v` flag):
+This runs the Scalar DB Server (you need to specify your local configuration file path with `-v` flag):
 
 ```
-$ docker run -v <your local database.properties path>:/scalardb/server/database.properties -d -p 60051:60051 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local configuration file path>:/scalardb/server/database.properties -d ghcr.io/scalar-labs/scalardb-server:<version>
 
 # For DEBUG logging
-$ docker run -v <your local database.properties path>:/scalardb/server/database.properties -e JAVA_OPTS=-Dlog4j.logLevel=DEBUG -d -p 60051:60051 ghcr.io/scalar-labs/scalardb-server:<version>
+$ docker run -v <your local configuration file path>:/scalardb/server/database.properties -e JAVA_OPTS=-Dlog4j.logLevel=DEBUG -d ghcr.io/scalar-labs/scalardb-server:<version>
 ```
