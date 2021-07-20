@@ -34,6 +34,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
@@ -1140,7 +1141,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    manager = new GrpcTransactionManager(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    manager = new GrpcTransactionManager(new GrpcConfig(properties));
   }
 
   @AfterClass

@@ -13,7 +13,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
@@ -52,6 +51,7 @@ public class GrpcStorage implements DistributedStorage {
         return new ExecutionException(message, cause);
       };
 
+  private final GrpcConfig config;
   private final ManagedChannel channel;
   private final DistributedStorageGrpc.DistributedStorageStub stub;
   private final DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
@@ -61,7 +61,8 @@ public class GrpcStorage implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public GrpcStorage(DatabaseConfig config) {
+  public GrpcStorage(GrpcConfig config) {
+    this.config = config;
     channel =
         NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
             .usePlaintext()
@@ -69,16 +70,18 @@ public class GrpcStorage implements DistributedStorage {
     stub = DistributedStorageGrpc.newStub(channel);
     blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
     metadataManager =
-        new GrpcTableMetadataManager(DistributedStorageAdminGrpc.newBlockingStub(channel));
+        new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
 
   @VisibleForTesting
   GrpcStorage(
+      GrpcConfig config,
       DistributedStorageGrpc.DistributedStorageStub stub,
       DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub,
       GrpcTableMetadataManager metadataManager) {
+    this.config = config;
     channel = null;
     this.stub = stub;
     this.blockingStub = blockingStub;
@@ -119,7 +122,9 @@ public class GrpcStorage implements DistributedStorage {
     return execute(
         () -> {
           GetResponse response =
-              blockingStub.get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
+              blockingStub
+                  .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
           if (response.hasResult()) {
             TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
             return Optional.of(ProtoUtil.toResult(response.getResult(), tableMetadata));
@@ -134,7 +139,7 @@ public class GrpcStorage implements DistributedStorage {
     return executeWithRetries(
         () -> {
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-          return new ScannerImpl(scan, stub, tableMetadata);
+          return new ScannerImpl(config, scan, stub, tableMetadata);
         },
         EXCEPTION_FACTORY);
   }
@@ -163,8 +168,10 @@ public class GrpcStorage implements DistributedStorage {
     Utility.setTargetToIfNot(mutation, namespace, tableName);
     execute(
         () -> {
-          blockingStub.mutate(
-              MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
+          blockingStub
+              .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+              .mutate(
+                  MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
           return null;
         });
   }
@@ -176,7 +183,9 @@ public class GrpcStorage implements DistributedStorage {
         () -> {
           MutateRequest.Builder builder = MutateRequest.newBuilder();
           mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
-          blockingStub.mutate(builder.build());
+          blockingStub
+              .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+              .mutate(builder.build());
           return null;
         });
   }
