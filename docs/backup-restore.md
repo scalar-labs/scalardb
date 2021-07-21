@@ -27,6 +27,6 @@ Or when you use Amazon RDS (Relational Database Service) or Azure Database for M
 ## Scalar DB server
 
 Since Scalar DB server implements [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface, you can easily pause the server to stop accepting incoming requests and drain in-flight requests.
-You can use paused duration and choose one of the following ways to make your databases transactionally-consistent even after being restored depending on the underlining database.
+You can use paused duration and choose one of the following ways depending on the underlining database to make your databases transactionally-consistent even after restored.
 * Take backups of your databases during the paused duration with snapshot feature.
 * Restore to a point in the paused duration with point-in-time-restore (PITR) feature.
