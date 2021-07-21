@@ -42,7 +42,7 @@ jobs:
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
 
-      - run: gradle dependencies
+      - run: ./gradlew dependencies
 
       - save_cache:
           paths:
@@ -66,14 +66,14 @@ jobs:
           command: dockerize -wait tcp://localhost:9042 -timeout 1m
 
       # run tests!
-      - run: gradle test
-      - run: gradle integrationTestCassandra
+      - run: ./gradlew test
+      - run: ./gradlew integrationTestCassandra
 
       - run:
           name: Run short verification
           command: |
-            gradle jar
-            gradle testJar
+            ./gradlew jar
+            ./gradlew testJar
             cqlsh -f scripts/sample_schema/tx_transfer.cql
             # run with 2 requesters for 30 seconds
             java -cp "build/test-libs/*:build/libs/*" com.scalar.db.verification.TransactionVerification -c 2 -t 30
@@ -130,7 +130,7 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 
-      - run: gradle dependencies
+      - run: ./gradlew dependencies
 
       - save_cache:
           paths:
@@ -138,10 +138,10 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
+      - run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
 
       # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
+      - run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
@@ -185,7 +185,7 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 
-      - run: gradle dependencies
+      - run: ./gradlew dependencies
 
       - save_cache:
           paths:
@@ -193,10 +193,10 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
+      - run: ./gradlew integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
