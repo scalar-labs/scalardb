@@ -129,7 +129,7 @@ targetCompatibility = 1.8
 
 group = "com.scalar-labs"
 archivesBaseName = "scalardb"
-//version = "3.0.0"
+version = "3.0.1"
 
 // for archiving and uploading to maven central
 if (!project.gradle.startParameter.taskNames.isEmpty() &&
