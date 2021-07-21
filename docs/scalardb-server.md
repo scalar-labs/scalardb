@@ -1,6 +1,8 @@
 # Scalar DB server
 
-This document explains the Scalar DB server that is a gRPC interface of Scalar DB.
+Scalar DB server is a gRPC server that implements Scalar DB interface. 
+With Scalar DB server, you can use Scalar DB features from multiple programming languages that are supported by gRPC.
+This document explains how to install and use Scalar DB server.
 
 ## Usage
 
