@@ -73,8 +73,8 @@ docker run -v <your local property file path>:/scalardb/server/database.properti
 For zip archives, you can start Scalar DB server with the following commands:
 
 ```
-unzip server.zip
-cd server
+unzip scalardb-server-<version>.zip
+cd scalardb-server-<version>
 bin/scalardb-server --config <your property file path>
 ```
 
