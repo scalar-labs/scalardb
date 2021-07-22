@@ -1,7 +1,7 @@
 # Multi-storage in Scalar DB
 
 Scalar DB transactions can span multiple storages/databases while preserving ACID property with a feature called `multi-storage`.
-This documentation explains this feature that's called `multi-storage`.
+This documentation explains the feature briefly.
 
 ## How Multi-storage works
 
