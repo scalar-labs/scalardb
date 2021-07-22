@@ -11,7 +11,7 @@ When an operation is executed, it chooses a proper storage instance from the spe
 ## Configuration
 
 You can use `multi-storage` in the same way as the other storages/databases at the code level as long as the configuration is properly set for `multi-storage`.
-An example of the configuration is as follows:
+An example of the configuration is shown as follows:
 
 ```
 # The storage is "multi-storage"
