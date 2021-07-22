@@ -311,4 +311,5 @@ These are just simple examples of how Scalar DB is used. For more information, p
 * [Database schema in Scalar DB](schema.md)
 * [Schema tool](../tools/scalar-schema/README.md)
 * [How to Back up and Restore](backup-restore.md)
+* [Multi-storage](multi-storage.md)
 * [Scalar DB server](scalardb-server.md)
