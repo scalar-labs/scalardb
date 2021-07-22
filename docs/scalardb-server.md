@@ -80,7 +80,7 @@ bin/scalardb-server --config <your property file path>
 
 ## Usage of the Java client of Scalar DB server
 
-You can use the Java client of Scalar DB server almost the same way as other storages/databases.
+You can use the Java client of Scalar DB server in almost the same way as other storages/databases.
 The difference is that you need to set `scalar.db.storage` and `scalar.db.transaction_manager` to `grpc` in your client side property file.
 
 ```
