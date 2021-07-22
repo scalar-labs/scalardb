@@ -1,4 +1,4 @@
-(defproject scalar-schema "3.0.0"
+(defproject scalar-schema "3.1.0-SNAPSHOT"
   :description "Schema tool for Scalar DB"
   :url "http://github.com/scalar-labs/scalardb"
   :dependencies [[org.clojure/clojure "1.10.1"]

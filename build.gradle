@@ -17,6 +17,9 @@ subprojects {
     apply plugin: 'java-library-distribution'
     apply plugin: 'com.diffplug.spotless'
 
+    project.version = '3.1.0-SNAPSHOT'
+    group = "com.scalar-labs"
+
     repositories {
         mavenCentral()
     }
@@ -41,17 +44,15 @@ subprojects {
     }
 
     distZip {
-        archiveName = "${project.name}.zip"
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 
     distTar {
-        archiveName = "${project.name}.tar"
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 
     installDist {
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 
     task sourcesJar(type: Jar) {
@@ -69,7 +70,8 @@ subprojects {
         from sourceSets.test.output
     }
 
-    group = "com.scalar-labs"
-
-    //version = "3.0.0"
+    task testSourcesJar(type: Jar) {
+        classifier = 'test-sources'
+        from sourceSets.test.allSource
+    }
 }
