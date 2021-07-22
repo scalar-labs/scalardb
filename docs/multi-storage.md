@@ -6,7 +6,7 @@ This documentation explains this feature that's called `multi-storage`.
 ## How Multi-storage works
 
 Internally, the `multi-storage` implementation holds multiple storage instances and has mappings from a table name/a namespace name to a proper storage instance.
-When an operation executes, it chooses a proper storage instance from the specified table/namespace by using the table-storage/namespace-storage mappings and uses it.
+When an operation is executed, it chooses a proper storage instance from the specified table/namespace by using the table-storage/namespace-storage mappings and uses it.
 
 ## Configuration
 
