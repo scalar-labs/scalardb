@@ -24,3 +24,9 @@ protobuf {
 }
 
 archivesBaseName = "scalardb-rpc"
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        project.gradle.startParameter.taskNames[0].endsWith('uploadArchives')) {
+    apply from: 'archive.gradle'
+}
