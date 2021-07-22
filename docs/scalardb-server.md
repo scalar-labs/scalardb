@@ -5,7 +5,7 @@ With Scalar DB server, you can use Scalar DB features from multiple programming 
 
 Currently, we provide only a Java client officially, and we will support other language clients officially in the future.
 Of course, you can generate language-specific client stubs by yourself.
-However, note that it might not be straightforward to implement a client since it's using a bidirectional streaming RPC in gRPC, and you need to be familiar with it.
+However, note that it is not necessarily straightforward to implement a client since it's using a bidirectional streaming RPC in gRPC, and you need to be familiar with it.
 
 This document explains how to install and use Scalar DB server.
 
