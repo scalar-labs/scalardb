@@ -50,8 +50,7 @@ jobs:
       - name: Upload scalardb, scalardb-server, and scalardb-rpc to Maven Central Repository
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
-          gradle uploadArchives \
-          -Pversion=${{ steps.version.outputs.version }} \
+          gradle publish \
           -Psigning.keyId="${{ secrets.SIGNING_KEY_ID }}" \
           -P'signing.password'="${{ secrets.SIGNING_PASSWORD }}" \
           -Psigning.secretKeyRingFile="$(echo ~/.gradle/secring.gpg)" \
