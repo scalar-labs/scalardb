@@ -24,13 +24,6 @@ subprojects {
         mavenCentral()
     }
 
-    dependencies {
-        testImplementation group: 'junit', name: 'junit', version: '4.12'
-        testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
-        testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
-        testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
-    }
-
     test {
         maxHeapSize "512m"
         testLogging.showStandardStreams = true
@@ -39,8 +32,16 @@ subprojects {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
+    java {
+        withJavadocJar()
+        withSourcesJar()
+    }
+
     javadoc {
         options.addStringOption("notimestamp", "com.scalar.db")
+        if (JavaVersion.current().isJava9Compatible()) {
+            options.addBooleanOption('html5', true)
+        }
     }
 
     distZip {
@@ -53,25 +54,5 @@ subprojects {
 
     installDist {
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
-    }
-
-    task sourcesJar(type: Jar) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from javadoc
-    }
-
-    task testJar(type: Jar) {
-        classifier = 'tests'
-        from sourceSets.test.output
-    }
-
-    task testSourcesJar(type: Jar) {
-        classifier = 'test-sources'
-        from sourceSets.test.allSource
     }
 }
