@@ -39,7 +39,7 @@ subprojects {
 
     javadoc {
         options.addStringOption("notimestamp", "com.scalar.db")
-        if(JavaVersion.current().isJava9Compatible()) {
+        if (JavaVersion.current().isJava9Compatible()) {
             options.addBooleanOption('html5', true)
         }
     }
