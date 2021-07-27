@@ -148,21 +148,10 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       boolean indexed,
       int ordinalPosition)
       throws SQLException {
-    String columns =
-        Stream.of(
-                FULL_TABLE_NAME,
-                COLUMN_NAME,
-                DATA_TYPE,
-                KEY_TYPE,
-                CLUSTERING_ORDER,
-                INDEXED,
-                ORDINAL_POSITION)
-            .map(c -> enclose(c, rdbEngine))
-            .collect(Collectors.joining(","));
+
     return String.format(
-        "INSERT INTO %s (%s) VALUES ('%s','%s','%s',%s,%s,%s,%d)",
+        "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
         enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine),
-        columns,
         schemaPrefix.orElse("") + schema + "." + table,
         columnName,
         dataType.toString(),
