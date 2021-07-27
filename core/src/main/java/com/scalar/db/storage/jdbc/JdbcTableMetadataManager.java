@@ -62,24 +62,19 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                   @Override
                   public Optional<TableMetadata> load(@Nonnull String fullTableName)
                       throws SQLException {
-                    return JdbcTableMetadataManager.this.load(
-                        dataSource, fullTableName, schemaPrefix, rdbEngine);
+                    return JdbcTableMetadataManager.this.load(dataSource, fullTableName, rdbEngine);
                   }
                 });
   }
 
   private Optional<TableMetadata> load(
-      DataSource dataSource,
-      String fullTableName,
-      Optional<String> schemaPrefix,
-      RdbEngine rdbEngine)
-      throws SQLException {
+      DataSource dataSource, String fullTableName, RdbEngine rdbEngine) throws SQLException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement(schemaPrefix, rdbEngine))) {
+            connection.prepareStatement(getSelectColumnsStatement(rdbEngine))) {
       preparedStatement.setString(1, fullTableName);
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -123,7 +118,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return Optional.of(builder.build());
   }
 
-  private String getSelectColumnsStatement(Optional<String> schemaPrefix, RdbEngine rdbEngine) {
+  private String getSelectColumnsStatement(RdbEngine rdbEngine) {
     return "SELECT "
         + enclose(COLUMN_NAME, rdbEngine)
         + ", "
