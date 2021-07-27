@@ -130,7 +130,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   }
 
   @Override
-  public void addTableMetadata(TableMetadata metadata) {
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
     //TODO To implement
   }
 

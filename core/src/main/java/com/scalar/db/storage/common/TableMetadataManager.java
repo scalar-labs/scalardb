@@ -32,5 +32,5 @@ public interface TableMetadataManager {
   /**
    * Add the given table metadata
    */
-  void addTableMetadata(TableMetadata metadata);
+  void addTableMetadata(String namespace, String table, TableMetadata metadata);
 }

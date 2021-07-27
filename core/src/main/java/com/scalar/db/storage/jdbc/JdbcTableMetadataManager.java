@@ -17,10 +17,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.Statement;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -84,16 +86,16 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         while (resultSet.next()) {
           tableExists = true;
 
-          String columnName = resultSet.getString("column_name");
-          DataType dataType = DataType.valueOf(resultSet.getString("data_type"));
+          String columnName = resultSet.getString(COLUMN_NAME);
+          DataType dataType = DataType.valueOf(resultSet.getString(DATA_TYPE));
           builder.addColumn(columnName, dataType);
 
-          boolean indexed = resultSet.getBoolean("indexed");
+          boolean indexed = resultSet.getBoolean(INDEXED);
           if (indexed) {
             builder.addSecondaryIndex(columnName);
           }
 
-          String keyType = resultSet.getString("key_type");
+          String keyType = resultSet.getString(KEY_TYPE);
           if (keyType == null) {
             continue;
           }
@@ -104,7 +106,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
               break;
             case CLUSTERING:
               Scan.Ordering.Order clusteringOrder =
-                  Scan.Ordering.Order.valueOf(resultSet.getString("clustering_order"));
+                  Scan.Ordering.Order.valueOf(resultSet.getString(CLUSTERING_ORDER));
               builder.addClusteringKey(columnName, clusteringOrder);
               break;
             default:
@@ -133,7 +135,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         + ", "
         + enclose(INDEXED, rdbEngine)
         + " FROM "
-        + enclosedFullTableName(schemaPrefix.orElse("") + SCHEMA, TABLE, rdbEngine)
+        + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
         + " WHERE "
         + enclose(FULL_TABLE_NAME, rdbEngine)
         + " = ? ORDER BY "
@@ -141,8 +143,9 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         + " ASC";
   }
 
-  private PreparedStatement getInsertStatement(
-      Connection connection,
+  private String getInsertStatement(
+      String schema,
+      String table,
       String columnName,
       DataType dataType,
       @Nullable KeyType keyType,
@@ -150,57 +153,57 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       boolean indexed,
       int ordinalPosition)
       throws SQLException {
-    String statement =
-        "INSERT INTO "
-            + enclosedFullTableName(schemaPrefix.orElse("") + SCHEMA, TABLE, rdbEngine)
-            + "("
-            + FULL_TABLE_NAME
-            + ", "
-            + COLUMN_NAME
-            + ", "
-            + DATA_TYPE
-            + ", "
-            + KEY_TYPE
-            + ", "
-            + CLUSTERING_ORDER
-            + ", "
-            + INDEXED
-            + ") VALUES (?, ?, ?, ?, ?, ?)";
-    PreparedStatement preparedStatement = connection.prepareStatement(statement);
-    preparedStatement.setString(1, schemaPrefix.orElse("") + SCHEMA + "." + TABLE);
-    preparedStatement.setString(2, columnName);
-    preparedStatement.setString(3, dataType.toString());
-    if (keyType != null) {
-      preparedStatement.setString(4, keyType.toString());
-    } else {
-      preparedStatement.setNull(5, Types.VARCHAR);
-    }
-    if (ckOrder != null) {
-      preparedStatement.setString(6, ckOrder.toString());
-    } else {
-      preparedStatement.setNull(6, Types.VARCHAR);
-    }
-    if (rdbEngine == RdbEngine.ORACLE || rdbEngine == RdbEngine.SQL_SERVER) {
-      preparedStatement.setInt(7, indexed ? 1 : 0);
-    } else {
-      preparedStatement.setBoolean(7, indexed);
-    }
-    preparedStatement.setInt(8, ordinalPosition);
-
-    return preparedStatement;
+    String columns =
+        Stream.of(
+                FULL_TABLE_NAME,
+                COLUMN_NAME,
+                DATA_TYPE,
+                KEY_TYPE,
+                CLUSTERING_ORDER,
+                INDEXED,
+                ORDINAL_POSITION)
+            .map(c -> enclose(c, rdbEngine))
+            .collect(Collectors.joining(","));
+    return String.format(
+        "INSERT INTO %s (%s) VALUES ('%s','%s','%s',%s,%s,%s,%d)",
+        enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine),
+        columns,
+        schemaPrefix.orElse("") + schema + "." + table,
+        columnName,
+        dataType.toString(),
+        keyType != null ? "'" + keyType + "'" : "NULL",
+        ckOrder != null ? "'" + ckOrder + "'" : "NULL",
+        computeBooleanValue(indexed),
+        ordinalPosition);
   }
 
-  private String getDeleteStatement(String tableName) {
+  private String computeBooleanValue(boolean value) {
+    switch (rdbEngine) {
+      case ORACLE:
+      case SQL_SERVER:
+        return value ? "1" : "0";
+      default:
+        return value ? "true" : "false";
+    }
+  }
+
+  private String getDeleteStatement(String namespace, String tableName) {
+    String fullTableName = schemaPrefix.orElse("") + namespace + "." + tableName;
     return "DELETE FROM "
-        + enclosedFullTableName(schemaPrefix.orElse("") + SCHEMA, TABLE, rdbEngine)
+        + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
         + " WHERE "
         + enclose(FULL_TABLE_NAME, rdbEngine)
         + " = "
-        + tableName;
+        + fullTableName;
   }
 
   private void insertMetadataColumn(
-      TableMetadata metadata, Connection connection, int ordinalPosition, String column)
+      String schema,
+      String table,
+      TableMetadata metadata,
+      Connection connection,
+      int ordinalPosition,
+      String column)
       throws SQLException {
     KeyType keyType = null;
     if (metadata.getPartitionKeyNames().contains(column)) {
@@ -210,16 +213,18 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       keyType = KeyType.CLUSTERING;
     }
 
-    try (PreparedStatement preparedStatement =
-        getInsertStatement(
-            connection,
-            column,
-            metadata.getColumnDataType(column),
-            keyType,
-            metadata.getClusteringOrder(column),
-            metadata.getSecondaryIndexNames().contains(column),
-            ordinalPosition)) {
-      preparedStatement.execute();
+    try (Statement statement = connection.createStatement()) {
+      String insertStatement =
+          getInsertStatement(
+              schema,
+              table,
+              column,
+              metadata.getColumnDataType(column),
+              keyType,
+              metadata.getClusteringOrder(column),
+              metadata.getSecondaryIndexNames().contains(column),
+              ordinalPosition);
+      statement.execute(insertStatement);
     } catch (SQLException e) {
       connection.rollback();
       throw e;
@@ -227,35 +232,46 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   private void createMetadataTable() {
-    String fullTableName = schemaPrefix.orElse("") + SCHEMA + "." + TABLE;
-
-    String statement =
-        String.format("CREATE TABLE %s (", fullTableName)
-            + String.format("%s %s, ", FULL_TABLE_NAME, getTextType(128))
-            + String.format("%s %s, ", COLUMN_NAME, getTextType(128))
-            + String.format("%s %s NOT NULL, ", DATA_TYPE, getTextType(20))
-            + String.format("%s %s, ", KEY_TYPE, getTextType(20))
-            + String.format("%s %s, ", CLUSTERING_ORDER, getTextType(10))
-            + String.format("%s %s NOT NULL, ", INDEXED, getBooleanType())
-            + String.format("%s INTEGER NOT NULL, ", ORDINAL_POSITION)
-            + String.format("PRIMARY KEY (%s, %s))", FULL_TABLE_NAME, COLUMN_NAME);
+    String createTableQuery =
+        String.format(
+                "CREATE TABLE %s(", enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine))
+            + String.format("%s VARCHAR(128),", enclose(FULL_TABLE_NAME, rdbEngine))
+            + String.format("%s VARCHAR(128),", enclose(COLUMN_NAME, rdbEngine))
+            + String.format("%s VARCHAR(20) NOT NULL,", enclose(DATA_TYPE, rdbEngine))
+            + String.format("%s VARCHAR(20),", enclose(KEY_TYPE, rdbEngine))
+            + String.format("%s VARCHAR(10),", enclose(CLUSTERING_ORDER, rdbEngine))
+            + String.format("%s %s NOT NULL,", enclose(INDEXED, rdbEngine), getBooleanType())
+            + String.format("%s INTEGER NOT NULL,", enclose(ORDINAL_POSITION, rdbEngine))
+            + String.format(
+                "PRIMARY KEY (%s, %s))",
+                enclose(FULL_TABLE_NAME, rdbEngine), enclose(COLUMN_NAME, rdbEngine));
 
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(getDeleteStatement(statement))) {
-      preparedStatement.executeQuery();
+        Statement createSchemaStatement = connection.createStatement();
+        Statement createTableStatement = connection.createStatement()) {
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      try {
+        // Creating the schema for Oracle is not supported
+        if (rdbEngine != RdbEngine.ORACLE) {
+          createSchemaStatement.execute("CREATE SCHEMA " + getMetadataSchema());
+        }
+        createTableStatement.execute(createTableQuery);
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+      connection.commit();
     } catch (SQLException e) {
-      // TODO Suppress exception if table exists
-
+      if (e.getMessage().contains("database exists") || e.getMessage().contains("already exists")) {
+        return;
+      }
+      throw new StorageRuntimeException("creating the metadata table failed", e);
     }
   }
 
-  private String getTextType(int charLength) {
-    if (this.rdbEngine == RdbEngine.ORACLE) {
-      return String.format("VARCHAR2( %s )", charLength);
-    } else {
-      return String.format("VARCHAR( %s )", charLength);
-    }
+  private String getMetadataSchema() {
+    return schemaPrefix.orElse("") + JdbcTableMetadataManager.SCHEMA;
   }
 
   private String getBooleanType() {
@@ -263,8 +279,6 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       case MYSQL:
       case POSTGRESQL:
         return "BOOLEAN";
-      case ORACLE:
-        return "NUMBER(1)";
       case SQL_SERVER:
         return "BIT";
       default:
@@ -274,7 +288,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   @Override
-  public void addTableMetadata(TableMetadata metadata) {
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
     createMetadataTable();
     try (Connection connection = dataSource.getConnection()) {
       // Start transaction to commit all the insert statements at once
@@ -287,7 +301,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
       int ordinalPosition = 1;
       for (String column : orderedColumns) {
-        insertMetadataColumn(metadata, connection, ordinalPosition++, column);
+        insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
       }
       try {
         connection.commit();
@@ -326,13 +340,16 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   @Override
   public void deleteTableMetadata(String namespace, String table) {
     try (Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement =
-            connection.prepareStatement(getDeleteStatement(table))) {
-      preparedStatement.executeQuery();
+        Statement statement = connection.createStatement()) {
+      statement.execute(getDeleteStatement(namespace, table));
     } catch (SQLException e) {
+      if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
+        return;
+      }
       throw new StorageRuntimeException(
           String.format(
               "deleting the %s table metadata failed", schemaPrefix + namespace + "." + table));
     }
+    tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
   }
 }

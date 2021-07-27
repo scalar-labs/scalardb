@@ -104,7 +104,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
   }
 
   @Override
-  public void addTableMetadata(TableMetadata metadata) {
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
 
   }
 }
