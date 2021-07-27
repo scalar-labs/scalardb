@@ -1,8 +1,13 @@
-# Compatibility Matrix
+# Scalar DB Supported Databases
 
-This document shows the compatibility of Scalar DB with supported databases.
+Scalar DB supports the following databases and the databases that are compatible with those databases.
+* Cassandra
+* Cosmos DB
+* DynamoDB
+* MySQL
+* PostgreSQL
 
-## Scalar DB Compatibility
+## Compatibility matrix
 
 | Scalar DB Version   | Cassandra 3.11 | Cassandra 3.0    | Cassandra 2.2   | Cosmos DB | DynamoDB  | MySQL 8.0  | MySQL 5.7  | PostgreSQL 13.3    | PostgreSQL 12.7   | PostgreSQL 11.12  |
 |:--------------------|:------------------|:--------------------|:-------------------|:----------|:----------|:--------------|:--------------|:-------------------|:------------------|:------------------|
