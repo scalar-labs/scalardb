@@ -208,7 +208,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       keyType = KeyType.CLUSTERING;
     }
 
-    try (Statement statement = connection.createStatement()) {
+    try {
       String insertStatement =
           getInsertStatement(
               schema,
@@ -219,7 +219,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
               metadata.getClusteringOrder(column),
               metadata.getSecondaryIndexNames().contains(column),
               ordinalPosition);
-      statement.execute(insertStatement);
+      execute(connection, insertStatement);
     } catch (SQLException e) {
       connection.rollback();
       throw e;
@@ -230,28 +230,23 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     String createTableQuery =
         String.format(
                 "CREATE TABLE %s(", enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine))
-            + String.format("%s VARCHAR(128),", enclose(FULL_TABLE_NAME, rdbEngine))
-            + String.format("%s VARCHAR(128),", enclose(COLUMN_NAME, rdbEngine))
-            + String.format("%s VARCHAR(20) NOT NULL,", enclose(DATA_TYPE, rdbEngine))
-            + String.format("%s VARCHAR(20),", enclose(KEY_TYPE, rdbEngine))
-            + String.format("%s VARCHAR(10),", enclose(CLUSTERING_ORDER, rdbEngine))
+            + String.format("%s %s,", enclose(FULL_TABLE_NAME, rdbEngine), getTextType(128))
+            + String.format("%s %s,", enclose(COLUMN_NAME, rdbEngine), getTextType(128))
+            + String.format("%s %s NOT NULL,", enclose(DATA_TYPE, rdbEngine), getTextType(20))
+            + String.format("%s %s,", enclose(KEY_TYPE, rdbEngine), getTextType(20))
+            + String.format("%s %s,", enclose(CLUSTERING_ORDER, rdbEngine), getTextType(10))
             + String.format("%s %s NOT NULL,", enclose(INDEXED, rdbEngine), getBooleanType())
             + String.format("%s INTEGER NOT NULL,", enclose(ORDINAL_POSITION, rdbEngine))
             + String.format(
                 "PRIMARY KEY (%s, %s))",
                 enclose(FULL_TABLE_NAME, rdbEngine), enclose(COLUMN_NAME, rdbEngine));
 
-    try (Connection connection = dataSource.getConnection();
-        Statement createSchemaStatement = connection.createStatement();
-        Statement createTableStatement = connection.createStatement()) {
+    try (Connection connection = dataSource.getConnection()) {
       connection.setAutoCommit(false);
       connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
       try {
-        // Creating the schema for Oracle is not supported
-        if (rdbEngine != RdbEngine.ORACLE) {
-          createSchemaStatement.execute("CREATE SCHEMA " + getMetadataSchema());
-        }
-        createTableStatement.execute(createTableQuery);
+        createMetadataSchema(connection);
+        execute(connection, createTableQuery);
       } catch (SQLException e) {
         connection.rollback();
         throw e;
@@ -262,6 +257,25 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         return;
       }
       throw new StorageRuntimeException("creating the metadata table failed", e);
+    }
+  }
+
+  private void createMetadataSchema(Connection connection) throws SQLException {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      execute(
+          connection,
+          "CREATE USER " + enclose(getMetadataSchema(), rdbEngine) + " IDENTIFIED BY \"oracle\"");
+      execute(
+          connection,
+          "ALTER USER " + enclose(getMetadataSchema(), rdbEngine) + " quota unlimited on USERS");
+    } else {
+      execute(connection, "CREATE SCHEMA " + enclose(getMetadataSchema(), rdbEngine));
+    }
+  }
+
+  private void execute(Connection connection, String sql) throws SQLException {
+    try (Statement stmt = connection.createStatement()) {
+      stmt.execute(sql);
     }
   }
 
@@ -276,6 +290,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         return "BOOLEAN";
       case SQL_SERVER:
         return "BIT";
+      case ORACLE:
+        return "NUMBER(1)";
       default:
         throw new UnsupportedOperationException(
             String.format("The rdb engine %s is not supported", rdbEngine));
@@ -309,6 +325,13 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
+  private String getTextType(int charLength) {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      return String.format("VARCHAR2(%s)", charLength);
+    }
+    return String.format("VARCHAR(%s)", charLength);
+  }
+
   @Override
   public TableMetadata getTableMetadata(Operation operation) {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
@@ -334,9 +357,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute(getDeleteStatement(namespace, table));
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, getDeleteStatement(namespace, table));
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
