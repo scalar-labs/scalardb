@@ -368,7 +368,7 @@ public class JdbcTableMetadataManagerTest {
   }
 
   @Test
-  public void getTableMetadata_WithExistingTable_ShouldReturnTableMetadata() throws SQLException {
+  public void getTableMetadata_withExistingTable_ShouldReturnTableMetadata() throws SQLException {
     // Arrange
     String namespace = "ns1";
     String table = "t1";
@@ -417,13 +417,13 @@ public class JdbcTableMetadataManagerTest {
   }
 
   @Test
-  public void deleteMetadata_ForMysqlWithExistingTable_ShouldDeleteMetadata() throws SQLException {
+  public void deleteMetadata_forMysqlWithExistingTable_ShouldDeleteMetadata() throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.MYSQL, "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
   }
 
   @Test
-  public void deleteMetadata_ForPostgresqlWithExistingTable_ShouldDeleteMetadata()
+  public void deleteMetadata_forPostgresqlWithExistingTable_ShouldDeleteMetadata()
       throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.POSTGRESQL,
@@ -431,7 +431,7 @@ public class JdbcTableMetadataManagerTest {
   }
 
   @Test
-  public void deleteMetadata_ForSqlServerWithExistingTable_ShouldDeleteMetadata()
+  public void deleteMetadata_forSqlServerWithExistingTable_ShouldDeleteMetadata()
       throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.SQL_SERVER,
@@ -439,7 +439,7 @@ public class JdbcTableMetadataManagerTest {
   }
 
   @Test
-  public void deleteMetadata_ForOracleWithExistingTable_ShouldDeleteMetadata() throws SQLException {
+  public void deleteMetadata_forOracleWithExistingTable_ShouldDeleteMetadata() throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.ORACLE, "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
   }
