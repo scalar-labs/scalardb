@@ -103,6 +103,10 @@ dependencies {
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
     implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
     implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
 }
 
 task integrationTestCassandra(type: Test) {
@@ -154,19 +158,12 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
-// build should not depend on the integration tests
-check.dependsOn -= integrationTestCassandra
-check.dependsOn -= integrationTestCosmos
-check.dependsOn -= integrationTestDynamo
-check.dependsOn -= integrationTestJdbc
-check.dependsOn -= integrationTestMultiStorage
-
 task copyDependencies(type: Copy) {
     configurations.api.canBeResolved true
     configurations.implementation.canBeResolved true
     from(configurations.api + configurations.implementation)
     into file("$buildDir/libs")
-    duplicatesStrategy 'exclude'
+    duplicatesStrategy DuplicatesStrategy.EXCLUDE
 }
 
 spotless {
@@ -181,4 +178,7 @@ spotless {
 archivesBaseName = "scalardb"
 
 // for archiving and uploading to maven central
-//apply from: 'archive.gradle'
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        project.gradle.startParameter.taskNames[0].endsWith('publish')) {
+    apply from: 'archive.gradle'
+}

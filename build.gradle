@@ -17,15 +17,11 @@ subprojects {
     apply plugin: 'java-library-distribution'
     apply plugin: 'com.diffplug.spotless'
 
+    project.version = '4.0.0-SNAPSHOT'
+    group = "com.scalar-labs"
+
     repositories {
         mavenCentral()
-    }
-
-    dependencies {
-        testImplementation group: 'junit', name: 'junit', version: '4.12'
-        testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
-        testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
-        testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
     }
 
     test {
@@ -36,40 +32,27 @@ subprojects {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
+    java {
+        withJavadocJar()
+        withSourcesJar()
+    }
+
     javadoc {
         options.addStringOption("notimestamp", "com.scalar.db")
+        if (JavaVersion.current().isJava9Compatible()) {
+            options.addBooleanOption('html5', true)
+        }
     }
 
     distZip {
-        archiveName = "${project.name}.zip"
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 
     distTar {
-        archiveName = "${project.name}.tar"
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
 
     installDist {
-        duplicatesStrategy 'exclude'
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
     }
-
-    task sourcesJar(type: Jar) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from javadoc
-    }
-
-    task testJar(type: Jar) {
-        classifier = 'tests'
-        from sourceSets.test.output
-    }
-
-    group = "com.scalar-labs"
-
-    //version = "3.0.0"
 }

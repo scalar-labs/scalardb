@@ -4,11 +4,11 @@ apply plugin: 'signing'
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'scalardb'
+            artifactId = 'scalardb-rpc'
             from components.java
             pom {
-                name = 'Scalar DB'
-                description = 'A library that makes non-ACID distributed databases/storages ACID-compliant'
+                name = 'Scalar DB RPC'
+                description = 'Scalar DB RPC libraries'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

@@ -38,7 +38,11 @@ dependencies {
     implementation group: 'io.prometheus', name: 'simpleclient_dropwizard', version: '0.11.0'
     implementation group: 'io.prometheus', name: 'simpleclient_servlet', version: '0.11.0'
     implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.4.43.v20210629'
-    testImplementation project(':core').sourceSets.integrationTest.output
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
+    integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTest.output
 }
 
 application {
@@ -47,7 +51,7 @@ application {
 }
 
 docker {
-    name "ghcr.io/scalar-labs/scalardb-server:$version"
+    name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
     files tasks.distTar.outputs, 'conf/log4j.properties'
 }
 
@@ -59,9 +63,6 @@ task integrationTestScalarDbServer(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
-// build should not depend on the integration tests
-check.dependsOn -= integrationTestScalarDbServer
-
 spotless {
     java {
         target 'src/*/java/**/*.java'
@@ -72,3 +73,19 @@ spotless {
 }
 
 archivesBaseName = "scalardb-server"
+
+// for release
+distZip {
+    archiveFileName = "${archivesBaseName}-${project.version}.zip"
+}
+
+// for docker
+distTar {
+    archiveFileName = "${project.name}.tar"
+}
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        project.gradle.startParameter.taskNames[0].endsWith('publish')) {
+    apply from: 'archive.gradle'
+}
