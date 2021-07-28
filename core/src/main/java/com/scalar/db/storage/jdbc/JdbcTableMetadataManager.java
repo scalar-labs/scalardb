@@ -21,8 +21,6 @@ import java.sql.Statement;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -37,13 +35,13 @@ import javax.sql.DataSource;
 public class JdbcTableMetadataManager implements TableMetadataManager {
   public static final String SCHEMA = "scalardb";
   public static final String TABLE = "metadata";
-  private static final String FULL_TABLE_NAME = "full_table_name";
-  private static final String COLUMN_NAME = "column_name";
-  private static final String DATA_TYPE = "data_type";
-  private static final String KEY_TYPE = "key_type";
-  private static final String CLUSTERING_ORDER = "clustering_order";
-  private static final String INDEXED = "indexed";
-  private static final String ORDINAL_POSITION = "ordinal_position";
+  public static final String FULL_TABLE_NAME = "full_table_name";
+  public static final String COLUMN_NAME = "column_name";
+  public static final String DATA_TYPE = "data_type";
+  public static final String KEY_TYPE = "key_type";
+  public static final String CLUSTERING_ORDER = "clustering_order";
+  public static final String INDEXED = "indexed";
+  public static final String ORDINAL_POSITION = "ordinal_position";
   private final LoadingCache<String, Optional<TableMetadata>> tableMetadataCache;
   private final DataSource dataSource;
   private final Optional<String> schemaPrefix;
@@ -177,8 +175,9 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
         + " WHERE "
         + enclose(FULL_TABLE_NAME, rdbEngine)
-        + " = "
-        + fullTableName;
+        + " = '"
+        + fullTableName
+        + "'";
   }
 
   private void insertMetadataColumn(
@@ -242,7 +241,10 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
       connection.commit();
     } catch (SQLException e) {
-      if (e.getMessage().contains("database exists") || e.getMessage().contains("already exists")) {
+      if (e.getMessage().contains("database exists")
+          || e.getMessage().contains("already exists")
+          || e.getMessage().contains("already an object named")
+          || e.getMessage().contains("conflicts")) {
         return;
       }
       throw new StorageRuntimeException("creating the metadata table failed", e);
@@ -354,7 +356,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
       throw new StorageRuntimeException(
           String.format(
-              "deleting the %s table metadata failed", schemaPrefix + namespace + "." + table));
+              "deleting the %s table metadata failed", schemaPrefix + namespace + "." + table),
+          e);
     }
     tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
   }
