@@ -60,13 +60,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                   @Override
                   public Optional<TableMetadata> load(@Nonnull String fullTableName)
                       throws SQLException {
-                    return JdbcTableMetadataManager.this.load(dataSource, fullTableName, rdbEngine);
+                    return JdbcTableMetadataManager.this.load(fullTableName);
                   }
                 });
   }
 
-  private Optional<TableMetadata> load(
-      DataSource dataSource, String fullTableName, RdbEngine rdbEngine) throws SQLException {
+  private Optional<TableMetadata> load(String fullTableName) throws SQLException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
 
