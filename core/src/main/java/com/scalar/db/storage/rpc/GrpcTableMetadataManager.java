@@ -108,11 +108,13 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    //TODO To implement
+    // TODO To implement
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
-    //TODO To implement
+    // TODO To implement
+    throw new UnsupportedOperationException();
   }
 }
