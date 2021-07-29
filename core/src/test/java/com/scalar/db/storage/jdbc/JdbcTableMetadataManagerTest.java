@@ -427,7 +427,7 @@ public class JdbcTableMetadataManagerTest {
       throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.POSTGRESQL,
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'");
   }
 
   @Test
@@ -435,13 +435,14 @@ public class JdbcTableMetadataManagerTest {
       throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
         RdbEngine.SQL_SERVER,
-        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
+        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'ns1.t2'");
   }
 
   @Test
   public void deleteMetadata_forOracleWithExistingTable_ShouldDeleteMetadata() throws SQLException {
     deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
-        RdbEngine.ORACLE, "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
+        RdbEngine.ORACLE,
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'");
   }
 
   private void deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
@@ -451,7 +452,7 @@ public class JdbcTableMetadataManagerTest {
     String table = "t2";
 
     JdbcTableMetadataManager manager =
-        new JdbcTableMetadataManager(dataSource, Optional.empty(), RdbEngine.MYSQL);
+        new JdbcTableMetadataManager(dataSource, Optional.empty(), rdbEngine);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
 
     ResultSet resultSet =
@@ -489,6 +490,7 @@ public class JdbcTableMetadataManagerTest {
     doAnswer(new ResultSetMocker(rows)).when(resultSet).next();
     return resultSet;
   }
+
   // Utility class used to mock ResultSet
   static class ResultSetMocker implements org.mockito.stubbing.Answer<Object> {
     List<Row> rows;
