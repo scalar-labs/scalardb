@@ -114,22 +114,12 @@ public class TableMetadata {
     }
 
     TableMetadata metadata = (TableMetadata) o;
-    if (!Objects.equals(columnNames, metadata.columnNames)) {
-      return false;
-    }
-    if (!Objects.equals(columnDataTypes, metadata.columnDataTypes)) {
-      return false;
-    }
-    if (!Objects.equals(partitionKeyNames, metadata.partitionKeyNames)) {
-      return false;
-    }
-    if (!Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)) {
-      return false;
-    }
-    if (!Objects.equals(clusteringOrders, metadata.clusteringOrders)) {
-      return false;
-    }
-    return Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
+    return Objects.equals(columnNames, metadata.columnNames)
+        && Objects.equals(columnDataTypes, metadata.columnDataTypes)
+        && Objects.equals(partitionKeyNames, metadata.partitionKeyNames)
+        && Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)
+        && Objects.equals(clusteringOrders, metadata.clusteringOrders)
+        && Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
   }
 
   @Override
