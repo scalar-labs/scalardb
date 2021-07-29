@@ -33,6 +33,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -1135,6 +1136,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
