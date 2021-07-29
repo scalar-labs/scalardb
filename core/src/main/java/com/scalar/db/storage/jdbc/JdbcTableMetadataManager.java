@@ -71,7 +71,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
-            connection.prepareStatement(getSelectColumnsStatement(rdbEngine))) {
+            connection.prepareStatement(getSelectColumnsStatement())) {
       preparedStatement.setString(1, fullTableName);
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -115,7 +115,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return Optional.of(builder.build());
   }
 
-  private String getSelectColumnsStatement(RdbEngine rdbEngine) {
+  private String getSelectColumnsStatement() {
     return "SELECT "
         + enclose(COLUMN_NAME, rdbEngine)
         + ", "
@@ -168,8 +168,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private String getDeleteStatement(String namespace, String tableName) {
-    String fullTableName = schemaPrefix.orElse("") + namespace + "." + tableName;
+  private String getDeleteStatement(String schema, String table) {
+    String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
         + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
         + " WHERE "
@@ -270,7 +270,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   private String getMetadataSchema() {
-    return schemaPrefix.orElse("") + JdbcTableMetadataManager.SCHEMA;
+    return schemaPrefix.orElse("") + SCHEMA;
   }
 
   private String getBooleanType() {
@@ -355,7 +355,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
       throw new StorageRuntimeException(
           String.format(
-              "deleting the %s table metadata failed", schemaPrefix + namespace + "." + table),
+              "deleting the %s table metadata failed", schemaPrefix.orElse("") + namespace + "." + table),
           e);
     }
     tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
