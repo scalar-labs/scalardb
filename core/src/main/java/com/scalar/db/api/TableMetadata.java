@@ -40,6 +40,15 @@ public class TableMetadata {
   }
 
   /**
+   * Creates a new builder instance
+   *
+   * @return a new builder instance
+   */
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
+  /**
    * Returns the column names
    *
    * @return an {@code LinkedHashSet} of column names
@@ -95,13 +104,43 @@ public class TableMetadata {
     return secondaryIndexNames;
   }
 
-  /**
-   * Creates a new builder instance
-   *
-   * @return a new builder instance
-   */
-  public static Builder newBuilder() {
-    return new Builder();
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TableMetadata metadata = (TableMetadata) o;
+    if (!Objects.equals(columnNames, metadata.columnNames)) {
+      return false;
+    }
+    if (!Objects.equals(columnDataTypes, metadata.columnDataTypes)) {
+      return false;
+    }
+    if (!Objects.equals(partitionKeyNames, metadata.partitionKeyNames)) {
+      return false;
+    }
+    if (!Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)) {
+      return false;
+    }
+    if (!Objects.equals(clusteringOrders, metadata.clusteringOrders)) {
+      return false;
+    }
+    return Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        columnNames,
+        columnDataTypes,
+        partitionKeyNames,
+        clusteringKeyNames,
+        clusteringOrders,
+        secondaryIndexNames);
   }
 
   /** A builder class that creates a TableMetadata instance */
@@ -168,45 +207,5 @@ public class TableMetadata {
       return new TableMetadata(
           columns, partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames);
     }
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    TableMetadata metadata = (TableMetadata) o;
-
-    if (!Objects.equals(columnNames, metadata.columnNames)) {
-      return false;
-    }
-    if (!Objects.equals(columnDataTypes, metadata.columnDataTypes)) {
-      return false;
-    }
-    if (!Objects.equals(partitionKeyNames, metadata.partitionKeyNames)) {
-      return false;
-    }
-    if (!Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)) {
-      return false;
-    }
-    if (!Objects.equals(clusteringOrders, metadata.clusteringOrders)) {
-      return false;
-    }
-    return Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
-  }
-
-  @Override
-  public int hashCode() {
-    int result = columnNames != null ? columnNames.hashCode() : 0;
-    result = 31 * result + (columnDataTypes != null ? columnDataTypes.hashCode() : 0);
-    result = 31 * result + (partitionKeyNames != null ? partitionKeyNames.hashCode() : 0);
-    result = 31 * result + (clusteringKeyNames != null ? clusteringKeyNames.hashCode() : 0);
-    result = 31 * result + (clusteringOrders != null ? clusteringOrders.hashCode() : 0);
-    result = 31 * result + (secondaryIndexNames != null ? secondaryIndexNames.hashCode() : 0);
-    return result;
   }
 }
