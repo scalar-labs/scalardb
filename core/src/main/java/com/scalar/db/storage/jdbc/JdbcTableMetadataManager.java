@@ -355,7 +355,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
       throw new StorageRuntimeException(
           String.format(
-              "deleting the %s table metadata failed", schemaPrefix.orElse("") + namespace + "." + table),
+              "deleting the %s table metadata failed",
+              schemaPrefix.orElse("") + namespace + "." + table),
           e);
     }
     tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());

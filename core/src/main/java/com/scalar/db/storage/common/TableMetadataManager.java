@@ -31,6 +31,7 @@ public interface TableMetadataManager {
 
   /**
    * Add the given table metadata
+   *
    * @param namespace a namespace
    * @param table a table
    * @param metadata a table metadata
