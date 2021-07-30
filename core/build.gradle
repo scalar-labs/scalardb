@@ -86,27 +86,25 @@ configurations {
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
-def awssdkVersion = "2.14.24"
-
 dependencies {
     implementation project(':rpc')
-    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
-    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
-    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
-    implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
+    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: "${cassandraDriverVersion}"
+    implementation group: 'com.azure', name: 'azure-cosmos', version: "${azureCosmosVersion}"
+    implementation group: 'org.jooq', name: 'jooq', version: "${jooqVersion}"
     implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
     implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
-    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
-    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
-    implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
-    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
-    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
-    testImplementation group: 'junit', name: 'junit', version: '4.12'
-    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
-    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
+    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: "${commonsDbcp2Version}"
+    implementation group: 'mysql', name: 'mysql-connector-java', version: "${mysqlDriverVersion}"
+    implementation group: 'org.postgresql', name: 'postgresql', version: "${postgresqlDriverVersion}"
+    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: "${oracleDriverVersion}"
+    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: "${sqlserverDriverVersion}"
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
 }
 
 task integrationTestCassandra(type: Test) {

@@ -19,29 +19,27 @@ configurations {
     integrationTestScalarDbServerRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
-def protobufVersion = '3.17.2'
-
 dependencies {
     implementation project(':core')
     implementation project(':rpc')
-    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
-    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.30'
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: "${slf4jVersion}"
     implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: '4.1.4'
-    implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: '1.0.0') {
+    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
+    implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: "${scalarAdminVersion}") {
         exclude group: 'io.grpc'
     }
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: '4.2.2'
-    implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: '4.2.2'
-    implementation group: 'io.prometheus', name: 'simpleclient_dropwizard', version: '0.11.0'
-    implementation group: 'io.prometheus', name: 'simpleclient_servlet', version: '0.11.0'
-    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.4.43.v20210629'
-    testImplementation group: 'junit', name: 'junit', version: '4.12'
-    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.9.1'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.16.0'
-    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '2.16.0'
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${dropwizardMetricsVersion}"
+    implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: "${dropwizardMetricsVersion}"
+    implementation group: 'io.prometheus', name: 'simpleclient_dropwizard', version: "${prometheusVersion}"
+    implementation group: 'io.prometheus', name: 'simpleclient_servlet', version: "${prometheusVersion}"
+    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: "${jettyVersion}"
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTest.output
 }
 
