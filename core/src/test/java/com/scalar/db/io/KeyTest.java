@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
@@ -45,7 +46,7 @@ public class KeyTest {
             .addFloat("key4", 4.56f)
             .addDouble("key5", 1.23)
             .addText("key6", "string_key")
-            .addBlob("key7", "blob_key".getBytes())
+            .addBlob("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
             .add(new IntValue("key8", 1357))
             .addAll(Arrays.asList(new IntValue("key9", 2468), new BigIntValue("key10", 1111L)))
             .build();
@@ -61,7 +62,8 @@ public class KeyTest {
     assertThat(values.get(3)).isEqualTo(new FloatValue("key4", 4.56f));
     assertThat(values.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
     assertThat(values.get(5)).isEqualTo(new TextValue("key6", "string_key"));
-    assertThat(values.get(6)).isEqualTo(new BlobValue("key7", "blob_key".getBytes()));
+    assertThat(values.get(6))
+        .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
     assertThat(values.get(7)).isEqualTo(new IntValue("key8", 1357));
     assertThat(values.get(8)).isEqualTo(new IntValue("key9", 2468));
     assertThat(values.get(9)).isEqualTo(new BigIntValue("key10", 1111L));
@@ -137,8 +139,8 @@ public class KeyTest {
     TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
     TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
     Key oneKey = new Key(oneKey1, oneKey2);
-    BlobValue anotherKey1 = new BlobValue(ANY_NAME_1, ANY_TEXT_1.getBytes());
-    BlobValue anotherKey2 = new BlobValue(ANY_NAME_2, ANY_TEXT_2.getBytes());
+    BlobValue anotherKey1 = new BlobValue(ANY_NAME_1, ANY_TEXT_1.getBytes(StandardCharsets.UTF_8));
+    BlobValue anotherKey2 = new BlobValue(ANY_NAME_2, ANY_TEXT_2.getBytes(StandardCharsets.UTF_8));
     Key anotherKey = new Key(anotherKey1, anotherKey2);
 
     // Act

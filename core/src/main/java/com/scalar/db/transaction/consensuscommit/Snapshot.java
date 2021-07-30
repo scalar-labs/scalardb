@@ -400,8 +400,7 @@ public class Snapshot {
       return this.namespace.equals(another.namespace)
           && this.table.equals(another.table)
           && this.partitionKey.equals(another.partitionKey)
-          && ((this.clusteringKey == null && another.clusteringKey == null)
-              || this.clusteringKey.equals(another.clusteringKey));
+          && this.clusteringKey.equals(another.clusteringKey);
     }
 
     @Override

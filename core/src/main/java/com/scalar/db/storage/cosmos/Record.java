@@ -3,6 +3,7 @@ package com.scalar.db.storage.cosmos;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A record class that Cosmos DB uses for storing a document based on Scalar DB data model.
@@ -85,5 +86,10 @@ public class Record {
     }
 
     return true;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, concatenatedPartitionKey, partitionKey, clusteringKey, values);
   }
 }

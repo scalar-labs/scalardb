@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
 
 /** */
@@ -153,11 +154,12 @@ public class BooleanValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     boolean some = Boolean.TRUE;
     BooleanValue one = new BooleanValue(ANY_NAME, some);
-    Boolean another = new Boolean(some);
+    Boolean another = Boolean.valueOf(some);
 
     // Act
     boolean result = one.equals(another);

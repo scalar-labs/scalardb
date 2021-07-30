@@ -3,6 +3,8 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
 import org.junit.Test;
@@ -11,11 +13,13 @@ import org.junit.Test;
 public class BlobValueTest {
   private static final String ANY_NAME = "name";
   private static final String ANOTHER_NAME = "another_name";
+  private static final String SOME_TEXT = "some_text";
+  private static final byte[] SOME_TEXT_BYTES = SOME_TEXT.getBytes(StandardCharsets.UTF_8);
 
   @Test
   public void get_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     BlobValue value = new BlobValue(ANY_NAME, expected);
 
     // Act
@@ -30,7 +34,7 @@ public class BlobValueTest {
   @Test
   public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act
@@ -46,7 +50,7 @@ public class BlobValueTest {
   public void
       getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -56,7 +60,7 @@ public class BlobValueTest {
   @Test
   public void getAsInt_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -66,7 +70,7 @@ public class BlobValueTest {
   @Test
   public void getAsLong_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -76,7 +80,7 @@ public class BlobValueTest {
   @Test
   public void getAsFloat_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -86,7 +90,7 @@ public class BlobValueTest {
   @Test
   public void getAsDouble_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -96,7 +100,7 @@ public class BlobValueTest {
   @Test
   public void getAsString_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = SOME_TEXT_BYTES;
     Value<?> value = new BlobValue(ANY_NAME, expected);
 
     // Act Assert
@@ -106,7 +110,7 @@ public class BlobValueTest {
   @Test
   public void copyWith_WithValuePresent_ShouldReturnNewBlobWithSameValue() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
 
     // Act
     BlobValue newValue = oneValue.copyWith("new name");
@@ -130,8 +134,8 @@ public class BlobValueTest {
   @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_text".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, SOME_TEXT.getBytes(StandardCharsets.UTF_8));
 
     // Act
     boolean result = oneValue.equals(anotherValue);
@@ -143,8 +147,9 @@ public class BlobValueTest {
   @Test
   public void equals_DifferentObjectsSameValuesDifferentNamesGiven_ShouldReturnFalse() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
-    BlobValue anotherValue = new BlobValue(ANOTHER_NAME, "some_text".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
+    BlobValue anotherValue =
+        new BlobValue(ANOTHER_NAME, SOME_TEXT.getBytes(StandardCharsets.UTF_8));
 
     // Act
     boolean result = oneValue.equals(anotherValue);
@@ -156,7 +161,7 @@ public class BlobValueTest {
   @Test
   public void equals_SameObjectsGiven_ShouldReturnTrue() {
     // Arrange
-    BlobValue value = new BlobValue(ANY_NAME, "some_text".getBytes());
+    BlobValue value = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
 
     // Act
     boolean result = value.equals(value);
@@ -168,8 +173,9 @@ public class BlobValueTest {
   @Test
   public void equals_DifferentObjectsDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "another_text".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
+    BlobValue anotherValue =
+        new BlobValue(ANY_NAME, "another_text".getBytes(StandardCharsets.UTF_8));
 
     // Act
     boolean result = oneValue.equals(anotherValue);
@@ -179,10 +185,11 @@ public class BlobValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_text".getBytes());
-    TextValue anotherValue = new TextValue(ANY_NAME, "some_text");
+    BlobValue oneValue = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
+    TextValue anotherValue = new TextValue(ANY_NAME, SOME_TEXT);
 
     // Act
     boolean result = oneValue.equals(anotherValue);
@@ -194,8 +201,9 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisBiggerThanGiven_ShouldReturnPositive() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value2".getBytes());
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value1".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value2".getBytes(StandardCharsets.UTF_8));
+    BlobValue anotherValue =
+        new BlobValue(ANY_NAME, "some_value1".getBytes(StandardCharsets.UTF_8));
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -207,8 +215,8 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisEqualsToGiven_ShouldReturnZero() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes());
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
+    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -220,8 +228,9 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisSmallerThanGiven_ShouldReturnNegative() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value1".getBytes());
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value2".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value1".getBytes(StandardCharsets.UTF_8));
+    BlobValue anotherValue =
+        new BlobValue(ANY_NAME, "some_value2".getBytes(StandardCharsets.UTF_8));
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -233,7 +242,7 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisNonNullAndGivenNull_ShouldReturnPositive() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+    BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
     BlobValue anotherValue = new BlobValue(ANY_NAME, null);
 
     // Act
@@ -247,7 +256,7 @@ public class BlobValueTest {
   public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, null);
-    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes());
+    BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -272,10 +281,6 @@ public class BlobValueTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new BlobValue(null, null);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new BlobValue(null, null)).isInstanceOf(NullPointerException.class);
   }
 }

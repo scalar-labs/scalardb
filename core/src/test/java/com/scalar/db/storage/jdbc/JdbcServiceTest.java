@@ -30,6 +30,7 @@ import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
 import com.scalar.db.storage.jdbc.query.UpsertQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -41,6 +42,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
 public class JdbcServiceTest {
 
   private static final Optional<String> NAMESPACE = Optional.of("s1");
@@ -85,6 +87,7 @@ public class JdbcServiceTest {
   }
 
   @Test
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenGetOperationExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -105,6 +108,7 @@ public class JdbcServiceTest {
   }
 
   @Test
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenGetScannerExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
@@ -130,6 +134,7 @@ public class JdbcServiceTest {
   }
 
   @Test
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public void whenScanExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);

@@ -98,7 +98,7 @@ public class ResultInterpreterTest {
     assertThat(result.getValue(ANY_COLUMN_NAME_7).isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_7).get().getAsBytes().isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_7).get().getAsBytes().get())
-        .isEqualTo("bytes".getBytes());
+        .isEqualTo("bytes".getBytes(StandardCharsets.UTF_8));
 
     Map<String, Value<?>> values = result.getValues();
     assertThat(values.containsKey(ANY_NAME_1)).isTrue();
@@ -122,6 +122,7 @@ public class ResultInterpreterTest {
     assertThat(values.get(ANY_COLUMN_NAME_6).getAsString().get()).isEqualTo("string");
     assertThat(values.containsKey(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().isPresent()).isTrue();
-    assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().get()).isEqualTo("bytes".getBytes());
+    assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().get())
+        .isEqualTo("bytes".getBytes(StandardCharsets.UTF_8));
   }
 }

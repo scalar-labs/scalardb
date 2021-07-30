@@ -24,6 +24,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class DatabaseConfig {
   private final Properties props;
   private List<String> contactPoints;
