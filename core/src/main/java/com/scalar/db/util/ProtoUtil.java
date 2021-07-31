@@ -27,7 +27,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.rpc.Get.Builder;
 import com.scalar.db.rpc.MutateCondition;
 import com.scalar.db.rpc.Order;
 import com.scalar.db.storage.common.ResultImpl;
@@ -59,7 +58,7 @@ public final class ProtoUtil {
   }
 
   public static com.scalar.db.rpc.Get toGet(Get get) {
-    Builder builder = com.scalar.db.rpc.Get.newBuilder();
+    com.scalar.db.rpc.Get.Builder builder = com.scalar.db.rpc.Get.newBuilder();
     builder.setPartitionKey(toKey(get.getPartitionKey()));
     get.getClusteringKey().ifPresent(k -> builder.setClusteringKey(toKey(k)));
     get.forNamespace().ifPresent(builder::setNamespace);

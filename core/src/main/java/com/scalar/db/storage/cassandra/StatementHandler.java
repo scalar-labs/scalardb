@@ -73,7 +73,7 @@ public abstract class StatementHandler {
   /**
    * Returns a {@link PreparedStatement} based on the given query string
    *
-   * @param queryString
+   * @param queryString a query string
    * @return a {@code PreparedStatement}
    */
   @Nonnull

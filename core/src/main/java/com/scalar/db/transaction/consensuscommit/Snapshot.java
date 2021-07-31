@@ -30,7 +30,6 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
 @ThreadSafe
 public class Snapshot {
   private static final Logger LOGGER = LoggerFactory.getLogger(Snapshot.class);

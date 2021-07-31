@@ -11,8 +11,6 @@ import com.scalar.db.io.ValueVisitor;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A visitor class to bind {@code Value}s to a {@link StringBuilder}
@@ -21,7 +19,6 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public final class ValueBinder implements ValueVisitor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ValueBinder.class);
   private Consumer consumer;
 
   /** Constructs {@code ValueBinder} */

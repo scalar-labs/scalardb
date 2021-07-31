@@ -12,7 +12,6 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
 @Immutable
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;

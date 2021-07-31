@@ -139,18 +139,21 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         EXCEPTION_FACTORY);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(Isolation isolation) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, Isolation isolation) throws TransactionException {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -158,12 +161,14 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(SerializableStrategy strategy) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, SerializableStrategy strategy)
@@ -171,6 +176,7 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)

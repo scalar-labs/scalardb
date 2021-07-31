@@ -13,7 +13,7 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class DoubleValue implements Value<DoubleValue> {
+public final class DoubleValue implements Value<Double> {
   private static final String ANONYMOUS = "";
   private final String name;
   private final double value;
@@ -38,18 +38,15 @@ public final class DoubleValue implements Value<DoubleValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return the content of this {@code Value}
-   */
-  public double get() {
+  @Override
+  @Nonnull
+  public Double get() {
     return value;
   }
 
   @Override
   public double getAsDouble() {
-    return get();
+    return value;
   }
 
   @Override
@@ -95,7 +92,7 @@ public final class DoubleValue implements Value<DoubleValue> {
       return false;
     }
     DoubleValue other = (DoubleValue) o;
-    return (this.name.equals(other.name) && this.value == other.value);
+    return (name.equals(other.name) && value == other.value);
   }
 
   @Override
@@ -104,7 +101,8 @@ public final class DoubleValue implements Value<DoubleValue> {
   }
 
   @Override
-  public int compareTo(DoubleValue o) {
-    return ComparisonChain.start().compare(this.value, o.value).compare(this.name, o.name).result();
+  public int compareTo(Value<Double> o) {
+    DoubleValue other = (DoubleValue) o;
+    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
   }
 }

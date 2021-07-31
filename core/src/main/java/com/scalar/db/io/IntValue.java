@@ -13,7 +13,7 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class IntValue implements Value<IntValue> {
+public final class IntValue implements Value<Integer> {
   private static final String ANONYMOUS = "";
   private final String name;
   private final int value;
@@ -38,33 +38,30 @@ public final class IntValue implements Value<IntValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return the content of this {@code Value}
-   */
-  public int get() {
+  @Override
+  @Nonnull
+  public Integer get() {
     return value;
   }
 
   @Override
   public int getAsInt() {
-    return get();
+    return value;
   }
 
   @Override
   public long getAsLong() {
-    return get();
+    return value;
   }
 
   @Override
   public float getAsFloat() {
-    return get();
+    return value;
   }
 
   @Override
   public double getAsDouble() {
-    return get();
+    return value;
   }
 
   @Override
@@ -110,7 +107,7 @@ public final class IntValue implements Value<IntValue> {
       return false;
     }
     IntValue other = (IntValue) o;
-    return (this.name.equals(other.name) && this.value == other.value);
+    return (name.equals(other.name) && value == other.value);
   }
 
   @Override
@@ -119,7 +116,8 @@ public final class IntValue implements Value<IntValue> {
   }
 
   @Override
-  public int compareTo(IntValue o) {
-    return ComparisonChain.start().compare(this.value, o.value).compare(this.name, o.name).result();
+  public int compareTo(Value<Integer> o) {
+    IntValue other = (IntValue) o;
+    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
   }
 }

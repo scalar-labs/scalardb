@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc.test;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -16,7 +17,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,93 +31,76 @@ import org.apache.commons.dbcp2.BasicDataSource;
 @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
 public class TestEnv implements Closeable {
 
-  private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING =
-      new HashMap<RdbEngine, Map<DataType, String>>() {
-        {
-          put(
+  private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
+      ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
+          .put(
               RdbEngine.MYSQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "LONGTEXT");
-                  put(DataType.FLOAT, "FLOAT");
-                  put(DataType.DOUBLE, "DOUBLE");
-                  put(DataType.BOOLEAN, "BOOLEAN");
-                  put(DataType.BLOB, "LONGBLOB");
-                }
-              });
-          put(
+              ImmutableMap.<DataType, String>builder()
+                  .put(DataType.INT, "INT")
+                  .put(DataType.BIGINT, "BIGINT")
+                  .put(DataType.TEXT, "LONGTEXT")
+                  .put(DataType.FLOAT, "FLOAT")
+                  .put(DataType.DOUBLE, "DOUBLE")
+                  .put(DataType.BOOLEAN, "BOOLEAN")
+                  .put(DataType.BLOB, "LONGBLOB")
+                  .build())
+          .put(
               RdbEngine.POSTGRESQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "TEXT");
-                  put(DataType.FLOAT, "FLOAT");
-                  put(DataType.DOUBLE, "DOUBLE PRECISION");
-                  put(DataType.BOOLEAN, "BOOLEAN");
-                  put(DataType.BLOB, "BYTEA");
-                }
-              });
-          put(
+              ImmutableMap.<DataType, String>builder()
+                  .put(DataType.INT, "INT")
+                  .put(DataType.BIGINT, "BIGINT")
+                  .put(DataType.TEXT, "TEXT")
+                  .put(DataType.FLOAT, "FLOAT")
+                  .put(DataType.DOUBLE, "DOUBLE PRECISION")
+                  .put(DataType.BOOLEAN, "BOOLEAN")
+                  .put(DataType.BLOB, "BYTEA")
+                  .build())
+          .put(
               RdbEngine.ORACLE,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "NUMBER(19)");
-                  put(DataType.TEXT, "VARCHAR2(4000)");
-                  put(DataType.FLOAT, "BINARY_FLOAT");
-                  put(DataType.DOUBLE, "BINARY_DOUBLE");
-                  put(DataType.BOOLEAN, "NUMBER(1)");
-                  put(DataType.BLOB, "BLOB");
-                }
-              });
-          put(
+              ImmutableMap.<DataType, String>builder()
+                  .put(DataType.INT, "INT")
+                  .put(DataType.BIGINT, "NUMBER(19)")
+                  .put(DataType.TEXT, "VARCHAR2(4000)")
+                  .put(DataType.FLOAT, "BINARY_FLOAT")
+                  .put(DataType.DOUBLE, "BINARY_DOUBLE")
+                  .put(DataType.BOOLEAN, "NUMBER(1)")
+                  .put(DataType.BLOB, "BLOB")
+                  .build())
+          .put(
               RdbEngine.SQL_SERVER,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "VARCHAR(8000)");
-                  put(DataType.FLOAT, "FLOAT(24)");
-                  put(DataType.DOUBLE, "FLOAT");
-                  put(DataType.BOOLEAN, "BIT");
-                  put(DataType.BLOB, "VARBINARY(8000)");
-                }
-              });
-        }
-      };
+              ImmutableMap.<DataType, String>builder()
+                  .put(DataType.INT, "INT")
+                  .put(DataType.BIGINT, "BIGINT")
+                  .put(DataType.TEXT, "VARCHAR(8000)")
+                  .put(DataType.FLOAT, "FLOAT(24)")
+                  .put(DataType.DOUBLE, "FLOAT")
+                  .put(DataType.BOOLEAN, "BIT")
+                  .put(DataType.BLOB, "VARBINARY(8000)")
+                  .build())
+          .build();
 
-  private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING_FOR_KEY =
-      new HashMap<RdbEngine, Map<DataType, String>>() {
-        {
-          put(
-              RdbEngine.MYSQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR(64)");
-                  put(DataType.BLOB, "VARBINARY(64)");
-                }
-              });
-          put(
-              RdbEngine.POSTGRESQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR(10485760)");
-                }
-              });
-          put(
-              RdbEngine.ORACLE,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR2(64)");
-                  put(DataType.BLOB, "RAW(64)");
-                }
-              });
-          put(RdbEngine.SQL_SERVER, new HashMap<DataType, String>() {});
-        }
-      };
+  private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>>
+      DATA_TYPE_MAPPING_FOR_KEY =
+          ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
+              .put(
+                  RdbEngine.MYSQL,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR(64)")
+                      .put(DataType.BLOB, "VARBINARY(64)")
+                      .build())
+              .put(
+                  RdbEngine.POSTGRESQL,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR(10485760)")
+                      .build())
+              .put(
+                  RdbEngine.ORACLE,
+                  ImmutableMap.<DataType, String>builder()
+                      .put(DataType.TEXT, "VARCHAR2(64)")
+                      .put(DataType.BLOB, "RAW(64)")
+                      .build())
+              .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
+              .build();
 
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
@@ -175,6 +158,7 @@ public class TestEnv implements Closeable {
     return config.getNamespacePrefix().orElse("");
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(String sql) throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {

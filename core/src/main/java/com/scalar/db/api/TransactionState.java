@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-/** */
 public enum TransactionState {
   PREPARED(1),
   DELETED(2),

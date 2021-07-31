@@ -64,6 +64,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                 });
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private Optional<TableMetadata> load(String fullTableName) throws SQLException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
@@ -212,7 +213,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  @SuppressFBWarnings(value = "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
@@ -334,6 +335,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(Connection connection, String sql) throws SQLException {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);

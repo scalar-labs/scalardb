@@ -9,12 +9,9 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 public class TransactionService implements DistributedTransactionManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(TransactionService.class);
   private final DistributedTransactionManager manager;
 
   @Inject
@@ -57,34 +54,40 @@ public class TransactionService implements DistributedTransactionManager {
     return manager.start(txId);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation) throws TransactionException {
     return manager.start(isolation);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(String txId, Isolation isolation)
       throws TransactionException {
     return manager.start(txId, isolation);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     return manager.start(isolation, strategy);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(SerializableStrategy strategy) throws TransactionException {
     return manager.start(strategy);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(String txId, SerializableStrategy strategy)
       throws TransactionException {
     return manager.start(txId, strategy);
   }
 
+  @Deprecated
   @Override
   public DistributedTransaction start(
       String txId, Isolation isolation, SerializableStrategy strategy) throws TransactionException {

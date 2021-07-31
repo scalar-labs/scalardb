@@ -5,7 +5,6 @@ import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 
-/** */
 public final class Attribute {
   public static final String ID = "tx_id";
   public static final String STATE = "tx_state";

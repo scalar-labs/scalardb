@@ -65,7 +65,12 @@ public class ResultInterpreter {
         return new TextValue(name, row.getString(name));
       case BLOB:
         ByteBuffer buffer = row.getBytes(name);
-        return new BlobValue(name, buffer == null ? null : buffer.array());
+        if (buffer == null) {
+          return new BlobValue(name, null);
+        }
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        return new BlobValue(name, bytes);
       default:
         throw new UnsupportedTypeException(type.toString());
     }

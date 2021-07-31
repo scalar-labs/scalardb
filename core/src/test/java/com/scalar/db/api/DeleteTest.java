@@ -92,6 +92,7 @@ public class DeleteTest {
     Delete put = prepareDelete();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = put.equals(put);
 
     // Assert
