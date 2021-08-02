@@ -36,6 +36,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -255,6 +256,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraWriteInteg
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     serverProperties.setProperty(DatabaseConfig.SERIALIZABLE_STRATEGY, "EXTRA_WRITE");
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
     server = new ScalarDbServer(serverProperties);
     server.start();
 

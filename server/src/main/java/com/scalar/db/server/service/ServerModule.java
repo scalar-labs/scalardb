@@ -78,9 +78,14 @@ public class ServerModule extends AbstractModule {
   }
 
   private void startPrometheusHttpEndpoint(MetricRegistry metricRegistry) {
+    int prometheusHttpEndpointPort = config.getPrometheusHttpEndpointPort();
+    if (prometheusHttpEndpointPort == 0) {
+      return;
+    }
+
     CollectorRegistry.defaultRegistry.register(new DropwizardExports(metricRegistry));
 
-    Server server = new Server(config.getPrometheusHttpEndpointPort());
+    Server server = new Server(prometheusHttpEndpointPort);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
     server.setHandler(context);
@@ -88,6 +93,7 @@ public class ServerModule extends AbstractModule {
     server.setStopAtShutdown(true);
     try {
       server.start();
+      LOGGER.info("Prometheus HTTP endpoint started, listening on {}", prometheusHttpEndpointPort);
     } catch (Exception e) {
       LOGGER.error("failed to start Jetty server", e);
     }

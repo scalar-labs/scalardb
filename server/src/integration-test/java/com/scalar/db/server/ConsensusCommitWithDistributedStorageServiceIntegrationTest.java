@@ -18,6 +18,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcStorage;
@@ -106,7 +107,9 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    server = new ScalarDbServer(testEnv.getJdbcConfig().getProperties());
+    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
+    server = new ScalarDbServer(serverProperties);
     server.start();
 
     Properties properties = new Properties();
