@@ -166,7 +166,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private String getDeleteStatement(String schema, String table) {
+  private String getDeleteTableMetadataStatement(String schema, String table) {
     String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
         + encloseFullTableNames(getMetadataSchema(), TABLE)
@@ -233,7 +233,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                 "SELECT COUNT(*) INTO tableExistCount FROM dba_tables WHERE owner='%s' AND table_name='%s';",
                 getMetadataSchema(), TABLE);
         createTableStatement = "'" + createTableStatement + "';";
-        // Will run the above count request first and if the result is false, will execute the create
+        // Will run the above count request first and if the result is false, will execute the
+        // create
         // table statement
         createTableIfNotExistsStatement =
             "DECLARE\n"
@@ -423,7 +424,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   @Override
   public void deleteTableMetadata(String namespace, String table) {
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, getDeleteStatement(namespace, table));
+      execute(connection, getDeleteTableMetadataStatement(namespace, table));
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;

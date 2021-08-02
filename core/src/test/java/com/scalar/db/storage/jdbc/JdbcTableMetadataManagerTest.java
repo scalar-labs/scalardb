@@ -251,7 +251,9 @@ public class JdbcTableMetadataManagerTest {
     manager.addTableMetadata(namespace, table, metadata);
 
     // Assert
-    verify(createSchemaStatement).execute("IF NOT EXISTS (SELECT * FROM [sys].[tables] INNER JOIN [sys].[schemas] ON [sys].[tables].[schema_id]=[sys].[schemas].[schema_id] WHERE [sys].[schemas].[name] = 'scalardb' AND [sys].[tables].[name]  = 'metadata') EXEC ('CREATE SCHEMA [scalardb]')");
+    verify(createSchemaStatement)
+        .execute(
+            "IF NOT EXISTS (SELECT * FROM [sys].[schemas] WHERE [sys].[schemas].[name]  = 'scalardb') EXEC ('CREATE SCHEMA [scalardb]')");
     String expectedCreateTableStatement =
         "IF NOT EXISTS "
             + "(SELECT * FROM [sys].[tables] "
