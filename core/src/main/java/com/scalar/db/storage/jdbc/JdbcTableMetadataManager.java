@@ -211,8 +211,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private void createTableIfNotExist(Connection connection) throws SQLException {
-    // TODO add comment
+  private void createTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         String.format("CREATE TABLE %s(", encloseFullTableNames(getMetadataSchema(), TABLE))
             + String.format("%s %s,", enclose(FULL_TABLE_NAME), getTextType(128))
@@ -227,11 +226,15 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     String createTableIfNotExistsStatement;
     switch (rdbEngine) {
       case ORACLE:
+        // Save into the tableExistCount variable if the metadata table
+        // exists (1=true, 0=false) by querying a system table
         String selectTableExistStatement =
             String.format(
                 "SELECT COUNT(*) INTO tableExistCount FROM dba_tables WHERE owner='%s' AND table_name='%s';",
                 getMetadataSchema(), TABLE);
         createTableStatement = "'" + createTableStatement + "';";
+        // Will run the above count request first and if the result is false, will execute the create
+        // table statement
         createTableIfNotExistsStatement =
             "DECLARE\n"
                 + "tableExistCount integer;\n"
@@ -251,6 +254,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         break;
       case SQL_SERVER:
         String selectTableQuery =
+            // Will return a row if the metadata table exists
             String.format(
                 "SELECT * "
                     + "FROM [sys].[tables] "
@@ -259,6 +263,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                     + "WHERE "
                     + "[sys].[schemas].[name] = '%s' AND [sys].[tables].[name]  = '%s'",
                 getMetadataSchema(), TABLE);
+        // If the metadata table do not exists, the create table statement will be executed
         createTableIfNotExistsStatement =
             "IF NOT EXISTS (" + selectTableQuery + ") " + createTableStatement;
         break;
@@ -273,8 +278,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       connection.setAutoCommit(false);
       connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
       try {
-        createMetadataSchemaIfNotExist(connection);
-        createTableIfNotExist(connection);
+        createMetadataSchemaIfNotExists(connection);
+        createTableIfNotExists(connection);
       } catch (SQLException e) {
         connection.rollback();
         throw e;
@@ -285,23 +290,19 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private void createMetadataSchemaIfNotExist(Connection connection) throws SQLException {
-    // TODO add comment
+  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
     switch (rdbEngine) {
       case MYSQL:
       case POSTGRESQL:
         execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(getMetadataSchema()));
         break;
       case SQL_SERVER:
+        // Query into a system table to see if the schema is already created
         String selectQuery =
             String.format(
-                "SELECT * "
-                    + "FROM [sys].[tables] "
-                    + "INNER JOIN [sys].[schemas] "
-                    + "ON [sys].[tables].[schema_id]=[sys].[schemas].[schema_id] "
-                    + "WHERE "
-                    + "[sys].[schemas].[name] = '%s' AND [sys].[tables].[name]  = '%s'",
-                getMetadataSchema(), TABLE);
+                "SELECT * " + "FROM [sys].[schemas] " + "WHERE [sys].[schemas].[name]  = '%s'",
+                getMetadataSchema());
+        // If the schema do not already exist, run the create schema statement
         execute(
             connection,
             "IF NOT EXISTS ("
@@ -311,12 +312,15 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                 + "')");
         break;
       case ORACLE:
+        // Query into a system table to see if the user already exist and save the result into the
+        // userExistCount variable(true=1, false=0)
         String selectUserExistStatement =
             "SELECT COUNT(*) INTO userExistCount FROM dba_users WHERE username='"
                 + getMetadataSchema()
                 + "';";
         String createUserStatement =
             "'CREATE USER " + enclose(getMetadataSchema()) + " IDENTIFIED BY \"oracle\"';";
+        // If the user doest not exist, will execute the create user statement
         execute(
             connection,
             "DECLARE "
