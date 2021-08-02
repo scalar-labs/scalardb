@@ -1,8 +1,5 @@
 package com.scalar.db.storage.jdbc;
 
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
-import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -13,6 +10,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.storage.jdbc.query.QueryUtils;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -117,21 +115,21 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   private String getSelectColumnsStatement() {
     return "SELECT "
-        + enclose(COLUMN_NAME, rdbEngine)
+        + enclose(COLUMN_NAME)
         + ", "
-        + enclose(DATA_TYPE, rdbEngine)
+        + enclose(DATA_TYPE)
         + ", "
-        + enclose(KEY_TYPE, rdbEngine)
+        + enclose(KEY_TYPE)
         + ", "
-        + enclose(CLUSTERING_ORDER, rdbEngine)
+        + enclose(CLUSTERING_ORDER)
         + ", "
-        + enclose(INDEXED, rdbEngine)
+        + enclose(INDEXED)
         + " FROM "
-        + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
+        + encloseFullTableNames(getMetadataSchema(), TABLE)
         + " WHERE "
-        + enclose(FULL_TABLE_NAME, rdbEngine)
+        + enclose(FULL_TABLE_NAME)
         + " = ? ORDER BY "
-        + enclose(ORDINAL_POSITION, rdbEngine)
+        + enclose(ORDINAL_POSITION)
         + " ASC";
   }
 
@@ -148,7 +146,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
-        enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine),
+        encloseFullTableNames(getMetadataSchema(), TABLE),
         schemaPrefix.orElse("") + schema + "." + table,
         columnName,
         dataType.toString(),
@@ -171,9 +169,9 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   private String getDeleteStatement(String schema, String table) {
     String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
-        + enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine)
+        + encloseFullTableNames(getMetadataSchema(), TABLE)
         + " WHERE "
-        + enclose(FULL_TABLE_NAME, rdbEngine)
+        + enclose(FULL_TABLE_NAME)
         + " = '"
         + fullTableName
         + "'";
@@ -213,53 +211,126 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private void createMetadataTable() {
-    String createTableQuery =
-        String.format(
-                "CREATE TABLE %s(", enclosedFullTableName(getMetadataSchema(), TABLE, rdbEngine))
-            + String.format("%s %s,", enclose(FULL_TABLE_NAME, rdbEngine), getTextType(128))
-            + String.format("%s %s,", enclose(COLUMN_NAME, rdbEngine), getTextType(128))
-            + String.format("%s %s NOT NULL,", enclose(DATA_TYPE, rdbEngine), getTextType(20))
-            + String.format("%s %s,", enclose(KEY_TYPE, rdbEngine), getTextType(20))
-            + String.format("%s %s,", enclose(CLUSTERING_ORDER, rdbEngine), getTextType(10))
-            + String.format("%s %s NOT NULL,", enclose(INDEXED, rdbEngine), getBooleanType())
-            + String.format("%s INTEGER NOT NULL,", enclose(ORDINAL_POSITION, rdbEngine))
+  private void createTableIfNotExist(Connection connection) throws SQLException {
+    // TODO add comment
+    String createTableStatement =
+        String.format("CREATE TABLE %s(", encloseFullTableNames(getMetadataSchema(), TABLE))
+            + String.format("%s %s,", enclose(FULL_TABLE_NAME), getTextType(128))
+            + String.format("%s %s,", enclose(COLUMN_NAME), getTextType(128))
+            + String.format("%s %s NOT NULL,", enclose(DATA_TYPE), getTextType(20))
+            + String.format("%s %s,", enclose(KEY_TYPE), getTextType(20))
+            + String.format("%s %s,", enclose(CLUSTERING_ORDER), getTextType(10))
+            + String.format("%s %s NOT NULL,", enclose(INDEXED), getBooleanType())
+            + String.format("%s INTEGER NOT NULL,", enclose(ORDINAL_POSITION))
             + String.format(
-                "PRIMARY KEY (%s, %s))",
-                enclose(FULL_TABLE_NAME, rdbEngine), enclose(COLUMN_NAME, rdbEngine));
+                "PRIMARY KEY (%s, %s))", enclose(FULL_TABLE_NAME), enclose(COLUMN_NAME));
+    String createTableIfNotExistsStatement;
+    switch (rdbEngine) {
+      case ORACLE:
+        String selectTableExistStatement =
+            String.format(
+                "SELECT COUNT(*) INTO tableExistCount FROM dba_tables WHERE owner='%s' AND table_name='%s';",
+                getMetadataSchema(), TABLE);
+        createTableStatement = "'" + createTableStatement + "';";
+        createTableIfNotExistsStatement =
+            "DECLARE\n"
+                + "tableExistCount integer;\n"
+                + "BEGIN\n"
+                + selectTableExistStatement
+                + "\n"
+                + "IF (tableExistCount = 0) THEN EXECUTE IMMEDIATE "
+                + createTableStatement
+                + "\n"
+                + "END IF;\n"
+                + "END;";
+        break;
+      case POSTGRESQL:
+      case MYSQL:
+        createTableIfNotExistsStatement =
+            createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+        break;
+      case SQL_SERVER:
+        String selectTableQuery =
+            String.format(
+                "SELECT * "
+                    + "FROM [sys].[tables] "
+                    + "INNER JOIN [sys].[schemas] "
+                    + "ON [sys].[tables].[schema_id]=[sys].[schemas].[schema_id] "
+                    + "WHERE "
+                    + "[sys].[schemas].[name] = '%s' AND [sys].[tables].[name]  = '%s'",
+                getMetadataSchema(), TABLE);
+        createTableIfNotExistsStatement =
+            "IF NOT EXISTS (" + selectTableQuery + ") " + createTableStatement;
+        break;
+      default:
+        throw new UnsupportedOperationException("rdb engine not supported");
+    }
+    execute(connection, createTableIfNotExistsStatement);
+  }
 
+  private void createMetadataSchemaAndTableIfNotExist() {
     try (Connection connection = dataSource.getConnection()) {
       connection.setAutoCommit(false);
       connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
       try {
-        createMetadataSchema(connection);
-        execute(connection, createTableQuery);
+        createMetadataSchemaIfNotExist(connection);
+        createTableIfNotExist(connection);
       } catch (SQLException e) {
         connection.rollback();
         throw e;
       }
       connection.commit();
     } catch (SQLException e) {
-      if (e.getMessage().contains("database exists")
-          || e.getMessage().contains("already exists")
-          || e.getMessage().contains("already an object named")
-          || e.getMessage().contains("conflicts")) {
-        return;
-      }
       throw new StorageRuntimeException("creating the metadata table failed", e);
     }
   }
 
-  private void createMetadataSchema(Connection connection) throws SQLException {
-    if (rdbEngine == RdbEngine.ORACLE) {
-      execute(
-          connection,
-          "CREATE USER " + enclose(getMetadataSchema(), rdbEngine) + " IDENTIFIED BY \"oracle\"");
-      execute(
-          connection,
-          "ALTER USER " + enclose(getMetadataSchema(), rdbEngine) + " quota unlimited on USERS");
-    } else {
-      execute(connection, "CREATE SCHEMA " + enclose(getMetadataSchema(), rdbEngine));
+  private void createMetadataSchemaIfNotExist(Connection connection) throws SQLException {
+    // TODO add comment
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(getMetadataSchema()));
+        break;
+      case SQL_SERVER:
+        String selectQuery =
+            String.format(
+                "SELECT * "
+                    + "FROM [sys].[tables] "
+                    + "INNER JOIN [sys].[schemas] "
+                    + "ON [sys].[tables].[schema_id]=[sys].[schemas].[schema_id] "
+                    + "WHERE "
+                    + "[sys].[schemas].[name] = '%s' AND [sys].[tables].[name]  = '%s'",
+                getMetadataSchema(), TABLE);
+        execute(
+            connection,
+            "IF NOT EXISTS ("
+                + selectQuery
+                + ") EXEC ('CREATE SCHEMA "
+                + enclose(getMetadataSchema())
+                + "')");
+        break;
+      case ORACLE:
+        String selectUserExistStatement =
+            "SELECT COUNT(*) INTO userExistCount FROM dba_users WHERE username='"
+                + getMetadataSchema()
+                + "';";
+        String createUserStatement =
+            "'CREATE USER " + enclose(getMetadataSchema()) + " IDENTIFIED BY \"oracle\"';";
+        execute(
+            connection,
+            "DECLARE "
+                + "userExistCount integer;\n"
+                + "BEGIN\n"
+                + selectUserExistStatement
+                + " IF (userExistCount = 0) THEN EXECUTE IMMEDIATE "
+                + createUserStatement
+                + "\n"
+                + "END IF;\n"
+                + "END;");
+        execute(
+            connection, "ALTER USER " + enclose(getMetadataSchema()) + " quota unlimited on USERS");
+        break;
     }
   }
 
@@ -290,7 +361,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
-    createMetadataTable();
+    createMetadataSchemaAndTableIfNotExist();
     try (Connection connection = dataSource.getConnection()) {
       // Start transaction to commit all the insert statements at once
       connection.setAutoCommit(false);
@@ -360,5 +431,13 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
           e);
     }
     tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
+  }
+
+  private String enclose(String name) {
+    return QueryUtils.enclose(name, rdbEngine);
+  }
+
+  private String encloseFullTableNames(String schema, String table) {
+    return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
   }
 }
