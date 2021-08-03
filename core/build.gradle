@@ -1,3 +1,7 @@
+plugins {
+    id 'com.github.spotbugs-base' version '4.7.1'
+}
+
 sourceSets {
     integrationTest {
         java {
@@ -74,16 +78,22 @@ sourceSets {
 configurations {
     integrationTestImplementation.extendsFrom testImplementation
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCompileOnly.extendsFrom testCompileOnly
     integrationTestCassandraImplementation.extendsFrom testImplementation
     integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraCompileOnly.extendsFrom testCompileOnly
     integrationTestCosmosImplementation.extendsFrom testImplementation
     integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosCompileOnly.extendsFrom testCompileOnly
     integrationTestDynamoImplementation.extendsFrom testImplementation
     integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoCompileOnly.extendsFrom testCompileOnly
     integrationTestJdbcImplementation.extendsFrom testImplementation
     integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcCompileOnly.extendsFrom testCompileOnly
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -105,6 +115,8 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
 }
 
 task integrationTestCassandra(type: Test) {
@@ -172,6 +184,36 @@ spotless {
         googleJavaFormat()
     }
 }
+
+import com.github.spotbugs.snom.SpotBugsTask
+
+task spotbugsMain(type: SpotBugsTask) {
+    dependsOn 'classes'
+    classDirs = sourceSets.main.output
+    sourceDirs = sourceSets.main.allSource.sourceDirectories
+    auxClassPaths = sourceSets.main.compileClasspath
+    reports { html.enabled = true }
+}
+
+task spotbugsTest(type: SpotBugsTask) {
+    dependsOn 'testClasses'
+    classDirs = sourceSets.test.output
+    sourceDirs = sourceSets.test.allSource.sourceDirectories
+    auxClassPaths = sourceSets.test.compileClasspath
+    reports { html.enabled = true }
+}
+
+task spotbugsIntegrationTest(type: SpotBugsTask) {
+    dependsOn 'integrationTestClasses'
+    classDirs = sourceSets.integrationTest.output
+    sourceDirs = sourceSets.integrationTest.allSource.sourceDirectories
+    auxClassPaths = sourceSets.integrationTest.compileClasspath
+    reports { html.enabled = true }
+}
+
+check.dependsOn += spotbugsMain
+check.dependsOn += spotbugsTest
+check.dependsOn += spotbugsIntegrationTest
 
 archivesBaseName = "scalardb"
 

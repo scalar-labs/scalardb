@@ -3,6 +3,7 @@ package com.scalar.db.storage.multistorage;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.scalar.db.config.DatabaseConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class MultiStorageConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";

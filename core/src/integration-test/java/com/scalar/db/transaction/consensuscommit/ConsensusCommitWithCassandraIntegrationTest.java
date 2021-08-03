@@ -10,6 +10,7 @@ import com.scalar.db.storage.cassandra.Cassandra;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
@@ -192,7 +193,9 @@ public class ConsensusCommitWithCassandraIntegrationTest
     BufferedReader reader = null;
     try {
       Process process = builder.start();
-      reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      reader =
+          new BufferedReader(
+              new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
       while (true) {
         String line = reader.readLine();
         if (line == null) break;

@@ -89,4 +89,9 @@ public class PartitionedMutations {
     PartitionedMutations other = (PartitionedMutations) o;
     return partitions.equals(other.partitions);
   }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(partitions);
+  }
 }
