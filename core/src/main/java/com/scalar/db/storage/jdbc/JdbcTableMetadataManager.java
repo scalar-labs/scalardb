@@ -213,16 +213,41 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   private void createTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
-        String.format("CREATE TABLE %s(", encloseFullTableNames(getMetadataSchema(), TABLE))
-            + String.format("%s %s,", enclose(FULL_TABLE_NAME), getTextType(128))
-            + String.format("%s %s,", enclose(COLUMN_NAME), getTextType(128))
-            + String.format("%s %s NOT NULL,", enclose(DATA_TYPE), getTextType(20))
-            + String.format("%s %s,", enclose(KEY_TYPE), getTextType(20))
-            + String.format("%s %s,", enclose(CLUSTERING_ORDER), getTextType(10))
-            + String.format("%s %s NOT NULL,", enclose(INDEXED), getBooleanType())
-            + String.format("%s INTEGER NOT NULL,", enclose(ORDINAL_POSITION))
-            + String.format(
-                "PRIMARY KEY (%s, %s))", enclose(FULL_TABLE_NAME), enclose(COLUMN_NAME));
+        "CREATE TABLE "
+            + encloseFullTableNames(getMetadataSchema(), TABLE)
+            + "("
+            + enclose(FULL_TABLE_NAME)
+            + " "
+            + getTextType(128)
+            + ","
+            + enclose(COLUMN_NAME)
+            + " "
+            + getTextType(128)
+            + ","
+            + enclose(DATA_TYPE)
+            + " "
+            + getTextType(20)
+            + " NOT NULL,"
+            + enclose(KEY_TYPE)
+            + " "
+            + getTextType(20)
+            + ","
+            + enclose(CLUSTERING_ORDER)
+            + " "
+            + getTextType(10)
+            + ","
+            + enclose(INDEXED)
+            + " "
+            + getBooleanType()
+            + " NOT NULL,"
+            + enclose(ORDINAL_POSITION)
+            + " INTEGER NOT NULL,"
+            + "PRIMARY KEY ("
+            + enclose(FULL_TABLE_NAME)
+            + ", "
+            + enclose(COLUMN_NAME)
+            + "))";
+
     String createTableIfNotExistsStatement;
     switch (rdbEngine) {
       case ORACLE:
