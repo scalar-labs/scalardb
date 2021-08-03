@@ -105,4 +105,14 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
       return Objects.hash(namespace, table);
     }
   }
+
+  @Override
+  public void deleteTableMetadata(String namespace, String table) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
+    throw new UnsupportedOperationException();
+  }
 }
