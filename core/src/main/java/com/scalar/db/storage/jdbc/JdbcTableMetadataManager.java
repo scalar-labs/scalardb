@@ -11,6 +11,7 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -211,6 +212,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     }
   }
 
+  @SuppressFBWarnings(value = "SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "

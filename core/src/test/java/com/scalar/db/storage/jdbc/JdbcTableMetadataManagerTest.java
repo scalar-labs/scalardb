@@ -11,6 +11,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcTableMetadataManagerTest.ResultSetMocker.Row;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 public class JdbcTableMetadataManagerTest {
   @Mock DataSource dataSource;
   @Mock Connection connection1;
