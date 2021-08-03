@@ -126,7 +126,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         + ", "
         + enclose(INDEXED)
         + " FROM "
-        + encloseFullTableNames(getMetadataSchema(), TABLE)
+        + encloseFullTableName(getMetadataSchema(), TABLE)
         + " WHERE "
         + enclose(FULL_TABLE_NAME)
         + " = ? ORDER BY "
@@ -147,7 +147,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
-        encloseFullTableNames(getMetadataSchema(), TABLE),
+        encloseFullTableName(getMetadataSchema(), TABLE),
         schemaPrefix.orElse("") + schema + "." + table,
         columnName,
         dataType.toString(),
@@ -170,7 +170,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   private String getDeleteTableMetadataStatement(String schema, String table) {
     String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
-        + encloseFullTableNames(getMetadataSchema(), TABLE)
+        + encloseFullTableName(getMetadataSchema(), TABLE)
         + " WHERE "
         + enclose(FULL_TABLE_NAME)
         + " = '"
@@ -216,7 +216,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
-            + encloseFullTableNames(getMetadataSchema(), TABLE)
+            + encloseFullTableName(getMetadataSchema(), TABLE)
             + "("
             + enclose(FULL_TABLE_NAME)
             + " "
@@ -437,7 +437,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return QueryUtils.enclose(name, rdbEngine);
   }
 
-  private String encloseFullTableNames(String schema, String table) {
+  private String encloseFullTableName(String schema, String table) {
     return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
   }
 }
