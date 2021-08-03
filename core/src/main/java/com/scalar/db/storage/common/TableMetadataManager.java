@@ -20,4 +20,21 @@ public interface TableMetadataManager {
    * @return a table metadata. null if the table is not found.
    */
   TableMetadata getTableMetadata(String namespace, String table);
+
+  /**
+   * Delete the given table metadata
+   *
+   * @param namespace a namespace
+   * @param table a table metadata
+   */
+  void deleteTableMetadata(String namespace, String table);
+
+  /**
+   * Add the given table metadata
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @param metadata a table metadata
+   */
+  void addTableMetadata(String namespace, String table, TableMetadata metadata);
 }

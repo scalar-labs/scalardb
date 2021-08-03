@@ -96,4 +96,16 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
         throw new AssertionError();
     }
   }
+
+  @Override
+  public void deleteTableMetadata(String namespace, String table) {
+    // TODO To implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
+    // TODO To implement
+    throw new UnsupportedOperationException();
+  }
 }

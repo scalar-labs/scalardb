@@ -40,6 +40,15 @@ public class TableMetadata {
   }
 
   /**
+   * Creates a new builder instance
+   *
+   * @return a new builder instance
+   */
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
+  /**
    * Returns the column names
    *
    * @return an {@code LinkedHashSet} of column names
@@ -95,13 +104,33 @@ public class TableMetadata {
     return secondaryIndexNames;
   }
 
-  /**
-   * Creates a new builder instance
-   *
-   * @return a new builder instance
-   */
-  public static Builder newBuilder() {
-    return new Builder();
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TableMetadata metadata = (TableMetadata) o;
+    return Objects.equals(columnNames, metadata.columnNames)
+        && Objects.equals(columnDataTypes, metadata.columnDataTypes)
+        && Objects.equals(partitionKeyNames, metadata.partitionKeyNames)
+        && Objects.equals(clusteringKeyNames, metadata.clusteringKeyNames)
+        && Objects.equals(clusteringOrders, metadata.clusteringOrders)
+        && Objects.equals(secondaryIndexNames, metadata.secondaryIndexNames);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        columnNames,
+        columnDataTypes,
+        partitionKeyNames,
+        clusteringKeyNames,
+        clusteringOrders,
+        secondaryIndexNames);
   }
 
   /** A builder class that creates a TableMetadata instance */
