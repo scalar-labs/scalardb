@@ -1,8 +1,10 @@
 package com.scalar.db.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 
+@SuppressFBWarnings("UR_UNINIT_READ_CALLED_FROM_SUPER_CONSTRUCTOR")
 public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
 
   private final boolean immutable;

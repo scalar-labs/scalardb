@@ -9,6 +9,7 @@ import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
@@ -27,6 +28,7 @@ import java.util.stream.Stream;
 import javax.sql.DataSource;
 import org.apache.commons.dbcp2.BasicDataSource;
 
+@SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
 public class TestEnv implements Closeable {
 
   private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING =

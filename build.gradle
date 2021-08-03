@@ -43,6 +43,7 @@ subprojects {
         junitVersion = '4.12'
         assertjVersion = '3.9.1'
         mockitoVersion = '2.16.0'
+        spotbugsVersion = '4.3.0'
     }
 
     repositories {

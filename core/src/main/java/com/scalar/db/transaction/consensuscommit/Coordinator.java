@@ -19,6 +19,7 @@ import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
@@ -178,6 +179,11 @@ public class Coordinator {
       State other = (State) o;
       // NOTICE: createdAt and metadata are not taken into account
       return (getId().equals(other.getId()) && getState().equals(other.getState()));
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(id, state);
     }
 
     private void checkNotMissingRequired(Result result) {

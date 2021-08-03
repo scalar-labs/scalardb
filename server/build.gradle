@@ -1,6 +1,7 @@
 plugins {
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
+    id 'com.github.spotbugs' version '4.7.1'
 }
 
 sourceSets {
@@ -17,6 +18,7 @@ sourceSets {
 configurations {
     integrationTestScalarDbServerImplementation.extendsFrom testImplementation
     integrationTestScalarDbServerRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestScalarDbServerCompileOnly.extendsFrom testCompileOnly
 }
 
 dependencies {
@@ -41,6 +43,8 @@ dependencies {
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTest.output
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
 }
 
 application {
@@ -68,6 +72,18 @@ spotless {
         removeUnusedImports()
         googleJavaFormat()
     }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+
+spotbugsTest.reports {
+    html.enabled = true
+}
+
+spotbugsIntegrationTestScalarDbServer.reports {
+    html.enabled = true
 }
 
 archivesBaseName = "scalardb-server"

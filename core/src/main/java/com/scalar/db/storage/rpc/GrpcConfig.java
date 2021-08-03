@@ -13,9 +13,9 @@ public class GrpcConfig extends DatabaseConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "grpc.";
-  public static String DEADLINE_DURATION_MILLIS = PREFIX + "deadline_duration_millis";
+  public static final String DEADLINE_DURATION_MILLIS = PREFIX + "deadline_duration_millis";
 
-  public static long DEFAULT_DEADLINE_DURATION_MILLIS = 60000; // 60 seconds
+  public static final long DEFAULT_DEADLINE_DURATION_MILLIS = 60000; // 60 seconds
 
   private long deadlineDurationMillis;
 

@@ -316,7 +316,6 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
-    Delete delete = prepareDelete();
     snapshot.put(new Snapshot.Key(prepareGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(prepareAnotherGet()), Optional.of(result));
     snapshot.put(new Snapshot.Key(put), put);
