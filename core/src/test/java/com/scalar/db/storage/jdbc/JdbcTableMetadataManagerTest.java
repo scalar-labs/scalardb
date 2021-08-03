@@ -251,16 +251,9 @@ public class JdbcTableMetadataManagerTest {
     manager.addTableMetadata(namespace, table, metadata);
 
     // Assert
-    verify(createSchemaStatement)
-        .execute(
-            "IF NOT EXISTS (SELECT * FROM [sys].[schemas] WHERE [sys].[schemas].[name]  = 'scalardb') EXEC ('CREATE SCHEMA [scalardb]')");
+    verify(createSchemaStatement).execute("CREATE SCHEMA [scalardb]");
     String expectedCreateTableStatement =
-        "IF NOT EXISTS "
-            + "(SELECT * FROM [sys].[tables] "
-            + "INNER JOIN [sys].[schemas] ON [sys].[tables].[schema_id]=[sys].[schemas].[schema_id] "
-            + "WHERE [sys].[schemas].[name] = 'scalardb' "
-            + "AND [sys].[tables].[name]  = 'metadata') "
-            + "CREATE TABLE [scalardb].[metadata]("
+        "CREATE TABLE [scalardb].[metadata]("
             + "[full_table_name] VARCHAR(128),"
             + "[column_name] VARCHAR(128),"
             + "[data_type] VARCHAR(20) NOT NULL,"
@@ -338,22 +331,10 @@ public class JdbcTableMetadataManagerTest {
     manager.addTableMetadata(namespace, table, metadata);
 
     // Assert
-    verify(createSchemaStatement)
-        .execute(
-            "DECLARE userExistCount integer;\n"
-                + "BEGIN\n"
-                + "SELECT COUNT(*) INTO userExistCount FROM dba_users WHERE username='scalardb'; IF (userExistCount = 0) THEN EXECUTE IMMEDIATE 'CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"';\n"
-                + "END IF;\n"
-                + "END;");
+    verify(createSchemaStatement).execute("CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"");
     verify(alterSchemaStatement).execute("ALTER USER \"scalardb\" quota unlimited on USERS");
     String expectedCreateTableStatement =
-        "DECLARE\n"
-            + "tableExistCount integer;\n"
-            + "BEGIN\n"
-            + "SELECT COUNT(*) INTO tableExistCount FROM dba_tables WHERE owner='scalardb' AND table_name='metadata';\n"
-            + "IF (tableExistCount = 0) THEN EXECUTE IMMEDIATE 'CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))';\n"
-            + "END IF;\n"
-            + "END;";
+        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))";
     verify(createTableStatement).execute(expectedCreateTableStatement);
     verify(insertC3Statement)
         .execute(
