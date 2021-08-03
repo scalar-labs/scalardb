@@ -7,6 +7,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,8 +40,8 @@ public class ItemSorterTest {
   private static final double ANY_SMALL_DOUBLE = -10.0;
   private static final String ANY_LARGE_TEXT = "sssssss";
   private static final String ANY_SMALL_TEXT = "aa";
-  private static final byte[] ANY_LARGE_BLOB = "scalar".getBytes();
-  private static final byte[] ANY_SMALL_BLOB = "a".getBytes();
+  private static final byte[] ANY_LARGE_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] ANY_SMALL_BLOB = "a".getBytes(StandardCharsets.UTF_8);
   private static final String ANY_COLUMN_NAME_1 = "val1";
 
   private TableMetadata metadata;

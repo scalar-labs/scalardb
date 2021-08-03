@@ -144,7 +144,6 @@ public class SelectStatementHandlerTest {
         .readItem(anyString(), any(PartitionKey.class), eq(Record.class));
     when(toThrow.getStatusCode()).thenReturn(CosmosErrorCode.NOT_FOUND.get());
 
-    Record expected = new Record();
     Get get = prepareGet();
 
     // Act Assert

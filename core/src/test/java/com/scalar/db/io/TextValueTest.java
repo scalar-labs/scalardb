@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
@@ -16,7 +17,7 @@ public class TextValueTest {
   @Test
   public void getBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = "some_text".getBytes(StandardCharsets.UTF_8);
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
@@ -61,7 +62,7 @@ public class TextValueTest {
   @Test
   public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = "some_text".getBytes(StandardCharsets.UTF_8);
     Value<?> value = new TextValue(ANY_NAME, expected);
 
     // Act
@@ -127,7 +128,7 @@ public class TextValueTest {
   @Test
   public void getStringWithTwoBytesCharacter_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    String expected = new String("あいうえお");
+    String expected = "あいうえお";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
@@ -135,7 +136,6 @@ public class TextValueTest {
 
     // Assert
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -190,6 +190,7 @@ public class TextValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     TextValue oneValue = new TextValue(ANY_NAME, "some_text");

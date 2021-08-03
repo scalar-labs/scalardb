@@ -42,9 +42,6 @@ jobs:
       # run check!
       - run: gradle check
 
-      # check code format!
-      - run: gradle spotlessCheck
-
       - run:
           name: Save Gradle test reports
           command: |
@@ -52,9 +49,31 @@ jobs:
             cp -a core/build/reports/tests/test /tmp/gradle_test_reports/
           when: always
 
+      - run:
+          name: Save SpotBugs reports for core
+          command: |
+            mkdir -p /tmp/gradle_spotbugs_reports_for_core
+            cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports_for_core/
+          when: always
+
+      - run:
+          name: Save SpotBugs reports for server
+          command: |
+            mkdir -p /tmp/gradle_spotbugs_reports_for_server
+            cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports_for_server/
+          when: always
+
       - store_artifacts:
           path: /tmp/gradle_test_reports
           destination: gradle_test_reports
+
+      - store_artifacts:
+          path: /tmp/gradle_spotbugs_reports_for_core
+          destination: gradle_spotbugs_reports_for_core
+
+      - store_artifacts:
+          path: /tmp/gradle_spotbugs_reports_for_server
+          destination: gradle_spotbugs_reports_for_server
 
   integration-test-for-cassandra:
     docker:

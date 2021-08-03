@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class DynamoConfig extends DatabaseConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
