@@ -15,6 +15,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +66,9 @@ public class ResultImplTest {
             .put(ANY_COLUMN_NAME_4, new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
             .put(ANY_COLUMN_NAME_5, new DoubleValue(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
             .put(ANY_COLUMN_NAME_6, new TextValue(ANY_COLUMN_NAME_6, "string"))
-            .put(ANY_COLUMN_NAME_7, new BlobValue(ANY_COLUMN_NAME_7, "bytes".getBytes()))
+            .put(
+                ANY_COLUMN_NAME_7,
+                new BlobValue(ANY_COLUMN_NAME_7, "bytes".getBytes(StandardCharsets.UTF_8)))
             .build();
   }
 
@@ -94,7 +97,7 @@ public class ResultImplTest {
     assertThat(actual.get(ANY_NAME_2)).isEqualTo(new TextValue(ANY_NAME_2, ANY_TEXT_2));
     assertThat(actual.get(ANY_COLUMN_NAME_1)).isEqualTo(new BooleanValue(ANY_COLUMN_NAME_1, true));
     assertThat(actual.get(ANY_COLUMN_NAME_7))
-        .isEqualTo(new BlobValue(ANY_COLUMN_NAME_7, "bytes".getBytes()));
+        .isEqualTo(new BlobValue(ANY_COLUMN_NAME_7, "bytes".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test

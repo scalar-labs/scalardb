@@ -16,6 +16,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -119,7 +120,7 @@ public class ValueBinderTest {
   @Test
   public void visit_BlobValueAcceptCalled_ShouldCallSetString() {
     // Arrange
-    BlobValue value = new BlobValue(ANY_NAME, ANY_STRING.getBytes());
+    BlobValue value = new BlobValue(ANY_NAME, ANY_STRING.getBytes(StandardCharsets.UTF_8));
     ValueBinder binder = new ValueBinder(bound);
 
     // Act
@@ -130,7 +131,9 @@ public class ValueBinderTest {
         .setBytes(
             0,
             (ByteBuffer)
-                ByteBuffer.allocate(ANY_STRING.length()).put(ANY_STRING.getBytes()).flip());
+                ByteBuffer.allocate(ANY_STRING.length())
+                    .put(ANY_STRING.getBytes(StandardCharsets.UTF_8))
+                    .flip());
   }
 
   @Test

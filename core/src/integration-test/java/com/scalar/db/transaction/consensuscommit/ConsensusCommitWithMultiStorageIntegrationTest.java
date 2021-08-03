@@ -24,6 +24,7 @@ import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Properties;
@@ -281,7 +282,9 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
     BufferedReader reader = null;
     try {
       Process process = builder.start();
-      reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      reader =
+          new BufferedReader(
+              new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
       while (true) {
         String line = reader.readLine();
         if (line == null) break;

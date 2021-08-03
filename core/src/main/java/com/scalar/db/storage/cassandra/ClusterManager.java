@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
@@ -12,6 +10,7 @@ import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ConnectionException;
+import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +24,6 @@ import org.slf4j.LoggerFactory;
 public class ClusterManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ClusterManager.class);
   private static final int DEFAULT_CASSANDRA_PORT = 9042;
-  private final DatabaseConfig config;
-  private Cluster.Builder builder;
   private Cluster cluster;
   private Session session;
 
@@ -36,7 +33,13 @@ public class ClusterManager {
    * @param config database configuration needed to create a cluster
    */
   public ClusterManager(DatabaseConfig config) {
-    this.config = checkNotNull(config);
+    initialize(Objects.requireNonNull(config));
+  }
+
+  @VisibleForTesting
+  public ClusterManager(Cluster cluster, Session session) {
+    this.cluster = cluster;
+    this.session = session;
   }
 
   /**
@@ -44,22 +47,8 @@ public class ClusterManager {
    *
    * @return a {@code Session}
    */
-  public synchronized Session getSession() {
-    if (session != null) {
-      return session;
-    }
-    try {
-      if (builder == null) {
-        build();
-      }
-      cluster = getCluster(config);
-      session = cluster.connect();
-      LOGGER.info("session to the cluster is created.");
-      return session;
-    } catch (RuntimeException e) {
-      LOGGER.error("connecting the cluster failed.", e);
-      throw new ConnectionException("connecting the cluster failed.", e);
-    }
+  public Session getSession() {
+    return session;
   }
 
   /**
@@ -87,9 +76,19 @@ public class ClusterManager {
     cluster.close();
   }
 
-  @VisibleForTesting
-  void build() {
-    builder =
+  private void initialize(DatabaseConfig config) {
+    try {
+      cluster = getCluster(config);
+      session = cluster.connect();
+      LOGGER.info("session to the cluster is created.");
+    } catch (RuntimeException e) {
+      LOGGER.error("connecting the cluster failed.", e);
+      throw new ConnectionException("connecting the cluster failed.", e);
+    }
+  }
+
+  private Cluster getCluster(DatabaseConfig config) {
+    Cluster.Builder builder =
         Cluster.builder()
             .withClusterName("Scalar Cluster")
             .addContactPoints(config.getContactPoints().toArray(new String[0]))
@@ -101,10 +100,6 @@ public class ClusterManager {
             .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
             .withLoadBalancingPolicy(
                 new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build()));
-  }
-
-  @VisibleForTesting
-  Cluster getCluster(DatabaseConfig config) {
     if (config.getUsername().isPresent() && config.getPassword().isPresent()) {
       builder.withCredentials(config.getUsername().get(), config.getPassword().get());
     }

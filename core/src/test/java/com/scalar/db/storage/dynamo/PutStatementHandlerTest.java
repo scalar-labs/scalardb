@@ -84,7 +84,6 @@ public class PutStatementHandlerTest {
     DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
-    String expectedCondition = dynamoMutation.getIfExistsCondition();
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert

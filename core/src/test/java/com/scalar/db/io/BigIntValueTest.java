@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
 
 /** */
@@ -160,6 +161,7 @@ public class BigIntValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     int some = Integer.MAX_VALUE;

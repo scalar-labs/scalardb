@@ -13,6 +13,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -102,7 +103,7 @@ public class PutTest {
         .withValue("val4", 4.56f)
         .withValue("val5", 1.23)
         .withValue("val6", "string_value")
-        .withValue("val7", "blob_value".getBytes());
+        .withValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8));
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
@@ -113,7 +114,8 @@ public class PutTest {
     assertThat(values.get("val4")).isEqualTo(new FloatValue("val4", 4.56f));
     assertThat(values.get("val5")).isEqualTo(new DoubleValue("val5", 1.23));
     assertThat(values.get("val6")).isEqualTo(new TextValue("val6", "string_value"));
-    assertThat(values.get("val7")).isEqualTo(new BlobValue("val7", "blob_value".getBytes()));
+    assertThat(values.get("val7"))
+        .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
