@@ -80,9 +80,11 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nonnull
   public Optional<byte[]> getBytes() {
-    return value.map(v -> v.getBytes(StandardCharsets.UTF_8));
+    return getAsBytes();
   }
 
   /**
@@ -90,19 +92,21 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @return an {@code Optional} of the content of this {@code Value} in {@code String}
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nonnull
   public Optional<String> getString() {
-    return value;
+    return get();
   }
 
   @Override
   public Optional<String> getAsString() {
-    return getString();
+    return get();
   }
 
   @Override
   public Optional<byte[]> getAsBytes() {
-    return getBytes();
+    return value.map(v -> v.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override

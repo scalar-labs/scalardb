@@ -46,17 +46,17 @@ public final class BigIntValue implements Value<Long> {
 
   @Override
   public long getAsLong() {
-    return get();
+    return value;
   }
 
   @Override
   public float getAsFloat() {
-    return get();
+    return value;
   }
 
   @Override
   public double getAsDouble() {
-    return get();
+    return value;
   }
 
   @Override

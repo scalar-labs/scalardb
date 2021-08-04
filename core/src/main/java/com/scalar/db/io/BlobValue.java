@@ -50,12 +50,17 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   @Override
   @Nonnull
   public Optional<byte[]> get() {
-    return value;
+    return value.map(
+        v -> {
+          byte[] bytes = new byte[v.length];
+          System.arraycopy(v, 0, bytes, 0, v.length);
+          return bytes;
+        });
   }
 
   @Override
   public Optional<byte[]> getAsBytes() {
-    return value;
+    return get();
   }
 
   @Override
