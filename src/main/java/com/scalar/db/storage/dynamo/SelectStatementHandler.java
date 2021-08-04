@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
@@ -83,7 +84,7 @@ public class SelectStatementHandler extends StatementHandler {
             .key(dynamoOperation.getKeyMap());
 
     if (!get.getProjections().isEmpty()) {
-      builder.projectionExpression(String.join(",", get.getProjections()));
+      projectionExpression(builder, get);
     }
 
     if (get.getConsistency() != Consistency.EVENTUAL) {
@@ -108,7 +109,7 @@ public class SelectStatementHandler extends StatementHandler {
     builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
 
     if (!selection.getProjections().isEmpty()) {
-      builder.projectionExpression(String.join(",", selection.getProjections()));
+      projectionExpression(builder, selection);
     }
 
     if (selection instanceof Scan) {
@@ -151,7 +152,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     if (!scan.getProjections().isEmpty()) {
-      builder.projectionExpression(String.join(",", scan.getProjections()));
+      projectionExpression(builder, scan);
     }
 
     if (scan.getConsistency() != Consistency.EVENTUAL) {
@@ -159,6 +160,27 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     return client.query(builder.build());
+  }
+
+  private void projectionExpression(DynamoDbRequest.Builder builder, Selection selection) {
+    assert builder instanceof GetItemRequest.Builder || builder instanceof QueryRequest.Builder;
+
+    Map<String, String> columnMap = new HashMap<>();
+    List<String> projections = new ArrayList<>(selection.getProjections().size());
+    for (int i = 0; i < selection.getProjections().size(); i++) {
+      String alias = DynamoOperation.COLUMN_NAME_ALIAS + i;
+      projections.add(alias);
+      columnMap.put(alias, selection.getProjections().get(i));
+    }
+    String projectionExpression = String.join(",", projections);
+
+    if (builder instanceof GetItemRequest.Builder) {
+      ((GetItemRequest.Builder) builder).projectionExpression(projectionExpression);
+      ((GetItemRequest.Builder) builder).expressionAttributeNames(columnMap);
+    } else {
+      ((QueryRequest.Builder) builder).projectionExpression(projectionExpression);
+      ((QueryRequest.Builder) builder).expressionAttributeNames(columnMap);
+    }
   }
 
   private Optional<String> getIndexName(Scan scan) {
