@@ -11,14 +11,17 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -148,7 +151,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
         encloseFullTableName(getMetadataSchema(), TABLE),
-        schemaPrefix.orElse("") + schema + "." + table,
+        Utility.getFullTableName(schemaPrefix, schema, table),
         columnName,
         dataType.toString(),
         keyType != null ? "'" + keyType + "'" : "NULL",
@@ -168,13 +171,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   private String getDeleteTableMetadataStatement(String schema, String table) {
-    String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
         + encloseFullTableName(getMetadataSchema(), TABLE)
         + " WHERE "
         + enclose(FULL_TABLE_NAME)
         + " = '"
-        + fullTableName
+        + Utility.getFullTableName(schemaPrefix, schema, table)
         + "'";
   }
 
@@ -426,11 +428,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       }
       throw new StorageRuntimeException(
           String.format(
-              "deleting the %s table metadata failed",
-              schemaPrefix.orElse("") + namespace + "." + table),
+              "deleting the %s table metadata failed ",
+              Utility.getFullTableName(schemaPrefix, namespace, table)),
           e);
     }
-    tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
+    tableMetadataCache.put(
+        Utility.getFullTableName(schemaPrefix, namespace, table), Optional.empty());
   }
 
   private String enclose(String name) {
@@ -439,5 +442,34 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   private String encloseFullTableName(String schema, String table) {
     return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
+  }
+
+  @Override
+  public Set<String> getTableNames(String namespace) {
+    //TODO add unit test
+    String fullSchemaName = schemaPrefix.orElse("") + namespace;
+    String selectTablesOfNamespaceStatement =
+        "SELECT "
+            + enclose(FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), TABLE)
+            + " WHERE "
+            + enclose(FULL_TABLE_NAME)
+            + " LIKE '"
+            + fullSchemaName
+            + "%'";
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      ResultSet results = statement.executeQuery(selectTablesOfNamespaceStatement);
+      Set<String> tableNames = new HashSet<>();
+      while (results.next()) {
+        String tableName = results.getString(FULL_TABLE_NAME).replace(fullSchemaName + ".", "");
+        tableNames.add(tableName);
+      }
+      return tableNames;
+    } catch (SQLException e) {
+      throw new StorageRuntimeException(
+          "error retrieving the table names of the given namespace", e);
+    }
   }
 }

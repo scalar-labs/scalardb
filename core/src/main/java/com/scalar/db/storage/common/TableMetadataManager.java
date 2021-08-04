@@ -2,6 +2,7 @@ package com.scalar.db.storage.common;
 
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
+import java.util.Set;
 
 public interface TableMetadataManager {
   /**
@@ -37,4 +38,12 @@ public interface TableMetadataManager {
    * @param metadata a table metadata
    */
   void addTableMetadata(String namespace, String table, TableMetadata metadata);
+
+  /**
+   * Return the names of the table belonging to the given namespace
+   *
+   * @param namespace a namespace
+   * @return a set of table names
+   */
+  Set<String> getTableNames(String namespace);
 }

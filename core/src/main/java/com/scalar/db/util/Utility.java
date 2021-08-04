@@ -91,4 +91,26 @@ public final class Utility {
       }
     }
   }
+
+  /**
+   * Return a fully qualified table name
+   *
+   * @param schemaPrefix an optional schema prefix
+   * @param namespace a namespace
+   * @param table a table
+   * @return a fully qualified table name
+   */
+  public static String getFullTableName(
+      Optional<String> schemaPrefix, String namespace, String table) {
+    return schemaPrefix.orElse("") + namespace + ". " + table;
+  }
+
+  /**
+   * @param schemaPrefix an optional schema prefix
+   * @param schema a schema
+   * @return the schema prefix concatenated to the schema
+   */
+  public static String getFullNamespaceName(Optional<String> schemaPrefix, String schema) {
+    return schemaPrefix.orElse("") + schema;
+  }
 }

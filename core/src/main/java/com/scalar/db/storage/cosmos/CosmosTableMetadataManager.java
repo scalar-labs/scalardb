@@ -15,6 +15,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -124,6 +125,12 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
     // TODO To implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getTableNames(String namespace) {
+    //TODO To implement
     throw new UnsupportedOperationException();
   }
 }
