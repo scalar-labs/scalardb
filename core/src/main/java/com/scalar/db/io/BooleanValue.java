@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
  *
  * @author Hiroyuki Yamada
  */
-public final class BooleanValue implements Value<BooleanValue> {
+public final class BooleanValue implements Value<Boolean> {
   private static final String ANONYMOUS = "";
   private final String name;
   private final boolean value;
@@ -37,18 +37,15 @@ public final class BooleanValue implements Value<BooleanValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return the content of this {@code Value}
-   */
-  public boolean get() {
+  @Override
+  @Nonnull
+  public Boolean get() {
     return value;
   }
 
   @Override
   public boolean getAsBoolean() {
-    return get();
+    return value;
   }
 
   @Override
@@ -94,7 +91,7 @@ public final class BooleanValue implements Value<BooleanValue> {
       return false;
     }
     BooleanValue other = (BooleanValue) o;
-    return (this.name.equals(other.name) && this.value == other.value);
+    return (name.equals(other.name) && value == other.value);
   }
 
   @Override
@@ -103,10 +100,10 @@ public final class BooleanValue implements Value<BooleanValue> {
   }
 
   @Override
-  public int compareTo(BooleanValue o) {
+  public int compareTo(Value<Boolean> o) {
     return ComparisonChain.start()
-        .compareFalseFirst(this.value, o.value)
-        .compare(this.name, o.name)
+        .compareFalseFirst(value, o.get())
+        .compare(name, o.getName())
         .result();
   }
 }

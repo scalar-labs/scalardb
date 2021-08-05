@@ -16,6 +16,7 @@ public interface Scanner extends Closeable, Iterable<Result> {
    * Returns the first result in the results.
    *
    * @return the first result in the results
+   * @throws ExecutionException if the operation failed
    */
   Optional<Result> one() throws ExecutionException;
 
@@ -23,6 +24,7 @@ public interface Scanner extends Closeable, Iterable<Result> {
    * Returns all the results.
    *
    * @return the list of {@code Result}s
+   * @throws ExecutionException if the operation failed
    */
   List<Result> all() throws ExecutionException;
 }

@@ -96,18 +96,21 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     }
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(Isolation isolation) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation) throws TransactionException {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -115,12 +118,14 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(SerializableStrategy strategy) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, SerializableStrategy strategy)
@@ -128,6 +133,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public JdbcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)

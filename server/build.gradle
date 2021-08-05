@@ -2,6 +2,7 @@ plugins {
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
     id 'com.github.spotbugs' version '4.7.1'
+    id 'net.ltgt.errorprone' version '2.0.2'
 }
 
 sourceSets {
@@ -43,8 +44,12 @@ dependencies {
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
     integrationTestScalarDbServerImplementation project(':core').sourceSets.integrationTest.output
+    // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
     testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
 application {

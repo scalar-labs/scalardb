@@ -164,6 +164,7 @@ public class BlobValueTest {
     BlobValue value = new BlobValue(ANY_NAME, SOME_TEXT_BYTES);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -192,6 +193,7 @@ public class BlobValueTest {
     TextValue anotherValue = new TextValue(ANY_NAME, SOME_TEXT);
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = oneValue.equals(anotherValue);
 
     // Assert

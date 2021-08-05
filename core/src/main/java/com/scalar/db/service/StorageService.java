@@ -13,12 +13,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 public class StorageService implements DistributedStorage {
-  private static final Logger LOGGER = LoggerFactory.getLogger(StorageService.class);
   private final DistributedStorage storage;
 
   @Inject

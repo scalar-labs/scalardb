@@ -89,6 +89,7 @@ public class ScalarDbServer implements Callable<Integer> {
       try {
         server.awaitTermination();
       } catch (InterruptedException ignored) {
+        // don't need to handle InterruptedException
       }
     }
   }
@@ -98,6 +99,7 @@ public class ScalarDbServer implements Callable<Integer> {
       try {
         server.awaitTermination(timeout, unit);
       } catch (InterruptedException ignored) {
+        // don't need to handle InterruptedException
       }
     }
   }

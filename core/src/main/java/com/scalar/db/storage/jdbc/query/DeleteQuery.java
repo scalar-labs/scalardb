@@ -33,6 +33,7 @@ public class DeleteQuery extends AbstractQuery {
     otherConditions = builder.otherConditions;
   }
 
+  @Override
   protected String sql() {
     return "DELETE FROM "
         + enclosedFullTableName(schema, table, rdbEngine)

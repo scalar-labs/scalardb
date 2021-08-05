@@ -41,7 +41,6 @@ public class TextValueTest {
     // Assert
     assertThat(actual.isPresent()).isTrue();
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -56,7 +55,6 @@ public class TextValueTest {
     // Assert
     assertThat(actual.isPresent()).isTrue();
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -170,6 +168,7 @@ public class TextValueTest {
     TextValue value = new TextValue(ANY_NAME, "some_text");
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -197,6 +196,7 @@ public class TextValueTest {
     BlobValue anotherValue = new BlobValue(ANY_NAME, "some_text".getBytes(StandardCharsets.UTF_8));
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = oneValue.equals(anotherValue);
 
     // Assert

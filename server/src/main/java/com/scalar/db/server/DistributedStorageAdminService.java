@@ -9,7 +9,6 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
-import com.scalar.db.rpc.GetTableMetadataResponse.Builder;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableRunnable;
@@ -79,7 +78,7 @@ public class DistributedStorageAdminService
         () -> {
           TableMetadata tableMetadata =
               admin.getTableMetadata(request.getNamespace(), request.getTable());
-          Builder builder = GetTableMetadataResponse.newBuilder();
+          GetTableMetadataResponse.Builder builder = GetTableMetadataResponse.newBuilder();
           if (tableMetadata != null) {
             builder.setTableMetadata(ProtoUtil.toTableMetadata(tableMetadata));
           }

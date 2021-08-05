@@ -1,6 +1,5 @@
 package com.scalar.db.exception.transaction;
 
-/** */
 public class AbortException extends TransactionException {
 
   public AbortException(String message) {

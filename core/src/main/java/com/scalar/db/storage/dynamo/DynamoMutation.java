@@ -84,19 +84,19 @@ public class DynamoMutation extends DynamoOperation {
     int i = 0;
 
     if (withKey) {
-      for (Value<?> key : put.getPartitionKey().get()) {
+      for (Value<?> unusedKey : put.getPartitionKey().get()) {
         expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
         i++;
       }
       if (put.getClusteringKey().isPresent()) {
-        for (Value<?> key : put.getClusteringKey().get().get()) {
+        for (Value<?> unusedKey : put.getClusteringKey().get().get()) {
           expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
           i++;
         }
       }
     }
 
-    for (String name : put.getValues().keySet()) {
+    for (String unusedName : put.getValues().keySet()) {
       expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
       i++;
     }

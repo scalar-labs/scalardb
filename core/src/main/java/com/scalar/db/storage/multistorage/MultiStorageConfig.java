@@ -1,7 +1,6 @@
 package com.scalar.db.storage.multistorage;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -72,8 +71,8 @@ public class MultiStorageConfig {
       databaseConfigMap = Collections.emptyMap();
       return;
     }
-    Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
-    for (String storage : storages.split(",")) {
+    ImmutableMap.Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
+    for (String storage : storages.split(",", -1)) {
       Properties dbProps = new Properties();
       for (String propertyName : props.stringPropertyNames()) {
         if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
@@ -98,9 +97,9 @@ public class MultiStorageConfig {
       tableStorageMap = Collections.emptyMap();
       return;
     }
-    Builder<String, String> builder = ImmutableMap.builder();
-    for (String tableAndStorage : tableMapping.split(",")) {
-      String[] s = tableAndStorage.split(":");
+    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+    for (String tableAndStorage : tableMapping.split(",", -1)) {
+      String[] s = tableAndStorage.split(":", -1);
       String table = s[0];
       String storage = s[1];
       checkIfStorageExists(storage);
@@ -115,9 +114,9 @@ public class MultiStorageConfig {
       namespaceStorageMap = Collections.emptyMap();
       return;
     }
-    Builder<String, String> builder = ImmutableMap.builder();
-    for (String namespaceAndStorage : namespaceMapping.split(",")) {
-      String[] s = namespaceAndStorage.split(":");
+    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+    for (String namespaceAndStorage : namespaceMapping.split(",", -1)) {
+      String[] s = namespaceAndStorage.split(":", -1);
       String namespace = s[0];
       String storage = s[1];
       checkIfStorageExists(storage);
