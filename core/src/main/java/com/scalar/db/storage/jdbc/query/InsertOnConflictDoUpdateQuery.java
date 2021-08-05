@@ -32,6 +32,7 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
     values = builder.values;
   }
 
+  @Override
   protected String sql() {
     return "INSERT INTO "
         + enclosedFullTableName(schema, table, rdbEngine)

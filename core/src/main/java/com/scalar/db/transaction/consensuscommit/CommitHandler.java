@@ -3,8 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Operation;
-import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -12,13 +10,11 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.io.Key;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
 @ThreadSafe
 public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
@@ -128,13 +124,5 @@ public class CommitHandler {
   private void abortState(String id) throws CoordinatorException {
     Coordinator.State state = new Coordinator.State(id, TransactionState.ABORTED);
     coordinator.putState(state);
-  }
-
-  private static Optional<Key> getClusteringKey(Operation base, TransactionResult result) {
-    if (base instanceof Scan) {
-      return result.getClusteringKey();
-    } else {
-      return base.getClusteringKey();
-    }
   }
 }

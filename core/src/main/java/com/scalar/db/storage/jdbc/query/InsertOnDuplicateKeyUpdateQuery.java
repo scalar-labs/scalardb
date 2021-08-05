@@ -32,6 +32,7 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
     values = builder.values;
   }
 
+  @Override
   protected String sql() {
     StringBuilder sql;
     if (!values.isEmpty()) {

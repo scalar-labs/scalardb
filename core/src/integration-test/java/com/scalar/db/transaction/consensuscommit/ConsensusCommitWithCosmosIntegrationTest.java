@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -111,9 +112,12 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
         new CosmosContainerProperties(METADATA_CONTAINER, "/id");
     client.getDatabase(database(METADATA_DATABASE)).createContainerIfNotExists(containerProperties);
 
-    String storedProcedure =
-        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)
-            .reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
+    String storedProcedure;
+    try (Stream<String> lines =
+        Files.lines(Paths.get(STORED_PROCEDURE_PATH), StandardCharsets.UTF_8)) {
+      storedProcedure =
+          lines.reduce("", (prev, cur) -> prev + cur + System.getProperty("line.separator"));
+    }
     CosmosStoredProcedureProperties properties =
         new CosmosStoredProcedureProperties("mutate.js", storedProcedure);
 

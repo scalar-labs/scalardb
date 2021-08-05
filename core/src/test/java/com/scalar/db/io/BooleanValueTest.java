@@ -132,6 +132,7 @@ public class BooleanValueTest {
     BooleanValue value = new BooleanValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -162,6 +163,7 @@ public class BooleanValueTest {
     Boolean another = Boolean.valueOf(some);
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = one.equals(another);
 
     // Assert

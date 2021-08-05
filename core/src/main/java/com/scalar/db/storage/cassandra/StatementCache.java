@@ -24,7 +24,7 @@ public class StatementCache {
   /**
    * Constructs a cache with the specified max size
    *
-   * @param maxSize
+   * @param maxSize the max size
    */
   public StatementCache(int maxSize) {
     cache = CacheBuilder.newBuilder().maximumSize(maxSize).build();
@@ -33,7 +33,7 @@ public class StatementCache {
   /**
    * Returns a {@link PreparedStatement} associated with the specified cacheKey
    *
-   * @param cacheKey
+   * @param cacheKey a cache key
    * @return a {@code PreparedStatement} associated with the specified cacheKey
    */
   public PreparedStatement get(String cacheKey) {
@@ -43,7 +43,7 @@ public class StatementCache {
   /**
    * Associates a {@link PreparedStatement} with a cacheKey in the cache
    *
-   * @param cacheKey
+   * @param cacheKey a cache key
    * @param statement a {@code PreparedStatement}
    */
   public void put(String cacheKey, PreparedStatement statement) {

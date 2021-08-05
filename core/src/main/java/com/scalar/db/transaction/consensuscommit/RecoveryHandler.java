@@ -5,20 +5,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
-import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CoordinatorException;
-import com.scalar.db.io.Key;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** */
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
@@ -110,14 +106,6 @@ public class RecoveryHandler {
       storage.mutate(mutations);
     } catch (ExecutionException e) {
       LOGGER.warn("mutation in recovery failed. the record will be eventually recovered", e);
-    }
-  }
-
-  private static Optional<Key> getClusteringKey(Operation base, TransactionResult result) {
-    if (base instanceof Scan) {
-      return result.getClusteringKey();
-    } else {
-      return base.getClusteringKey();
     }
   }
 }

@@ -16,7 +16,6 @@ import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.CosmosScripts;
 import com.azure.cosmos.CosmosStoredProcedure;
-import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureResponse;
 import com.scalar.db.api.Operation;
@@ -56,7 +55,6 @@ public class PutStatementHandlerTest {
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
-  @Mock private CosmosItemResponse response;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;
   @Mock private CosmosStoredProcedureResponse spResponse;

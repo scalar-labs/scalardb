@@ -115,7 +115,7 @@ public class DynamoWithReservedKeywordIntegrationTest {
 
   @Test
   public void get_getWithSecondaryIndexWithReservedKeywordProjection_ShouldReturnWhatsPut()
-      throws ExecutionException, IOException {
+      throws ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;

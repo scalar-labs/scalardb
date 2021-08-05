@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
-import java.nio.ByteBuffer;
+import com.google.common.primitives.UnsignedBytes;
 import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -16,10 +16,10 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class BlobValue implements Value<BlobValue> {
+public final class BlobValue implements Value<Optional<byte[]>> {
   private static final String ANONYMOUS = "";
   private final String name;
-  private final Optional<ByteBuffer> bytes;
+  private final Optional<byte[]> value;
 
   /**
    * Constructs a {@code BlobValue} with the specified name and value
@@ -30,14 +30,11 @@ public final class BlobValue implements Value<BlobValue> {
   public BlobValue(String name, byte[] value) {
     this.name = checkNotNull(name);
     if (value == null) {
-      bytes = Optional.empty();
+      this.value = Optional.empty();
     } else {
-      bytes = Optional.of(ByteBuffer.allocate(value.length));
-      bytes.ifPresent(
-          b -> {
-            b.put(value);
-            b.flip();
-          });
+      byte[] bytes = new byte[value.length];
+      System.arraycopy(value, 0, bytes, 0, value.length);
+      this.value = Optional.of(bytes);
     }
   }
 
@@ -50,13 +47,15 @@ public final class BlobValue implements Value<BlobValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return an {@code Optional} of the content of this {@code Value}
-   */
+  @Override
+  @Nonnull
   public Optional<byte[]> get() {
-    return bytes.map(b -> Arrays.copyOf(b.array(), b.limit()));
+    return value.map(
+        v -> {
+          byte[] bytes = new byte[v.length];
+          System.arraycopy(v, 0, bytes, 0, v.length);
+          return bytes;
+        });
   }
 
   @Override
@@ -72,10 +71,13 @@ public final class BlobValue implements Value<BlobValue> {
 
   @Override
   public BlobValue copyWith(String name) {
-    if (bytes.isPresent()) {
-      return new BlobValue(name, bytes.get().array());
+    if (value.isPresent()) {
+      byte[] bytes = new byte[value.get().length];
+      System.arraycopy(value.get(), 0, bytes, 0, value.get().length);
+      return new BlobValue(name, bytes);
+    } else {
+      return new BlobValue(name, null);
     }
-    return new BlobValue(name, (byte[]) null);
   }
 
   @Override
@@ -85,7 +87,7 @@ public final class BlobValue implements Value<BlobValue> {
 
   @Override
   public int hashCode() {
-    return bytes.hashCode();
+    return value.hashCode();
   }
 
   /**
@@ -110,29 +112,35 @@ public final class BlobValue implements Value<BlobValue> {
       return false;
     }
     BlobValue other = (BlobValue) o;
-    return this.name.equals(other.name) && bytes.equals(other.bytes);
+    if (!name.equals(other.name)) {
+      return false;
+    }
+    if (value.isPresent() && other.value.isPresent()) {
+      return Arrays.equals(value.get(), other.value.get());
+    }
+    return !value.isPresent() && !other.value.isPresent();
   }
 
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("name", name)
-        .add("value", bytes.toString())
+        .add("value", value.map(Arrays::toString).toString())
         .toString();
   }
 
   @Override
-  public int compareTo(BlobValue o) {
-    if (bytes.isPresent() && o.bytes.isPresent()) {
+  public int compareTo(Value<Optional<byte[]>> o) {
+    if (value.isPresent() && o.get().isPresent()) {
       return ComparisonChain.start()
-          .compare(bytes.get(), o.bytes.get())
-          .compare(this.name, o.name)
+          .compare(value.get(), o.get().get(), UnsignedBytes.lexicographicalComparator())
+          .compare(name, o.getName())
           .result();
     } else {
       // either bytes or o.bytes is empty
-      if (bytes.isPresent()) {
+      if (value.isPresent()) {
         return 1;
-      } else if (o.bytes.isPresent()) {
+      } else if (o.get().isPresent()) {
         return -1;
       } else {
         return 0;
