@@ -306,7 +306,7 @@ So you can use the same schema file as **emoney-storage.json**.
 These are just simple examples of how Scalar DB is used. For more information, please take a look at the following documents.
 
 * [Design Document](design.md)
-* [Javadoc](https://scalar-labs.github.io/scalardb/javadoc/)
+* [Javadoc](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html)
 * [Requirements in the underlining databases](requirements.md)
 * [Database schema in Scalar DB](schema.md)
 * [Schema tool](../tools/scalar-schema/README.md)
