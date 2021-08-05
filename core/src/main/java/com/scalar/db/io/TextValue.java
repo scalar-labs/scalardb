@@ -79,6 +79,7 @@ public final class TextValue implements Value<Optional<String>> {
    * Returns the content of this {@code Value}
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
+   * @deprecated As of release 3.2.0, replaced by {@link #get()}. Will be removed in release 4.0.0.
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -91,6 +92,8 @@ public final class TextValue implements Value<Optional<String>> {
    * Returns the content of this {@code Value}
    *
    * @return an {@code Optional} of the content of this {@code Value} in {@code String}
+   * @deprecated As of release 3.2.0, replaced by {@link #getAsString()}. Will be removed in release
+   *     4.0.0.
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -159,7 +162,10 @@ public final class TextValue implements Value<Optional<String>> {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("name", name).add("value", getString()).toString();
+    return MoreObjects.toStringHelper(this)
+        .add("name", name)
+        .add("value", get().toString())
+        .toString();
   }
 
   @Override
