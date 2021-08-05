@@ -105,8 +105,8 @@ public final class ValueBinder implements ValueVisitor {
   @Override
   public void visit(TextValue value) {
     AttributeValue.Builder builder = AttributeValue.builder();
-    if (value.getString().isPresent()) {
-      builder.s(value.getString().get());
+    if (value.get().isPresent()) {
+      builder.s(value.get().get());
     } else {
       builder.nul(true);
     }
