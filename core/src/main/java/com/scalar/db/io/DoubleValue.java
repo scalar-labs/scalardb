@@ -102,7 +102,9 @@ public final class DoubleValue implements Value<Double> {
 
   @Override
   public int compareTo(Value<Double> o) {
-    DoubleValue other = (DoubleValue) o;
-    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
+    return ComparisonChain.start()
+        .compare(value, o.get().doubleValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

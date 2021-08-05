@@ -112,7 +112,9 @@ public final class BigIntValue implements Value<Long> {
 
   @Override
   public int compareTo(Value<Long> o) {
-    BigIntValue other = (BigIntValue) o;
-    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
+    return ComparisonChain.start()
+        .compare(value, o.get().longValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

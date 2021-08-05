@@ -101,10 +101,9 @@ public final class BooleanValue implements Value<Boolean> {
 
   @Override
   public int compareTo(Value<Boolean> o) {
-    BooleanValue other = (BooleanValue) o;
     return ComparisonChain.start()
-        .compareFalseFirst(value, other.value)
-        .compare(name, other.name)
+        .compareFalseFirst(value, o.get())
+        .compare(name, o.getName())
         .result();
   }
 }

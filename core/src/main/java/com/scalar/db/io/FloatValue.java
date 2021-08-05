@@ -107,7 +107,9 @@ public final class FloatValue implements Value<Float> {
 
   @Override
   public int compareTo(Value<Float> o) {
-    FloatValue other = (FloatValue) o;
-    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
+    return ComparisonChain.start()
+        .compare(value, o.get().floatValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

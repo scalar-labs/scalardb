@@ -117,7 +117,9 @@ public final class IntValue implements Value<Integer> {
 
   @Override
   public int compareTo(Value<Integer> o) {
-    IntValue other = (IntValue) o;
-    return ComparisonChain.start().compare(value, other.value).compare(name, other.name).result();
+    return ComparisonChain.start()
+        .compare(value, o.get().intValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

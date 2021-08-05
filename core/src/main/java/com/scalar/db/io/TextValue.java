@@ -164,17 +164,16 @@ public final class TextValue implements Value<Optional<String>> {
 
   @Override
   public int compareTo(Value<Optional<String>> o) {
-    TextValue other = (TextValue) o;
-    if (value.isPresent() && other.value.isPresent()) {
+    if (value.isPresent() && o.get().isPresent()) {
       return ComparisonChain.start()
-          .compare(value.get(), other.value.get())
-          .compare(name, other.name)
+          .compare(value.get(), o.get().get())
+          .compare(name, o.getName())
           .result();
     } else {
       // either bytes or o.bytes is empty
       if (value.isPresent()) {
         return 1;
-      } else if (other.value.isPresent()) {
+      } else if (o.get().isPresent()) {
         return -1;
       } else {
         return 0;
