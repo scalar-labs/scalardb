@@ -88,7 +88,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    assertThat((new TransactionResult(result.get())).getState())
+    assertThat(new TransactionResult(result.get()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -105,7 +105,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat((new TransactionResult(results.get(0))).getState())
+    assertThat(new TransactionResult(results.get(0)).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 

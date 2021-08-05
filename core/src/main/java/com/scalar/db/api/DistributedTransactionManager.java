@@ -40,6 +40,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(Isolation isolation) throws TransactionException;
@@ -53,6 +54,7 @@ public interface DistributedTransactionManager {
    * @param isolation an isolation level
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(String txId, Isolation isolation) throws TransactionException;
@@ -66,6 +68,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -78,6 +81,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(SerializableStrategy strategy) throws TransactionException;
@@ -92,6 +96,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(String txId, SerializableStrategy strategy)
@@ -108,6 +113,7 @@ public interface DistributedTransactionManager {
    * @param strategy a serializable strategy
    * @return {@link DistributedTransaction}
    * @throws TransactionException if starting the transaction failed
+   * @deprecated As of release 2.4.0. Will be removed in release 4.0.0.
    */
   @Deprecated
   DistributedTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)

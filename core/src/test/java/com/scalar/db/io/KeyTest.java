@@ -110,6 +110,7 @@ public class KeyTest {
     Key oneKey = new Key(oneKey1, oneKey2);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = oneKey.equals(oneKey);
 
     // Assert

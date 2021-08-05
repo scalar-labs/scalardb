@@ -4,9 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -17,10 +15,10 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class TextValue implements Value<TextValue> {
+public final class TextValue implements Value<Optional<String>> {
   private static final String ANONYMOUS = "";
   private final String name;
-  private final Optional<ByteBuffer> bytes;
+  private final Optional<String> value;
 
   /**
    * Constructs a {@code TextValue} with the specified name and value
@@ -31,10 +29,9 @@ public final class TextValue implements Value<TextValue> {
   public TextValue(String name, byte[] value) {
     this.name = checkNotNull(name);
     if (value == null) {
-      bytes = Optional.empty();
+      this.value = Optional.empty();
     } else {
-      bytes = Optional.of(ByteBuffer.allocate(value.length));
-      set(value);
+      this.value = Optional.of(new String(value, StandardCharsets.UTF_8));
     }
   }
 
@@ -57,11 +54,9 @@ public final class TextValue implements Value<TextValue> {
     checkNotNull(name);
     this.name = name;
     if (value == null) {
-      bytes = Optional.empty();
+      this.value = Optional.empty();
     } else {
-      byte[] byteValue = value.getBytes(StandardCharsets.UTF_8);
-      bytes = Optional.of(ByteBuffer.allocate(byteValue.length));
-      set(byteValue);
+      this.value = Optional.of(value);
     }
   }
 
@@ -74,47 +69,47 @@ public final class TextValue implements Value<TextValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Sets the specified byte array
-   *
-   * @param value
-   */
-  private void set(byte[] value) {
-    bytes.ifPresent(
-        b -> {
-          b.put(value);
-          b.flip();
-        });
+  @Override
+  @Nonnull
+  public Optional<String> get() {
+    return value;
   }
 
   /**
    * Returns the content of this {@code Value}
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
+   * @deprecated As of release 3.2.0, replaced by {@link #get()}. Will be removed in release 4.0.0.
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nonnull
   public Optional<byte[]> getBytes() {
-    return bytes.map(b -> Arrays.copyOf(b.array(), b.limit()));
+    return getAsBytes();
   }
 
   /**
    * Returns the content of this {@code Value}
    *
    * @return an {@code Optional} of the content of this {@code Value} in {@code String}
+   * @deprecated As of release 3.2.0, replaced by {@link #getAsString()}. Will be removed in release
+   *     4.0.0.
    */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   @Nonnull
   public Optional<String> getString() {
-    return bytes.map(b -> new String(b.array(), StandardCharsets.UTF_8));
+    return get();
   }
 
   @Override
   public Optional<String> getAsString() {
-    return getString();
+    return get();
   }
 
   @Override
   public Optional<byte[]> getAsBytes() {
-    return getBytes();
+    return value.map(v -> v.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override
@@ -125,10 +120,9 @@ public final class TextValue implements Value<TextValue> {
 
   @Override
   public TextValue copyWith(String name) {
-    if (bytes.isPresent()) {
-      return new TextValue(name, bytes.get().array());
-    }
-    return new TextValue(name, (byte[]) null);
+    return value
+        .map(s -> new TextValue(name, s))
+        .orElseGet(() -> new TextValue(name, (String) null));
   }
 
   @Override
@@ -138,7 +132,7 @@ public final class TextValue implements Value<TextValue> {
 
   @Override
   public int hashCode() {
-    return bytes.hashCode();
+    return value.hashCode();
   }
 
   /**
@@ -163,26 +157,29 @@ public final class TextValue implements Value<TextValue> {
       return false;
     }
     TextValue other = (TextValue) o;
-    return this.name.equals(other.name) && bytes.equals(other.bytes);
+    return name.equals(other.name) && value.equals(other.value);
   }
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("name", name).add("value", getString()).toString();
+    return MoreObjects.toStringHelper(this)
+        .add("name", name)
+        .add("value", get().toString())
+        .toString();
   }
 
   @Override
-  public int compareTo(TextValue o) {
-    if (bytes.isPresent() && o.bytes.isPresent()) {
+  public int compareTo(Value<Optional<String>> o) {
+    if (value.isPresent() && o.get().isPresent()) {
       return ComparisonChain.start()
-          .compare(bytes.get(), o.bytes.get())
-          .compare(this.name, o.name)
+          .compare(value.get(), o.get().get())
+          .compare(name, o.getName())
           .result();
     } else {
       // either bytes or o.bytes is empty
-      if (bytes.isPresent()) {
+      if (value.isPresent()) {
         return 1;
-      } else if (o.bytes.isPresent()) {
+      } else if (o.get().isPresent()) {
         return -1;
       } else {
         return 0;

@@ -139,6 +139,7 @@ public class BigIntValueTest {
     BigIntValue value = new BigIntValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -169,6 +170,7 @@ public class BigIntValueTest {
     IntValue another = new IntValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = one.equals(another);
 
     // Assert

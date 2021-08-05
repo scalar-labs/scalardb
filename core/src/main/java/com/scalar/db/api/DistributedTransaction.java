@@ -84,6 +84,7 @@ public interface DistributedTransaction {
    * a transaction if you want to implement conditional mutation.
    *
    * @param put a {@code Put} command
+   * @throws CrudException if the operation failed
    */
   void put(Put put) throws CrudException;
 
@@ -93,6 +94,7 @@ public interface DistributedTransaction {
    * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param puts a list of {@code Put} commands
+   * @throws CrudException if the operation failed
    */
   void put(List<Put> puts) throws CrudException;
 
@@ -102,6 +104,7 @@ public interface DistributedTransaction {
    * in a transaction if you want to implement conditional mutation.
    *
    * @param delete a {@code Delete} command
+   * @throws CrudException if the operation failed
    */
   void delete(Delete delete) throws CrudException;
 
@@ -111,6 +114,7 @@ public interface DistributedTransaction {
    * conditions in a transaction if you want to implement conditional mutation.
    *
    * @param deletes a list of {@code Delete} commands
+   * @throws CrudException if the operation failed
    */
   void delete(List<Delete> deletes) throws CrudException;
 
@@ -119,6 +123,7 @@ public interface DistributedTransaction {
    * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
+   * @throws CrudException if the operation failed
    */
   void mutate(List<? extends Mutation> mutations) throws CrudException;
 

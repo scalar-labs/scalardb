@@ -92,7 +92,7 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
       if (this == o) {
         return true;
       }
-      if (o == null || getClass() != o.getClass()) {
+      if (!(o instanceof TableName)) {
         return false;
       }
       TableName tableName = (TableName) o;

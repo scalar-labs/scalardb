@@ -179,6 +179,7 @@ public class PutTest {
     Put put = preparePut();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = put.equals(put);
 
     // Assert

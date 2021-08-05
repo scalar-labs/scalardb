@@ -19,10 +19,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.ResultInterpreter;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,11 +33,7 @@ public class JdbcTransactionManagerTest {
 
   @Mock private BasicDataSource dataSource;
   @Mock private JdbcService jdbcService;
-
-  @Mock private ResultInterpreter resultInterpreter;
   @Mock private Connection connection;
-  @Mock private PreparedStatement preparedStatement;
-  @Mock private ResultSet resultSet;
   @Mock private SQLException sqlException;
 
   private JdbcTransactionManager manager;

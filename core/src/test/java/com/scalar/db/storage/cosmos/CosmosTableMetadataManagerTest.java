@@ -14,12 +14,12 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.PartitionKey;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Get;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,13 +46,7 @@ public class CosmosTableMetadataManagerTest {
     manager = new CosmosTableMetadataManager(container);
 
     // Arrange
-    when(metadata.getColumns())
-        .thenReturn(
-            new HashMap<String, String>() {
-              {
-                put(ANY_NAME_1, "varchar");
-              }
-            });
+    when(metadata.getColumns()).thenReturn(ImmutableMap.of(ANY_NAME_1, "varchar"));
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
   }

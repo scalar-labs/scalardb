@@ -12,6 +12,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -50,6 +51,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
                 });
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private Optional<TableMetadata> load(
       DataSource dataSource,
       String fullTableName,

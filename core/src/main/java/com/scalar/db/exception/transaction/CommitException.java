@@ -1,6 +1,5 @@
 package com.scalar.db.exception.transaction;
 
-/** */
 public class CommitException extends TransactionException {
 
   public CommitException(String message) {

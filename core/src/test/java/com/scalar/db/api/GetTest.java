@@ -154,6 +154,7 @@ public class GetTest {
     Get get = prepareGet();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = get.equals(get);
 
     // Assert

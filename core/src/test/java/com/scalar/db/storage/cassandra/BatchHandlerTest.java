@@ -20,7 +20,6 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.IntValue;
@@ -38,11 +37,9 @@ import org.mockito.MockitoAnnotations;
 public class BatchHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
-  private static final String ANOTHER_TABLE_NAME = "another_table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
-  private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
@@ -107,32 +104,13 @@ public class BatchHandlerTest {
     return mutations;
   }
 
-  private List<Mutation> prepareMultiPartitionPuts() {
-    Key partitionKey1 = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey1 = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Put put1 =
-        new Put(partitionKey1, clusteringKey1)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    Key partitionKey2 = new Key(new TextValue(ANY_NAME_4, ANY_TEXT_1));
-    Key clusteringKey2 = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3));
-    Put put2 =
-        new Put(partitionKey2, clusteringKey2)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return Arrays.asList(put1, put2);
-  }
-
   private BatchHandler prepareSpiedBatchHandler() {
     BatchHandler spy = Mockito.spy(new BatchHandler(session, handlers));
     return spy;
   }
 
   @Test
-  public void handle_CorrectHandlerAndConditionalOperationsGiven_ShouldExecuteProperly()
-      throws ExecutionException {
+  public void handle_CorrectHandlerAndConditionalOperationsGiven_ShouldExecuteProperly() {
     // Arrange
     configureBehavior();
     mutations = prepareConditionalPuts();

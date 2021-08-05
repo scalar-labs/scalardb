@@ -17,7 +17,6 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
 @Immutable
 public class TransactionResult implements Result {
   private final Result result;

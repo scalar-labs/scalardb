@@ -2,7 +2,6 @@ package com.scalar.db.exception.transaction;
 
 import java.util.Optional;
 
-/** */
 public class UnknownTransactionStatusException extends TransactionException {
   private Optional<String> unknownTxId = Optional.empty();
 
