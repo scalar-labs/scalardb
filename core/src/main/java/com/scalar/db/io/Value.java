@@ -86,7 +86,7 @@ public interface Value<T> extends Comparable<Value<T>> {
   }
 
   /**
-   * Returns the content of this {@code Value} as a string
+   * Returns the content of this {@code Value} as a string type
    *
    * @return the content of this {@code Value}
    */

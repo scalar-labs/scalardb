@@ -8,6 +8,7 @@ import com.google.common.primitives.UnsignedBytes;
 import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
@@ -27,7 +28,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
    * @param name name of the {@code Value}
    * @param value content of the {@code Value}
    */
-  public BlobValue(String name, byte[] value) {
+  public BlobValue(String name, @Nullable byte[] value) {
     this.name = checkNotNull(name);
     if (value == null) {
       this.value = Optional.empty();
@@ -43,7 +44,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
    *
    * @param value content of the {@code Value}
    */
-  public BlobValue(byte[] value) {
+  public BlobValue(@Nullable byte[] value) {
     this(ANONYMOUS, value);
   }
 
