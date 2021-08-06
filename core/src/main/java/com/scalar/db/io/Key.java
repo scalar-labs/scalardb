@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
@@ -43,6 +44,76 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     checkNotNull(values);
     this.values = new ArrayList<>(values.size());
     this.values.addAll(values);
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a boolean type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, boolean value) {
+    values = Collections.singletonList(new BooleanValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a integer type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, int value) {
+    values = Collections.singletonList(new IntValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a long type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, long value) {
+    values = Collections.singletonList(new BigIntValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a float type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, float value) {
+    values = Collections.singletonList(new FloatValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a double type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, double value) {
+    values = Collections.singletonList(new DoubleValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a string type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, @Nullable String value) {
+    values = Collections.singletonList(new TextValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with a single {@link Value} as a byte array type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, @Nullable byte[] value) {
+    values = Collections.singletonList(new BlobValue(name, value));
   }
 
   /**
@@ -153,12 +224,12 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return this;
     }
 
-    public Builder addText(String name, String value) {
+    public Builder addText(String name, @Nullable String value) {
       values.add(new TextValue(name, value));
       return this;
     }
 
-    public Builder addBlob(String name, byte[] value) {
+    public Builder addBlob(String name, @Nullable byte[] value) {
       values.add(new BlobValue(name, value));
       return this;
     }

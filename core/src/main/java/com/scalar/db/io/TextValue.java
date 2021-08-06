@@ -7,6 +7,7 @@ import com.google.common.collect.ComparisonChain;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
@@ -26,7 +27,7 @@ public final class TextValue implements Value<Optional<String>> {
    * @param name name of the {@code Value}
    * @param value content of the {@code Value} in byte array
    */
-  public TextValue(String name, byte[] value) {
+  public TextValue(String name, @Nullable byte[] value) {
     this.name = checkNotNull(name);
     if (value == null) {
       this.value = Optional.empty();
@@ -40,7 +41,7 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @param value content of the {@code Value}
    */
-  public TextValue(byte[] value) {
+  public TextValue(@Nullable byte[] value) {
     this(ANONYMOUS, value);
   }
 
@@ -50,7 +51,7 @@ public final class TextValue implements Value<Optional<String>> {
    * @param name name of the {@code Value}
    * @param value content of the {@code Value} in {@code String}
    */
-  public TextValue(String name, String value) {
+  public TextValue(String name, @Nullable String value) {
     checkNotNull(name);
     this.name = name;
     if (value == null) {
@@ -65,7 +66,7 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @param value content of the {@code Value}
    */
-  public TextValue(String value) {
+  public TextValue(@Nullable String value) {
     this(ANONYMOUS, value);
   }
 
