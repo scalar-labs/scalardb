@@ -1,9 +1,0 @@
-com.scalar.db
-com.scalar.db.api
-com.scalar.db.config
-com.scalar.db.exception.storage
-com.scalar.db.exception.transaction
-com.scalar.db.io
-com.scalar.db.service
-com.scalar.db.storage.cassandra
-com.scalar.db.transaction.consensuscommit
