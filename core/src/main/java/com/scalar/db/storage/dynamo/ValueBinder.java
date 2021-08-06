@@ -26,7 +26,11 @@ public final class ValueBinder implements ValueVisitor {
   private final String alias;
   private int i;
 
-  /** Constructs {@code ValueBinder} with the specified {@code BoundStatement} */
+  /**
+   * Constructs {@code ValueBinder} with the specified {@code BoundStatement}
+   *
+   * @param alias an alias
+   */
   public ValueBinder(String alias) {
     this.values = new HashMap<>();
     this.alias = alias;

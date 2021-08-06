@@ -49,7 +49,7 @@ public class ConcatenationVisitorTest {
     String actual = visitor.build();
 
     // Assert
-    String[] values = actual.split(":");
+    String[] values = actual.split(":", -1);
     assertThat(values.length).isEqualTo(7);
     assertThat(values[0]).isEqualTo(String.valueOf(ANY_BOOLEAN));
     assertThat(values[1]).isEqualTo(String.valueOf(ANY_INT));

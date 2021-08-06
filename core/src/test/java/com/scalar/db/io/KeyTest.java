@@ -22,6 +22,118 @@ public class KeyTest {
   private static final int ANY_INT_2 = 20;
 
   @Test
+  public void constructor_WithSingleBooleanValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    boolean value = true;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsBoolean()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleIntegerValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    int value = 100;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsInt()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleLongValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    long value = 1000L;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsLong()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleFloatValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    float value = 1.0f;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsFloat()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleDoubleValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    double value = 1.01d;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsDouble()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleStringValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    String value = "value";
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsString().get()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleByteArrayValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(Arrays.equals(values.get(0).getAsBytes().get(), value)).isTrue();
+  }
+
+  @Test
   public void get_ProperKeysGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     TextValue key1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
@@ -110,6 +222,7 @@ public class KeyTest {
     Key oneKey = new Key(oneKey1, oneKey2);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = oneKey.equals(oneKey);
 
     // Assert

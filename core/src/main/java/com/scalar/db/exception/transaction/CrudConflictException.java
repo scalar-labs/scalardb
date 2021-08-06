@@ -1,6 +1,5 @@
 package com.scalar.db.exception.transaction;
 
-/** */
 public class CrudConflictException extends CrudException {
 
   public CrudConflictException(String message) {

@@ -13,8 +13,6 @@ import org.jooq.Field;
 import org.jooq.SelectConditionStep;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A builder to make a query statement for a stored procedure of Cosmos DB from conditions
@@ -23,7 +21,6 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public class ConditionalQueryBuilder implements MutationConditionVisitor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConditionalQueryBuilder.class);
   private final SelectConditionStep<org.jooq.Record> select;
   private final ValueBinder binder;
 

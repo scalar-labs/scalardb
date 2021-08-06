@@ -13,7 +13,7 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class FloatValue implements Value<FloatValue> {
+public final class FloatValue implements Value<Float> {
   private static final String ANONYMOUS = "";
   private final String name;
   private final float value;
@@ -38,23 +38,20 @@ public final class FloatValue implements Value<FloatValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return the content of this {@code Value}
-   */
-  public float get() {
+  @Override
+  @Nonnull
+  public Float get() {
     return value;
   }
 
   @Override
   public float getAsFloat() {
-    return get();
+    return value;
   }
 
   @Override
   public double getAsDouble() {
-    return get();
+    return value;
   }
 
   @Override
@@ -100,7 +97,7 @@ public final class FloatValue implements Value<FloatValue> {
       return false;
     }
     FloatValue other = (FloatValue) o;
-    return (this.name.equals(other.name) && this.value == other.value);
+    return (name.equals(other.name) && value == other.value);
   }
 
   @Override
@@ -109,7 +106,10 @@ public final class FloatValue implements Value<FloatValue> {
   }
 
   @Override
-  public int compareTo(FloatValue o) {
-    return ComparisonChain.start().compare(this.value, o.value).compare(this.name, o.name).result();
+  public int compareTo(Value<Float> o) {
+    return ComparisonChain.start()
+        .compare(value, o.get().floatValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

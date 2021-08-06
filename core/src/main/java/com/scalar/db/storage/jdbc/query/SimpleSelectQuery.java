@@ -51,6 +51,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
     indexedColumn = builder.indexedColumn;
   }
 
+  @Override
   protected String sql() {
     return "SELECT "
         + projectionSqlString()

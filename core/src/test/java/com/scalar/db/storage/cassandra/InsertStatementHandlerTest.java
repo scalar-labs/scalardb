@@ -55,7 +55,6 @@ public class InsertStatementHandlerTest {
   @Mock private Session session;
   @Mock private PreparedStatement prepared;
   @Mock private BoundStatement bound;
-  @Mock private ResultSet results;
 
   @Before
   public void setUp() throws Exception {

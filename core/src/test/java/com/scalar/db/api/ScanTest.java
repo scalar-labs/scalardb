@@ -91,6 +91,7 @@ public class ScanTest {
     Scan scan = prepareScan();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = scan.equals(scan);
 
     // Assert

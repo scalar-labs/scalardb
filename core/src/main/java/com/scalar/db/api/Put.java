@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -125,7 +126,7 @@ public class Put extends Mutation {
    * @param value a value to put
    * @return this object
    */
-  public Put withValue(String name, String value) {
+  public Put withValue(String name, @Nullable String value) {
     values.put(name, new TextValue(name, value));
     return this;
   }
@@ -137,7 +138,7 @@ public class Put extends Mutation {
    * @param value a value to put
    * @return this object
    */
-  public Put withValue(String name, byte[] value) {
+  public Put withValue(String name, @Nullable byte[] value) {
     values.put(name, new BlobValue(name, value));
     return this;
   }

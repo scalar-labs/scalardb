@@ -4,7 +4,6 @@ import com.datastax.driver.core.ClusteringOrder;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.api.TableMetadata.Builder;
 import com.scalar.db.exception.storage.ConnectionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
@@ -52,7 +51,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
   }
 
   private TableMetadata createTableMetadata(com.datastax.driver.core.TableMetadata metadata) {
-    Builder builder = TableMetadata.newBuilder();
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
     metadata
         .getColumns()
         .forEach(c -> builder.addColumn(c.getName(), convertDataType(c.getType().getName())));

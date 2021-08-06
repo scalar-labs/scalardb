@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
-import com.azure.cosmos.CosmosContainer;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
@@ -37,7 +36,6 @@ public class CosmosMutationTest {
   private static final int ANY_INT_3 = 3;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
-  @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 

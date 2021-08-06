@@ -136,6 +136,7 @@ public class FloatValueTest {
     FloatValue value = new FloatValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -166,6 +167,7 @@ public class FloatValueTest {
     DoubleValue anotherValue = new DoubleValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = oneValue.equals(anotherValue);
 
     // Assert
