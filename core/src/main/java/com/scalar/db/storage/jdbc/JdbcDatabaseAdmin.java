@@ -15,6 +15,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import com.scalar.db.util.Utility;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -158,7 +159,8 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String truncateTableStatement =
-        "TRUNCATE TABLE " + getFullTableName(schemaPrefix, namespace, table);
+        "TRUNCATE TABLE "
+            + encloseFullTableName(Utility.getFullNamespaceName(schemaPrefix, namespace), table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
@@ -293,11 +295,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
           "CREATE INDEX "
               + indexName
               + " ON "
-              + getFullNamespaceName(schemaPrefix, schema)
-              + "."
-              + table
+              + encloseFullTableName(getFullNamespaceName(schemaPrefix, schema), table)
               + " ("
-              + indexedColumn
+              + enclose(indexedColumn)
               + ")";
       execute(connection, createIndexStatement);
     }

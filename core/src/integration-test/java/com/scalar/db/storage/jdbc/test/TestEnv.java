@@ -1,14 +1,17 @@
 package com.scalar.db.storage.jdbc.test;
 
-import com.scalar.db.api.Scan;
+import static com.scalar.db.util.Utility.getFullNamespaceName;
+
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.io.DataType;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.io.IOException;
@@ -17,107 +20,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.sql.DataSource;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
 public class TestEnv implements Closeable {
-
-  private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING =
-      new HashMap<RdbEngine, Map<DataType, String>>() {
-        {
-          put(
-              RdbEngine.MYSQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "LONGTEXT");
-                  put(DataType.FLOAT, "FLOAT");
-                  put(DataType.DOUBLE, "DOUBLE");
-                  put(DataType.BOOLEAN, "BOOLEAN");
-                  put(DataType.BLOB, "LONGBLOB");
-                }
-              });
-          put(
-              RdbEngine.POSTGRESQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "TEXT");
-                  put(DataType.FLOAT, "FLOAT");
-                  put(DataType.DOUBLE, "DOUBLE PRECISION");
-                  put(DataType.BOOLEAN, "BOOLEAN");
-                  put(DataType.BLOB, "BYTEA");
-                }
-              });
-          put(
-              RdbEngine.ORACLE,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "NUMBER(19)");
-                  put(DataType.TEXT, "VARCHAR2(4000)");
-                  put(DataType.FLOAT, "BINARY_FLOAT");
-                  put(DataType.DOUBLE, "BINARY_DOUBLE");
-                  put(DataType.BOOLEAN, "NUMBER(1)");
-                  put(DataType.BLOB, "BLOB");
-                }
-              });
-          put(
-              RdbEngine.SQL_SERVER,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.INT, "INT");
-                  put(DataType.BIGINT, "BIGINT");
-                  put(DataType.TEXT, "VARCHAR(8000)");
-                  put(DataType.FLOAT, "FLOAT(24)");
-                  put(DataType.DOUBLE, "FLOAT");
-                  put(DataType.BOOLEAN, "BIT");
-                  put(DataType.BLOB, "VARBINARY(8000)");
-                }
-              });
-        }
-      };
-
-  private static final Map<RdbEngine, Map<DataType, String>> DATA_TYPE_MAPPING_FOR_KEY =
-      new HashMap<RdbEngine, Map<DataType, String>>() {
-        {
-          put(
-              RdbEngine.MYSQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR(64)");
-                  put(DataType.BLOB, "VARBINARY(64)");
-                }
-              });
-          put(
-              RdbEngine.POSTGRESQL,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR(10485760)");
-                }
-              });
-          put(
-              RdbEngine.ORACLE,
-              new HashMap<DataType, String>() {
-                {
-                  put(DataType.TEXT, "VARCHAR2(64)");
-                  put(DataType.BLOB, "RAW(64)");
-                }
-              });
-          put(RdbEngine.SQL_SERVER, new HashMap<DataType, String>() {});
-        }
-      };
 
   private static final String PROP_JDBC_URL = "scalardb.jdbc.url";
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
@@ -131,6 +40,8 @@ public class TestEnv implements Closeable {
   private final List<String> schemaList;
   private final List<String> tableList;
   private final List<TableMetadata> metadataList;
+
+  private final JdbcDatabaseAdmin jdbcAdmin;
 
   public TestEnv() {
     this(
@@ -163,16 +74,35 @@ public class TestEnv implements Closeable {
     schemaList = new ArrayList<>();
     tableList = new ArrayList<>();
     metadataList = new ArrayList<>();
+    jdbcAdmin = new JdbcDatabaseAdmin(config);
   }
 
-  public void register(String schema, String table, TableMetadata metadata) {
-    schemaList.add(namespacePrefix() + schema);
+  public void createTable(String schema, String table, TableMetadata metadata)
+      throws ExecutionException {
+    schemaList.add(schema);
     tableList.add(table);
     metadataList.add(metadata);
+    jdbcAdmin.createTable(schema, table, metadata, new HashMap<>());
   }
 
-  private String namespacePrefix() {
-    return config.getNamespacePrefix().orElse("");
+  private void deleteMetadataSchemaAndTable() throws SQLException {
+    String enclosedFullMetadataTableName =
+        QueryUtils.enclosedFullTableName(
+            Utility.getFullNamespaceName(
+                config.getNamespacePrefix(), JdbcTableMetadataManager.SCHEMA),
+            JdbcTableMetadataManager.TABLE,
+            rdbEngine);
+    execute("DROP TABLE " + enclosedFullMetadataTableName);
+
+    String enclosedFullMetadataSchema =
+        QueryUtils.enclose(
+            getFullNamespaceName(config.getNamespacePrefix(), JdbcTableMetadataManager.SCHEMA),
+            rdbEngine);
+    if (rdbEngine == RdbEngine.ORACLE) {
+      execute("DROP USER " + enclosedFullMetadataSchema);
+    } else {
+      execute("DROP SCHEMA " + enclosedFullMetadataSchema);
+    }
   }
 
   private void execute(String sql) throws SQLException {
@@ -182,283 +112,29 @@ public class TestEnv implements Closeable {
     }
   }
 
-  private String enclose(String name) {
-    return QueryUtils.enclose(name, rdbEngine);
-  }
-
-  private String enclosedFullTableName(String schema, String table) {
-    return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
-  }
-
-  private String getMetadataSchema() {
-    return namespacePrefix() + JdbcTableMetadataManager.SCHEMA;
-  }
-
-  private String enclosedMetadataTableName() {
-    return enclosedFullTableName(getMetadataSchema(), JdbcTableMetadataManager.TABLE);
-  }
-
-  private void createSchema(String schema) throws SQLException {
-    if (rdbEngine == RdbEngine.ORACLE) {
-      execute("CREATE USER " + enclose(schema) + " IDENTIFIED BY \"oracle\"");
-      execute("ALTER USER " + enclose(schema) + " quota unlimited on USERS");
-    } else {
-      execute("CREATE SCHEMA " + enclose(schema));
-    }
-  }
-
-  private void dropSchema(String schema) throws SQLException {
-    if (rdbEngine == RdbEngine.ORACLE) {
-      execute("DROP USER " + enclose(schema) + " CASCADE");
-    } else {
-      execute("DROP SCHEMA " + enclose(schema));
-    }
-  }
-
-  private void createTable(String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    execute(
-        "CREATE TABLE "
-            + enclosedFullTableName(schema, table)
-            + "("
-            + metadata.getColumnNames().stream()
-                .map(c -> enclose(c) + " " + getColumnDataType(c, metadata))
-                .collect(Collectors.joining(","))
-            + ",PRIMARY KEY ("
-            + Stream.concat(
-                    metadata.getPartitionKeyNames().stream(),
-                    metadata.getClusteringKeyNames().stream())
-                .map(this::enclose)
-                .collect(Collectors.joining(","))
-            + "))");
-  }
-
-  private String getColumnDataType(String column, TableMetadata metadata) {
-    boolean isPrimaryKey =
-        metadata.getPartitionKeyNames().contains(column)
-            || metadata.getClusteringKeyNames().contains(column);
-    boolean isIndexed = metadata.getSecondaryIndexNames().contains(column);
-
-    DataType dataType = metadata.getColumnDataType(column);
-    if (isPrimaryKey || isIndexed) {
-      return getDataTypeMappingForKey().getOrDefault(dataType, getDataTypeMapping().get(dataType));
-    }
-
-    return getDataTypeMapping().get(dataType);
-  }
-
-  private Map<DataType, String> getDataTypeMappingForKey() {
-    return DATA_TYPE_MAPPING_FOR_KEY.get(rdbEngine);
-  }
-
-  private Map<DataType, String> getDataTypeMapping() {
-    return DATA_TYPE_MAPPING.get(rdbEngine);
-  }
-
-  private void createIndex(String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      String indexName = "index_" + schema + "_" + table + "_" + indexedColumn;
-      execute(
-          "CREATE INDEX "
-              + enclose(indexName)
-              + " ON "
-              + enclosedFullTableName(schema, table)
-              + "("
-              + enclose(indexedColumn)
-              + ")");
-    }
-  }
-
-  public void insertMetadata() throws SQLException {
+  public void deleteTableData() throws ExecutionException {
     for (int i = 0; i < metadataList.size(); i++) {
-      insertMetadata(schemaList.get(i), tableList.get(i), metadataList.get(i));
+      jdbcAdmin.truncateTable(schemaList.get(i), tableList.get(i));
     }
   }
 
-  private void insertMetadata(String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    int ordinalPosition = 1;
-    for (String partitionKeyName : metadata.getPartitionKeyNames()) {
-      insertMetadata(partitionKeyName, ordinalPosition++, schema, table, metadata);
-    }
-    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
-      insertMetadata(clusteringKeyName, ordinalPosition++, schema, table, metadata);
-    }
-    for (String column : metadata.getColumnNames()) {
-      if (metadata.getPartitionKeyNames().contains(column)
-          || metadata.getClusteringKeyNames().contains(column)) {
-        continue;
-      }
-      insertMetadata(column, ordinalPosition++, schema, table, metadata);
-    }
-  }
-
-  private void insertMetadata(
-      String column, int ordinalPosition, String schema, String table, TableMetadata metadata)
-      throws SQLException {
-    String keyType = getKeyType(column, metadata);
-    Scan.Ordering.Order keyOrder = metadata.getClusteringOrder(column);
-    execute(
-        String.format(
-            "INSERT INTO %s VALUES('%s','%s','%s',%s,%s,%s,%d)",
-            enclosedMetadataTableName(),
-            schema + "." + table,
-            column,
-            metadata.getColumnDataType(column),
-            keyType != null ? "'" + keyType + "'" : "NULL",
-            keyOrder != null ? "'" + keyOrder + "'" : "NULL",
-            booleanValue(metadata.getSecondaryIndexNames().contains(column)),
-            ordinalPosition));
-  }
-
-  private String getKeyType(String column, TableMetadata metadata) {
-    if (metadata.getPartitionKeyNames().contains(column)) {
-      return "PARTITION";
-    } else if (metadata.getClusteringKeyNames().contains(column)) {
-      return "CLUSTERING";
-    }
-    return null;
-  }
-
-  private String booleanValue(boolean value) {
-    switch (rdbEngine) {
-      case ORACLE:
-      case SQL_SERVER:
-        return value ? "1" : "0";
-      default:
-        return value ? "true" : "false";
-    }
-  }
-
-  private void dropTable(String schema, String table) throws SQLException {
-    execute("DROP TABLE " + enclosedFullTableName(schema, table));
-  }
-
-  public void createMetadataTable() throws SQLException {
-    createSchema(getMetadataSchema());
-
-    // create the metadata table
-    execute(
-        "CREATE TABLE "
-            + enclosedMetadataTableName()
-            + "("
-            + enclose("full_table_name")
-            + " "
-            + textType(128)
-            + ","
-            + enclose("column_name")
-            + " "
-            + textType(128)
-            + ","
-            + enclose("data_type")
-            + " "
-            + textType(20)
-            + " NOT NULL,"
-            + enclose("key_type")
-            + " "
-            + textType(20)
-            + ","
-            + enclose("clustering_order")
-            + " "
-            + textType(10)
-            + ","
-            + enclose("indexed")
-            + " "
-            + booleanType()
-            + " NOT NULL,"
-            + enclose("ordinal_position")
-            + " INTEGER NOT NULL,"
-            + "PRIMARY KEY ("
-            + enclose("full_table_name")
-            + ", "
-            + enclose("column_name")
-            + "))");
-  }
-
-  private String textType(int length) {
-    String textType;
-    switch (rdbEngine) {
-      case ORACLE:
-        textType = "VARCHAR2";
-        break;
-      default:
-        textType = "VARCHAR";
-        break;
-    }
-    return textType + "(" + length + ")";
-  }
-
-  private String booleanType() {
-    switch (rdbEngine) {
-      case ORACLE:
-        return "NUMBER(1)";
-      case SQL_SERVER:
-        return "BIT";
-      default:
-        return "BOOLEAN";
-    }
-  }
-
-  public void dropMetadataTable() throws SQLException {
-    // drop the metadata table
-    execute("DROP TABLE " + enclosedMetadataTableName());
-
-    dropSchema(getMetadataSchema());
-  }
-
-  public void createTables() throws SQLException {
-    Set<String> schemas = new HashSet<>(schemaList);
-    for (String schema : schemas) {
-      createSchema(schema);
-    }
-
+  public void deleteTables() throws Exception {
     for (int i = 0; i < metadataList.size(); i++) {
-      createTable(schemaList.get(i), tableList.get(i), metadataList.get(i));
+      jdbcAdmin.dropTable(schemaList.get(i), tableList.get(i));
     }
 
-    for (int i = 0; i < metadataList.size(); i++) {
-      createIndex(schemaList.get(i), tableList.get(i), metadataList.get(i));
-    }
-  }
-
-  public void deleteTableData() throws SQLException {
-    for (int i = 0; i < metadataList.size(); i++) {
-      deleteTableData(schemaList.get(i), tableList.get(i));
-    }
-  }
-
-  private void deleteTableData(String schema, String table) throws SQLException {
-    execute("DELETE FROM " + enclosedFullTableName(schema, table));
-  }
-
-  public void dropTables() throws SQLException {
-    for (int i = 0; i < metadataList.size(); i++) {
-      dropTable(schemaList.get(i), tableList.get(i));
-    }
-
-    Set<String> schemas = new HashSet<>(schemaList);
-    for (String schema : schemas) {
-      dropSchema(schema);
-    }
-  }
-
-  public DataSource getDataSource() {
-    return dataSource;
+    deleteMetadataSchemaAndTable();
   }
 
   public JdbcConfig getJdbcConfig() {
     return config;
   }
 
-  public RdbEngine getRdbEngine() {
-    return rdbEngine;
-  }
-
   @Override
   public void close() throws IOException {
     try {
       dataSource.close();
+      jdbcAdmin.close();
     } catch (SQLException e) {
       throw new IOException(e);
     }

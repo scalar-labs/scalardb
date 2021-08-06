@@ -102,7 +102,7 @@ public final class Utility {
    */
   public static String getFullTableName(
       Optional<String> schemaPrefix, String namespace, String table) {
-    return schemaPrefix.orElse("") + namespace + ". " + table;
+    return schemaPrefix.orElse("") + namespace + "." + table;
   }
 
   /**
