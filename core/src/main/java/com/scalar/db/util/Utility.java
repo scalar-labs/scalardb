@@ -106,6 +106,8 @@ public final class Utility {
   }
 
   /**
+   * Return the schema prefix concatenated to the schema
+   *
    * @param schemaPrefix an optional schema prefix
    * @param schema a schema
    * @return the schema prefix concatenated to the schema

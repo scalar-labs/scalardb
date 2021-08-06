@@ -105,6 +105,7 @@ public class TestEnv implements Closeable {
     }
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(String sql) throws SQLException {
     try (Connection connection = dataSource.getConnection();
         Statement stmt = connection.createStatement()) {

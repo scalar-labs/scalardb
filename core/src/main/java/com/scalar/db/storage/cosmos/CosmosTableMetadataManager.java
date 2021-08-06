@@ -130,7 +130,7 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
 
   @Override
   public Set<String> getTableNames(String namespace) {
-    //TODO To implement
+    // TODO To implement
     throw new UnsupportedOperationException();
   }
 }

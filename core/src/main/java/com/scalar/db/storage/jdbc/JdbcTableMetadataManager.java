@@ -446,10 +446,11 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   public Set<String> getTableNames(String namespace) {
-    //TODO add unit test
-    String fullSchemaName = schemaPrefix.orElse("") + namespace;
+    // TODO add unit test
+
     String selectTablesOfNamespaceStatement =
         "SELECT "
             + enclose(FULL_TABLE_NAME)
@@ -457,18 +458,21 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
             + encloseFullTableName(getMetadataSchema(), TABLE)
             + " WHERE "
             + enclose(FULL_TABLE_NAME)
-            + " LIKE '"
-            + fullSchemaName
-            + "%'";
+            + " LIKE ?";
     try (Connection connection = dataSource.getConnection();
-        Statement statement = connection.createStatement()) {
-      ResultSet results = statement.executeQuery(selectTablesOfNamespaceStatement);
-      Set<String> tableNames = new HashSet<>();
-      while (results.next()) {
-        String tableName = results.getString(FULL_TABLE_NAME).replace(fullSchemaName + ".", "");
-        tableNames.add(tableName);
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+      String fullSchemaName = Utility.getFullNamespaceName(schemaPrefix, namespace);
+      preparedStatement.setString(1, fullSchemaName + "%");
+      try (ResultSet results = preparedStatement.executeQuery()) {
+        Set<String> tableNames = new HashSet<>();
+        while (results.next()) {
+          String tableName =
+              results.getString(FULL_TABLE_NAME).replaceFirst("^" + fullSchemaName + ".", "");
+          tableNames.add(tableName);
+        }
+        return tableNames;
       }
-      return tableNames;
     } catch (SQLException e) {
       throw new StorageRuntimeException(
           "error retrieving the table names of the given namespace", e);

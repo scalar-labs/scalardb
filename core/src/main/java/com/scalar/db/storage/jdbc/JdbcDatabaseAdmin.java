@@ -16,6 +16,7 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import com.scalar.db.util.Utility;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -232,6 +233,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
   private void createTableInternal(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
@@ -303,6 +305,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     }
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(Connection connection, String sql) throws SQLException {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);
