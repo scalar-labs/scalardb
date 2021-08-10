@@ -548,7 +548,7 @@ public class JdbcTableMetadataManagerTest {
     // Assert
     verify(connection1).prepareStatement(expectedSelectStatement);
     assertThat(actualTableNames).containsExactly(table1, table2);
-    verify(preparedStatement).setString(1, schemaPrefix + namespace + "%");
+    verify(preparedStatement).setString(1, schemaPrefix + namespace + ".%");
   }
 
   // Utility class used to mock ResultSet for getTableMetadata test

@@ -461,7 +461,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         PreparedStatement preparedStatement =
             connection.prepareStatement(selectTablesOfNamespaceStatement)) {
       String fullSchemaName = Utility.getFullNamespaceName(schemaPrefix, namespace);
-      preparedStatement.setString(1, fullSchemaName + "%");
+      preparedStatement.setString(1, fullSchemaName + ".%");
       try (ResultSet results = preparedStatement.executeQuery()) {
         Set<String> tableNames = new HashSet<>();
         while (results.next()) {

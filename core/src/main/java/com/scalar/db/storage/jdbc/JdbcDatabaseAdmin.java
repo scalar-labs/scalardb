@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
+
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabaseAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
       ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
@@ -118,12 +119,14 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   public JdbcDatabaseAdmin(
-      JdbcTableMetadataManager metadataManager, Optional<String> namespacePrefix) {
-    dataSource = null;
+      BasicDataSource dataSource,
+      JdbcTableMetadataManager metadataManager,
+      Optional<String> namespacePrefix,
+      RdbEngine rdbEngine) {
+    this.dataSource = dataSource;
     this.metadataManager = metadataManager;
-    this.schemaPrefix = namespacePrefix.map(n -> n + "_");
-    // TODO Check if it's ok
-    rdbEngine = null;
+    this.schemaPrefix = namespacePrefix;
+    this.rdbEngine = rdbEngine;
   }
 
   @Override
@@ -186,7 +189,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @Override
   public void close() {
     try {
-      dataSource.close();
+      dataSource.getConnection().close();
     } catch (SQLException e) {
       LOGGER.error("failed to close the dataSource", e);
     }
@@ -250,7 +253,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     // Add columns definition
     createTableStatement +=
         sortedColumnNames.stream()
-            .map(columnName -> enclose(columnName) + " " + getColumnType(metadata, columnName))
+            .map(
+                columnName ->
+                    enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
             .collect(Collectors.joining(","));
     // Add primary key definition
     createTableStatement +=
@@ -264,28 +269,37 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     execute(connection, createTableStatement);
   }
 
-  private String getColumnType(TableMetadata metadata, String columnName) {
+  /**
+   * Get the vendor DB data type equivalent that is equivalent to the Scalar DB data type
+   *
+   * @param metadata a table metadata
+   * @param columnName a column name
+   * @return a vendor DB data type
+   */
+  private String getVendorDbColumnType(TableMetadata metadata, String columnName) {
     HashSet<String> keysAndIndexes =
         Sets.newHashSet(
             Iterables.concat(
                 metadata.getPartitionKeyNames(),
                 metadata.getClusteringKeyNames(),
                 metadata.getSecondaryIndexNames()));
+    DataType scalarDbColumnType = metadata.getColumnDataType(columnName);
     if (keysAndIndexes.contains(columnName)) {
       return DATA_TYPE_MAPPING_FOR_KEY
           .get(rdbEngine)
           .getOrDefault(
-              metadata.getColumnDataType(columnName),
-              DATA_TYPE_MAPPING.get(rdbEngine).get(metadata.getColumnDataType(columnName)));
+              scalarDbColumnType, DATA_TYPE_MAPPING.get(rdbEngine).get(scalarDbColumnType));
     } else {
-      return DATA_TYPE_MAPPING.get(rdbEngine).get(metadata.getColumnDataType(columnName));
+      return DATA_TYPE_MAPPING.get(rdbEngine).get(scalarDbColumnType);
     }
   }
 
   private void createIndex(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
-    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
+    LinkedHashSet<String> sortedIndexedColumns = new LinkedHashSet<>(metadata.getColumnNames());
+    sortedIndexedColumns.retainAll(metadata.getSecondaryIndexNames());
+    for (String indexedColumn : sortedIndexedColumns) {
       String indexName =
           String.join(
               "_",
@@ -322,7 +336,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private void dropTableInternal(String schema, String table) throws ExecutionException {
     String dropTableStatement =
-        "DROP TABLE " + encloseFullTableName(schemaPrefix.orElse("") + schema, table);
+        "DROP TABLE " + encloseFullTableName(getFullNamespaceName(schemaPrefix, schema), table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, dropTableStatement);
     } catch (SQLException e) {
