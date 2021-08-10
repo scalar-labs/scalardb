@@ -10,6 +10,7 @@ workflows:
       - integration-test-for-jdbc-mysql
       - integration-test-for-jdbc-postgresql
       - integration-test-for-jdbc-oracle
+      - integration-test-for-jdbc-sqlserver
       - integration-test-for-multi-storage
       - integration-test-for-scalardb-server
 jobs:
@@ -342,6 +343,52 @@ jobs:
 
       # run tests with the namespace prefix!
       - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18 -Dscalardb.namespace_prefix=ns_prefix
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-jdbc-sqlserver:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: mcr.microsoft.com/mssql/server:2019-latest
+        environment:
+          MSSQL_PID: "Express"
+          SA_PASSWORD: "SqlServer19"
+          ACCEPT_EULA: "Y"
+
+    working_directory: ~/repo
+
+    environment:
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "core/build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "core/build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+
+      # run tests with the namespace prefix!
+      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
