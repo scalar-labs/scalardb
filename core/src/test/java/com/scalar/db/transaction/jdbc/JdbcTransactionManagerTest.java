@@ -16,7 +16,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.Connection;
@@ -55,13 +54,13 @@ public class JdbcTransactionManagerTest {
 
     // Act
     JdbcTransaction transaction = manager.start();
-    Get get = new Get(new Key(new TextValue("p1", "val")));
+    Get get = new Get(new Key("p1", "val"));
     transaction.get(get);
-    Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+    Scan scan = new Scan(new Key("p1", "val"));
     transaction.scan(scan);
-    Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
+    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
     transaction.put(put);
-    Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+    Delete delete = new Delete(new Key("p1", "val1"));
     transaction.delete(delete);
     transaction.mutate(Arrays.asList(put, delete));
     transaction.commit();
@@ -85,7 +84,7 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key(new TextValue("p1", "val")));
+              Get get = new Get(new Key("p1", "val"));
               transaction.get(get);
             })
         .isInstanceOf(CrudException.class);
@@ -101,7 +100,7 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+              Scan scan = new Scan(new Key("p1", "val"));
               transaction.scan(scan);
             })
         .isInstanceOf(CrudException.class);
@@ -117,9 +116,7 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
               transaction.put(put);
             })
         .isInstanceOf(CrudException.class);
@@ -136,7 +133,7 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+              Delete delete = new Delete(new Key("p1", "val1"));
               transaction.delete(delete);
             })
         .isInstanceOf(CrudException.class);
@@ -153,10 +150,8 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
-              Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Delete delete = new Delete(new Key("p1", "val1"));
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudException.class);
@@ -171,11 +166,9 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key(new TextValue("p1", "val")));
+              Get get = new Get(new Key("p1", "val"));
               transaction.get(get);
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
               transaction.put(put);
               transaction.commit();
             })
@@ -193,11 +186,9 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key(new TextValue("p1", "val")));
+              Get get = new Get(new Key("p1", "val"));
               transaction.get(get);
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
               transaction.put(put);
               transaction.abort();
             })
@@ -216,11 +207,9 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key(new TextValue("p1", "val")));
+              Get get = new Get(new Key("p1", "val"));
               transaction.get(get);
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
               transaction.put(put);
               transaction.commit();
             })

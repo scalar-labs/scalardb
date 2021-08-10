@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Get;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import org.junit.Before;
@@ -58,7 +57,7 @@ public class CosmosTableMetadataManagerTest {
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act
@@ -74,9 +73,9 @@ public class CosmosTableMetadataManagerTest {
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get1 = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    Key partitionKey2 = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2));
+    Key partitionKey2 = new Key(ANY_NAME_1, ANY_TEXT_2);
     Get get2 = new Get(partitionKey2).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act
@@ -94,7 +93,7 @@ public class CosmosTableMetadataManagerTest {
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME);
 
     // Act Assert
@@ -113,7 +112,7 @@ public class CosmosTableMetadataManagerTest {
         .when(container)
         .readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class));
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act Assert

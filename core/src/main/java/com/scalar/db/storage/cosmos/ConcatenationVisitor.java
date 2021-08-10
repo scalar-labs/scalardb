@@ -88,7 +88,7 @@ public class ConcatenationVisitor implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value.getString().ifPresent(s -> values.add(s));
+    value.get().ifPresent(s -> values.add(s));
   }
 
   /**

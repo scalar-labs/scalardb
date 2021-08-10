@@ -22,7 +22,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,27 +59,25 @@ public class PrepareMutationComposerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(new IntValue(ANY_NAME_3, ANY_INT_3));
+        .withValue(ANY_NAME_3, ANY_INT_3);
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private void configureResult(Result mock) {
-    when(mock.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(mock.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
+    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
+    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
 
     ImmutableMap<String, Value<?>> values =
         ImmutableMap.<String, Value<?>>builder()
@@ -134,7 +131,7 @@ public class PrepareMutationComposerTest {
     put.withValue(Attribute.toBeforeIdValue(ANY_ID_2));
     put.withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED));
     put.withValue(Attribute.toBeforeVersionValue(2));
-    put.withValue(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2));
+    put.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
     assertThat(actual).isEqualTo(put);
   }
 
@@ -186,7 +183,7 @@ public class PrepareMutationComposerTest {
     expected.withValue(Attribute.toBeforeIdValue(ANY_ID_2));
     expected.withValue(Attribute.toBeforeStateValue(TransactionState.COMMITTED));
     expected.withValue(Attribute.toBeforeVersionValue(2));
-    expected.withValue(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2));
+    expected.withValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_2);
     assertThat(actual).isEqualTo(expected);
   }
 

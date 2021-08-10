@@ -39,15 +39,15 @@ import java.util.Optional;
  *
  * // Inserts a new entry which has the primary key value 0 to the storage.
  * // Assumes that the primary key is composed of a integer value named COL_NAME.
- * Put put = new Put(new Key(new IntValue(COL_NAME, 0));
+ * Put put = new Put(new Key(COL_NAME, 0);
  * storage.put(put);
  *
  * // Retrieves the entry from the storage.
- * Get get = new Get(new Key(new IntValue(COL_NAME, 0));
+ * Get get = new Get(new Key(COL_NAME, 0);
  * Optional<Result> result = storage.get(get);
  *
  * // Deletes an entry which has the primary key value 1.
- * Delete delete = new Delete(new Key(new IntValue(COL_NAME, 1));
+ * Delete delete = new Delete(new Key(COL_NAME, 1);
  * storage.delete(delete);
  * }</pre>
  *

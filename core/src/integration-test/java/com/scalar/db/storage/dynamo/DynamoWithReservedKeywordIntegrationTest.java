@@ -12,9 +12,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -99,8 +97,8 @@ public class DynamoWithReservedKeywordIntegrationTest {
     int pKey = 0;
     int cKey = 0;
     String status = "s0";
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME2, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME2, cKey);
     dynamo.put(new Put(partitionKey, clusteringKey).withValue(COL_NAME4, status));
 
     // Act
@@ -121,15 +119,15 @@ public class DynamoWithReservedKeywordIntegrationTest {
     int cKey = 0;
     String status = "s0";
     String col3Value = "value3";
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME2, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME2, cKey);
     dynamo.put(
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME3, col3Value)
             .withValue(COL_NAME4, status));
 
     // Act
-    Get get = new Get(new Key(new TextValue(COL_NAME3, col3Value))).withProjection(COL_NAME4);
+    Get get = new Get(new Key(COL_NAME3, col3Value)).withProjection(COL_NAME4);
     Optional<Result> result = dynamo.get(get);
 
     // Assert
@@ -142,9 +140,9 @@ public class DynamoWithReservedKeywordIntegrationTest {
   public void scan_ScanWithReservedKeywordProjection_ShouldReturnWhatsPut()
       throws ExecutionException, IOException {
     // Arrange
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
     for (int cKey = 0; cKey < 3; cKey++) {
-      Key clusteringKey = new Key(new IntValue(COL_NAME2, cKey));
+      Key clusteringKey = new Key(COL_NAME2, cKey);
       String status = "s" + cKey;
       dynamo.put(new Put(partitionKey, clusteringKey).withValue(COL_NAME4, status));
     }
@@ -170,10 +168,10 @@ public class DynamoWithReservedKeywordIntegrationTest {
   public void scan_ScanWithSecondaryIndexWithReservedKeywordProjection_ShouldReturnWhatsPut()
       throws ExecutionException, IOException {
     // Arrange
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
     String col3Value = "value3";
     for (int cKey = 0; cKey < 3; cKey++) {
-      Key clusteringKey = new Key(new IntValue(COL_NAME2, cKey));
+      Key clusteringKey = new Key(COL_NAME2, cKey);
       String status = "s" + cKey;
       dynamo.put(
           new Put(partitionKey, clusteringKey)
@@ -182,7 +180,7 @@ public class DynamoWithReservedKeywordIntegrationTest {
     }
 
     // Act
-    Scan scan = new Scan(new Key(new TextValue(COL_NAME3, col3Value))).withProjection(COL_NAME4);
+    Scan scan = new Scan(new Key(COL_NAME3, col3Value)).withProjection(COL_NAME4);
     List<Result> results;
     try (Scanner scanner = dynamo.scan(scan)) {
       results = scanner.all();

@@ -30,9 +30,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.ReadRepairableExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -64,22 +62,22 @@ public class InsertStatementHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Put put =
         new Put(partitionKey)
-            .withValue(new IntValue(ANY_NAME_2, ANY_INT_1))
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_2))
+            .withValue(ANY_NAME_2, ANY_INT_1)
+            .withValue(ANY_NAME_3, ANY_INT_2)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     return put;
   }
 
   private Put preparePutWithClusteringKey() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
+            .withValue(ANY_NAME_3, ANY_INT_1)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     return put;

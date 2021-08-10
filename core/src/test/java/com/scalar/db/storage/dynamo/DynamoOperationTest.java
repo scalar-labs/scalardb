@@ -8,7 +8,6 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -42,8 +41,8 @@ public class DynamoOperationTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)

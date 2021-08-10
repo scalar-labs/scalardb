@@ -68,8 +68,8 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, table1).withValue(BALANCE, 1),
+            preparePut(0, 1, table2).withValue(BALANCE, 1));
     GrpcTransaction transaction = manager.start();
     transaction.put(puts);
     transaction.commit();
@@ -81,15 +81,15 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
     Throwable thrown = catchThrowable(transaction2::commit);
@@ -139,9 +139,9 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
     int current2 = 0;
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -190,9 +190,9 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
     int count2 = results2.size();
-    Put put1 = preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    Put put1 = preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    Put put2 = preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -218,8 +218,8 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, TABLE_1).withValue(BALANCE, 1),
+            preparePut(0, 1, TABLE_1).withValue(BALANCE, 1));
     GrpcTransaction transaction = manager.start();
     transaction.put(puts);
     transaction.commit();
@@ -231,9 +231,9 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
     int count2 = results2.size();
-    Put put1 = preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    Put put1 = preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    Put put2 = preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
