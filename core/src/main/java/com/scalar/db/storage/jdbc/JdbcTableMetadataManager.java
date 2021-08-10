@@ -449,10 +449,8 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Override
   public Set<String> getTableNames(String namespace) {
-    // TODO add unit test
-
     String selectTablesOfNamespaceStatement =
-        "SELECT "
+        "SELECT DISTINCT "
             + enclose(FULL_TABLE_NAME)
             + " FROM "
             + encloseFullTableName(getMetadataSchema(), TABLE)

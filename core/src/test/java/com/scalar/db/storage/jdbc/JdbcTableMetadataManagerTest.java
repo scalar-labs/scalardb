@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManagerTest.ResultSetMocker.Row;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.junit.Before;
 import org.junit.Test;
@@ -374,16 +374,19 @@ public class JdbcTableMetadataManagerTest {
     ResultSet resultSet =
         mockResultSet(
             Arrays.asList(
-                new ResultSetMocker.Row(
+                new GetColumnsResultSetMocker.Row(
                     "c3", DataType.BOOLEAN.toString(), "PARTITION", null, false),
-                new ResultSetMocker.Row(
+                new GetColumnsResultSetMocker.Row(
                     "c1", DataType.TEXT.toString(), "CLUSTERING", Order.DESC.toString(), false),
-                new ResultSetMocker.Row(
+                new GetColumnsResultSetMocker.Row(
                     "c4", DataType.BLOB.toString(), "CLUSTERING", Order.ASC.toString(), true),
-                new ResultSetMocker.Row("c2", DataType.BIGINT.toString(), null, null, false),
-                new ResultSetMocker.Row("c5", DataType.INT.toString(), null, null, false),
-                new ResultSetMocker.Row("c6", DataType.DOUBLE.toString(), null, null, false),
-                new ResultSetMocker.Row("c7", DataType.FLOAT.toString(), null, null, false)));
+                new GetColumnsResultSetMocker.Row(
+                    "c2", DataType.BIGINT.toString(), null, null, false),
+                new GetColumnsResultSetMocker.Row("c5", DataType.INT.toString(), null, null, false),
+                new GetColumnsResultSetMocker.Row(
+                    "c6", DataType.DOUBLE.toString(), null, null, false),
+                new GetColumnsResultSetMocker.Row(
+                    "c7", DataType.FLOAT.toString(), null, null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection1.prepareStatement(any())).thenReturn(selectStatement);
 
@@ -452,7 +455,8 @@ public class JdbcTableMetadataManagerTest {
     ResultSet resultSet =
         mockResultSet(
             Collections.singletonList(
-                new Row("c1", DataType.BOOLEAN.toString(), "PARTITION", null, false)));
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false)));
     when(selectStatement.executeQuery()).thenReturn(resultSet);
     when(connection1.prepareStatement(any())).thenReturn(selectStatement);
 
@@ -462,12 +466,12 @@ public class JdbcTableMetadataManagerTest {
     when(dataSource.getConnection()).thenReturn(connection1, connection2);
 
     // Act
-    TableMetadata beforeDeletionMedatata = manager.getTableMetadata(namespace, table);
+    TableMetadata beforeDeletionMetadata = manager.getTableMetadata(namespace, table);
     manager.deleteTableMetadata(namespace, table);
     TableMetadata afterDeletionMetadata = manager.getTableMetadata(namespace, table);
 
     // Assert
-    assertThat(beforeDeletionMedatata)
+    assertThat(beforeDeletionMetadata)
         .isEqualTo(
             TableMetadata.newBuilder()
                 .addPartitionKey("c1")
@@ -477,20 +481,82 @@ public class JdbcTableMetadataManagerTest {
     assertThat(afterDeletionMetadata).isNull();
   }
 
-  public ResultSet mockResultSet(List<ResultSetMocker.Row> rows) throws SQLException {
+  public ResultSet mockResultSet(List<GetColumnsResultSetMocker.Row> rows) throws SQLException {
     ResultSet resultSet = mock(ResultSet.class);
     // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
     // mocked to return the current row data
-    doAnswer(new ResultSetMocker(rows)).when(resultSet).next();
+    doAnswer(new GetColumnsResultSetMocker(rows)).when(resultSet).next();
     return resultSet;
   }
 
-  // Utility class used to mock ResultSet
-  static class ResultSetMocker implements org.mockito.stubbing.Answer<Object> {
+  @Test
+  public void getTables_forMysql_shouldReturnTableNames() throws SQLException {
+    getTables_forXDatabase_shouldReturnTableNames(
+        RdbEngine.MYSQL,
+        "SELECT DISTINCT `full_table_name` FROM `my_appscalardb`.`metadata` WHERE `full_table_name` LIKE ?");
+  }
+
+  @Test
+  public void getTables_forPostgresql_shouldReturnTableNames() throws SQLException {
+    getTables_forXDatabase_shouldReturnTableNames(
+        RdbEngine.POSTGRESQL,
+        "SELECT DISTINCT \"full_table_name\" FROM \"my_appscalardb\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+  }
+
+  @Test
+  public void getTables_forSqlServer_shouldReturnTableNames() throws SQLException {
+    getTables_forXDatabase_shouldReturnTableNames(
+        RdbEngine.SQL_SERVER,
+        "SELECT DISTINCT [full_table_name] FROM [my_appscalardb].[metadata] WHERE [full_table_name] LIKE ?");
+  }
+
+  @Test
+  public void getTables_forOracle_shouldReturnTableNames() throws SQLException {
+    getTables_forXDatabase_shouldReturnTableNames(
+        RdbEngine.ORACLE,
+        "SELECT DISTINCT \"full_table_name\" FROM \"my_appscalardb\".\"metadata\" WHERE \"full_table_name\" LIKE ?");
+  }
+
+  @SuppressFBWarnings("ODR_OPEN_DATABASE_RESOURCE")
+  public void getTables_forXDatabase_shouldReturnTableNames(
+      RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException {
+    // Arrange
+    String namespace = "ns1";
+    String table1 = "t1";
+    String table2 = "t2";
+    String schemaPrefix = "my_app";
+    ResultSet resultSet = mock(ResultSet.class);
+    // Everytime the ResultSet.next() method will be called, the ResultSet.getXXX methods call be
+    // mocked to return the current row data
+    doAnswer(
+            new GetTablesNamesResultSetMocker(
+                Arrays.asList(
+                    new GetTablesNamesResultSetMocker.Row("t1"),
+                    new GetTablesNamesResultSetMocker.Row("t2"))))
+        .when(resultSet)
+        .next();
+    JdbcTableMetadataManager manager =
+        new JdbcTableMetadataManager(dataSource, Optional.of(schemaPrefix), rdbEngine);
+    PreparedStatement preparedStatement = mock(PreparedStatement.class);
+    when(preparedStatement.executeQuery()).thenReturn(resultSet);
+    when(connection1.prepareStatement(any())).thenReturn(preparedStatement);
+    when(dataSource.getConnection()).thenReturn(connection1);
+
+    // Act
+    Set<String> actualTableNames = manager.getTableNames(namespace);
+
+    // Assert
+    verify(connection1).prepareStatement(expectedSelectStatement);
+    assertThat(actualTableNames).containsExactly(table1, table2);
+    verify(preparedStatement).setString(1, schemaPrefix + namespace + "%");
+  }
+
+  // Utility class used to mock ResultSet for getTableMetadata test
+  static class GetColumnsResultSetMocker implements org.mockito.stubbing.Answer<Object> {
     List<Row> rows;
     int row = -1;
 
-    public ResultSetMocker(List<Row> rows) {
+    public GetColumnsResultSetMocker(List<Row> rows) {
       this.rows = rows;
     }
 
@@ -529,6 +595,37 @@ public class JdbcTableMetadataManagerTest {
         this.keyType = keyType;
         this.clusteringOrder = clusteringOrder;
         this.indexed = indexed;
+      }
+    }
+  }
+
+  // Utility class used to mock ResultSet for getTablesNames test
+  static class GetTablesNamesResultSetMocker implements org.mockito.stubbing.Answer<Object> {
+    List<Row> rows;
+    int row = -1;
+
+    public GetTablesNamesResultSetMocker(List<Row> rows) {
+      this.rows = rows;
+    }
+
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      row++;
+      if (row >= rows.size()) {
+        return false;
+      }
+      Row currentRow = rows.get(row);
+      ResultSet mock = (ResultSet) invocation.getMock();
+      when(mock.getString(JdbcTableMetadataManager.FULL_TABLE_NAME))
+          .thenReturn(currentRow.fullTableName);
+      return true;
+    }
+
+    static class Row {
+      final String fullTableName;
+
+      public Row(String fullTableName) {
+        this.fullTableName = fullTableName;
       }
     }
   }
