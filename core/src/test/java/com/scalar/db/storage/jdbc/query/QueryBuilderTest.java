@@ -88,7 +88,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
+                .where(new Key("p1", "aaa"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?"));
@@ -98,7 +98,7 @@ public class QueryBuilderTest {
                 .select(Collections.emptyList())
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "bbb")),
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "bbb").build(),
                     Optional.empty())
                 .build()
                 .toString())
@@ -108,9 +108,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))))
+                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "aaa")))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?"));
@@ -120,8 +118,8 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb"))))
+                    new Key("p1", "aaa"),
+                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "bbb").build()))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?"));
@@ -131,10 +129,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .build()
                 .toString())
@@ -147,10 +145,10 @@ public class QueryBuilderTest {
                 .select(Collections.emptyList())
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     false,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     false)
                 .build()
                 .toString())
@@ -162,10 +160,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "aaa").build()),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "aaa"), new TextValue("c2", "bbb"))),
+                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "bbb").build()),
                     false)
                 .build()
                 .toString())
@@ -179,10 +177,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .orderBy(
                     Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
@@ -197,10 +195,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .orderBy(
                     Arrays.asList(
@@ -217,10 +215,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .orderBy(
                     Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
@@ -235,10 +233,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .orderBy(
                     Arrays.asList(
@@ -275,10 +273,10 @@ public class QueryBuilderTest {
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "aaa"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "aaa")),
                     true,
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    Optional.of(new Key("c1", "bbb")),
                     true)
                 .limit(10)
                 .build()
@@ -292,7 +290,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(new Key(new TextValue("v1", "aaa")), Optional.empty())
+                .where(new Key("v1", "aaa"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
@@ -301,12 +299,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(
-                    new Key(new TextValue("v1", "aaa")),
-                    Optional.empty(),
-                    false,
-                    Optional.empty(),
-                    false)
+                .where(new Key("v1", "aaa"), Optional.empty(), false, Optional.empty(), false)
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
@@ -315,7 +308,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(new Key(new TextValue("v2", "aaa")), Optional.empty())
+                .where(new Key("v2", "aaa"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
@@ -324,12 +317,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE)
-                .where(
-                    new Key(new TextValue("v2", "aaa")),
-                    Optional.empty(),
-                    false,
-                    Optional.empty(),
-                    false)
+                .where(new Key("v2", "aaa"), Optional.empty(), false, Optional.empty(), false)
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
@@ -345,7 +333,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .insertInto(NAMESPACE, TABLE)
-                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
+                .values(new Key("p1", "aaa"), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"));
@@ -353,10 +341,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .insertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    values)
+                .values(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), values)
                 .build()
                 .toString())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"));
@@ -367,8 +352,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .insertInto(NAMESPACE, TABLE)
                 .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
+                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
                     values)
                 .build()
                 .toString())
@@ -387,7 +372,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .update(NAMESPACE, TABLE)
                 .set(values)
-                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
+                .where(new Key("p1", "aaa"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
@@ -396,9 +381,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .update(NAMESPACE, TABLE)
                 .set(values)
-                .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))))
+                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?"));
@@ -408,8 +391,8 @@ public class QueryBuilderTest {
                 .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
+                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()))
                 .build()
                 .toString())
         .isEqualTo(
@@ -420,8 +403,8 @@ public class QueryBuilderTest {
                 .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "bbb")),
                     Collections.singletonList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
@@ -433,8 +416,8 @@ public class QueryBuilderTest {
                 .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "bbb")),
                     Arrays.asList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
                         new ConditionalExpression("v2", new TextValue("ddd"), Operator.GT),
@@ -451,7 +434,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
-                .where(new Key(new TextValue("p1", "aaa")), Optional.empty())
+                .where(new Key("p1", "aaa"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?"));
@@ -459,9 +442,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
-                .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))))
+                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?"));
@@ -470,8 +451,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))))
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
+                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?"));
@@ -480,8 +461,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "bbb")),
                     Collections.singletonList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
                 .build()
@@ -492,8 +473,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
                 .where(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
+                    new Key("p1", "aaa"),
+                    Optional.of(new Key("c1", "bbb")),
                     Arrays.asList(
                         new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
                         new ConditionalExpression("v2", new TextValue("ddd"), Operator.GTE),
@@ -541,7 +522,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
-                .values(new Key(new TextValue("p1", "aaa")), Optional.empty(), values)
+                .values(new Key("p1", "aaa"), Optional.empty(), values)
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));
@@ -576,10 +557,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    values)
+                .values(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), values)
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));
@@ -618,8 +596,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
                 .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
+                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
                     values)
                 .build()
                 .toString())
@@ -652,8 +630,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key(new TextValue("p1", "aaa")), Optional.empty(), Collections.emptyMap())
+                .values(new Key("p1", "aaa"), Optional.empty(), Collections.emptyMap())
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));
@@ -683,9 +660,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
                 .values(
-                    new Key(new TextValue("p1", "aaa")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"))),
-                    Collections.emptyMap())
+                    new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), Collections.emptyMap())
                 .build()
                 .toString())
         .isEqualTo(encloseSql(expectedQuery));
@@ -717,8 +692,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
                 .values(
-                    new Key(new TextValue("p1", "aaa"), new TextValue("p2", "ccc")),
-                    Optional.of(new Key(new TextValue("c1", "bbb"), new TextValue("c2", "ddd"))),
+                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
+                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
                     Collections.emptyMap())
                 .build()
                 .toString())

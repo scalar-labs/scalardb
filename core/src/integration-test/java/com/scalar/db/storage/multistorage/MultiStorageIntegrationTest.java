@@ -12,11 +12,8 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
@@ -93,13 +90,13 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new TextValue(COL_NAME2, "val2"))
-            .withValue(new IntValue(COL_NAME3, 3))
-            .withValue(new BooleanValue(COL_NAME5, true))
+            .withValue(COL_NAME2, "val2")
+            .withValue(COL_NAME3, 3)
+            .withValue(COL_NAME5, true)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -111,21 +108,19 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -136,13 +131,13 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new TextValue(COL_NAME2, "val2"))
-            .withValue(new IntValue(COL_NAME3, 3))
-            .withValue(new BooleanValue(COL_NAME5, true))
+            .withValue(COL_NAME2, "val2")
+            .withValue(COL_NAME3, 3)
+            .withValue(COL_NAME5, true)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -154,24 +149,22 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
   }
 
   @Test
@@ -180,14 +173,14 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
 
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new TextValue(COL_NAME2, "val2"))
-            .withValue(new IntValue(COL_NAME3, 3))
-            .withValue(new BooleanValue(COL_NAME5, true))
+            .withValue(COL_NAME2, "val2")
+            .withValue(COL_NAME3, 3)
+            .withValue(COL_NAME5, true)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -199,21 +192,19 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -224,23 +215,23 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 0));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey3 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 0);
+    Key clusteringKey2 = new Key(COL_NAME4, 1);
+    Key clusteringKey3 = new Key(COL_NAME4, 2);
 
     cassandra.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
-                .withValue(new IntValue(COL_NAME3, 2))
+                .withValue(COL_NAME3, 2)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 1))
+                .withValue(COL_NAME3, 1)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey3)
-                .withValue(new IntValue(COL_NAME3, 0))
+                .withValue(COL_NAME3, 0)
                 .forNamespace(namespace)
                 .forTable(table)));
 
@@ -249,15 +240,15 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME3).get()).get()).isEqualTo(2);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME4).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME3).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME4).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME3).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -265,23 +256,23 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 0));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey3 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 0);
+    Key clusteringKey2 = new Key(COL_NAME4, 1);
+    Key clusteringKey3 = new Key(COL_NAME4, 2);
 
     mysql.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
-                .withValue(new IntValue(COL_NAME3, 2))
+                .withValue(COL_NAME3, 2)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 1))
+                .withValue(COL_NAME3, 1)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey3)
-                .withValue(new IntValue(COL_NAME3, 0))
+                .withValue(COL_NAME3, 0)
                 .forNamespace(namespace)
                 .forTable(table)));
 
@@ -290,15 +281,15 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME3).get()).get()).isEqualTo(2);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME4).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME3).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME4).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME3).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -306,23 +297,23 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 0));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey3 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 0);
+    Key clusteringKey2 = new Key(COL_NAME4, 1);
+    Key clusteringKey3 = new Key(COL_NAME4, 2);
 
     cassandra.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
-                .withValue(new IntValue(COL_NAME3, 2))
+                .withValue(COL_NAME3, 2)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 1))
+                .withValue(COL_NAME3, 1)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey3)
-                .withValue(new IntValue(COL_NAME3, 0))
+                .withValue(COL_NAME3, 0)
                 .forNamespace(namespace)
                 .forTable(table)));
 
@@ -331,15 +322,15 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME3).get()).get()).isEqualTo(2);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME4).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME3).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME4).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME3).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   private List<Result> scanAll(Scan scan) throws Exception {
@@ -354,11 +345,11 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -380,9 +371,9 @@ public class MultiStorageIntegrationTest {
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
   }
 
   @Test
@@ -390,11 +381,11 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -413,9 +404,9 @@ public class MultiStorageIntegrationTest {
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -427,11 +418,11 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -453,9 +444,9 @@ public class MultiStorageIntegrationTest {
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
   }
 
   @Test
@@ -463,12 +454,12 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 1);
+    Key clusteringKey2 = new Key(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -479,7 +470,7 @@ public class MultiStorageIntegrationTest {
     multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 3))
+                .withValue(COL_NAME3, 3)
                 .forNamespace(namespace)
                 .forTable(table),
             new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
@@ -492,23 +483,23 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = cassandra.get(get1);
     assertThat(result.isPresent()).isFalse();
     result = cassandra.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = mysql.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
     result = mysql.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
@@ -518,12 +509,12 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 1);
+    Key clusteringKey2 = new Key(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -534,7 +525,7 @@ public class MultiStorageIntegrationTest {
     multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 3))
+                .withValue(COL_NAME3, 3)
                 .forNamespace(namespace)
                 .forTable(table),
             new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
@@ -547,15 +538,15 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = cassandra.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
     result = cassandra.get(get2);
     assertThat(result.isPresent()).isFalse();
 
@@ -563,9 +554,9 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = mysql.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -573,12 +564,12 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 1);
+    Key clusteringKey2 = new Key(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -589,7 +580,7 @@ public class MultiStorageIntegrationTest {
     multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 3))
+                .withValue(COL_NAME3, 3)
                 .forNamespace(namespace)
                 .forTable(table),
             new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
@@ -602,23 +593,23 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = cassandra.get(get1);
     assertThat(result.isPresent()).isFalse();
     result = cassandra.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = mysql.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
     result = mysql.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
@@ -629,13 +620,13 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new TextValue(COL_NAME2, "val2"))
-            .withValue(new IntValue(COL_NAME3, 3))
-            .withValue(new BooleanValue(COL_NAME5, true))
+            .withValue(COL_NAME2, "val2")
+            .withValue(COL_NAME3, 3)
+            .withValue(COL_NAME5, true)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -647,24 +638,22 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isFalse();
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((TextValue) result.get().getValue(COL_NAME2).get()).getString().get())
-        .isEqualTo("val2");
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
-    assertThat(((BooleanValue) result.get().getValue(COL_NAME5).get()).get()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
   }
 
   @Test
@@ -672,23 +661,23 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 0));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey3 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 0);
+    Key clusteringKey2 = new Key(COL_NAME4, 1);
+    Key clusteringKey3 = new Key(COL_NAME4, 2);
 
     mysql.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
-                .withValue(new IntValue(COL_NAME3, 2))
+                .withValue(COL_NAME3, 2)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 1))
+                .withValue(COL_NAME3, 1)
                 .forNamespace(namespace)
                 .forTable(table),
             new Put(partitionKey, clusteringKey3)
-                .withValue(new IntValue(COL_NAME3, 0))
+                .withValue(COL_NAME3, 0)
                 .forNamespace(namespace)
                 .forTable(table)));
 
@@ -697,15 +686,15 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME3).get()).get()).isEqualTo(2);
-    assertThat(((IntValue) results.get(0).getValue(COL_NAME4).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME3).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(1).getValue(COL_NAME4).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME3).get()).get()).isEqualTo(0);
-    assertThat(((IntValue) results.get(2).getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -714,11 +703,11 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 4));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 4);
     Put put =
         new Put(partitionKey, clusteringKey)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -737,9 +726,9 @@ public class MultiStorageIntegrationTest {
 
     result = cassandra.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(4);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
 
     result = mysql.get(get);
     assertThat(result.isPresent()).isFalse();
@@ -751,12 +740,12 @@ public class MultiStorageIntegrationTest {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 1));
-    Key clusteringKey1 = new Key(new IntValue(COL_NAME4, 1));
-    Key clusteringKey2 = new Key(new IntValue(COL_NAME4, 2));
+    Key partitionKey = new Key(COL_NAME1, 1);
+    Key clusteringKey1 = new Key(COL_NAME4, 1);
+    Key clusteringKey2 = new Key(COL_NAME4, 2);
     Put put =
         new Put(partitionKey, clusteringKey1)
-            .withValue(new IntValue(COL_NAME3, 3))
+            .withValue(COL_NAME3, 3)
             .forNamespace(namespace)
             .forTable(table);
 
@@ -767,7 +756,7 @@ public class MultiStorageIntegrationTest {
     multiStorage.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey2)
-                .withValue(new IntValue(COL_NAME3, 3))
+                .withValue(COL_NAME3, 3)
                 .forNamespace(namespace)
                 .forTable(table),
             new Delete(partitionKey, clusteringKey1).forNamespace(namespace).forTable(table)));
@@ -780,15 +769,15 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     result = cassandra.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
     result = cassandra.get(get2);
     assertThat(result.isPresent()).isFalse();
 
@@ -796,9 +785,9 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = mysql.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(((IntValue) result.get().getValue(COL_NAME1).get()).get()).isEqualTo(1);
-    assertThat(((IntValue) result.get().getValue(COL_NAME3).get()).get()).isEqualTo(3);
-    assertThat(((IntValue) result.get().getValue(COL_NAME4).get()).get()).isEqualTo(2);
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test

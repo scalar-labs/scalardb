@@ -27,7 +27,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,8 +63,8 @@ public class RollbackMutationComposerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
@@ -73,7 +72,7 @@ public class RollbackMutationComposerTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
@@ -81,20 +80,18 @@ public class RollbackMutationComposerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(new IntValue(ANY_NAME_3, ANY_INT_3));
+        .withValue(ANY_NAME_3, ANY_INT_3);
   }
 
   private void configureResult(Result mock, TransactionState state) {
-    when(mock.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(mock.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
+    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
+    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
 
     ImmutableMap<String, Value<?>> values =
         ImmutableMap.<String, Value<?>>builder()
@@ -123,10 +120,8 @@ public class RollbackMutationComposerTest {
   }
 
   private void configureInitialResult(Result mock, String id, TransactionState state) {
-    when(mock.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(mock.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
+    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
+    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
 
     ImmutableMap.Builder builder =
         ImmutableMap.<String, Value<?>>builder()

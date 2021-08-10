@@ -85,7 +85,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value.getString().ifPresent(s -> consumer.accept(s));
+    value.get().ifPresent(s -> consumer.accept(s));
   }
 
   /**

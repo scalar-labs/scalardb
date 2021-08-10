@@ -13,7 +13,6 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -51,14 +50,14 @@ public class DynamoMutationTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+            .withValue(ANY_NAME_3, ANY_INT_1)
+            .withValue(ANY_NAME_4, ANY_INT_2);
 
     return put;
   }

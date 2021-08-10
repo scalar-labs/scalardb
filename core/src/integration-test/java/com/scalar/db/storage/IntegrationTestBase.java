@@ -56,8 +56,8 @@ public abstract class IntegrationTestBase {
   public void operation_NoTargetGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     storage.with(null, TABLE);
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
+    Key clusteringKey = new Key(COL_NAME4, 0);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act Assert
@@ -68,8 +68,8 @@ public abstract class IntegrationTestBase {
   public void operation_WrongNamespaceGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     storage.with("wrong_" + NAMESPACE, TABLE); // a wrong namespace
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
+    Key clusteringKey = new Key(COL_NAME4, 0);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act Assert
@@ -80,8 +80,8 @@ public abstract class IntegrationTestBase {
   public void operation_WrongTableGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     storage.with(NAMESPACE, "wrong_" + TABLE); // a wrong table
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
+    Key clusteringKey = new Key(COL_NAME4, 0);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act Assert
@@ -113,7 +113,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act Assert
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
     Get get = new Get(partitionKey);
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
   }
@@ -151,7 +151,7 @@ public abstract class IntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
+        new Scan(new Key(COL_NAME1, pKey))
             .withProjection(COL_NAME1)
             .withProjection(COL_NAME2)
             .withProjection(COL_NAME3);
@@ -177,7 +177,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     Scanner scanner = storage.scan(scan);
 
     // Assert
@@ -211,7 +211,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     double t1 = System.currentTimeMillis();
     List<Result> actual = scanAll(scan);
     double t2 = System.currentTimeMillis();
@@ -241,9 +241,9 @@ public abstract class IntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
-            .withStart(new Key(new IntValue(COL_NAME4, 0)), true)
-            .withEnd(new Key(new IntValue(COL_NAME4, 2)), false);
+        new Scan(new Key(COL_NAME1, pKey))
+            .withStart(new Key(COL_NAME4, 0), true)
+            .withEnd(new Key(COL_NAME4, 2), false);
     List<Result> actual = scanAll(scan);
 
     // verify
@@ -259,9 +259,9 @@ public abstract class IntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, pKey)))
-            .withStart(new Key(new IntValue(COL_NAME4, 0)), false)
-            .withEnd(new Key(new IntValue(COL_NAME4, 2)), true);
+        new Scan(new Key(COL_NAME1, pKey))
+            .withStart(new Key(COL_NAME4, 0), false)
+            .withEnd(new Key(COL_NAME4, 2), true);
     List<Result> actual = scanAll(scan);
 
     // verify
@@ -274,7 +274,7 @@ public abstract class IntegrationTestBase {
     puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+        new Scan(new Key(COL_NAME1, 0))
             .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.ASC));
 
     // Act
@@ -296,7 +296,7 @@ public abstract class IntegrationTestBase {
     puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+        new Scan(new Key(COL_NAME1, 0))
             .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC));
 
     // Act
@@ -319,7 +319,7 @@ public abstract class IntegrationTestBase {
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
 
     Scan scan =
-        new Scan(new Key(new IntValue(COL_NAME1, 0)))
+        new Scan(new Key(COL_NAME1, 0))
             .withOrdering(new Scan.Ordering(COL_NAME4, Scan.Ordering.Order.DESC))
             .withLimit(1);
 
@@ -340,7 +340,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     scanner.forEach(actual::add);
@@ -357,7 +357,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     Optional<Result> result = scanner.one();
@@ -379,7 +379,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     List<Result> all = scanner.all();
@@ -399,7 +399,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
     List<Result> actual = new ArrayList<>();
     Scanner scanner = storage.scan(scan);
     actual.add(scanner.iterator().next());
@@ -417,8 +417,8 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     puts = preparePuts();
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act
@@ -446,13 +446,13 @@ public abstract class IntegrationTestBase {
     int cKey = 0;
     puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act
     storage.put(puts.get(0));
-    puts.get(0).withValue(new IntValue(COL_NAME3, Integer.MAX_VALUE));
+    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
     assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
 
     // Assert
@@ -476,7 +476,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     puts = preparePuts();
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -497,7 +497,7 @@ public abstract class IntegrationTestBase {
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
     puts.get(2).withCondition(new PutIfNotExists());
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -512,8 +512,8 @@ public abstract class IntegrationTestBase {
   @Test
   public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws Exception {
     // Arrange
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
+    Key clusteringKey = new Key(COL_NAME4, 0);
 
     // Act
     assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
@@ -527,8 +527,8 @@ public abstract class IntegrationTestBase {
   @Test
   public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws Exception {
     // Arrange
-    Key partitionKey = new Key(new IntValue(COL_NAME1, 0));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, 0));
+    Key partitionKey = new Key(COL_NAME1, 0);
+    Key clusteringKey = new Key(COL_NAME4, 0);
 
     // Act
     assertThatCode(() -> storage.put(new Put(partitionKey, clusteringKey)))
@@ -552,7 +552,7 @@ public abstract class IntegrationTestBase {
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
     puts.get(2).withCondition(new PutIfNotExists());
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
     assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -581,11 +581,11 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 3))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 6))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -601,11 +601,11 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 3))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 6))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -626,7 +626,7 @@ public abstract class IntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
+    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertScanResultWithoutOrdering(results, 0, COL_NAME4, Arrays.asList(0, 1));
   }
 
@@ -660,7 +660,7 @@ public abstract class IntegrationTestBase {
     // Act Assert
     storage.put(puts.get(0));
     puts.get(0).withCondition(new PutIfExists());
-    puts.get(0).withValue(new IntValue(COL_NAME3, Integer.MAX_VALUE));
+    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
     // Assert
@@ -689,7 +689,7 @@ public abstract class IntegrationTestBase {
             new PutIf(
                 new ConditionalExpression(
                     COL_NAME3, new IntValue(pKey + cKey), ConditionalExpression.Operator.EQ)));
-    puts.get(0).withValue(new IntValue(COL_NAME3, Integer.MAX_VALUE));
+    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
     // Assert
@@ -718,7 +718,7 @@ public abstract class IntegrationTestBase {
             new PutIf(
                 new ConditionalExpression(
                     COL_NAME3, new IntValue(pKey + cKey + 1), ConditionalExpression.Operator.EQ)));
-    puts.get(0).withValue(new IntValue(COL_NAME3, Integer.MAX_VALUE));
+    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
     assertThatThrownBy(() -> storage.put(puts.get(0))).isInstanceOf(NoMutationException.class);
 
     // Assert
@@ -738,7 +738,7 @@ public abstract class IntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -768,8 +768,8 @@ public abstract class IntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -788,8 +788,8 @@ public abstract class IntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -813,8 +813,8 @@ public abstract class IntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -852,7 +852,7 @@ public abstract class IntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
+    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -862,7 +862,7 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     puts = preparePuts();
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -886,11 +886,11 @@ public abstract class IntegrationTestBase {
 
     // Assert
     List<Result> results;
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 0))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 3))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 3)));
     assertThat(results.size()).isEqualTo(0);
-    results = scanAll(new Scan(new Key(new IntValue(COL_NAME1, 6))));
+    results = scanAll(new Scan(new Key(COL_NAME1, 6)));
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -899,14 +899,14 @@ public abstract class IntegrationTestBase {
     // Arrange
     populateRecords();
     puts = preparePuts();
-    puts.get(1).withValue(new IntValue(COL_NAME3, Integer.MAX_VALUE));
-    puts.get(2).withValue(new IntValue(COL_NAME3, Integer.MIN_VALUE));
+    puts.get(1).withValue(COL_NAME3, Integer.MAX_VALUE);
+    puts.get(2).withValue(COL_NAME3, Integer.MIN_VALUE);
 
     int pKey = 0;
     int cKey = 0;
     Delete delete = prepareDelete(pKey, cKey);
 
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME1, pKey)));
+    Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(delete, puts.get(1), puts.get(2))))
@@ -924,8 +924,8 @@ public abstract class IntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     puts = preparePuts();
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act
@@ -956,8 +956,8 @@ public abstract class IntegrationTestBase {
     int cKey = 0;
 
     // Act
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     Delete delete = new Delete(partitionKey, clusteringKey);
     assertThatCode(() -> storage.mutate(Collections.singletonList(delete)))
         .doesNotThrowAnyException();
@@ -978,7 +978,7 @@ public abstract class IntegrationTestBase {
   public void put_PutWithoutClusteringKeyGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     int pKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
     Put put = new Put(partitionKey);
 
     // Act Assert
@@ -990,8 +990,8 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Put put = new Put(partitionKey).withValue(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Put put = new Put(partitionKey).withValue(COL_NAME4, cKey);
 
     // Act Assert
     assertThatCode(() -> storage.put(put)).isInstanceOf(IllegalArgumentException.class);
@@ -1002,7 +1002,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
-    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+    Get get = new Get(new Key(COL_NAME3, c3));
 
     // Act
     Optional<Result> actual = storage.get(get);
@@ -1019,7 +1019,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Get get = new Get(new Key(new IntValue(COL_NAME3, c3)));
+    Get get = new Get(new Key(COL_NAME3, c3));
 
     // Act Assert
     assertThatThrownBy(() -> storage.get(get)).isInstanceOf(IllegalArgumentException.class);
@@ -1030,7 +1030,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Scan scan = new Scan(new Key(new IntValue(COL_NAME3, c3)));
+    Scan scan = new Scan(new Key(COL_NAME3, c3));
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1041,8 +1041,8 @@ public abstract class IntegrationTestBase {
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
     for (Result result : actual) {
-      int col1Val = ((IntValue) result.getValue(COL_NAME1).get()).get();
-      int col4Val = ((IntValue) result.getValue(COL_NAME4).get()).get();
+      int col1Val = result.getValue(COL_NAME1).get().getAsInt();
+      int col4Val = result.getValue(COL_NAME4).get().getAsInt();
       List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
       assertThat(expectedValues).contains(col1AndCol4);
       expectedValues.remove(col1AndCol4);
@@ -1056,7 +1056,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     populateRecords();
     String c2 = "test";
-    Scan scan = new Scan(new Key(new TextValue(COL_NAME2, c2)));
+    Scan scan = new Scan(new Key(COL_NAME2, c2));
 
     // Act Assert
     assertThatThrownBy(() -> scanAll(scan)).isInstanceOf(IllegalArgumentException.class);
@@ -1068,8 +1068,8 @@ public abstract class IntegrationTestBase {
   }
 
   private Get prepareGet(int pKey, int cKey) {
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     return new Get(partitionKey, clusteringKey);
   }
 
@@ -1082,13 +1082,13 @@ public abstract class IntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(new IntValue(COL_NAME1, i));
-                          Key clusteringKey = new Key(new IntValue(COL_NAME4, j));
+                          Key partitionKey = new Key(COL_NAME1, i);
+                          Key clusteringKey = new Key(COL_NAME4, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
-                                  .withValue(new TextValue(COL_NAME2, Integer.toString(i + j)))
-                                  .withValue(new IntValue(COL_NAME3, i + j))
-                                  .withValue(new BooleanValue(COL_NAME5, j % 2 == 0));
+                                  .withValue(COL_NAME2, Integer.toString(i + j))
+                                  .withValue(COL_NAME3, i + j)
+                                  .withValue(COL_NAME5, j % 2 == 0);
                           puts.add(put);
                         }));
 
@@ -1096,8 +1096,8 @@ public abstract class IntegrationTestBase {
   }
 
   private Delete prepareDelete(int pKey, int cKey) {
-    Key partitionKey = new Key(new IntValue(COL_NAME1, pKey));
-    Key clusteringKey = new Key(new IntValue(COL_NAME4, cKey));
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
     return new Delete(partitionKey, clusteringKey);
   }
 
@@ -1110,8 +1110,8 @@ public abstract class IntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(new IntValue(COL_NAME1, i));
-                          Key clusteringKey = new Key(new IntValue(COL_NAME4, j));
+                          Key partitionKey = new Key(COL_NAME1, i);
+                          Key clusteringKey = new Key(COL_NAME4, j);
                           Delete delete = new Delete(partitionKey, clusteringKey);
                           deletes.add(delete);
                         }));
@@ -1137,7 +1137,7 @@ public abstract class IntegrationTestBase {
       assertThat(result.getValue(COL_NAME1))
           .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
 
-      int actualClusteringKeyValue = ((IntValue) result.getValue(checkedColumn).get()).get();
+      int actualClusteringKeyValue = result.getValue(checkedColumn).get().getAsInt();
       assertThat(expectedValuesSet).contains(actualClusteringKeyValue);
       expectedValuesSet.remove(actualClusteringKeyValue);
     }

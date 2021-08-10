@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.List;
 import org.assertj.core.api.Assertions;
@@ -35,18 +34,18 @@ public class PartitionedMutationsTest {
   }
 
   private List<Put> preparePuts1() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey1 = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Key clusteringKey2 = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey1 = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key clusteringKey2 = new Key(ANY_NAME_3, ANY_TEXT_3);
     Put put1 = preparePut(partitionKey, clusteringKey1);
     Put put2 = preparePut(partitionKey, clusteringKey2);
     return Arrays.asList(put1, put2);
   }
 
   private List<Put> preparePuts2() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_4, ANY_TEXT_4));
-    Key clusteringKey1 = new Key(new TextValue(ANY_NAME_5, ANY_TEXT_5));
-    Key clusteringKey2 = new Key(new TextValue(ANY_NAME_6, ANY_TEXT_6));
+    Key partitionKey = new Key(ANY_NAME_4, ANY_TEXT_4);
+    Key clusteringKey1 = new Key(ANY_NAME_5, ANY_TEXT_5);
+    Key clusteringKey2 = new Key(ANY_NAME_6, ANY_TEXT_6);
     Put put1 = preparePut(partitionKey, clusteringKey1);
     Put put2 = preparePut(partitionKey, clusteringKey2);
     return Arrays.asList(put1, put2);
