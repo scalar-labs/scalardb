@@ -29,7 +29,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -76,8 +75,8 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     Delete del =
@@ -136,7 +135,7 @@ public class DeleteStatementHandlerTest {
     when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);

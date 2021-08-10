@@ -80,7 +80,8 @@ public final class TextValue implements Value<Optional<String>> {
    * Returns the content of this {@code Value}
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
-   * @deprecated As of release 3.2.0, replaced by {@link #get()}. Will be removed in release 4.0.0.
+   * @deprecated As of release 3.2.0, replaced by {@link #getAsBytes()}. Will be removed in release
+   *     4.0.0.
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated

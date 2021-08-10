@@ -15,10 +15,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.RequiredValueMissingException;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -88,7 +85,7 @@ public class Coordinator {
         .getMetadata()
         .ifPresent(
             m -> {
-              put.withValue(new TextValue(Attribute.METADATA, m));
+              put.withValue(Attribute.METADATA, m);
             });
     return put;
   }
@@ -126,10 +123,9 @@ public class Coordinator {
 
     public State(Result result) {
       checkNotMissingRequired(result);
-      id = ((TextValue) result.getValue(Attribute.ID).get()).getString().get();
-      state =
-          TransactionState.getInstance(((IntValue) result.getValue(Attribute.STATE).get()).get());
-      createdAt = ((BigIntValue) result.getValue(Attribute.CREATED_AT).get()).get();
+      id = result.getValue(Attribute.ID).get().getAsString().get();
+      state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
+      createdAt = result.getValue(Attribute.CREATED_AT).get().getAsLong();
     }
 
     public State(String id, TransactionState state) {
@@ -187,15 +183,15 @@ public class Coordinator {
 
     private void checkNotMissingRequired(Result result) {
       if (!result.getValue(Attribute.ID).isPresent()
-          || !((TextValue) result.getValue(Attribute.ID).get()).getString().isPresent()) {
+          || !result.getValue(Attribute.ID).get().getAsString().isPresent()) {
         throw new RequiredValueMissingException("id is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.STATE).isPresent()
-          || ((IntValue) result.getValue(Attribute.STATE).get()).get() == 0) {
+          || result.getValue(Attribute.STATE).get().getAsInt() == 0) {
         throw new RequiredValueMissingException("state is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.CREATED_AT).isPresent()
-          || ((BigIntValue) result.getValue(Attribute.CREATED_AT).get()).get() == 0) {
+          || result.getValue(Attribute.CREATED_AT).get().getAsLong() == 0) {
         throw new RequiredValueMissingException("created_at is missing in the coordinator state");
       }
     }

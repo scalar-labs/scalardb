@@ -838,7 +838,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     ConsensusCommit transaction1 = manager.start();
@@ -846,7 +846,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     ConsensusCommit transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction2.commit();
 
     // Act
@@ -889,7 +889,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = ((IntValue) result.get().getValue(BALANCE).get()).get() + 100;
+    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
     IntValue expected = new IntValue(BALANCE, afterBalance);
     Put put = preparePut(0, 0, TABLE_1).withValue(expected);
     transaction.put(put);
@@ -909,7 +909,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     populateRecords(TABLE_1);
     List<Put> puts = preparePuts(TABLE_1);
-    puts.get(0).withValue(new IntValue(BALANCE, 1100));
+    puts.get(0).withValue(BALANCE, 1100);
     ConsensusCommit transaction = manager.start();
 
     // Act Assert
@@ -1436,8 +1436,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, table1).withValue(BALANCE, 1),
+            preparePut(0, 1, table2).withValue(BALANCE, 1));
     ConsensusCommit transaction = manager.start();
     transaction.put(puts);
     transaction.commit();
@@ -1449,15 +1449,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
     transaction2.commit();
@@ -1494,8 +1494,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, table1).withValue(BALANCE, 1),
+            preparePut(0, 1, table2).withValue(BALANCE, 1));
     ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     transaction.put(puts);
@@ -1510,15 +1510,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
     Throwable thrown = catchThrowable(transaction2::commit);
@@ -1555,8 +1555,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, table1).withValue(BALANCE, 1),
+            preparePut(0, 1, table2).withValue(BALANCE, 1));
     ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     transaction.put(puts);
@@ -1571,15 +1571,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
     Throwable thrown = catchThrowable(transaction2::commit);
@@ -1630,9 +1630,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
     int current2 = 0;
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -1681,7 +1681,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Get get1_2 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction1.get(get1_2);
     int current1 = 0;
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
     Throwable thrown1 = catchThrowable(transaction1::commit);
 
@@ -1734,9 +1734,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
     int current2 = 0;
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -1789,9 +1789,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
     int count2 = results2.size();
-    Put put1 = preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    Put put1 = preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    Put put2 = preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -1825,9 +1825,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
     int count2 = results2.size();
-    Put put1 = preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    Put put1 = preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    Put put2 = preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -1855,8 +1855,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, TABLE_1).withValue(BALANCE, 1),
+            preparePut(0, 1, TABLE_1).withValue(BALANCE, 1));
     ConsensusCommit transaction =
         manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     transaction.put(puts);
@@ -1871,9 +1871,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     int count1 = results1.size();
     List<Result> results2 = transaction2.scan(prepareScan(0, 0, 1, TABLE_1));
     int count2 = results2.size();
-    Put put1 = preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, count1 + 1));
+    Put put1 = preparePut(0, 0, TABLE_1).withValue(BALANCE, count1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, TABLE_1).withValue(new IntValue(BALANCE, count2 + 1));
+    Put put2 = preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1);
     transaction2.put(put2);
     Throwable thrown1 = catchThrowable(transaction1::commit);
     Throwable thrown2 = catchThrowable(transaction2::commit);
@@ -1895,7 +1895,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
 
     // Act
@@ -1903,9 +1903,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
     int balance1 = 0;
     if (result1.isPresent()) {
-      balance1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+      balance1 = result1.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance1 + 1)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance1 + 1));
 
     ConsensusCommit transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
@@ -1917,9 +1917,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = ((IntValue) result3.get().getValue(BALANCE).get()).get();
+      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
+    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
 
     Throwable thrown = catchThrowable(transaction1::commit);
@@ -1930,7 +1930,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
         .hasCauseInstanceOf(NoMutationException.class);
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
-    assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -1938,7 +1938,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
 
     // Act
@@ -1956,9 +1956,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = ((IntValue) result3.get().getValue(BALANCE).get()).get();
+      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
+    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
 
     Throwable thrown = catchThrowable(transaction1::commit);
@@ -1969,7 +1969,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
         .hasCauseInstanceOf(NoMutationException.class);
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
-    assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -1977,7 +1977,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -1998,7 +1998,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -2019,14 +2019,14 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
     ConsensusCommit transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
@@ -2043,7 +2043,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -2051,7 +2051,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
@@ -2067,7 +2067,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
@@ -2083,7 +2083,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       throws CommitException, UnknownTransactionStatusException {
     // Arrange
     ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act
     Scan scan = prepareScan(0, 1, 1, TABLE_1);
@@ -2130,9 +2130,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
     Optional<Result> toResult = transaction.get(toGets.get(toId));
 
     IntValue fromBalance =
-        new IntValue(BALANCE, ((IntValue) fromResult.get().getValue(BALANCE).get()).get() - amount);
+        new IntValue(BALANCE, fromResult.get().getValue(BALANCE).get().getAsInt() - amount);
     IntValue toBalance =
-        new IntValue(BALANCE, ((IntValue) toResult.get().getValue(BALANCE).get()).get() + amount);
+        new IntValue(BALANCE, toResult.get().getValue(BALANCE).get().getAsInt() + amount);
 
     List<Put> fromPuts = preparePuts(fromTable);
     List<Put> toPuts = differentTables ? preparePuts(toTable) : fromPuts;
@@ -2172,13 +2172,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
-                          Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
+                          Key partitionKey = new Key(ACCOUNT_ID, i);
+                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
                                   .forNamespace(NAMESPACE)
                                   .forTable(table)
-                                  .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
+                                  .withValue(BALANCE, INITIAL_BALANCE);
                           transaction.put(put);
                         }));
     transaction.commit();
@@ -2191,13 +2191,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
       long preparedAt,
       TransactionState coordinatorState)
       throws ExecutionException, CoordinatorException {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, 0));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, 0));
+    Key partitionKey = new Key(ACCOUNT_ID, 0);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, 0);
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(NAMESPACE)
             .forTable(table)
-            .withValue(new IntValue(BALANCE, INITIAL_BALANCE))
+            .withValue(BALANCE, INITIAL_BALANCE)
             .withValue(Attribute.toIdValue(ANY_ID_2))
             .withValue(Attribute.toStateValue(recordState))
             .withValue(Attribute.toVersionValue(2))
@@ -2217,8 +2217,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private Get prepareGet(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
@@ -2234,18 +2234,18 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private Scan prepareScan(int id, int fromType, int toType, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(new IntValue(ACCOUNT_TYPE, fromType)))
-        .withEnd(new Key(new IntValue(ACCOUNT_TYPE, toType)));
+        .withStart(new Key(ACCOUNT_TYPE, fromType))
+        .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
   private Put preparePut(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
@@ -2261,8 +2261,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private Delete prepareDelete(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)

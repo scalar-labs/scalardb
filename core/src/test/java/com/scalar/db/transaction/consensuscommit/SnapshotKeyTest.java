@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Get;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import org.junit.Test;
 
 /** */
@@ -19,21 +18,21 @@ public class SnapshotKeyTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithoutClusteringKey() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareAnotherGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_3));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_4));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
