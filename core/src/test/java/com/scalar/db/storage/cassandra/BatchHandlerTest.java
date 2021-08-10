@@ -22,9 +22,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Before;
@@ -82,17 +80,17 @@ public class BatchHandlerTest {
   }
 
   private List<Mutation> prepareNonConditionalPuts() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey1 = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey1 = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put1 =
         new Put(partitionKey, clusteringKey1)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
+            .withValue(ANY_NAME_3, ANY_INT_1)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
-    Key clusteringKey2 = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3));
+    Key clusteringKey2 = new Key(ANY_NAME_2, ANY_TEXT_3);
     Put put2 =
         new Put(partitionKey, clusteringKey2)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
+            .withValue(ANY_NAME_3, ANY_INT_1)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     return Arrays.asList(put1, put2);

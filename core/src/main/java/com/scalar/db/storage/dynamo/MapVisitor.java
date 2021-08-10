@@ -94,9 +94,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value
-        .getString()
-        .ifPresent(s -> values.put(value.getName(), AttributeValue.builder().s(s).build()));
+    value.get().ifPresent(s -> values.put(value.getName(), AttributeValue.builder().s(s).build()));
   }
 
   /**

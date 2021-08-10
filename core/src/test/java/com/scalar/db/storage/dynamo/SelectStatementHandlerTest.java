@@ -15,7 +15,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,15 +72,15 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -133,7 +132,7 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expected = new HashMap<>();
     when(queryResponse.items()).thenReturn(Arrays.asList(expected));
 
-    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -209,7 +208,7 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expected = new HashMap<>();
     when(queryResponse.items()).thenReturn(Arrays.asList(expected));
 
-    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -257,8 +256,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)));
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -302,11 +301,15 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(
-                new Key(
-                    new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build())
             .withEnd(
-                new Key(
-                    new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_4)));
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_4)
+                    .build());
 
     String expectedCondition =
         DynamoOperation.PARTITION_KEY
@@ -365,7 +368,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
             .withLimit(ANY_LIMIT);
 
@@ -413,7 +416,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
             .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
             .withLimit(ANY_LIMIT);

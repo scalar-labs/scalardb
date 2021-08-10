@@ -30,16 +30,16 @@ public class PutTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey);
   }
 
   @Test
   public void getPartitionKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key expected = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key expected = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put = new Put(expected, clusteringKey);
 
     // Act
@@ -52,8 +52,8 @@ public class PutTest {
   @Test
   public void getClusteringKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key expected = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key expected = new Key(ANY_NAME_1, ANY_TEXT_2);
     Put put = new Put(partitionKey, expected);
 
     // Act
@@ -66,7 +66,7 @@ public class PutTest {
   @Test
   public void getClusteringKey_ClusteringKeyNotGivenInConstructor_ShouldReturnNull() {
     // Arrange
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Put put = new Put(partitionKey);
 
     // Act
@@ -232,9 +232,9 @@ public class PutTest {
   public void equals_PutWithDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
     Put put = preparePut();
-    put.withValue(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    put.withValue(ANY_NAME_3, ANY_TEXT_3);
     Put another = preparePut();
-    another.withValue(new TextValue(ANY_NAME_3, ANY_TEXT_4));
+    another.withValue(ANY_NAME_3, ANY_TEXT_4);
 
     // Act
     boolean ret = put.equals(another);

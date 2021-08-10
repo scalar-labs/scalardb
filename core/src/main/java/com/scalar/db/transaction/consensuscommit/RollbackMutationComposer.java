@@ -77,7 +77,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     }
 
     TextValue beforeId = (TextValue) latest.getValue(Attribute.BEFORE_ID).get();
-    if (beforeId.getString().isPresent()) {
+    if (beforeId.get().isPresent()) {
       mutations.add(composePut(base, latest));
     } else {
       // no record to rollback, so it should be deleted
