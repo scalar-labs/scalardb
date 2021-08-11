@@ -95,24 +95,24 @@ public final class Utility {
   /**
    * Return a fully qualified table name
    *
-   * @param schemaPrefix an optional schema prefix
+   * @param namespacePrefix an optional namespace prefix
    * @param namespace a namespace
    * @param table a table
    * @return a fully qualified table name
    */
   public static String getFullTableName(
-      Optional<String> schemaPrefix, String namespace, String table) {
-    return schemaPrefix.orElse("") + namespace + "." + table;
+      Optional<String> namespacePrefix, String namespace, String table) {
+    return namespacePrefix.orElse("") + namespace + "." + table;
   }
 
   /**
-   * Return the schema prefix concatenated to the schema
+   * Return the namespace prefix concatenated to the namespace
    *
-   * @param schemaPrefix an optional schema prefix
-   * @param schema a schema
-   * @return the schema prefix concatenated to the schema
+   * @param namespacePrefix an optional namespace prefix
+   * @param namespace a namespace
+   * @return the namespace prefix concatenated to the namespace
    */
-  public static String getFullNamespaceName(Optional<String> schemaPrefix, String schema) {
-    return schemaPrefix.orElse("") + schema;
+  public static String getFullNamespaceName(Optional<String> namespacePrefix, String namespace) {
+    return namespacePrefix.orElse("") + namespace;
   }
 }
