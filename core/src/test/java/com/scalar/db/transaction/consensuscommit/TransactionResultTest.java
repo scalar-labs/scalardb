@@ -9,7 +9,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Map;
 import java.util.Optional;
@@ -35,10 +34,8 @@ public class TransactionResultTest {
   private TransactionResult result;
 
   private void configureResult(Result mock) {
-    when(mock.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(mock.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
+    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
+    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
 
     ImmutableMap<String, Value<?>> values =
         ImmutableMap.<String, Value<?>>builder()
@@ -76,7 +73,7 @@ public class TransactionResultTest {
     Optional<Key> actual = result.getPartitionKey();
 
     // Assert
-    assertThat(actual).isEqualTo(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
+    assertThat(actual).isEqualTo(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
   }
 
   @Test
@@ -88,7 +85,7 @@ public class TransactionResultTest {
     Optional<Key> actual = result.getClusteringKey();
 
     // Assert
-    assertThat(actual).isEqualTo(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
+    assertThat(actual).isEqualTo(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
   }
 
   @Test

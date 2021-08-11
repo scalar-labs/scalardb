@@ -5,10 +5,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,16 +36,16 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
-    List<Value<?>> list = new ArrayList<>();
+    Key.Builder builder = Key.newBuilder();
     for (String name : names) {
       Value<?> value = values.get(name);
       if (value == null) {
         LOGGER.warn("full key doesn't seem to be projected into the result");
         return Optional.empty();
       }
-      list.add(value);
+      builder.add(value);
     }
-    return Optional.of(new Key(list));
+    return Optional.of(builder.build());
   }
 
   @Override

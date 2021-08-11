@@ -99,8 +99,8 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    LOGGER.debug(value.getString() + " is bound to " + i);
-    value.getString().ifPresent(s -> bound.setString(i, s));
+    LOGGER.debug(value.get() + " is bound to " + i);
+    value.get().ifPresent(s -> bound.setString(i, s));
     i++;
   }
 

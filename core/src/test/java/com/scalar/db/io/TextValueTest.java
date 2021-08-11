@@ -15,28 +15,13 @@ public class TextValueTest {
   private static final String ANOTHER_NAME = "another_name";
 
   @Test
-  public void getBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    byte[] expected = "some_text".getBytes(StandardCharsets.UTF_8);
-    TextValue value = new TextValue(ANY_NAME, expected);
-
-    // Act
-    Optional<byte[]> actual = value.getBytes();
-
-    // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(Arrays.equals(expected, actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
-  }
-
-  @Test
-  public void getString_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+  public void get_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     String expected = "some_text";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
-    Optional<String> actual = value.getString();
+    Optional<String> actual = value.get();
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
@@ -124,13 +109,13 @@ public class TextValueTest {
   }
 
   @Test
-  public void getStringWithTwoBytesCharacter_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+  public void getWithTwoBytesCharacter_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     String expected = "あいうえお";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
-    Optional<String> actual = value.getString();
+    Optional<String> actual = value.get();
 
     // Assert
     assertThat(expected.equals(actual.get())).isTrue();

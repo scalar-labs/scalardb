@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Get;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,7 +72,7 @@ public class DynamoTableMetadataManagerTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(metadataMap);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     Map<String, AttributeValue> expectedKey = new HashMap<>();
     expectedKey.put("table", AttributeValue.builder().s(FULLNAME).build());
@@ -96,7 +95,7 @@ public class DynamoTableMetadataManagerTest {
     when(response.item()).thenReturn(metadataMap);
     manager = new DynamoTableMetadataManager(client, Optional.of("prefix_"));
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     Map<String, AttributeValue> expectedKey = new HashMap<>();
     expectedKey.put("table", AttributeValue.builder().s(FULLNAME).build());
@@ -118,9 +117,9 @@ public class DynamoTableMetadataManagerTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(metadataMap);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get1 = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    Key partitionKey2 = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2));
+    Key partitionKey2 = new Key(ANY_NAME_1, ANY_TEXT_2);
     Get get2 = new Get(partitionKey2).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act
@@ -136,7 +135,7 @@ public class DynamoTableMetadataManagerTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(metadataMap);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME);
 
     // Act Assert
@@ -153,7 +152,7 @@ public class DynamoTableMetadataManagerTest {
     DynamoDbException toThrow = mock(DynamoDbException.class);
     doThrow(toThrow).when(client).getItem(any(GetItemRequest.class));
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act Assert

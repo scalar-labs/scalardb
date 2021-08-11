@@ -12,9 +12,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -63,7 +61,7 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
 
     Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
+        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
@@ -81,8 +79,8 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
@@ -103,7 +101,7 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
+        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(delete, metadataManager);
@@ -122,10 +120,11 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        new Key(
-            new TextValue(ANY_NAME_1, ANY_TEXT_1),
-            new TextValue(ANY_NAME_2, ANY_TEXT_2),
-            new IntValue(ANY_NAME_3, ANY_INT_1));
+        Key.newBuilder()
+            .addText(ANY_NAME_1, ANY_TEXT_1)
+            .addText(ANY_NAME_2, ANY_TEXT_2)
+            .addInt(ANY_NAME_3, ANY_INT_1)
+            .build();
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
@@ -143,10 +142,11 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        new Key(
-            new TextValue(ANY_NAME_1, ANY_TEXT_1),
-            new TextValue(ANY_NAME_2, ANY_TEXT_2),
-            new IntValue(ANY_NAME_3, ANY_INT_1));
+        Key.newBuilder()
+            .addText(ANY_NAME_1, ANY_TEXT_1)
+            .addText(ANY_NAME_2, ANY_TEXT_2)
+            .addInt(ANY_NAME_3, ANY_INT_1)
+            .build();
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadataManager);
 
@@ -166,8 +166,8 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
     Key partitionKey =
-        new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1), new IntValue(ANY_NAME_3, ANY_INT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)

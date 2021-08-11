@@ -99,7 +99,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Get get = new Get(new Key(new TextValue("p1", "val")));
+    Get get = new Get(new Key("p1", "val"));
     jdbcService.get(get, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -125,7 +125,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+    Scan scan = new Scan(new Key("p1", "val"));
     jdbcService.getScanner(scan, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -151,7 +151,7 @@ public class JdbcServiceTest {
     when(resultSet.next()).thenReturn(false);
 
     // Act
-    Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+    Scan scan = new Scan(new Key("p1", "val"));
     jdbcService.scan(scan, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -168,7 +168,7 @@ public class JdbcServiceTest {
     when(upsertQuery.prepareAndBind(any())).thenReturn(preparedStatement);
 
     // Act
-    Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
+    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
     boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -190,8 +190,8 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
+        new Put(new Key("p1", "val1"))
+            .withValue("v1", "val2")
             .withCondition(
                 new PutIf(
                     new ConditionalExpression(
@@ -217,8 +217,8 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
+        new Put(new Key("p1", "val1"))
+            .withValue("v1", "val2")
             .withCondition(
                 new PutIf(
                     new ConditionalExpression(
@@ -244,9 +244,7 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
-            .withCondition(new PutIfExists());
+        new Put(new Key("p1", "val1")).withValue("v1", "val2").withCondition(new PutIfExists());
     boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -268,9 +266,7 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
-            .withCondition(new PutIfExists());
+        new Put(new Key("p1", "val1")).withValue("v1", "val2").withCondition(new PutIfExists());
     boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -291,9 +287,7 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
-            .withCondition(new PutIfNotExists());
+        new Put(new Key("p1", "val1")).withValue("v1", "val2").withCondition(new PutIfNotExists());
     boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -316,9 +310,7 @@ public class JdbcServiceTest {
 
     // Act
     Put put =
-        new Put(new Key(new TextValue("p1", "val1")))
-            .withValue(new TextValue("v1", "val2"))
-            .withCondition(new PutIfNotExists());
+        new Put(new Key("p1", "val1")).withValue("v1", "val2").withCondition(new PutIfNotExists());
     boolean ret = jdbcService.put(put, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -336,7 +328,7 @@ public class JdbcServiceTest {
     when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
 
     // Act
-    Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+    Delete delete = new Delete(new Key("p1", "val1"));
     boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -357,7 +349,7 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key(new TextValue("p1", "val1")))
+        new Delete(new Key("p1", "val1"))
             .withCondition(
                 new DeleteIf(
                     new ConditionalExpression(
@@ -382,7 +374,7 @@ public class JdbcServiceTest {
 
     // Act
     Delete delete =
-        new Delete(new Key(new TextValue("p1", "val1")))
+        new Delete(new Key("p1", "val1"))
             .withCondition(
                 new DeleteIf(
                     new ConditionalExpression(
@@ -407,8 +399,7 @@ public class JdbcServiceTest {
     when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
-    Delete delete =
-        new Delete(new Key(new TextValue("p1", "val1"))).withCondition(new DeleteIfExists());
+    Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
     boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -429,8 +420,7 @@ public class JdbcServiceTest {
     when(preparedStatement.executeUpdate()).thenReturn(0);
 
     // Act
-    Delete delete =
-        new Delete(new Key(new TextValue("p1", "val1"))).withCondition(new DeleteIfExists());
+    Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
     boolean ret = jdbcService.delete(delete, connection, NAMESPACE, TABLE);
 
     // Assert
@@ -453,8 +443,8 @@ public class JdbcServiceTest {
     when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
 
     // Act
-    Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
-    Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+    Delete delete = new Delete(new Key("p1", "val1"));
     boolean ret = jdbcService.mutate(Arrays.asList(put, delete), connection, NAMESPACE, TABLE);
 
     // Assert

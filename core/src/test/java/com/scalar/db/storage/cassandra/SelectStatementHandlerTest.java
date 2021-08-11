@@ -7,7 +7,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,7 +23,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -60,20 +58,20 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithClusteringKey() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -204,8 +202,7 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-        .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)));
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2)).withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
 
     // Act
     handler.prepare(scan);
@@ -238,9 +235,15 @@ public class SelectStatementHandlerTest {
     configureBehavior(expected);
     scan = prepareScan();
     scan.withStart(
-            new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+            Key.newBuilder()
+                .addText(ANY_NAME_2, ANY_TEXT_2)
+                .addText(ANY_NAME_3, ANY_TEXT_3)
+                .build())
         .withEnd(
-            new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_4)));
+            Key.newBuilder()
+                .addText(ANY_NAME_2, ANY_TEXT_2)
+                .addText(ANY_NAME_3, ANY_TEXT_4)
+                .build());
 
     // Act
     handler.prepare(scan);
@@ -268,8 +271,8 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
-        .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), false);
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
+        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
 
     // Act
     handler.prepare(scan);
@@ -300,7 +303,7 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
         .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
         .withLimit(ANY_LIMIT);
 
@@ -334,7 +337,7 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
         .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
         .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
         .withLimit(ANY_LIMIT);
@@ -366,9 +369,15 @@ public class SelectStatementHandlerTest {
     configureBehavior(null);
     scan = prepareScan();
     scan.withStart(
-            new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+            Key.newBuilder()
+                .addText(ANY_NAME_2, ANY_TEXT_2)
+                .addText(ANY_NAME_3, ANY_TEXT_3)
+                .build())
         .withEnd(
-            new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_4)));
+            Key.newBuilder()
+                .addText(ANY_NAME_2, ANY_TEXT_2)
+                .addText(ANY_NAME_3, ANY_TEXT_4)
+                .build());
 
     // Act
     handler.bind(prepared, scan);

@@ -75,7 +75,7 @@ public class PreparedStatementBinder implements ValueVisitor {
   @Override
   public void visit(TextValue value) {
     try {
-      preparedStatement.setString(index++, value.getString().orElse(null));
+      preparedStatement.setString(index++, value.get().orElse(null));
     } catch (SQLException e) {
       sqlException = e;
     }

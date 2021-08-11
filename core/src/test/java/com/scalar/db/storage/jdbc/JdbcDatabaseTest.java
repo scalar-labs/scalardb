@@ -15,7 +15,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -53,7 +52,7 @@ public class JdbcDatabaseTest {
     // Arrange
 
     // Act
-    Get get = new Get(new Key(new TextValue("p1", "val")));
+    Get get = new Get(new Key("p1", "val"));
     jdbcDatabase.get(get);
 
     // Assert
@@ -71,7 +70,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Get get = new Get(new Key(new TextValue("p1", "val")));
+              Get get = new Get(new Key("p1", "val"));
               jdbcDatabase.get(get);
             })
         .isInstanceOf(ExecutionException.class);
@@ -85,7 +84,7 @@ public class JdbcDatabaseTest {
         .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
 
     // Act
-    Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+    Scan scan = new Scan(new Key("p1", "val"));
     Scanner scanner = jdbcDatabase.scan(scan);
     scanner.close();
 
@@ -104,7 +103,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Scan scan = new Scan(new Key(new TextValue("p1", "val")));
+              Scan scan = new Scan(new Key("p1", "val"));
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class);
@@ -117,7 +116,7 @@ public class JdbcDatabaseTest {
     when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
 
     // Act
-    Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
+    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
     jdbcDatabase.put(put);
 
     // Assert
@@ -136,8 +135,8 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"))
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
                       .withCondition(new PutIfNotExists());
               jdbcDatabase.put(put);
             })
@@ -155,9 +154,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
               jdbcDatabase.put(put);
             })
         .isInstanceOf(ExecutionException.class);
@@ -170,7 +167,7 @@ public class JdbcDatabaseTest {
     when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);
 
     // Act
-    Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+    Delete delete = new Delete(new Key("p1", "val1"));
     jdbcDatabase.delete(delete);
 
     // Assert
@@ -188,9 +185,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Delete delete =
-                  new Delete(new Key(new TextValue("p1", "val1")))
-                      .withCondition(new DeleteIfExists());
+              Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(NoMutationException.class);
@@ -207,7 +202,7 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+              Delete delete = new Delete(new Key("p1", "val1"));
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(ExecutionException.class);
@@ -220,8 +215,8 @@ public class JdbcDatabaseTest {
     when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(true);
 
     // Act
-    Put put = new Put(new Key(new TextValue("p1", "val1"))).withValue(new TextValue("v1", "val2"));
-    Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+    Delete delete = new Delete(new Key("p1", "val1"));
     jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
@@ -240,12 +235,10 @@ public class JdbcDatabaseTest {
     assertThatThrownBy(
             () -> {
               Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"))
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
                       .withCondition(new PutIfNotExists());
-              Delete delete =
-                  new Delete(new Key(new TextValue("p1", "val1")))
-                      .withCondition(new DeleteIfExists());
+              Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(NoMutationException.class);
@@ -262,10 +255,8 @@ public class JdbcDatabaseTest {
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Put put =
-                  new Put(new Key(new TextValue("p1", "val1")))
-                      .withValue(new TextValue("v1", "val2"));
-              Delete delete = new Delete(new Key(new TextValue("p1", "val1")));
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Delete delete = new Delete(new Key("p1", "val1"));
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(ExecutionException.class);

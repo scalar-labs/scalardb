@@ -19,9 +19,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
@@ -56,30 +54,30 @@ public class CommitHandlerTest {
   }
 
   private Put preparePut1() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(new IntValue(ANY_NAME_3, ANY_INT_1));
+        .withValue(ANY_NAME_3, ANY_INT_1);
   }
 
   private Put preparePut2() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_3));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_4));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(new IntValue(ANY_NAME_3, ANY_INT_2));
+        .withValue(ANY_NAME_3, ANY_INT_2);
   }
 
   private Put preparePut3() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME)
-        .withValue(new IntValue(ANY_NAME_3, ANY_INT_2));
+        .withValue(ANY_NAME_3, ANY_INT_2);
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {

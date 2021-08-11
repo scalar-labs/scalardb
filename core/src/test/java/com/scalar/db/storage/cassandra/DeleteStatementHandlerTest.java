@@ -57,14 +57,14 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Delete del = new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     return del;
   }
 
   private Delete prepareDeleteWithClusteringKey() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Delete del =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
