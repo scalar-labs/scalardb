@@ -311,7 +311,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -321,10 +321,6 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build());
-
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
@@ -344,8 +340,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     manager.close();
     server.shutdown();
     server.blockUntilShutdown();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

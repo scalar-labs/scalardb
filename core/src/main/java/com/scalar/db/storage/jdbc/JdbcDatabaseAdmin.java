@@ -176,20 +176,16 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      return metadataManager.getTableMetadata(fullNamespace(namespace), table);
+      return metadataManager.getTableMetadata(getFullNamespaceName(schemaPrefix, namespace), table);
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }
   }
 
-  private String fullNamespace(String namespace) {
-    return schemaPrefix.map(s -> s + namespace).orElse(namespace);
-  }
-
   @Override
   public void close() {
     try {
-      dataSource.getConnection().close();
+      dataSource.close();
     } catch (SQLException e) {
       LOGGER.error("failed to close the dataSource", e);
     }
@@ -270,7 +266,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   /**
-   * Get the vendor DB data type equivalent that is equivalent to the Scalar DB data type
+   * Get the vendor DB data type that is equivalent to the Scalar DB data type
    *
    * @param metadata a table metadata
    * @param columnName a column name

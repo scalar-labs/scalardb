@@ -68,7 +68,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
 
     // For the coordinator table
-    testEnv.register(
+    testEnv.createTable(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
         TableMetadata.newBuilder()
@@ -80,7 +80,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE,
           table,
           TableMetadata.newBuilder()
@@ -103,10 +103,6 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
               .build());
     }
 
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
-
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
     server = new ScalarDbServer(serverProperties);
@@ -124,8 +120,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     originalStorage.close();
     server.shutdown();
     server.blockUntilShutdown();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

@@ -1,5 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.Utility.getFullTableName;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -152,7 +154,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
         encloseFullTableName(getMetadataSchema(), TABLE),
-        Utility.getFullTableName(schemaPrefix, schema, table),
+        getFullTableName(schemaPrefix, schema, table),
         columnName,
         dataType.toString(),
         keyType != null ? "'" + keyType + "'" : "NULL",
@@ -177,7 +179,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         + " WHERE "
         + enclose(FULL_TABLE_NAME)
         + " = '"
-        + Utility.getFullTableName(schemaPrefix, schema, table)
+        + getFullTableName(schemaPrefix, schema, table)
         + "'";
   }
 
@@ -431,11 +433,10 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       throw new StorageRuntimeException(
           String.format(
               "deleting the %s table metadata failed ",
-              Utility.getFullTableName(schemaPrefix, namespace, table)),
+              getFullTableName(schemaPrefix, namespace, table)),
           e);
     }
-    tableMetadataCache.put(
-        Utility.getFullTableName(schemaPrefix, namespace, table), Optional.empty());
+    tableMetadataCache.put(getFullTableName(schemaPrefix, namespace, table), Optional.empty());
   }
 
   private String enclose(String name) {

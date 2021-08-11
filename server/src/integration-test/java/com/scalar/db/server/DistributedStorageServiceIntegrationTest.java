@@ -100,7 +100,7 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -113,9 +113,6 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
             .addClusteringKey(COL_NAME4)
             .addSecondaryIndex(COL_NAME3)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
@@ -134,8 +131,7 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
     storage.close();
     server.shutdown();
     server.blockUntilShutdown();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }
