@@ -15,7 +15,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -164,7 +163,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String truncateTableStatement =
         "TRUNCATE TABLE "
-            + encloseFullTableName(Utility.getFullNamespaceName(schemaPrefix, namespace), table);
+            + encloseFullTableName(getFullNamespaceName(schemaPrefix, namespace), table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
@@ -293,9 +292,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private void createIndex(
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
-    LinkedHashSet<String> sortedIndexedColumns = new LinkedHashSet<>(metadata.getColumnNames());
-    sortedIndexedColumns.retainAll(metadata.getSecondaryIndexNames());
-    for (String indexedColumn : sortedIndexedColumns) {
+    for (String indexedColumn : metadata.getSecondaryIndexNames()) {
       String indexName =
           String.join(
               "_",

@@ -79,8 +79,8 @@ public class JdbcDatabaseAdminTest {
         RdbEngine.MYSQL,
         "CREATE SCHEMA IF NOT EXISTS `ns_prefixmy_ns`",
         "CREATE TABLE `ns_prefixmy_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` FLOAT, PRIMARY KEY (`c3`,`c1`,`c4`))",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON `ns_prefixmy_ns`.`foo_table` (`c1`)",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON `ns_prefixmy_ns`.`foo_table` (`c4`)");
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON `ns_prefixmy_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON `ns_prefixmy_ns`.`foo_table` (`c1`)");
   }
 
   @Test
@@ -90,8 +90,8 @@ public class JdbcDatabaseAdminTest {
         RdbEngine.POSTGRESQL,
         "CREATE SCHEMA IF NOT EXISTS \"ns_prefixmy_ns\"",
         "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")");
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")");
   }
 
   @Test
@@ -101,8 +101,8 @@ public class JdbcDatabaseAdminTest {
         RdbEngine.SQL_SERVER,
         "CREATE SCHEMA [ns_prefixmy_ns]",
         "CREATE TABLE [ns_prefixmy_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON [ns_prefixmy_ns].[foo_table] ([c1])",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON [ns_prefixmy_ns].[foo_table] ([c4])");
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON [ns_prefixmy_ns].[foo_table] ([c4])",
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON [ns_prefixmy_ns].[foo_table] ([c1])");
   }
 
   @Test
@@ -113,9 +113,8 @@ public class JdbcDatabaseAdminTest {
         "CREATE USER \"ns_prefixmy_ns\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"ns_prefixmy_ns\" quota unlimited on USERS",
         "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")",
-        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")"
-            + "");
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")");
   }
 
   private void createTable_forX_shouldExecuteCreateTableStatement(
