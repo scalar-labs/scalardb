@@ -523,6 +523,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     execute(connection, dropTableStatement);
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
         "SELECT DISTINCT "

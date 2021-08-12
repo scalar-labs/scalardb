@@ -456,6 +456,7 @@ public class JdbcTableMetadataManagerTest {
   }
   // After deleting the given table metadata, since there are no more metadata stored in the
   // metadata table, the metadata table and schema should be deleted
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
   private void
       deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
           RdbEngine rdbEngine,
@@ -547,12 +548,13 @@ public class JdbcTableMetadataManagerTest {
         RdbEngine.SQL_SERVER);
   }
   /**
-   * After deleting the metadata for the given table, since there are still metadata for other tables
-   * existing, the metadata table should not be deleted
+   * After deleting the metadata for the given table, since there are still metadata for other
+   * tables existing, the metadata table should not be deleted
    *
    * @param rdbEngine a rdbEngine
    * @throws SQLException an exception
    */
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
   public void
       deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
           RdbEngine rdbEngine) throws SQLException {

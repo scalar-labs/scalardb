@@ -1,23 +1,14 @@
 package com.scalar.db.storage.jdbc.test;
 
-import static com.scalar.db.util.Utility.getFullNamespaceName;
-
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
-import com.scalar.db.storage.jdbc.JdbcUtils;
-import com.scalar.db.storage.jdbc.RdbEngine;
-import com.scalar.db.storage.jdbc.query.QueryUtils;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +24,6 @@ public class TestEnv implements Closeable {
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
   private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
 
-  private final RdbEngine rdbEngine;
   private final BasicDataSource dataSource;
   private final JdbcConfig config;
 
@@ -53,7 +43,6 @@ public class TestEnv implements Closeable {
 
   public TestEnv(
       String jdbcUrl, String username, String password, Optional<String> namespacePrefix) {
-    rdbEngine = JdbcUtils.getRdbEngine(jdbcUrl);
 
     dataSource = new BasicDataSource();
     dataSource.setUrl(jdbcUrl);
@@ -83,34 +72,6 @@ public class TestEnv implements Closeable {
     tableList.add(table);
     metadataList.add(metadata);
     jdbcAdmin.createTable(schema, table, metadata, new HashMap<>());
-  }
-
-  private void deleteMetadataSchemaAndTable() throws SQLException {
-    String enclosedFullMetadataTableName =
-        QueryUtils.enclosedFullTableName(
-            Utility.getFullNamespaceName(
-                config.getNamespacePrefix(), JdbcTableMetadataManager.SCHEMA),
-            JdbcTableMetadataManager.TABLE,
-            rdbEngine);
-    execute("DROP TABLE " + enclosedFullMetadataTableName);
-
-    String enclosedFullMetadataSchema =
-        QueryUtils.enclose(
-            getFullNamespaceName(config.getNamespacePrefix(), JdbcTableMetadataManager.SCHEMA),
-            rdbEngine);
-    if (rdbEngine == RdbEngine.ORACLE) {
-      execute("DROP USER " + enclosedFullMetadataSchema);
-    } else {
-      execute("DROP SCHEMA " + enclosedFullMetadataSchema);
-    }
-  }
-
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
-  private void execute(String sql) throws SQLException {
-    try (Connection connection = dataSource.getConnection();
-        Statement stmt = connection.createStatement()) {
-      stmt.execute(sql);
-    }
   }
 
   public void deleteTableData() throws ExecutionException {
