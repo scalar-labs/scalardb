@@ -123,8 +123,6 @@ public class TestEnv implements Closeable {
     for (int i = 0; i < metadataList.size(); i++) {
       jdbcAdmin.dropTable(schemaList.get(i), tableList.get(i));
     }
-
-    deleteMetadataSchemaAndTable();
   }
 
   public JdbcConfig getJdbcConfig() {

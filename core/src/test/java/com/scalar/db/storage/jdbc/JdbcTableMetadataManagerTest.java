@@ -415,35 +415,55 @@ public class JdbcTableMetadataManagerTest {
 
   @Test
   public void deleteMetadata_forMysqlWithExistingTable_ShouldDeleteMetadata() throws SQLException {
-    deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
-        RdbEngine.MYSQL, "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'");
+    deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
+        RdbEngine.MYSQL,
+        "DELETE FROM `scalardb`.`metadata` WHERE `full_table_name` = 'ns1.t2'",
+        "SELECT DISTINCT `full_table_name` FROM `scalardb`.`metadata`",
+        "DROP TABLE `scalardb`.`metadata`",
+        "DROP SCHEMA `scalardb`");
   }
 
   @Test
   public void deleteMetadata_forPostgresqlWithExistingTable_ShouldDeleteMetadata()
       throws SQLException {
-    deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
+    deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
         RdbEngine.POSTGRESQL,
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'");
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"",
+        "DROP TABLE \"scalardb\".\"metadata\"",
+        "DROP SCHEMA \"scalardb\"");
   }
 
   @Test
   public void deleteMetadata_forSqlServerWithExistingTable_ShouldDeleteMetadata()
       throws SQLException {
-    deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
+    deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
         RdbEngine.SQL_SERVER,
-        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'ns1.t2'");
+        "DELETE FROM [scalardb].[metadata] WHERE [full_table_name] = 'ns1.t2'",
+        "SELECT DISTINCT [full_table_name] FROM [scalardb].[metadata]",
+        "DROP TABLE [scalardb].[metadata]",
+        "DROP SCHEMA [scalardb]");
   }
 
   @Test
   public void deleteMetadata_forOracleWithExistingTable_ShouldDeleteMetadata() throws SQLException {
-    deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
+    deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
         RdbEngine.ORACLE,
-        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'");
+        "DELETE FROM \"scalardb\".\"metadata\" WHERE \"full_table_name\" = 'ns1.t2'",
+        "SELECT DISTINCT \"full_table_name\" FROM \"scalardb\".\"metadata\"",
+        "DROP TABLE \"scalardb\".\"metadata\"",
+        "DROP USER \"scalardb\"");
   }
-
-  private void deleteMetadata_ForXWithExistingTable_ShouldDeleteMetadata(
-      RdbEngine rdbEngine, String deleteQuery) throws SQLException {
+  // After deleting the given table metadata, since there are no more metadata stored in the
+  // metadata table, the metadata table and schema should be deleted
+  private void
+      deleteMetadata_ForXWithNoMoreMetadataAfterDeletion_ShouldDeleteMetadataAndMetadataTable(
+          RdbEngine rdbEngine,
+          String expectedDeleteQuery,
+          String expectedIsMetadataEmptyQuery,
+          String expectedDeleteMetadataTableStatement,
+          String expectedDeleteMetadataSchemaStatement)
+          throws SQLException {
     // Arrange
     String namespace = "ns1";
     String table = "t2";
@@ -462,8 +482,19 @@ public class JdbcTableMetadataManagerTest {
 
     when(dataSource.getConnection()).thenReturn(connection1).thenReturn(connection2);
     Statement deleteStatement = mock(Statement.class);
-    when(connection2.createStatement()).thenReturn(deleteStatement);
+    Statement isMetadataTableEmptyStatement = mock(Statement.class);
+    Statement deleteMetadataTableStatement = mock(Statement.class);
+    Statement deleteMetadataSchemaStatement = mock(Statement.class);
+    when(connection2.createStatement())
+        .thenReturn(
+            deleteStatement,
+            isMetadataTableEmptyStatement,
+            deleteMetadataTableStatement,
+            deleteMetadataSchemaStatement);
     when(dataSource.getConnection()).thenReturn(connection1, connection2);
+    ResultSet isMetadataEmptyQueryResult = mock(ResultSet.class);
+    when(isMetadataTableEmptyStatement.executeQuery(any())).thenReturn(isMetadataEmptyQueryResult);
+    when(isMetadataEmptyQueryResult.next()).thenReturn(false);
 
     // Act
     TableMetadata beforeDeletionMetadata = manager.getTableMetadata(namespace, table);
@@ -477,7 +508,93 @@ public class JdbcTableMetadataManagerTest {
                 .addPartitionKey("c1")
                 .addColumn("c1", DataType.BOOLEAN)
                 .build());
-    verify(deleteStatement).execute(deleteQuery);
+    verify(deleteStatement).execute(expectedDeleteQuery);
+    verify(isMetadataTableEmptyStatement).executeQuery(expectedIsMetadataEmptyQuery);
+    verify(deleteMetadataTableStatement).execute(expectedDeleteMetadataTableStatement);
+    verify(deleteMetadataSchemaStatement).execute(expectedDeleteMetadataSchemaStatement);
+    assertThat(afterDeletionMetadata).isNull();
+  }
+
+  @Test
+  public void
+      deleteMetadata_ForMysqlWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable()
+          throws SQLException {
+    deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
+        RdbEngine.MYSQL);
+  }
+
+  @Test
+  public void
+      deleteMetadata_ForPostgresqlWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable()
+          throws SQLException {
+    deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
+        RdbEngine.POSTGRESQL);
+  }
+
+  @Test
+  public void
+      deleteMetadata_ForOracleWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable()
+          throws SQLException {
+    deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
+        RdbEngine.ORACLE);
+  }
+
+  @Test
+  public void
+      deleteMetadata_ForSqlServerWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable()
+          throws SQLException {
+    deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
+        RdbEngine.SQL_SERVER);
+  }
+  /**
+   * After deleting the metadata for the given table, since there are still metadata for other tables
+   * existing, the metadata table should not be deleted
+   *
+   * @param rdbEngine a rdbEngine
+   * @throws SQLException an exception
+   */
+  public void
+      deleteMetadata_ForXWithOtherMetadataAfterDeletion_ShouldDeleteMetadataButNotMetadataTable(
+          RdbEngine rdbEngine) throws SQLException {
+    // Arrange
+    String namespace = "ns1";
+    String table = "t2";
+
+    JdbcTableMetadataManager manager =
+        new JdbcTableMetadataManager(dataSource, Optional.empty(), rdbEngine);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+
+    ResultSet resultSet =
+        mockResultSet(
+            Collections.singletonList(
+                new GetColumnsResultSetMocker.Row(
+                    "c1", DataType.BOOLEAN.toString(), "PARTITION", null, false)));
+    when(selectStatement.executeQuery()).thenReturn(resultSet);
+    when(connection1.prepareStatement(any())).thenReturn(selectStatement);
+
+    when(dataSource.getConnection()).thenReturn(connection1).thenReturn(connection2);
+    Statement deleteStatement = mock(Statement.class);
+    Statement isMetadataTableEmptyStatement = mock(Statement.class);
+    when(connection2.createStatement()).thenReturn(deleteStatement, isMetadataTableEmptyStatement);
+    when(dataSource.getConnection()).thenReturn(connection1, connection2);
+    ResultSet isMetadataEmptyQueryResult = mock(ResultSet.class);
+    when(isMetadataTableEmptyStatement.executeQuery(any())).thenReturn(isMetadataEmptyQueryResult);
+    when(isMetadataEmptyQueryResult.next()).thenReturn(true);
+
+    // Act
+    TableMetadata beforeDeletionMetadata = manager.getTableMetadata(namespace, table);
+    manager.deleteTableMetadata(namespace, table);
+    TableMetadata afterDeletionMetadata = manager.getTableMetadata(namespace, table);
+
+    // Assert
+    assertThat(beforeDeletionMetadata)
+        .isEqualTo(
+            TableMetadata.newBuilder()
+                .addPartitionKey("c1")
+                .addColumn("c1", DataType.BOOLEAN)
+                .build());
+    verify(deleteStatement).execute(any());
+    verify(isMetadataTableEmptyStatement).executeQuery(any());
     assertThat(afterDeletionMetadata).isNull();
   }
 

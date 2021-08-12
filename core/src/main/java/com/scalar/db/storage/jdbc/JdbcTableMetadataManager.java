@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
 import com.google.common.cache.CacheBuilder;
@@ -20,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -37,6 +39,7 @@ import javax.sql.DataSource;
  */
 @ThreadSafe
 public class JdbcTableMetadataManager implements TableMetadataManager {
+
   public static final String SCHEMA = "scalardb";
   public static final String TABLE = "metadata";
   public static final String FULL_TABLE_NAME = "full_table_name";
@@ -425,7 +428,16 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   @Override
   public void deleteTableMetadata(String namespace, String table) {
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, getDeleteTableMetadataStatement(namespace, table));
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      try {
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        deleteMetadataSchemaAndTableIfEmpty(connection);
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+      connection.commit();
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
@@ -473,8 +485,53 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
         return tableNames;
       }
     } catch (SQLException e) {
+      // An exception will be thrown if the metadata table does not exist when executing the select
+      // query
+      if ((rdbEngine == RdbEngine.MYSQL && e.getErrorCode() == 1049)
+          || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
+          || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+        return Collections.emptySet();
+      }
       throw new StorageRuntimeException(
           "error retrieving the table names of the given namespace", e);
+    }
+  }
+
+  private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
+    if (isMetadataTableEmpty(connection)) {
+      deleteMetadataTable(connection);
+      deleteMetadataSchema(connection);
+    }
+  }
+
+  private void deleteMetadataSchema(Connection connection) throws SQLException {
+    String dropStatement;
+    if (rdbEngine == RdbEngine.ORACLE) {
+      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, SCHEMA));
+    } else {
+      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, SCHEMA));
+    }
+
+    execute(connection, dropStatement);
+  }
+
+  private void deleteMetadataTable(Connection connection) throws SQLException {
+    String dropTableStatement =
+        "DROP TABLE " + encloseFullTableName(getFullNamespaceName(schemaPrefix, SCHEMA), TABLE);
+
+    execute(connection, dropTableStatement);
+  }
+
+  private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
+    String selectAllTables =
+        "SELECT DISTINCT "
+            + enclose(FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), TABLE);
+    try (Statement statement = connection.createStatement();
+        ResultSet results = statement.executeQuery(selectAllTables)) {
+      return !results.next();
     }
   }
 }
