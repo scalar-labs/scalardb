@@ -5,7 +5,9 @@ import java.util.Map;
 
 /** An administrative interface for distributed storage implementations. */
 public interface DistributedStorageAdmin {
+
   String INDEX_NAME_PREFIX = "index";
+
   /**
    * Creates a new table.
    *
