@@ -4,7 +4,7 @@ plugins {
 }
 
 sourceSets {
-    integrationTest {
+    integrationTestAll {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -77,9 +77,9 @@ sourceSets {
 }
 
 configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestCompileOnly.extendsFrom testCompileOnly
+    integrationTestAllImplementation.extendsFrom testImplementation
+    integrationTestAllRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestAllCompileOnly.extendsFrom testCompileOnly
     integrationTestCassandraImplementation.extendsFrom testImplementation
     integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
     integrationTestCassandraCompileOnly.extendsFrom testCompileOnly
@@ -209,10 +209,10 @@ task spotbugsTest(type: SpotBugsTask) {
 }
 
 task spotbugsIntegrationTest(type: SpotBugsTask) {
-    dependsOn 'integrationTestClasses'
-    classDirs = sourceSets.integrationTest.output
-    sourceDirs = sourceSets.integrationTest.allSource.sourceDirectories
-    auxClassPaths = sourceSets.integrationTest.compileClasspath
+    dependsOn 'integrationTestAllClasses'
+    classDirs = sourceSets.integrationTestAll.output
+    sourceDirs = sourceSets.integrationTestAll.allSource.sourceDirectories
+    auxClassPaths = sourceSets.integrationTestAll.compileClasspath
     reports { html.enabled = true }
 }
 
