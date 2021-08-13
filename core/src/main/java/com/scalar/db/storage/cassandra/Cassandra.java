@@ -59,7 +59,7 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
-    metadataManager = new CassandraTableMetadataManager(clusterManager);
+    metadataManager = new CassandraTableMetadataManager(clusterManager, Optional.empty());
     operationChecker = new OperationChecker(metadataManager);
 
     namespacePrefix = config.getNamespacePrefix();

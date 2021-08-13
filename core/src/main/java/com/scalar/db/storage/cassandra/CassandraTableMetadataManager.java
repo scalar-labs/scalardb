@@ -6,20 +6,23 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ConnectionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CassandraTableMetadataManager implements TableMetadataManager {
 
   private final Map<String, TableMetadata> tableMetadataMap;
   private final ClusterManager clusterManager;
+  private final Optional<String> namespacePrefix;
 
-  public CassandraTableMetadataManager(ClusterManager clusterManager) {
+  public CassandraTableMetadataManager(
+      ClusterManager clusterManager, Optional<String> namespacePrefix) {
     this.clusterManager = clusterManager;
     tableMetadataMap = new ConcurrentHashMap<>();
+    this.namespacePrefix = namespacePrefix;
   }
 
   @Override
@@ -32,11 +35,13 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    String fullName = namespace + "." + table;
+    // TODO replace by utility
+    String fullNamespace = namespacePrefix.orElse("") + namespace;
+    String fullName = fullNamespace + "." + table;
     if (!tableMetadataMap.containsKey(fullName)) {
       try {
         com.datastax.driver.core.TableMetadata metadata =
-            clusterManager.getMetadata(namespace, table);
+            clusterManager.getMetadata(fullNamespace, table);
         if (metadata == null) {
           return null;
         }
@@ -53,7 +58,10 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     metadata
         .getColumns()
-        .forEach(c -> builder.addColumn(c.getName(), convertDataType(c.getType().getName())));
+        .forEach(
+            c ->
+                builder.addColumn(
+                    c.getName(), DataType.fromCassandraDataType(c.getType().getName())));
     metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
     for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
       String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
@@ -62,27 +70,6 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
     }
     metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
     return builder.build();
-  }
-
-  private DataType convertDataType(com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
-    switch (cassandraDataTypeName) {
-      case INT:
-        return DataType.INT;
-      case BIGINT:
-        return DataType.BIGINT;
-      case FLOAT:
-        return DataType.FLOAT;
-      case DOUBLE:
-        return DataType.DOUBLE;
-      case TEXT:
-        return DataType.TEXT;
-      case BOOLEAN:
-        return DataType.BOOLEAN;
-      case BLOB:
-        return DataType.BLOB;
-      default:
-        throw new UnsupportedTypeException(cassandraDataTypeName.toString());
-    }
   }
 
   private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
@@ -98,13 +85,13 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    // TODO To implement
-    throw new UnsupportedOperationException();
+    String fullName = namespacePrefix.orElse("") + namespace + "." + table;
+    tableMetadataMap.remove(fullName);
   }
 
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
-    // TODO To implement
-    throw new UnsupportedOperationException();
+    // Table metadata can be retrieved from the ClusterManager directly once the table has been
+    // inserted to Cassandra so we don't need to do anything here
   }
 }
