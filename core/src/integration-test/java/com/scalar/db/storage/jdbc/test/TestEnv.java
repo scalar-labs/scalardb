@@ -8,13 +8,11 @@ import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import org.apache.commons.dbcp2.BasicDataSource;
 
 @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
 public class TestEnv implements Closeable {
@@ -23,13 +21,10 @@ public class TestEnv implements Closeable {
   private static final String PROP_JDBC_USERNAME = "scalardb.jdbc.username";
   private static final String PROP_JDBC_PASSWORD = "scalardb.jdbc.password";
   private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
-
-  private final BasicDataSource dataSource;
   private final JdbcConfig config;
 
   private final List<String> schemaList;
   private final List<String> tableList;
-  private final List<TableMetadata> metadataList;
 
   private final JdbcDatabaseAdmin jdbcAdmin;
 
@@ -43,15 +38,6 @@ public class TestEnv implements Closeable {
 
   public TestEnv(
       String jdbcUrl, String username, String password, Optional<String> namespacePrefix) {
-
-    dataSource = new BasicDataSource();
-    dataSource.setUrl(jdbcUrl);
-    dataSource.setUsername(username);
-    dataSource.setPassword(password);
-    dataSource.setMinIdle(5);
-    dataSource.setMaxIdle(10);
-    dataSource.setMaxTotal(25);
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, jdbcUrl);
     props.setProperty(DatabaseConfig.USERNAME, username);
@@ -62,7 +48,6 @@ public class TestEnv implements Closeable {
 
     schemaList = new ArrayList<>();
     tableList = new ArrayList<>();
-    metadataList = new ArrayList<>();
     jdbcAdmin = new JdbcDatabaseAdmin(config);
   }
 
@@ -70,18 +55,17 @@ public class TestEnv implements Closeable {
       throws ExecutionException {
     schemaList.add(schema);
     tableList.add(table);
-    metadataList.add(metadata);
     jdbcAdmin.createTable(schema, table, metadata, new HashMap<>());
   }
 
   public void deleteTableData() throws ExecutionException {
-    for (int i = 0; i < metadataList.size(); i++) {
+    for (int i = 0; i < tableList.size(); i++) {
       jdbcAdmin.truncateTable(schemaList.get(i), tableList.get(i));
     }
   }
 
   public void deleteTables() throws Exception {
-    for (int i = 0; i < metadataList.size(); i++) {
+    for (int i = 0; i < tableList.size(); i++) {
       jdbcAdmin.dropTable(schemaList.get(i), tableList.get(i));
     }
   }
@@ -92,11 +76,6 @@ public class TestEnv implements Closeable {
 
   @Override
   public void close() throws IOException {
-    try {
-      dataSource.close();
-      jdbcAdmin.close();
-    } catch (SQLException e) {
-      throw new IOException(e);
-    }
+    jdbcAdmin.close();
   }
 }

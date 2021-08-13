@@ -239,6 +239,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
         "CREATE TABLE "
             + enclosedFullTableName(getFullNamespaceName(schemaPrefix, schema), table, rdbEngine)
             + "(";
+    // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
         Sets.newLinkedHashSet(
             Iterables.concat(
