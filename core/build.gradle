@@ -224,6 +224,7 @@ archivesBaseName = "scalardb"
 
 // for archiving and uploading to maven central
 if (!project.gradle.startParameter.taskNames.isEmpty() &&
-        project.gradle.startParameter.taskNames[0].endsWith('publish')) {
+        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
+                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
     apply from: 'archive.gradle'
 }
