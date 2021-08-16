@@ -67,7 +67,7 @@ public class ServerModule extends AbstractModule {
   Metrics provideMetrics() {
     MetricRegistry metricRegistry = new MetricRegistry();
     startJmxReporter(metricRegistry);
-    startPrometheusHttpEndpoint(metricRegistry);
+    startPrometheusExporter(metricRegistry);
     return new Metrics(metricRegistry);
   }
 
@@ -77,15 +77,15 @@ public class ServerModule extends AbstractModule {
     Runtime.getRuntime().addShutdownHook(new Thread(reporter::stop));
   }
 
-  private void startPrometheusHttpEndpoint(MetricRegistry metricRegistry) {
-    int prometheusHttpEndpointPort = config.getPrometheusHttpEndpointPort();
-    if (prometheusHttpEndpointPort == 0) {
+  private void startPrometheusExporter(MetricRegistry metricRegistry) {
+    int prometheusExporterPort = config.getPrometheusExporterPort();
+    if (prometheusExporterPort < 0) {
       return;
     }
 
     CollectorRegistry.defaultRegistry.register(new DropwizardExports(metricRegistry));
 
-    Server server = new Server(prometheusHttpEndpointPort);
+    Server server = new Server(prometheusExporterPort);
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
     server.setHandler(context);
@@ -93,7 +93,7 @@ public class ServerModule extends AbstractModule {
     server.setStopAtShutdown(true);
     try {
       server.start();
-      LOGGER.info("Prometheus HTTP endpoint started, listening on {}", prometheusHttpEndpointPort);
+      LOGGER.info("Prometheus exporter started, listening on {}", prometheusExporterPort);
     } catch (Exception e) {
       LOGGER.error("failed to start Jetty server", e);
     }
