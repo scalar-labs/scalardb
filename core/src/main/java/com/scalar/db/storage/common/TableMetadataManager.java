@@ -23,7 +23,7 @@ public interface TableMetadataManager {
   TableMetadata getTableMetadata(String namespace, String table);
 
   /**
-   * Delete the given table metadata
+   * Deletes the given table metadata
    *
    * @param namespace a namespace
    * @param table a table metadata
@@ -31,7 +31,7 @@ public interface TableMetadataManager {
   void deleteTableMetadata(String namespace, String table);
 
   /**
-   * Add the given table metadata
+   * Adds the given table metadata
    *
    * @param namespace a namespace
    * @param table a table
@@ -40,7 +40,7 @@ public interface TableMetadataManager {
   void addTableMetadata(String namespace, String table, TableMetadata metadata);
 
   /**
-   * Return the names of the table belonging to the given namespace
+   * Returns the names of the table belonging to the given namespace
    *
    * @param namespace a namespace
    * @return a set of table names
