@@ -89,7 +89,7 @@ public class ServerModule extends AbstractModule {
     ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
     server.setHandler(context);
-    context.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
+    context.addServlet(new ServletHolder(new MetricsServlet()), "/stats/prometheus");
     server.setStopAtShutdown(true);
     try {
       server.start();
