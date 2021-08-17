@@ -410,7 +410,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    return getTableMetadata(Utility.getFullTableName(schemaPrefix, namespace, table));
+    return getTableMetadata(getFullTableName(schemaPrefix, namespace, table));
   }
 
   public TableMetadata getTableMetadata(String fullTableName) {
