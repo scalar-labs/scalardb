@@ -406,8 +406,8 @@ jobs:
       - image: circleci/openjdk:8-jdk
       - image: cassandra:3.11
         environment:
-          MAX_HEAP_SIZE: 2048m
-          HEAP_NEWSIZE: 512m
+          MAX_HEAP_SIZE: 1536m
+          HEAP_NEWSIZE: 256m
       - image: circleci/mysql:8.0.23
         environment:
           MYSQL_ROOT_PASSWORD: mysql
