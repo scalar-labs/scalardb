@@ -202,22 +202,17 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       keyType = KeyType.CLUSTERING;
     }
 
-    try {
-      String insertStatement =
-          getInsertStatement(
-              schema,
-              table,
-              column,
-              metadata.getColumnDataType(column),
-              keyType,
-              metadata.getClusteringOrder(column),
-              metadata.getSecondaryIndexNames().contains(column),
-              ordinalPosition);
-      execute(connection, insertStatement);
-    } catch (SQLException e) {
-      connection.rollback();
-      throw e;
-    }
+    String insertStatement =
+        getInsertStatement(
+            schema,
+            table,
+            column,
+            metadata.getColumnDataType(column),
+            keyType,
+            metadata.getClusteringOrder(column),
+            metadata.getSecondaryIndexNames().contains(column),
+            ordinalPosition);
+    execute(connection, insertStatement);
   }
 
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
@@ -298,11 +293,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       try {
         createMetadataSchemaIfNotExists(connection);
         createMetadataTableIfNotExists(connection);
+        connection.commit();
       } catch (SQLException e) {
         connection.rollback();
         throw e;
       }
-      connection.commit();
+
     } catch (SQLException e) {
       throw new StorageRuntimeException("creating the metadata table failed", e);
     }
@@ -381,10 +377,10 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       orderedColumns.addAll(metadata.getColumnNames());
 
       int ordinalPosition = 1;
-      for (String column : orderedColumns) {
-        insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
-      }
       try {
+        for (String column : orderedColumns) {
+          insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+        }
         connection.commit();
       } catch (SQLException e) {
         connection.rollback();
@@ -433,11 +429,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       try {
         execute(connection, getDeleteTableMetadataStatement(namespace, table));
         deleteMetadataSchemaAndTableIfEmpty(connection);
+        connection.commit();
       } catch (SQLException e) {
         connection.rollback();
         throw e;
       }
-      connection.commit();
+
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;

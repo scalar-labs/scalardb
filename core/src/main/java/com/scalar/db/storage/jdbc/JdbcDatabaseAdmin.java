@@ -133,17 +133,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      connection.setAutoCommit(false);
-      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
       try {
+        connection.setAutoCommit(false);
+        connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
         createSchemaIfNotExists(connection, namespace);
         createTableInternal(connection, namespace, table, metadata);
         createIndex(connection, namespace, table, metadata);
+
+        connection.commit();
       } catch (SQLException e) {
         connection.rollback();
         throw e;
       }
-      connection.commit();
     } catch (SQLException e) {
       throw new ExecutionException("creating the table failed", e);
     }
