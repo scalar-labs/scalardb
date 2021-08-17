@@ -40,8 +40,8 @@ It contains two sections, Server configurations and Underlining storage/database
 # Port number of Scalar DB server. 60051 by deafult
 #scalar.db.server.port=60051
 
-# Port number of Prometheus HTTP endpoint. 8080 by default
-#scalar.db.server.prometheus_http_endpoint_port=8080
+# Prometheus exporter port. Use 8080 if this is not given. Prometheus exporter will not be started if a negative number is given.
+#scalar.db.server.prometheus_exporter_port=8080
 
 #
 # Underlining storage/database configurations
