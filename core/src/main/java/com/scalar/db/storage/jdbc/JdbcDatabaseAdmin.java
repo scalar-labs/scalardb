@@ -177,7 +177,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      return metadataManager.getTableMetadata(getFullNamespaceName(schemaPrefix, namespace), table);
+      return metadataManager.getTableMetadata(namespace, table);
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }

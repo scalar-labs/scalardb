@@ -55,7 +55,7 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithNamespacePrefix()
+  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix()
       throws ExecutionException {
     // Arrange
     Optional<String> namespacePrefix = Optional.of("prefix_");
@@ -69,7 +69,7 @@ public class JdbcDatabaseAdminTest {
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(metadataManager).getTableMetadata(namespacePrefix.get() + namespace, table);
+    verify(metadataManager).getTableMetadata(namespace, table);
   }
 
   @Test
