@@ -31,8 +31,8 @@ import java.util.Optional;
  * readability.)
  *
  * <pre>{@code
- * Injector injector = Guice.createInjector(new StorageModule(new DatabaseConfig(props)));
- * StorageService storage = injector.getInstance(StorageService.class);
+ * StorageFactory factory = new StorageFactory(databaseConfig);
+ * DistributedStorage storage = factory.getStorage();
  *
  * // Uses NAMESPACE and TABLE by default in this storage instance.
  * storage.with(NAMESPACE, TABLE);

@@ -3,9 +3,7 @@ package com.scalar.db.storage.multistorage;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -16,7 +14,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.service.StorageModule;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,9 +52,8 @@ public class MultiStorage implements DistributedStorage {
         .getDatabaseConfigMap()
         .forEach(
             (storageName, databaseConfig) -> {
-              // Instantiate storages with Guice
-              Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
-              DistributedStorage storage = injector.getInstance(DistributedStorage.class);
+              StorageFactory factory = new StorageFactory(databaseConfig);
+              DistributedStorage storage = factory.getStorage();
               nameStorageMap.put(storageName, storage);
               storages.add(storage);
             });
