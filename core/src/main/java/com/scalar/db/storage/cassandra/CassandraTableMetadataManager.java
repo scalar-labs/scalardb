@@ -10,6 +10,7 @@ import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CassandraTableMetadataManager implements TableMetadataManager {
@@ -104,6 +105,12 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
+    // TODO To implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getTableNames(String namespace) {
     // TODO To implement
     throw new UnsupportedOperationException();
   }
