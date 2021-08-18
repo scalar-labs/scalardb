@@ -254,7 +254,7 @@ public class MultiStorageAdminIntegrationTest {
     testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
 
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE1,
           table,
           TableMetadata.newBuilder()
@@ -264,7 +264,7 @@ public class MultiStorageAdminIntegrationTest {
               .addPartitionKey(COL_NAME1)
               .build());
     }
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE2,
         TABLE1,
         TableMetadata.newBuilder()
@@ -273,9 +273,6 @@ public class MultiStorageAdminIntegrationTest {
             .addColumn(COL_NAME3, DataType.BOOLEAN)
             .addPartitionKey(COL_NAME1)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
   }
 
   private static void initMultiStorageAdmin() {
@@ -333,8 +330,7 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   private static void cleanUpMySql() throws Exception {
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }
