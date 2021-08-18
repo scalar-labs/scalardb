@@ -254,7 +254,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
 
     // For the coordinator table
-    testEnv.register(
+    testEnv.createTable(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
         TableMetadata.newBuilder()
@@ -266,7 +266,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE,
           table,
           TableMetadata.newBuilder()
@@ -289,14 +289,10 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
               .build());
     }
 
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
-
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.ISOLATION_LEVEL, "SERIALIZABLE");
     serverProperties.setProperty(DatabaseConfig.SERIALIZABLE_STRATEGY, "EXTRA_READ");
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
@@ -312,8 +308,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     manager.close();
     server.shutdown();
     server.blockUntilShutdown();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

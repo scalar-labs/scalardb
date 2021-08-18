@@ -19,8 +19,8 @@ public class ServerConfigTest {
 
     // Assert
     assertThat(config.getPort()).isEqualTo(ServerConfig.DEFAULT_PORT);
-    assertThat(config.getPrometheusHttpEndpointPort())
-        .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_HTTP_ENDPOINT_PORT);
+    assertThat(config.getPrometheusExporterPort())
+        .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
   }
 
   @Test
@@ -50,29 +50,29 @@ public class ServerConfigTest {
   }
 
   @Test
-  public void constructor_ValidPrometheusHttpEndpointPortGiven_ShouldLoadProperly() {
+  public void constructor_ValidPrometheusExporterPortGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, Integer.toString(ANY_PORT));
+    props.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, Integer.toString(ANY_PORT));
 
     // Act
     ServerConfig config = new ServerConfig(props);
 
     // Assert
-    assertThat(config.getPrometheusHttpEndpointPort()).isEqualTo(ANY_PORT);
+    assertThat(config.getPrometheusExporterPort()).isEqualTo(ANY_PORT);
   }
 
   @Test
-  public void constructor_InvalidPrometheusHttpEndpointPortGiven_ShouldUseDefault() {
+  public void constructor_InvalidPrometheusExporterPortGiven_ShouldUseDefault() {
     // Arrange
     Properties props = new Properties();
-    props.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "abc");
+    props.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "abc");
 
     // Act
     ServerConfig config = new ServerConfig(props);
 
     // Assert
-    assertThat(config.getPrometheusHttpEndpointPort())
-        .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_HTTP_ENDPOINT_PORT);
+    assertThat(config.getPrometheusExporterPort())
+        .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
   }
 }

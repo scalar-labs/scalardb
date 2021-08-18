@@ -10,6 +10,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CassandraTableMetadataManager implements TableMetadataManager {
@@ -93,5 +94,11 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
     // Table metadata can be retrieved from the ClusterManager directly once the table has been
     // inserted to Cassandra so we don't need to do anything here
+  }
+
+  @Override
+  public Set<String> getTableNames(String namespace) {
+    // TODO To implement
+    throw new UnsupportedOperationException();
   }
 }

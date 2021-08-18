@@ -34,7 +34,7 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -56,11 +56,9 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
             .addSecondaryIndex(COL_NAME5)
             .addSecondaryIndex(COL_NAME6)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_HTTP_ENDPOINT_PORT, "0");
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
@@ -73,7 +71,7 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    testEnv.dropMetadataTable();
+    testEnv.deleteTables();
     testEnv.close();
     admin.close();
     server.shutdown();

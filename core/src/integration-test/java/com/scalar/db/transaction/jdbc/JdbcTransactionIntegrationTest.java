@@ -38,6 +38,29 @@ public class JdbcTransactionIntegrationTest {
   private static TestEnv testEnv;
   private static JdbcTransactionManager manager;
 
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    testEnv = new TestEnv();
+    testEnv.createTable(
+        NAMESPACE,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build());
+
+    manager = new JdbcTransactionManager(testEnv.getJdbcConfig());
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    testEnv.deleteTables();
+    testEnv.close();
+  }
+
   @After
   public void tearDown() throws Exception {
     testEnv.deleteTableData();
@@ -295,33 +318,5 @@ public class JdbcTransactionIntegrationTest {
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv();
-    testEnv.register(
-        NAMESPACE,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ACCOUNT_ID, DataType.INT)
-            .addColumn(ACCOUNT_TYPE, DataType.INT)
-            .addColumn(BALANCE, DataType.INT)
-            .addPartitionKey(ACCOUNT_ID)
-            .addClusteringKey(ACCOUNT_TYPE)
-            .build());
-
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
-
-    manager = new JdbcTransactionManager(testEnv.getJdbcConfig());
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
-    testEnv.close();
   }
 }
