@@ -10,8 +10,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.Metrics;
 import com.scalar.db.server.Pauser;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.service.StorageModule;
-import com.scalar.db.service.TransactionModule;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.service.TransactionFactory;
 
 public class ServerModule extends AbstractModule {
 
