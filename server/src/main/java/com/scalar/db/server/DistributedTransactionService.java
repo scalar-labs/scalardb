@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 public class DistributedTransactionService
     extends DistributedTransactionGrpc.DistributedTransactionImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(DistributedTransactionService.class);
+  private static final String SERVICE_NAME = "distributed_transaction";
 
   private final DistributedTransactionManager manager;
   private final Pauser pauser;
@@ -77,7 +78,7 @@ public class DistributedTransactionService
           responseObserver.onCompleted();
         },
         responseObserver,
-        "getState");
+        "get_state");
   }
 
   @Override
@@ -102,7 +103,7 @@ public class DistributedTransactionService
     }
 
     try {
-      metrics.measure(DistributedTransactionService.class, method, runnable);
+      metrics.measure(SERVICE_NAME, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
@@ -182,7 +183,7 @@ public class DistributedTransactionService
 
       try {
         metrics.measure(
-            DistributedTransactionService.class,
+            SERVICE_NAME,
             "transaction.start",
             () -> {
               StartRequest request = transactionRequest.getStartRequest();
@@ -333,7 +334,7 @@ public class DistributedTransactionService
         TransactionResponse.Builder responseBuilder,
         String method) {
       try {
-        metrics.measure(DistributedTransactionService.class, method, runnable);
+        metrics.measure(SERVICE_NAME, method, runnable);
       } catch (IllegalArgumentException | IllegalStateException e) {
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
