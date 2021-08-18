@@ -24,8 +24,8 @@ Scalar DB schema tool is a Java CLI application using for manipulating schemas i
 - Deleting schemas can be performed easily through cli arguments as well.
 - Extending for supporting new database can be achieved easily.
 ## Architecture
-Module blocks
-![module-blocks](./module-blocks.png)
+Blocks diagram
+![blocks-diagram](blocks-diagram.png)
 ## Detailed Design
 ### Data type mapping between Scalar DB and the other databases
 Data types in Scalar DB and their mapping to the data types of other databases.
