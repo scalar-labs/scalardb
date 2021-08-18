@@ -113,7 +113,7 @@ By default, the schema tool enables auto-scaling of RU for all tables: RU is sca
 ```
 - `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored in Cosmos DB and DynamoDB.
 - This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB and DynamoDB. `ru` is ignored in Cassandra.
-
+- The order of clustering key can be set to `ASC` or `DESC`. Default value will be `ASC`.
 ### Libraries
 - [picocli](https://github.com/remkop/picocli) for command line interface.
 - Admin module from [Scalar DB library](https://github.com/scalar-labs/scalardb/blob/master/core/src/main/java/com/scalar/db/service/AdminService.java) as core.
