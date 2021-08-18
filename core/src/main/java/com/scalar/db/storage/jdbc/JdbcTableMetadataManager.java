@@ -1,5 +1,8 @@
 package com.scalar.db.storage.jdbc;
 
+import static com.scalar.db.util.Utility.getFullNamespaceName;
+import static com.scalar.db.util.Utility.getFullTableName;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -11,14 +14,18 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,6 +39,7 @@ import javax.sql.DataSource;
  */
 @ThreadSafe
 public class JdbcTableMetadataManager implements TableMetadataManager {
+
   public static final String SCHEMA = "scalardb";
   public static final String TABLE = "metadata";
   public static final String FULL_TABLE_NAME = "full_table_name";
@@ -149,7 +157,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
         encloseFullTableName(getMetadataSchema(), TABLE),
-        schemaPrefix.orElse("") + schema + "." + table,
+        getFullTableName(schemaPrefix, schema, table),
         columnName,
         dataType.toString(),
         keyType != null ? "'" + keyType + "'" : "NULL",
@@ -169,13 +177,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   }
 
   private String getDeleteTableMetadataStatement(String schema, String table) {
-    String fullTableName = schemaPrefix.orElse("") + schema + "." + table;
     return "DELETE FROM "
         + encloseFullTableName(getMetadataSchema(), TABLE)
         + " WHERE "
         + enclose(FULL_TABLE_NAME)
         + " = '"
-        + fullTableName
+        + getFullTableName(schemaPrefix, schema, table)
         + "'";
   }
 
@@ -195,22 +202,17 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       keyType = KeyType.CLUSTERING;
     }
 
-    try {
-      String insertStatement =
-          getInsertStatement(
-              schema,
-              table,
-              column,
-              metadata.getColumnDataType(column),
-              keyType,
-              metadata.getClusteringOrder(column),
-              metadata.getSecondaryIndexNames().contains(column),
-              ordinalPosition);
-      execute(connection, insertStatement);
-    } catch (SQLException e) {
-      connection.rollback();
-      throw e;
-    }
+    String insertStatement =
+        getInsertStatement(
+            schema,
+            table,
+            column,
+            metadata.getColumnDataType(column),
+            keyType,
+            metadata.getClusteringOrder(column),
+            metadata.getSecondaryIndexNames().contains(column),
+            ordinalPosition);
+    execute(connection, insertStatement);
   }
 
   @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
@@ -291,11 +293,12 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       try {
         createMetadataSchemaIfNotExists(connection);
         createMetadataTableIfNotExists(connection);
+        connection.commit();
       } catch (SQLException e) {
         connection.rollback();
         throw e;
       }
-      connection.commit();
+
     } catch (SQLException e) {
       throw new StorageRuntimeException("creating the metadata table failed", e);
     }
@@ -374,10 +377,10 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       orderedColumns.addAll(metadata.getColumnNames());
 
       int ordinalPosition = 1;
-      for (String column : orderedColumns) {
-        insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
-      }
       try {
+        for (String column : orderedColumns) {
+          insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+        }
         connection.commit();
       } catch (SQLException e) {
         connection.rollback();
@@ -407,7 +410,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    return getTableMetadata(namespace + "." + table);
+    return getTableMetadata(getFullTableName(schemaPrefix, namespace, table));
   }
 
   public TableMetadata getTableMetadata(String fullTableName) {
@@ -421,18 +424,28 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
   @Override
   public void deleteTableMetadata(String namespace, String table) {
     try (Connection connection = dataSource.getConnection()) {
-      execute(connection, getDeleteTableMetadataStatement(namespace, table));
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      try {
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        deleteMetadataSchemaAndTableIfEmpty(connection);
+        connection.commit();
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
       }
       throw new StorageRuntimeException(
           String.format(
-              "deleting the %s table metadata failed",
-              schemaPrefix.orElse("") + namespace + "." + table),
+              "deleting the %s table metadata failed ",
+              getFullTableName(schemaPrefix, namespace, table)),
           e);
     }
-    tableMetadataCache.put(schemaPrefix.orElse("") + namespace + "." + table, Optional.empty());
+    tableMetadataCache.put(getFullTableName(schemaPrefix, namespace, table), Optional.empty());
   }
 
   private String enclose(String name) {
@@ -441,5 +454,82 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
 
   private String encloseFullTableName(String schema, String table) {
     return QueryUtils.enclosedFullTableName(schema, table, rdbEngine);
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  @Override
+  public Set<String> getTableNames(String namespace) {
+    String selectTablesOfNamespaceStatement =
+        "SELECT DISTINCT "
+            + enclose(FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), TABLE)
+            + " WHERE "
+            + enclose(FULL_TABLE_NAME)
+            + " LIKE ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+      String fullSchemaName = Utility.getFullNamespaceName(schemaPrefix, namespace);
+      preparedStatement.setString(1, fullSchemaName + ".%");
+      try (ResultSet results = preparedStatement.executeQuery()) {
+        Set<String> tableNames = new HashSet<>();
+        while (results.next()) {
+          String tableName =
+              results.getString(FULL_TABLE_NAME).replaceFirst("^" + fullSchemaName + ".", "");
+          tableNames.add(tableName);
+        }
+        return tableNames;
+      }
+    } catch (SQLException e) {
+      // An exception will be thrown if the metadata table does not exist when executing the select
+      // query
+      if ((rdbEngine == RdbEngine.MYSQL && e.getErrorCode() == 1049)
+          || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
+          || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+        return Collections.emptySet();
+      }
+      throw new StorageRuntimeException(
+          "error retrieving the table names of the given namespace", e);
+    }
+  }
+
+  private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
+    if (isMetadataTableEmpty(connection)) {
+      deleteMetadataTable(connection);
+      deleteMetadataSchema(connection);
+    }
+  }
+
+  private void deleteMetadataSchema(Connection connection) throws SQLException {
+    String dropStatement;
+    if (rdbEngine == RdbEngine.ORACLE) {
+      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, SCHEMA));
+    } else {
+      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, SCHEMA));
+    }
+
+    execute(connection, dropStatement);
+  }
+
+  private void deleteMetadataTable(Connection connection) throws SQLException {
+    String dropTableStatement =
+        "DROP TABLE " + encloseFullTableName(getFullNamespaceName(schemaPrefix, SCHEMA), TABLE);
+
+    execute(connection, dropTableStatement);
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
+    String selectAllTables =
+        "SELECT DISTINCT "
+            + enclose(FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), TABLE);
+    try (Statement statement = connection.createStatement();
+        ResultSet results = statement.executeQuery(selectAllTables)) {
+      return !results.next();
+    }
   }
 }

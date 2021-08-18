@@ -53,7 +53,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     testEnv = new TestEnv();
 
     // For the coordinator table
-    testEnv.register(
+    testEnv.createTable(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
         TableMetadata.newBuilder()
@@ -65,7 +65,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE,
           table,
           TableMetadata.newBuilder()
@@ -88,17 +88,12 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
               .build());
     }
 
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
-
     originalStorage = new JdbcDatabase(testEnv.getJdbcConfig());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

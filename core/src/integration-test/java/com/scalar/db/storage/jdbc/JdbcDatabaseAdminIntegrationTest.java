@@ -23,7 +23,7 @@ public class JdbcDatabaseAdminIntegrationTest extends AdminIntegrationTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv();
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -45,15 +45,12 @@ public class JdbcDatabaseAdminIntegrationTest extends AdminIntegrationTestBase {
             .addSecondaryIndex(COL_NAME5)
             .addSecondaryIndex(COL_NAME6)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.insertMetadata();
-
     admin = new JdbcDatabaseAdmin(testEnv.getJdbcConfig());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    testEnv.dropMetadataTable();
+    testEnv.deleteTables();
     testEnv.close();
     admin.close();
   }

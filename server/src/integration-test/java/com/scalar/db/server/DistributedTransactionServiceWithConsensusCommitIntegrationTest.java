@@ -1096,7 +1096,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
 
     // For the coordinator table
-    testEnv.register(
+    testEnv.createTable(
         Coordinator.NAMESPACE,
         Coordinator.TABLE,
         TableMetadata.newBuilder()
@@ -1108,7 +1108,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // For the test tables
     for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE,
           table,
           TableMetadata.newBuilder()
@@ -1131,10 +1131,6 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
               .build());
     }
 
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
-
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
     server = new ScalarDbServer(serverProperties);
@@ -1152,8 +1148,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     manager.close();
     server.shutdown();
     server.blockUntilShutdown();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

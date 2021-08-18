@@ -1,8 +1,6 @@
 package com.scalar.db.server.service;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
@@ -18,31 +16,31 @@ import com.scalar.db.service.TransactionModule;
 public class ServerModule extends AbstractModule {
 
   private final ServerConfig config;
-  private final Injector storageInjector;
-  private final Injector transactionInjector;
+  private final StorageFactory storageFactory;
+  private final TransactionFactory transactionFactory;
 
   public ServerModule(ServerConfig config, DatabaseConfig databaseConfig) {
     this.config = config;
-    storageInjector = Guice.createInjector(new StorageModule(databaseConfig));
-    transactionInjector = Guice.createInjector(new TransactionModule(databaseConfig));
+    storageFactory = new StorageFactory(databaseConfig);
+    transactionFactory = new TransactionFactory(databaseConfig);
   }
 
   @Provides
   @Singleton
   DistributedStorage provideDistributedStorage() {
-    return storageInjector.getInstance(DistributedStorage.class);
+    return storageFactory.getStorage();
   }
 
   @Provides
   @Singleton
   DistributedStorageAdmin provideDistributedStorageAdmin() {
-    return storageInjector.getInstance(DistributedStorageAdmin.class);
+    return storageFactory.getAdmin();
   }
 
   @Provides
   @Singleton
   DistributedTransactionManager provideDistributedTransactionManager() {
-    return transactionInjector.getInstance(DistributedTransactionManager.class);
+    return transactionFactory.getTransactionManager();
   }
 
   @Provides
