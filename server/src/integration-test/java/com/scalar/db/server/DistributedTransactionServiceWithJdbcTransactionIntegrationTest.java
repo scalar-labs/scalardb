@@ -15,7 +15,9 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import java.util.ArrayList;
@@ -141,7 +143,7 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = ((IntValue) result.get().getValue(BALANCE).get()).get() + 100;
+    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
     IntValue expected = new IntValue(BALANCE, afterBalance);
     Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
     transaction.put(put);
@@ -214,9 +216,9 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     Optional<Result> result1 = transaction.get(gets.get(fromId));
     Optional<Result> result2 = transaction.get(gets.get(toId));
     IntValue fromBalance =
-        new IntValue(BALANCE, ((IntValue) result1.get().getValue(BALANCE).get()).get() - amount);
+        new IntValue(BALANCE, result1.get().getValue(BALANCE).get().getAsInt() - amount);
     IntValue toBalance =
-        new IntValue(BALANCE, ((IntValue) result2.get().getValue(BALANCE).get()).get() + amount);
+        new IntValue(BALANCE, result2.get().getValue(BALANCE).get().getAsInt() + amount);
     List<Put> puts = preparePuts(NAMESPACE, TABLE);
     puts.get(fromId).withValue(fromBalance);
     puts.get(toId).withValue(toBalance);
@@ -233,13 +235,13 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
-                          Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
+                          Key partitionKey = new Key(ACCOUNT_ID, i);
+                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
                                   .forNamespace(NAMESPACE)
                                   .forTable(TABLE)
-                                  .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
+                                  .withValue(BALANCE, INITIAL_BALANCE);
                           try {
                             transaction.put(put);
                           } catch (CrudException e) {
@@ -250,8 +252,8 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   }
 
   private Get prepareGet(int id, int type, String namespace, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(table)
@@ -269,18 +271,18 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   }
 
   private Scan prepareScan(int id, int fromType, int toType, String namespace, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(new IntValue(ACCOUNT_TYPE, fromType)))
-        .withEnd(new Key(new IntValue(ACCOUNT_TYPE, toType)));
+        .withStart(new Key(ACCOUNT_TYPE, fromType))
+        .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
   private Put preparePut(int id, int type, String namespace, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(table)
@@ -298,8 +300,8 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   }
 
   private Delete prepareDelete(int id, int type, String namespace, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(namespace)
         .forTable(table)
@@ -326,13 +328,15 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
     serverProperties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    manager = new GrpcTransactionManager(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    manager = new GrpcTransactionManager(new GrpcConfig(properties));
   }
 
   @AfterClass

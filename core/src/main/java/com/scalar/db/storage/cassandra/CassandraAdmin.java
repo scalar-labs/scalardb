@@ -21,7 +21,6 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
-    clusterManager.getSession();
     metadataManager = new CassandraTableMetadataManager(clusterManager);
     namespacePrefix = config.getNamespacePrefix();
   }

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
-import com.azure.cosmos.CosmosContainer;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Delete;
@@ -14,7 +13,6 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -37,7 +35,6 @@ public class CosmosMutationTest {
   private static final int ANY_INT_3 = 3;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT_3);
 
-  @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
@@ -51,21 +48,21 @@ public class CosmosMutationTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+            .withValue(ANY_NAME_3, ANY_INT_1)
+            .withValue(ANY_NAME_4, ANY_INT_2);
 
     return put;
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Delete del =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
@@ -127,7 +124,7 @@ public class CosmosMutationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
@@ -151,8 +148,8 @@ public class CosmosMutationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Delete delete =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)

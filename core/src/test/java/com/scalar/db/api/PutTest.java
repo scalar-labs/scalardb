@@ -13,6 +13,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -29,16 +30,16 @@ public class PutTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey);
   }
 
   @Test
   public void getPartitionKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key expected = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key expected = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put = new Put(expected, clusteringKey);
 
     // Act
@@ -51,8 +52,8 @@ public class PutTest {
   @Test
   public void getClusteringKey_ProperKeyGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key expected = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key expected = new Key(ANY_NAME_1, ANY_TEXT_2);
     Put put = new Put(partitionKey, expected);
 
     // Act
@@ -65,7 +66,7 @@ public class PutTest {
   @Test
   public void getClusteringKey_ClusteringKeyNotGivenInConstructor_ShouldReturnNull() {
     // Arrange
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Put put = new Put(partitionKey);
 
     // Act
@@ -102,7 +103,7 @@ public class PutTest {
         .withValue("val4", 4.56f)
         .withValue("val5", 1.23)
         .withValue("val6", "string_value")
-        .withValue("val7", "blob_value".getBytes());
+        .withValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8));
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
@@ -113,7 +114,8 @@ public class PutTest {
     assertThat(values.get("val4")).isEqualTo(new FloatValue("val4", 4.56f));
     assertThat(values.get("val5")).isEqualTo(new DoubleValue("val5", 1.23));
     assertThat(values.get("val6")).isEqualTo(new TextValue("val6", "string_value"));
-    assertThat(values.get("val7")).isEqualTo(new BlobValue("val7", "blob_value".getBytes()));
+    assertThat(values.get("val7"))
+        .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
@@ -177,6 +179,7 @@ public class PutTest {
     Put put = preparePut();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = put.equals(put);
 
     // Assert
@@ -229,9 +232,9 @@ public class PutTest {
   public void equals_PutWithDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
     Put put = preparePut();
-    put.withValue(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    put.withValue(ANY_NAME_3, ANY_TEXT_3);
     Put another = preparePut();
-    another.withValue(new TextValue(ANY_NAME_3, ANY_TEXT_4));
+    another.withValue(ANY_NAME_3, ANY_TEXT_4);
 
     // Act
     boolean ret = put.equals(another);

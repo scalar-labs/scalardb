@@ -50,7 +50,9 @@ public class ScalarDbServer implements Callable<Integer> {
   public void start() throws IOException {
     if (configFile != null) {
       properties = new Properties();
-      properties.load(new FileInputStream(configFile));
+      try (FileInputStream fis = new FileInputStream(configFile)) {
+        properties.load(fis);
+      }
     }
 
     ServerConfig config = new ServerConfig(properties);
@@ -87,6 +89,7 @@ public class ScalarDbServer implements Callable<Integer> {
       try {
         server.awaitTermination();
       } catch (InterruptedException ignored) {
+        // don't need to handle InterruptedException
       }
     }
   }
@@ -96,6 +99,7 @@ public class ScalarDbServer implements Callable<Integer> {
       try {
         server.awaitTermination(timeout, unit);
       } catch (InterruptedException ignored) {
+        // don't need to handle InterruptedException
       }
     }
   }

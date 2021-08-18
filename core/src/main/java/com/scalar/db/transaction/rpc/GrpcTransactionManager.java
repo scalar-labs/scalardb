@@ -8,7 +8,6 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -16,6 +15,7 @@ import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableSupplier;
@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
+  private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
   private static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
@@ -48,6 +49,7 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         return new TransactionException(message, cause);
       };
 
+  private final GrpcConfig config;
   private final ManagedChannel channel;
   private final DistributedTransactionGrpc.DistributedTransactionStub stub;
   private final DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
@@ -57,24 +59,31 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
   private Optional<String> tableName;
 
   @Inject
-  public GrpcTransactionManager(DatabaseConfig config) {
+  public GrpcTransactionManager(GrpcConfig config) {
+    this.config = config;
     channel =
-        NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
+        NettyChannelBuilder.forAddress(
+                config.getContactPoints().get(0),
+                config.getContactPort() == 0
+                    ? DEFAULT_SCALAR_DB_SERVER_PORT
+                    : config.getContactPort())
             .usePlaintext()
             .build();
     stub = DistributedTransactionGrpc.newStub(channel);
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
     metadataManager =
-        new GrpcTableMetadataManager(DistributedStorageAdminGrpc.newBlockingStub(channel));
+        new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
 
   @VisibleForTesting
   GrpcTransactionManager(
+      GrpcConfig config,
       DistributedTransactionGrpc.DistributedTransactionStub stub,
       DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub,
       GrpcTableMetadataManager metadataManager) {
+    this.config = config;
     channel = null;
     this.stub = stub;
     this.blockingStub = blockingStub;
@@ -123,25 +132,28 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return executeWithRetries(
         () -> {
           GrpcTransactionOnBidirectionalStream stream =
-              new GrpcTransactionOnBidirectionalStream(stub, metadataManager);
+              new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
           String transactionId = stream.startTransaction(txId);
           return new GrpcTransaction(transactionId, stream, namespace, tableName);
         },
         EXCEPTION_FACTORY);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(Isolation isolation) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, Isolation isolation) throws TransactionException {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(Isolation isolation, SerializableStrategy strategy)
@@ -149,12 +161,14 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(SerializableStrategy strategy) throws TransactionException {
     return start();
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, SerializableStrategy strategy)
@@ -162,6 +176,7 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return start(txId);
   }
 
+  @SuppressWarnings("InlineMeSuggester")
   @Deprecated
   @Override
   public GrpcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
@@ -174,8 +189,9 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return execute(
         () -> {
           GetTransactionStateResponse response =
-              blockingStub.getState(
-                  GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
+              blockingStub
+                  .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .getState(GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtil.toTransactionState(response.getState());
         });
   }
@@ -185,7 +201,9 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     return execute(
         () -> {
           AbortResponse response =
-              blockingStub.abort(AbortRequest.newBuilder().setTransactionId(txId).build());
+              blockingStub
+                  .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .abort(AbortRequest.newBuilder().setTransactionId(txId).build());
           return ProtoUtil.toTransactionState(response.getState());
         });
   }

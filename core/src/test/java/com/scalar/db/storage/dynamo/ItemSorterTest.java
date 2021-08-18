@@ -6,7 +6,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,8 +39,8 @@ public class ItemSorterTest {
   private static final double ANY_SMALL_DOUBLE = -10.0;
   private static final String ANY_LARGE_TEXT = "sssssss";
   private static final String ANY_SMALL_TEXT = "aa";
-  private static final byte[] ANY_LARGE_BLOB = "scalar".getBytes();
-  private static final byte[] ANY_SMALL_BLOB = "a".getBytes();
+  private static final byte[] ANY_LARGE_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] ANY_SMALL_BLOB = "a".getBytes(StandardCharsets.UTF_8);
   private static final String ANY_COLUMN_NAME_1 = "val1";
 
   private TableMetadata metadata;
@@ -93,7 +93,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item1 = prepareItemWithSmallValues();
     item1.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
-    Scan scan = new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)));
+    Scan scan = new Scan(new Key(ANY_NAME_1, ANY_TEXT_1));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
     items.add(item2);
@@ -114,7 +114,7 @@ public class ItemSorterTest {
     item1.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -136,7 +136,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -158,7 +158,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_3, AttributeValue.builder().bool(LARGE_BOOLEAN).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_3, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -180,7 +180,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_4, AttributeValue.builder().n(String.valueOf(ANY_LARGE_BIGINT)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_4, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -202,7 +202,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_5, AttributeValue.builder().n(String.valueOf(ANY_LARGE_FLOAT)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_5, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -224,7 +224,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_6, AttributeValue.builder().n(String.valueOf(ANY_LARGE_DOUBLE)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_6, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -246,7 +246,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_7, AttributeValue.builder().s(ANY_LARGE_TEXT).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_7, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -269,7 +269,7 @@ public class ItemSorterTest {
     item2.put(
         ANY_NAME_8, AttributeValue.builder().b(SdkBytes.fromByteArray(ANY_LARGE_BLOB)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_8, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();
     items.add(item1);
@@ -291,7 +291,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(ANY_NAME_2, AttributeValue.builder().n(String.valueOf(ANY_LARGE_INT)).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.DESC))
             .withLimit(1);
     List<Map<String, AttributeValue>> items = new ArrayList<>();
@@ -316,7 +316,7 @@ public class ItemSorterTest {
     Map<String, AttributeValue> item3 = prepareItemWithSmallValues();
     item3.put(ANY_NAME_7, AttributeValue.builder().s(ANY_LARGE_TEXT).build());
     Scan scan =
-        new Scan(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.DESC))
             .withOrdering(new Scan.Ordering(ANY_NAME_7, Scan.Ordering.Order.DESC));
     List<Map<String, AttributeValue>> items = new ArrayList<>();

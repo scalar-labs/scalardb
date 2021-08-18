@@ -33,7 +33,9 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
@@ -87,7 +89,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    assertThat((new TransactionResult(result.get())).getState())
+    assertThat(new TransactionResult(result.get()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -104,7 +106,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat((new TransactionResult(results.get(0))).getState())
+    assertThat(new TransactionResult(results.get(0)).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -143,7 +145,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
       throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     GrpcTransaction transaction1 = manager.start();
@@ -151,7 +153,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     GrpcTransaction transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction2.commit();
 
     // Act
@@ -195,7 +197,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = ((IntValue) result.get().getValue(BALANCE).get()).get() + 100;
+    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
     IntValue expected = new IntValue(BALANCE, afterBalance);
     Put put = preparePut(0, 0, TABLE_1).withValue(expected);
     transaction.put(put);
@@ -216,7 +218,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Arrange
     populateRecords(TABLE_1);
     List<Put> puts = preparePuts(TABLE_1);
-    puts.get(0).withValue(new IntValue(BALANCE, 1100));
+    puts.get(0).withValue(BALANCE, 1100);
     GrpcTransaction transaction = manager.start();
 
     // Act Assert
@@ -682,8 +684,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Arrange
     List<Put> puts =
         Arrays.asList(
-            preparePut(0, 0, table1).withValue(new IntValue(BALANCE, 1)),
-            preparePut(0, 1, table2).withValue(new IntValue(BALANCE, 1)));
+            preparePut(0, 0, table1).withValue(BALANCE, 1),
+            preparePut(0, 1, table2).withValue(BALANCE, 1));
     GrpcTransaction transaction = manager.start();
     transaction.put(puts);
     transaction.commit();
@@ -695,15 +697,15 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result1 = transaction1.get(get1_1);
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = ((IntValue) result2.get().getValue(BALANCE).get()).get();
-    Put put1 = preparePut(0, 0, table1).withValue(new IntValue(BALANCE, current1 + 1));
+    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
+    Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
-    Put put2 = preparePut(0, 1, table2).withValue(new IntValue(BALANCE, current2 + 1));
+    Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
     transaction2.put(put2);
     transaction1.commit();
     transaction2.commit();
@@ -739,7 +741,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
       throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
 
     // Act
@@ -747,9 +749,9 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
     int balance1 = 0;
     if (result1.isPresent()) {
-      balance1 = ((IntValue) result1.get().getValue(BALANCE).get()).get();
+      balance1 = result1.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance1 + 1)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance1 + 1));
 
     GrpcTransaction transaction2 = manager.start();
     transaction2.get(prepareGet(0, 0, TABLE_1));
@@ -761,9 +763,9 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = ((IntValue) result3.get().getValue(BALANCE).get()).get();
+      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
+    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
 
     Throwable thrown = catchThrowable(transaction1::commit);
@@ -773,7 +775,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.commit();
-    assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -781,7 +783,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
       throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction.commit();
 
     // Act
@@ -799,9 +801,9 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = ((IntValue) result3.get().getValue(BALANCE).get()).get();
+      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
     }
-    transaction3.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, balance3 + 1)));
+    transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
 
     Throwable thrown = catchThrowable(transaction1::commit);
@@ -811,14 +813,14 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.commit();
-    assertThat(((IntValue) result.get().getValue(BALANCE).get()).get()).isEqualTo(1);
+    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -838,7 +840,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   public void scan_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -858,14 +860,14 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   public void delete_PutCalledBefore_ShouldDelete() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
     GrpcTransaction transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
@@ -881,7 +883,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   public void put_DeleteCalledBefore_ShouldPut() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
     transaction.commit();
 
     // Act
@@ -889,7 +891,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Get get = prepareGet(0, 0, TABLE_1);
     Optional<Result> resultBefore = transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 2)));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
     assertThatCode(transaction1::commit).doesNotThrowAnyException();
 
     // Assert
@@ -906,7 +908,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
       throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
@@ -921,7 +923,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(new IntValue(BALANCE, 1)));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act
     Scan scan = prepareScan(0, 1, 1, TABLE_1);
@@ -969,9 +971,9 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> toResult = transaction.get(toGets.get(toId));
 
     IntValue fromBalance =
-        new IntValue(BALANCE, ((IntValue) fromResult.get().getValue(BALANCE).get()).get() - amount);
+        new IntValue(BALANCE, fromResult.get().getValue(BALANCE).get().getAsInt() - amount);
     IntValue toBalance =
-        new IntValue(BALANCE, ((IntValue) toResult.get().getValue(BALANCE).get()).get() + amount);
+        new IntValue(BALANCE, toResult.get().getValue(BALANCE).get().getAsInt() + amount);
 
     List<Put> fromPuts = preparePuts(fromTable);
     List<Put> toPuts = differentTables ? preparePuts(toTable) : fromPuts;
@@ -1010,13 +1012,13 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
                 IntStream.range(0, NUM_TYPES)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(new IntValue(ACCOUNT_ID, i));
-                          Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, j));
+                          Key partitionKey = new Key(ACCOUNT_ID, i);
+                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
                                   .forNamespace(NAMESPACE)
                                   .forTable(table)
-                                  .withValue(new IntValue(BALANCE, INITIAL_BALANCE));
+                                  .withValue(BALANCE, INITIAL_BALANCE);
                           try {
                             transaction.put(put);
                           } catch (TransactionException e) {
@@ -1027,8 +1029,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   static Get prepareGet(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Get(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
@@ -1044,18 +1046,18 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   static Scan prepareScan(int id, int fromType, int toType, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
     return new Scan(partitionKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(new IntValue(ACCOUNT_TYPE, fromType)))
-        .withEnd(new Key(new IntValue(ACCOUNT_TYPE, toType)));
+        .withStart(new Key(ACCOUNT_TYPE, fromType))
+        .withEnd(new Key(ACCOUNT_TYPE, toType));
   }
 
   static Put preparePut(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Put(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
@@ -1071,8 +1073,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   static Delete prepareDelete(int id, int type, String table) {
-    Key partitionKey = new Key(new IntValue(ACCOUNT_ID, id));
-    Key clusteringKey = new Key(new IntValue(ACCOUNT_TYPE, type));
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
     return new Delete(partitionKey, clusteringKey)
         .forNamespace(NAMESPACE)
         .forTable(table)
@@ -1134,13 +1136,15 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     testEnv.insertMetadata();
 
     Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
     server = new ScalarDbServer(serverProperties);
     server.start();
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    manager = new GrpcTransactionManager(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    manager = new GrpcTransactionManager(new GrpcConfig(properties));
   }
 
   @AfterClass

@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
@@ -14,33 +15,17 @@ public class TextValueTest {
   private static final String ANOTHER_NAME = "another_name";
 
   @Test
-  public void getBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
-    // Arrange
-    byte[] expected = "some_text".getBytes();
-    TextValue value = new TextValue(ANY_NAME, expected);
-
-    // Act
-    Optional<byte[]> actual = value.getBytes();
-
-    // Assert
-    assertThat(actual.isPresent()).isTrue();
-    assertThat(Arrays.equals(expected, actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
-  }
-
-  @Test
-  public void getString_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+  public void get_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     String expected = "some_text";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
-    Optional<String> actual = value.getString();
+    Optional<String> actual = value.get();
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -55,13 +40,12 @@ public class TextValueTest {
     // Assert
     assertThat(actual.isPresent()).isTrue();
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
   public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes();
+    byte[] expected = "some_text".getBytes(StandardCharsets.UTF_8);
     Value<?> value = new TextValue(ANY_NAME, expected);
 
     // Act
@@ -125,17 +109,16 @@ public class TextValueTest {
   }
 
   @Test
-  public void getStringWithTwoBytesCharacter_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+  public void getWithTwoBytesCharacter_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    String expected = new String("あいうえお");
+    String expected = "あいうえお";
     TextValue value = new TextValue(ANY_NAME, expected);
 
     // Act
-    Optional<String> actual = value.getString();
+    Optional<String> actual = value.get();
 
     // Assert
     assertThat(expected.equals(actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
   }
 
   @Test
@@ -170,6 +153,7 @@ public class TextValueTest {
     TextValue value = new TextValue(ANY_NAME, "some_text");
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -190,12 +174,14 @@ public class TextValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     TextValue oneValue = new TextValue(ANY_NAME, "some_text");
     BlobValue anotherValue = new BlobValue(ANY_NAME, "some_text".getBytes(StandardCharsets.UTF_8));
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = oneValue.equals(anotherValue);
 
     // Assert

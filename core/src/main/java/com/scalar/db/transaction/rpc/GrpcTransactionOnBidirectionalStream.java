@@ -23,33 +23,48 @@ import com.scalar.db.rpc.TransactionRequest.ScanRequest;
 import com.scalar.db.rpc.TransactionRequest.StartRequest;
 import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.Utility;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
+import io.grpc.stub.ClientCallStreamObserver;
+import io.grpc.stub.ClientResponseObserver;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class GrpcTransactionOnBidirectionalStream implements StreamObserver<TransactionResponse> {
+public class GrpcTransactionOnBidirectionalStream
+    implements ClientResponseObserver<TransactionRequest, TransactionResponse> {
 
-  private final StreamObserver<TransactionRequest> requestObserver;
+  private final GrpcConfig config;
   private final GrpcTableMetadataManager metadataManager;
   private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finished = new AtomicBoolean();
 
+  private ClientCallStreamObserver<TransactionRequest> requestStream;
+
   public GrpcTransactionOnBidirectionalStream(
-      DistributedTransactionStub stub, GrpcTableMetadataManager metadataManager) {
-    requestObserver = stub.transaction(this);
+      GrpcConfig config,
+      DistributedTransactionStub stub,
+      GrpcTableMetadataManager metadataManager) {
+    this.config = config;
     this.metadataManager = metadataManager;
+    stub.transaction(this);
+  }
+
+  @Override
+  public void beforeStart(ClientCallStreamObserver<TransactionRequest> requestStream) {
+    this.requestStream = requestStream;
   }
 
   @Override
@@ -64,12 +79,22 @@ public class GrpcTransactionOnBidirectionalStream implements StreamObserver<Tran
 
   @Override
   public void onCompleted() {
-    requestObserver.onCompleted();
+    requestStream.onCompleted();
   }
 
   private ResponseOrError sendRequest(TransactionRequest request) {
-    requestObserver.onNext(request);
-    return Uninterruptibles.takeUninterruptibly(queue);
+    requestStream.onNext(request);
+
+    ResponseOrError responseOrError =
+        Utility.pollUninterruptibly(
+            queue, config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS);
+    if (responseOrError == null) {
+      requestStream.cancel("deadline exceeded", null);
+
+      // Should receive a CANCELED error
+      return Uninterruptibles.takeUninterruptibly(queue);
+    }
+    return responseOrError;
   }
 
   private void throwIfTransactionFinished() {

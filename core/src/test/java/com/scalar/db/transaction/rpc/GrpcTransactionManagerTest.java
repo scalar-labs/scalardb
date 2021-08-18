@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.rpc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,7 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import io.grpc.Status;
 import org.junit.Before;
@@ -22,6 +24,7 @@ public class GrpcTransactionManagerTest {
 
   private static final String ANY_ID = "id";
 
+  @Mock private GrpcConfig config;
   @Mock private DistributedTransactionGrpc.DistributedTransactionStub stub;
   @Mock private DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
   @Mock private GrpcTableMetadataManager metadataManager;
@@ -33,8 +36,10 @@ public class GrpcTransactionManagerTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    manager = new GrpcTransactionManager(stub, blockingStub, metadataManager);
+    manager = new GrpcTransactionManager(config, stub, blockingStub, metadataManager);
     manager.with("namespace", "table");
+    when(config.getDeadlineDurationMillis()).thenReturn(60000L);
+    when(blockingStub.withDeadlineAfter(anyLong(), any())).thenReturn(blockingStub);
   }
 
   @Test

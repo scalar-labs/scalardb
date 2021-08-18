@@ -98,7 +98,10 @@ public class MapVisitorTest {
 
     // Assert
     ByteBuffer expected =
-        (ByteBuffer) ByteBuffer.allocate(ANY_TEXT.length()).put(ANY_TEXT.getBytes()).flip();
+        (ByteBuffer)
+            ByteBuffer.allocate(ANY_TEXT.length())
+                .put(ANY_TEXT.getBytes(StandardCharsets.UTF_8))
+                .flip();
     assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(expected);
   }
 }

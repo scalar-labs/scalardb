@@ -25,7 +25,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -78,8 +77,8 @@ public class SelectStatementHandlerTest {
   }
 
   private Get prepareGet() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Get(partitionKey, clusteringKey)
@@ -88,7 +87,7 @@ public class SelectStatementHandlerTest {
   }
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
@@ -119,7 +118,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(responseIterable);
     Record expected = new Record();
     when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
-    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
         "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
@@ -144,7 +143,6 @@ public class SelectStatementHandlerTest {
         .readItem(anyString(), any(PartitionKey.class), eq(Record.class));
     when(toThrow.getStatusCode()).thenReturn(CosmosErrorCode.NOT_FOUND.get());
 
-    Record expected = new Record();
     Get get = prepareGet();
 
     // Act Assert
@@ -203,7 +201,7 @@ public class SelectStatementHandlerTest {
     Record expected = new Record();
     when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
 
-    Key indexKey = new Key(new TextValue(ANY_NAME_3, ANY_TEXT_3));
+    Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
         "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
@@ -248,8 +246,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
-            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)));
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3));
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -286,11 +284,15 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(
-                new Key(
-                    new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build())
             .withEnd(
-                new Key(
-                    new TextValue(ANY_NAME_2, ANY_TEXT_2), new TextValue(ANY_NAME_3, ANY_TEXT_4)));
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_4)
+                    .build());
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -334,8 +336,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)), false)
-            .withEnd(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3)), false);
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
+            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), false);
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
@@ -371,7 +373,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
             .withLimit(ANY_LIMIT);
 
@@ -408,7 +410,7 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
             .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
             .withLimit(ANY_LIMIT);

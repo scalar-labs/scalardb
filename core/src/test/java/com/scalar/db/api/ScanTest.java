@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
 import java.util.Optional;
@@ -20,9 +19,9 @@ public class ScanTest {
   private static final String ANY_TEXT_4 = "text4";
 
   private Scan prepareScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key startClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Key endClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
     Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
 
     return new Scan(partitionKey)
@@ -34,9 +33,9 @@ public class ScanTest {
   }
 
   private Scan prepareAnotherScan() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key startClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Key endClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_4));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
     Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
 
     return new Scan(partitionKey)
@@ -50,9 +49,9 @@ public class ScanTest {
   @Test
   public void constructorAndSetters_AllSet_ShouldGetWhatsSet() {
     // Arrange
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key startClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    Key endClusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_3));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
     Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
 
     // Act
@@ -91,6 +90,7 @@ public class ScanTest {
     Scan scan = prepareScan();
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean ret = scan.equals(scan);
 
     // Assert

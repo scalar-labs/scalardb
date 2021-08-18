@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
@@ -19,6 +20,118 @@ public class KeyTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final int ANY_INT_1 = 10;
   private static final int ANY_INT_2 = 20;
+
+  @Test
+  public void constructor_WithSingleBooleanValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    boolean value = true;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsBoolean()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleIntegerValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    int value = 100;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsInt()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleLongValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    long value = 1000L;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsLong()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleFloatValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    float value = 1.0f;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsFloat()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleDoubleValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    double value = 1.01d;
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsDouble()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleStringValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    String value = "value";
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsString().get()).isEqualTo(value);
+  }
+
+  @Test
+  public void constructor_WithSingleByteArrayValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+    Key key = new Key(name, value);
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(Arrays.equals(values.get(0).getAsBytes().get(), value)).isTrue();
+  }
 
   @Test
   public void get_ProperKeysGivenInConstructor_ShouldReturnWhatsSet() {
@@ -45,7 +158,7 @@ public class KeyTest {
             .addFloat("key4", 4.56f)
             .addDouble("key5", 1.23)
             .addText("key6", "string_key")
-            .addBlob("key7", "blob_key".getBytes())
+            .addBlob("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
             .add(new IntValue("key8", 1357))
             .addAll(Arrays.asList(new IntValue("key9", 2468), new BigIntValue("key10", 1111L)))
             .build();
@@ -61,7 +174,8 @@ public class KeyTest {
     assertThat(values.get(3)).isEqualTo(new FloatValue("key4", 4.56f));
     assertThat(values.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
     assertThat(values.get(5)).isEqualTo(new TextValue("key6", "string_key"));
-    assertThat(values.get(6)).isEqualTo(new BlobValue("key7", "blob_key".getBytes()));
+    assertThat(values.get(6))
+        .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
     assertThat(values.get(7)).isEqualTo(new IntValue("key8", 1357));
     assertThat(values.get(8)).isEqualTo(new IntValue("key9", 2468));
     assertThat(values.get(9)).isEqualTo(new BigIntValue("key10", 1111L));
@@ -108,6 +222,7 @@ public class KeyTest {
     Key oneKey = new Key(oneKey1, oneKey2);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = oneKey.equals(oneKey);
 
     // Assert
@@ -137,8 +252,8 @@ public class KeyTest {
     TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
     TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
     Key oneKey = new Key(oneKey1, oneKey2);
-    BlobValue anotherKey1 = new BlobValue(ANY_NAME_1, ANY_TEXT_1.getBytes());
-    BlobValue anotherKey2 = new BlobValue(ANY_NAME_2, ANY_TEXT_2.getBytes());
+    BlobValue anotherKey1 = new BlobValue(ANY_NAME_1, ANY_TEXT_1.getBytes(StandardCharsets.UTF_8));
+    BlobValue anotherKey2 = new BlobValue(ANY_NAME_2, ANY_TEXT_2.getBytes(StandardCharsets.UTF_8));
     Key anotherKey = new Key(anotherKey1, anotherKey2);
 
     // Act

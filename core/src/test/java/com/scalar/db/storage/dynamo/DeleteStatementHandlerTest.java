@@ -16,7 +16,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import org.junit.Before;
@@ -39,7 +38,6 @@ public class DeleteStatementHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
 
   private DeleteStatementHandler handler;
-  private String concatenatedPartitionKey;
   @Mock private DynamoDbClient client;
   @Mock private DynamoTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
@@ -57,9 +55,8 @@ public class DeleteStatementHandlerTest {
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
-    concatenatedPartitionKey = ANY_TEXT_1 + ":" + ANY_TEXT_2;
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Delete del =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
@@ -114,7 +111,7 @@ public class DeleteStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
 
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 

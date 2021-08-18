@@ -13,7 +13,7 @@ import javax.annotation.concurrent.Immutable;
  * @author Hiroyuki Yamada
  */
 @Immutable
-public final class BigIntValue implements Value<BigIntValue> {
+public final class BigIntValue implements Value<Long> {
   private static final String ANONYMOUS = "";
   private final String name;
   private final long value;
@@ -38,28 +38,25 @@ public final class BigIntValue implements Value<BigIntValue> {
     this(ANONYMOUS, value);
   }
 
-  /**
-   * Returns the content of this {@code Value}
-   *
-   * @return the content of this {@code Value}
-   */
-  public long get() {
+  @Override
+  @Nonnull
+  public Long get() {
     return value;
   }
 
   @Override
   public long getAsLong() {
-    return get();
+    return value;
   }
 
   @Override
   public float getAsFloat() {
-    return get();
+    return value;
   }
 
   @Override
   public double getAsDouble() {
-    return get();
+    return value;
   }
 
   @Override
@@ -105,7 +102,7 @@ public final class BigIntValue implements Value<BigIntValue> {
       return false;
     }
     BigIntValue other = (BigIntValue) o;
-    return (this.name.equals(other.name) && this.value == other.value);
+    return (name.equals(other.name) && value == other.value);
   }
 
   @Override
@@ -114,7 +111,10 @@ public final class BigIntValue implements Value<BigIntValue> {
   }
 
   @Override
-  public int compareTo(BigIntValue o) {
-    return ComparisonChain.start().compare(this.value, o.value).compare(this.name, o.name).result();
+  public int compareTo(Value<Long> o) {
+    return ComparisonChain.start()
+        .compare(value, o.get().longValue())
+        .compare(name, o.getName())
+        .result();
   }
 }

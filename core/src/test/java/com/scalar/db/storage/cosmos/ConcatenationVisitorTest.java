@@ -9,6 +9,7 @@ import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
+import java.nio.charset.StandardCharsets;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ public class ConcatenationVisitorTest {
   private static final DoubleValue ANY_DOUBLE_VALUE = new DoubleValue("any_double", ANY_DOUBLE);
   private static final String ANY_TEXT = "test";
   private static final TextValue ANY_TEXT_VALUE = new TextValue("any_text", ANY_TEXT);
-  private static final byte[] ANY_BLOB = "scalar".getBytes();
+  private static final byte[] ANY_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
   private static final BlobValue ANY_BLOB_VALUE = new BlobValue("any_blob", ANY_BLOB);
   private ConcatenationVisitor visitor;
 
@@ -48,7 +49,7 @@ public class ConcatenationVisitorTest {
     String actual = visitor.build();
 
     // Assert
-    String[] values = actual.split(":");
+    String[] values = actual.split(":", -1);
     assertThat(values.length).isEqualTo(7);
     assertThat(values[0]).isEqualTo(String.valueOf(ANY_BOOLEAN));
     assertThat(values[1]).isEqualTo(String.valueOf(ANY_INT));
@@ -56,7 +57,7 @@ public class ConcatenationVisitorTest {
     assertThat(values[3]).isEqualTo(String.valueOf(ANY_FLOAT));
     assertThat(values[4]).isEqualTo(String.valueOf(ANY_DOUBLE));
     assertThat(values[5]).isEqualTo(ANY_TEXT);
-    assertThat(values[6]).isEqualTo(new String(ANY_BLOB));
+    assertThat(values[6]).isEqualTo(new String(ANY_BLOB, StandardCharsets.UTF_8));
   }
 
   @Test
@@ -119,6 +120,6 @@ public class ConcatenationVisitorTest {
     ANY_BLOB_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(new String(ANY_BLOB));
+    assertThat(visitor.build()).isEqualTo(new String(ANY_BLOB, StandardCharsets.UTF_8));
   }
 }

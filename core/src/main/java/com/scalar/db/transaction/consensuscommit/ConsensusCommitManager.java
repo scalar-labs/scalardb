@@ -127,6 +127,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     return start(txId, Isolation.SERIALIZABLE, strategy);
   }
 
+  @Deprecated
   @Override
   public synchronized ConsensusCommit start(
       String txId, Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {

@@ -2,9 +2,6 @@ plugins {
     id 'com.google.protobuf' version '0.8.16'
 }
 
-def grpcVersion = '1.38.0'
-def protocVersion = '3.17.2'
-
 dependencies {
     api group: 'io.grpc', name: 'grpc-netty', version: "${grpcVersion}"
     api group: 'io.grpc', name: 'grpc-protobuf', version: "${grpcVersion}"
@@ -24,3 +21,10 @@ protobuf {
 }
 
 archivesBaseName = "scalardb-rpc"
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
+                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
+    apply from: 'archive.gradle'
+}

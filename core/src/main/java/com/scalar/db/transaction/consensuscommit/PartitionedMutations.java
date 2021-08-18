@@ -12,7 +12,6 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
 @Immutable
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;
@@ -88,5 +87,10 @@ public class PartitionedMutations {
     }
     PartitionedMutations other = (PartitionedMutations) o;
     return partitions.equals(other.partitions);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(partitions);
   }
 }

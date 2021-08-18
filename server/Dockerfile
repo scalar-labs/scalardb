@@ -33,4 +33,4 @@ ENV SCALARDB_SERVER_OPTS -Dlog4j.configuration=file:log4j.properties
 ENTRYPOINT ["./bin/scalardb-server"]
 CMD ["--config", "database.properties"]
 
-EXPOSE 60051
+EXPOSE 60051 8080

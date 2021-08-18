@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
@@ -25,24 +24,28 @@ import org.slf4j.LoggerFactory;
 public class GrpcAdmin implements DistributedStorageAdmin {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcAdmin.class);
 
+  private final GrpcConfig config;
   private final ManagedChannel channel;
   private final DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub;
   private final GrpcTableMetadataManager metadataManager;
 
   @Inject
-  public GrpcAdmin(DatabaseConfig config) {
+  public GrpcAdmin(GrpcConfig config) {
+    this.config = config;
     channel =
         NettyChannelBuilder.forAddress(config.getContactPoints().get(0), config.getContactPort())
             .usePlaintext()
             .build();
     stub = DistributedStorageAdminGrpc.newBlockingStub(channel);
-    metadataManager = new GrpcTableMetadataManager(stub);
+    metadataManager = new GrpcTableMetadataManager(config, stub);
   }
 
   @VisibleForTesting
   GrpcAdmin(
+      GrpcConfig config,
       DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub,
       GrpcTableMetadataManager metadataManager) {
+    this.config = config;
     channel = null;
     this.stub = stub;
     this.metadataManager = metadataManager;
@@ -54,29 +57,35 @@ public class GrpcAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     execute(
         () ->
-            stub.createTable(
-                CreateTableRequest.newBuilder()
-                    .setNamespace(namespace)
-                    .setTable(table)
-                    .setTableMetadata(ProtoUtil.toTableMetadata(metadata))
-                    .putAllOptions(options)
-                    .build()));
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .createTable(
+                    CreateTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setTableMetadata(ProtoUtil.toTableMetadata(metadata))
+                        .putAllOptions(options)
+                        .build()));
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     execute(
         () ->
-            stub.dropTable(
-                DropTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .dropTable(
+                    DropTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     execute(
         () ->
-            stub.truncateTable(
-                TruncateTableRequest.newBuilder().setNamespace(namespace).setTable(table).build()));
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .truncateTable(
+                    TruncateTableRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .build()));
   }
 
   @Override
@@ -84,9 +93,9 @@ public class GrpcAdmin implements DistributedStorageAdmin {
     return metadataManager.getTableMetadata(namespace, table);
   }
 
-  private static void execute(Runnable supplier) throws ExecutionException {
+  private static void execute(Runnable runnable) throws ExecutionException {
     try {
-      supplier.run();
+      runnable.run();
     } catch (StatusRuntimeException e) {
       if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
         throw new IllegalArgumentException(e.getMessage(), e);

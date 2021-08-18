@@ -26,7 +26,11 @@ public final class ValueBinder implements ValueVisitor {
   private final String alias;
   private int i;
 
-  /** Constructs {@code ValueBinder} with the specified {@code BoundStatement} */
+  /**
+   * Constructs {@code ValueBinder} with the specified {@code BoundStatement}
+   *
+   * @param alias an alias
+   */
   public ValueBinder(String alias) {
     this.values = new HashMap<>();
     this.alias = alias;
@@ -101,8 +105,8 @@ public final class ValueBinder implements ValueVisitor {
   @Override
   public void visit(TextValue value) {
     AttributeValue.Builder builder = AttributeValue.builder();
-    if (value.getString().isPresent()) {
-      builder.s(value.getString().get());
+    if (value.get().isPresent()) {
+      builder.s(value.get().get());
     } else {
       builder.nul(true);
     }

@@ -6,10 +6,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Map;
 import java.util.Objects;
@@ -17,7 +14,6 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
-/** */
 @Immutable
 public class TransactionResult implements Result {
   private final Result result;
@@ -82,23 +78,23 @@ public class TransactionResult implements Result {
   }
 
   public String getId() {
-    return ((TextValue) getValue(Attribute.ID).get()).getString().get();
+    return getValue(Attribute.ID).get().getAsString().get();
   }
 
   public TransactionState getState() {
-    return TransactionState.getInstance(((IntValue) getValue(Attribute.STATE).get()).get());
+    return TransactionState.getInstance(getValue(Attribute.STATE).get().getAsInt());
   }
 
   public int getVersion() {
-    return ((IntValue) getValue(Attribute.VERSION).get()).get();
+    return getValue(Attribute.VERSION).get().getAsInt();
   }
 
   public long getPreparedAt() {
-    return ((BigIntValue) getValue(Attribute.PREPARED_AT).get()).get();
+    return getValue(Attribute.PREPARED_AT).get().getAsLong();
   }
 
   public long getCommittedAt() {
-    return ((BigIntValue) getValue(Attribute.COMMITTED_AT).get()).get();
+    return getValue(Attribute.COMMITTED_AT).get().getAsLong();
   }
 
   public boolean isCommitted() {

@@ -17,6 +17,7 @@ import io.grpc.StatusRuntimeException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -26,7 +27,7 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
   private final LoadingCache<TableName, Optional<TableMetadata>> tableMetadataCache;
 
   public GrpcTableMetadataManager(
-      DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub) {
+      GrpcConfig config, DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub) {
     Objects.requireNonNull(stub);
 
     // TODO Need to add an expiration to handle the case of altering table
@@ -37,11 +38,13 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
                   @Override
                   public Optional<TableMetadata> load(@Nonnull TableName tableName) {
                     GetTableMetadataResponse response =
-                        stub.getTableMetadata(
-                            GetTableMetadataRequest.newBuilder()
-                                .setNamespace(tableName.namespace)
-                                .setTable(tableName.table)
-                                .build());
+                        stub.withDeadlineAfter(
+                                config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                            .getTableMetadata(
+                                GetTableMetadataRequest.newBuilder()
+                                    .setNamespace(tableName.namespace)
+                                    .setTable(tableName.table)
+                                    .build());
                     if (!response.hasTableMetadata()) {
                       return Optional.empty();
                     }
@@ -89,7 +92,7 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
       if (this == o) {
         return true;
       }
-      if (o == null || getClass() != o.getClass()) {
+      if (!(o instanceof TableName)) {
         return false;
       }
       TableName tableName = (TableName) o;
@@ -101,5 +104,15 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
     public int hashCode() {
       return Objects.hash(namespace, table);
     }
+  }
+
+  @Override
+  public void deleteTableMetadata(String namespace, String table) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
+    throw new UnsupportedOperationException();
   }
 }

@@ -1,3 +1,4 @@
+rootProject.name = 'scalardb'
 include 'core'
 include 'rpc'
 include 'server'

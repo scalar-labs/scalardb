@@ -21,7 +21,11 @@ import org.mockito.MockitoAnnotations;
 
 public class ConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
-  @Mock private DistributedStorage storage;
+
+  @Mock
+  @SuppressWarnings("unused")
+  private DistributedStorage storage;
+
   @Mock private DatabaseConfig config;
   @Mock private Coordinator coordinator;
   @Mock private RecoveryHandler recovery;
@@ -41,7 +45,7 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = (ConsensusCommit) manager.start();
+    ConsensusCommit transaction = manager.start();
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -54,7 +58,7 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = (ConsensusCommit) manager.start(Isolation.SERIALIZABLE);
+    ConsensusCommit transaction = manager.start(Isolation.SERIALIZABLE);
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -67,10 +71,7 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.start((Isolation) null);
-            })
+    assertThatThrownBy(() -> manager.start((Isolation) null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -79,8 +80,8 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction1 = (ConsensusCommit) manager.start();
-    ConsensusCommit transaction2 = (ConsensusCommit) manager.start();
+    ConsensusCommit transaction1 = manager.start();
+    ConsensusCommit transaction2 = manager.start();
 
     // Assert
     assertThat(transaction1.getCrudHandler()).isNotEqualTo(transaction2.getCrudHandler());

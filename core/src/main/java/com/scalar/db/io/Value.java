@@ -1,13 +1,14 @@
 package com.scalar.db.io;
 
 import java.util.Optional;
+import javax.annotation.Nonnull;
 
 /**
  * An abstraction for storage entry's value
  *
  * @author Hiroyuki Yamada
  */
-public interface Value<T> extends Comparable<T> {
+public interface Value<T> extends Comparable<Value<T>> {
 
   /**
    * Returns the name of the value
@@ -22,7 +23,7 @@ public interface Value<T> extends Comparable<T> {
    * @param name name of a {@code Value}
    * @return a {@code Value} which has the same content of this value
    */
-  Value<?> copyWith(String name);
+  Value<T> copyWith(String name);
 
   /**
    * Accepts a {@link ValueVisitor} to be able to be traversed
@@ -30,6 +31,14 @@ public interface Value<T> extends Comparable<T> {
    * @param v a visitor class used for traversing {@code Value}s
    */
   void accept(ValueVisitor v);
+
+  /**
+   * Returns the content of this {@code Value}
+   *
+   * @return the content of this {@code Value}
+   */
+  @Nonnull
+  T get();
 
   /**
    * Returns the content of this {@code Value} as a boolean type
@@ -77,7 +86,7 @@ public interface Value<T> extends Comparable<T> {
   }
 
   /**
-   * Returns the content of this {@code Value} as a string
+   * Returns the content of this {@code Value} as a string type
    *
    * @return the content of this {@code Value}
    */

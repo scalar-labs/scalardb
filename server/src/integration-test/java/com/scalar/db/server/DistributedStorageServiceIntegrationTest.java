@@ -13,8 +13,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.IntegrationTestBase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -115,13 +117,16 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
     testEnv.createTables();
     testEnv.insertMetadata();
 
-    server = new ScalarDbServer(testEnv.getJdbcConfig().getProperties());
+    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
+    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
+    server = new ScalarDbServer(serverProperties);
     server.start();
 
     Properties properties = new Properties();
     properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
     properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    storage = new GrpcStorage(new DatabaseConfig(properties));
+    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
+    storage = new GrpcStorage(new GrpcConfig(properties));
   }
 
   @AfterClass

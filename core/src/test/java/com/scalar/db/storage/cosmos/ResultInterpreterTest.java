@@ -11,7 +11,6 @@ import com.scalar.db.io.Value;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
@@ -55,19 +54,17 @@ public class ResultInterpreterTest {
     record.setPartitionKey(ImmutableMap.of(ANY_NAME_1, ANY_TEXT_1));
     record.setClusteringKey(ImmutableMap.of(ANY_NAME_2, ANY_TEXT_2));
     record.setValues(
-        new HashMap<String, Object>() {
-          {
-            put(ANY_COLUMN_NAME_1, true);
-            put(ANY_COLUMN_NAME_2, Integer.MAX_VALUE);
-            put(ANY_COLUMN_NAME_3, Long.MAX_VALUE);
-            put(ANY_COLUMN_NAME_4, Float.MAX_VALUE);
-            put(ANY_COLUMN_NAME_5, Double.MAX_VALUE);
-            put(ANY_COLUMN_NAME_6, "string");
-            put(
+        ImmutableMap.<String, Object>builder()
+            .put(ANY_COLUMN_NAME_1, true)
+            .put(ANY_COLUMN_NAME_2, Integer.MAX_VALUE)
+            .put(ANY_COLUMN_NAME_3, Long.MAX_VALUE)
+            .put(ANY_COLUMN_NAME_4, Float.MAX_VALUE)
+            .put(ANY_COLUMN_NAME_5, Double.MAX_VALUE)
+            .put(ANY_COLUMN_NAME_6, "string")
+            .put(
                 ANY_COLUMN_NAME_7,
-                Base64.getEncoder().encodeToString("bytes".getBytes(StandardCharsets.UTF_8)));
-          }
-        });
+                Base64.getEncoder().encodeToString("bytes".getBytes(StandardCharsets.UTF_8)))
+            .build());
 
     List<String> projections = Collections.emptyList();
     ResultInterpreter spy = spy(new ResultInterpreter(projections, metadata));
@@ -98,7 +95,7 @@ public class ResultInterpreterTest {
     assertThat(result.getValue(ANY_COLUMN_NAME_7).isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_7).get().getAsBytes().isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_7).get().getAsBytes().get())
-        .isEqualTo("bytes".getBytes());
+        .isEqualTo("bytes".getBytes(StandardCharsets.UTF_8));
 
     Map<String, Value<?>> values = result.getValues();
     assertThat(values.containsKey(ANY_NAME_1)).isTrue();
@@ -122,6 +119,7 @@ public class ResultInterpreterTest {
     assertThat(values.get(ANY_COLUMN_NAME_6).getAsString().get()).isEqualTo("string");
     assertThat(values.containsKey(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().isPresent()).isTrue();
-    assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().get()).isEqualTo("bytes".getBytes());
+    assertThat(values.get(ANY_COLUMN_NAME_7).getAsBytes().get())
+        .isEqualTo("bytes".getBytes(StandardCharsets.UTF_8));
   }
 }

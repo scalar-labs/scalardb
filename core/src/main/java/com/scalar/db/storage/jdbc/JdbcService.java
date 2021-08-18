@@ -14,6 +14,7 @@ import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
 import com.scalar.db.util.Utility;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,6 +49,7 @@ public class JdbcService {
     this.namespacePrefix = Objects.requireNonNull(namespacePrefix);
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public Optional<Result> get(
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {
@@ -96,6 +98,7 @@ public class JdbcService {
         resultSet);
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public List<Result> scan(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException {

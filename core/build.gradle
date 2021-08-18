@@ -1,5 +1,10 @@
+plugins {
+    id 'com.github.spotbugs-base' version '4.7.1'
+    id 'net.ltgt.errorprone' version '2.0.2'
+}
+
 sourceSets {
-    integrationTest {
+    integrationTestAll {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -72,37 +77,51 @@ sourceSets {
 }
 
 configurations {
-    integrationTestImplementation.extendsFrom testImplementation
-    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestAllImplementation.extendsFrom testImplementation
+    integrationTestAllRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestAllCompileOnly.extendsFrom testCompileOnly
     integrationTestCassandraImplementation.extendsFrom testImplementation
     integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraCompileOnly.extendsFrom testCompileOnly
     integrationTestCosmosImplementation.extendsFrom testImplementation
     integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosCompileOnly.extendsFrom testCompileOnly
     integrationTestDynamoImplementation.extendsFrom testImplementation
     integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoCompileOnly.extendsFrom testCompileOnly
     integrationTestJdbcImplementation.extendsFrom testImplementation
     integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcCompileOnly.extendsFrom testCompileOnly
     integrationTestMultiStorageImplementation.extendsFrom testImplementation
     integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
 }
-
-def awssdkVersion = "2.14.24"
 
 dependencies {
     implementation project(':rpc')
-    implementation group: 'com.google.guava', name: 'guava', version: '24.1-jre'
-    implementation group: 'com.google.inject', name: 'guice', version: '5.0.1'
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
-    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
-    implementation group: 'com.azure', name: 'azure-cosmos', version: '4.15.0'
-    implementation group: 'org.jooq', name: 'jooq', version: '3.13.2'
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
+    implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: "${cassandraDriverVersion}"
+    implementation group: 'com.azure', name: 'azure-cosmos', version: "${azureCosmosVersion}"
+    implementation group: 'org.jooq', name: 'jooq', version: "${jooqVersion}"
     implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
     implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
-    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.8.0'
-    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.22'
-    implementation group: 'org.postgresql', name: 'postgresql', version: '42.2.18'
-    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: '19.8.0.0'
-    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
+    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: "${commonsDbcp2Version}"
+    implementation group: 'mysql', name: 'mysql-connector-java', version: "${mysqlDriverVersion}"
+    implementation group: 'org.postgresql', name: 'postgresql', version: "${postgresqlDriverVersion}"
+    implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: "${oracleDriverVersion}"
+    implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: "${sqlserverDriverVersion}"
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    // for SpotBugs
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
 task integrationTestCassandra(type: Test) {
@@ -154,19 +173,12 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
 }
 
-// build should not depend on the integration tests
-check.dependsOn -= integrationTestCassandra
-check.dependsOn -= integrationTestCosmos
-check.dependsOn -= integrationTestDynamo
-check.dependsOn -= integrationTestJdbc
-check.dependsOn -= integrationTestMultiStorage
-
 task copyDependencies(type: Copy) {
     configurations.api.canBeResolved true
     configurations.implementation.canBeResolved true
     from(configurations.api + configurations.implementation)
     into file("$buildDir/libs")
-    duplicatesStrategy 'exclude'
+    duplicatesStrategy DuplicatesStrategy.EXCLUDE
 }
 
 spotless {
@@ -178,7 +190,41 @@ spotless {
     }
 }
 
+import com.github.spotbugs.snom.SpotBugsTask
+
+task spotbugsMain(type: SpotBugsTask) {
+    dependsOn 'classes'
+    classDirs = sourceSets.main.output
+    sourceDirs = sourceSets.main.allSource.sourceDirectories
+    auxClassPaths = sourceSets.main.compileClasspath
+    reports { html.enabled = true }
+}
+
+task spotbugsTest(type: SpotBugsTask) {
+    dependsOn 'testClasses'
+    classDirs = sourceSets.test.output
+    sourceDirs = sourceSets.test.allSource.sourceDirectories
+    auxClassPaths = sourceSets.test.compileClasspath
+    reports { html.enabled = true }
+}
+
+task spotbugsIntegrationTest(type: SpotBugsTask) {
+    dependsOn 'integrationTestAllClasses'
+    classDirs = sourceSets.integrationTestAll.output
+    sourceDirs = sourceSets.integrationTestAll.allSource.sourceDirectories
+    auxClassPaths = sourceSets.integrationTestAll.compileClasspath
+    reports { html.enabled = true }
+}
+
+check.dependsOn += spotbugsMain
+check.dependsOn += spotbugsTest
+check.dependsOn += spotbugsIntegrationTest
+
 archivesBaseName = "scalardb"
 
 // for archiving and uploading to maven central
-//apply from: 'archive.gradle'
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
+                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
+    apply from: 'archive.gradle'
+}

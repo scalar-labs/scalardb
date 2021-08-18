@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
 
 /** */
@@ -135,6 +136,7 @@ public class FloatValueTest {
     FloatValue value = new FloatValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("SelfEquals")
     boolean result = value.equals(value);
 
     // Assert
@@ -157,6 +159,7 @@ public class FloatValueTest {
   }
 
   @Test
+  @SuppressFBWarnings("EC_UNRELATED_TYPES")
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
     float some = Float.MAX_VALUE;
@@ -164,6 +167,7 @@ public class FloatValueTest {
     DoubleValue anotherValue = new DoubleValue(ANY_NAME, some);
 
     // Act
+    @SuppressWarnings("EqualsIncompatibleType")
     boolean result = oneValue.equals(anotherValue);
 
     // Assert

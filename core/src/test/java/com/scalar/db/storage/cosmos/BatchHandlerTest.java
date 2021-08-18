@@ -26,9 +26,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -42,15 +40,12 @@ import org.mockito.MockitoAnnotations;
 public class BatchHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
-  private static final String ANOTHER_TABLE_NAME = "another_table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
   private static final String ANY_NAME_4 = "name4";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
-  private static final String ANY_TEXT_3 = "text1";
-  private static final String ANY_TEXT_4 = "text2";
   private static final int ANY_INT_1 = 1;
   private static final int ANY_INT_2 = 2;
 
@@ -78,21 +73,21 @@ public class BatchHandlerTest {
   }
 
   private Put preparePut() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Put put =
         new Put(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withValue(new IntValue(ANY_NAME_3, ANY_INT_1))
-            .withValue(new IntValue(ANY_NAME_4, ANY_INT_2));
+            .withValue(ANY_NAME_3, ANY_INT_1)
+            .withValue(ANY_NAME_4, ANY_INT_2);
 
     return put;
   }
 
   private Delete prepareDelete() {
-    Key partitionKey = new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1));
-    Key clusteringKey = new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Delete del =
         new Delete(partitionKey, clusteringKey)
             .forNamespace(ANY_KEYSPACE_NAME)
