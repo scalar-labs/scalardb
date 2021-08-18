@@ -858,7 +858,7 @@ public class MultiStorageIntegrationTest {
     testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
 
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      testEnv.register(
+      testEnv.createTable(
           NAMESPACE1,
           table,
           TableMetadata.newBuilder()
@@ -871,7 +871,7 @@ public class MultiStorageIntegrationTest {
               .addClusteringKey(COL_NAME4)
               .build());
     }
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE2,
         TABLE1,
         TableMetadata.newBuilder()
@@ -883,9 +883,6 @@ public class MultiStorageIntegrationTest {
             .addPartitionKey(COL_NAME1)
             .addClusteringKey(COL_NAME4)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
 
     mysql = new JdbcDatabase(testEnv.getJdbcConfig());
   }
@@ -947,8 +944,7 @@ public class MultiStorageIntegrationTest {
 
   private static void cleanUpMySql() throws Exception {
     mysql.close();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

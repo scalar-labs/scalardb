@@ -2,6 +2,7 @@ package com.scalar.db.storage.common;
 
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
+import java.util.Set;
 
 public interface TableMetadataManager {
   /**
@@ -22,7 +23,7 @@ public interface TableMetadataManager {
   TableMetadata getTableMetadata(String namespace, String table);
 
   /**
-   * Delete the given table metadata
+   * Deletes the given table metadata
    *
    * @param namespace a namespace
    * @param table a table metadata
@@ -30,11 +31,19 @@ public interface TableMetadataManager {
   void deleteTableMetadata(String namespace, String table);
 
   /**
-   * Add the given table metadata
+   * Adds the given table metadata
    *
    * @param namespace a namespace
    * @param table a table
    * @param metadata a table metadata
    */
   void addTableMetadata(String namespace, String table, TableMetadata metadata);
+
+  /**
+   * Returns the names of the table belonging to the given namespace
+   *
+   * @param namespace a namespace
+   * @return a set of table names
+   */
+  Set<String> getTableNames(String namespace);
 }

@@ -91,4 +91,28 @@ public final class Utility {
       }
     }
   }
+
+  /**
+   * Return a fully qualified table name
+   *
+   * @param namespacePrefix an optional namespace prefix
+   * @param namespace a namespace
+   * @param table a table
+   * @return a fully qualified table name
+   */
+  public static String getFullTableName(
+      Optional<String> namespacePrefix, String namespace, String table) {
+    return namespacePrefix.orElse("") + namespace + "." + table;
+  }
+
+  /**
+   * Return the namespace prefix concatenated to the namespace
+   *
+   * @param namespacePrefix an optional namespace prefix
+   * @param namespace a namespace
+   * @return the namespace prefix concatenated to the namespace
+   */
+  public static String getFullNamespaceName(Optional<String> namespacePrefix, String namespace) {
+    return namespacePrefix.orElse("") + namespace;
+  }
 }
