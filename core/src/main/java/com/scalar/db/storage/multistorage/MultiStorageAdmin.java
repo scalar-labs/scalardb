@@ -1,13 +1,11 @@
 package com.scalar.db.storage.multistorage;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.service.StorageModule;
+import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,9 +38,8 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
         .getDatabaseConfigMap()
         .forEach(
             (storageName, databaseConfig) -> {
-              // Instantiate admins with Guice
-              Injector injector = Guice.createInjector(new StorageModule(databaseConfig));
-              DistributedStorageAdmin admin = injector.getInstance(DistributedStorageAdmin.class);
+              StorageFactory factory = new StorageFactory(databaseConfig);
+              DistributedStorageAdmin admin = factory.getAdmin();
               nameAdminMap.put(storageName, admin);
               admins.add(admin);
             });
