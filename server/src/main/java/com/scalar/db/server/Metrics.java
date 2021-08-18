@@ -6,32 +6,82 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.Timer.Context;
+import com.codahale.metrics.jmx.JmxReporter;
 import com.google.common.annotations.VisibleForTesting;
+import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.util.ThrowableRunnable;
 import com.scalar.db.util.ThrowableSupplier;
-import java.util.Objects;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.dropwizard.DropwizardExports;
+import io.prometheus.client.exporter.MetricsServlet;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Metrics {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Metrics.class);
+  private static final String PRODUCT_NAME = "scalardb";
+  private static final String STATS_PREFIX = "stats";
+  private static final String SUCCESS_SUFFIX = "success";
+  private static final String FAILURE_SUFFIX = "failure";
+
+  private final ServerConfig config;
   private final MetricRegistry metricRegistry;
+  private final String prefix;
+  private final Counter totalSuccess;
+  private final Counter totalFailure;
 
-  private final Counter totalSucceeded;
-  private final Counter totalFailed;
+  public Metrics(ServerConfig config) {
+    this.config = config;
+    metricRegistry = new MetricRegistry();
+    startJmxReporter();
+    startPrometheusExporter();
 
-  public Metrics(MetricRegistry metricRegistry) {
-    this.metricRegistry = Objects.requireNonNull(metricRegistry);
-
-    totalSucceeded = metricRegistry.counter(name(Metrics.class, "totalSucceeded"));
-    totalFailed = metricRegistry.counter(name(Metrics.class, "totalFailed"));
+    prefix = name(PRODUCT_NAME, STATS_PREFIX);
+    totalSuccess = metricRegistry.counter(name(prefix, "total", SUCCESS_SUFFIX));
+    totalFailure = metricRegistry.counter(name(prefix, "total", FAILURE_SUFFIX));
   }
 
   @VisibleForTesting
-  public Metrics() {
-    metricRegistry = null;
-    totalSucceeded = null;
-    totalFailed = null;
+  Metrics() {
+    this.config = null;
+    this.metricRegistry = null;
+    this.prefix = null;
+    this.totalSuccess = null;
+    this.totalFailure = null;
   }
 
-  public void measure(Class<?> klass, String method, ThrowableRunnable<Throwable> runnable)
+  private void startJmxReporter() {
+    JmxReporter reporter = JmxReporter.forRegistry(metricRegistry).build();
+    reporter.start();
+    Runtime.getRuntime().addShutdownHook(new Thread(reporter::stop));
+  }
+
+  private void startPrometheusExporter() {
+    int prometheusExporterPort = config.getPrometheusExporterPort();
+    if (prometheusExporterPort < 0) {
+      return;
+    }
+
+    CollectorRegistry.defaultRegistry.register(new DropwizardExports(metricRegistry));
+
+    Server server = new Server(prometheusExporterPort);
+    ServletContextHandler context = new ServletContextHandler();
+    context.setContextPath("/");
+    server.setHandler(context);
+    context.addServlet(new ServletHolder(new MetricsServlet()), "/stats/prometheus");
+    server.setStopAtShutdown(true);
+    try {
+      server.start();
+      LOGGER.info("Prometheus exporter started, listening on {}", prometheusExporterPort);
+    } catch (Exception e) {
+      LOGGER.error("failed to start Jetty server", e);
+    }
+  }
+
+  public void measure(String serviceName, String method, ThrowableRunnable<Throwable> runnable)
       throws Throwable {
     // For test
     if (metricRegistry == null) {
@@ -39,31 +89,41 @@ public class Metrics {
       return;
     }
 
-    Timer timer = metricRegistry.timer(name(klass, method));
+    Timer timer = metricRegistry.timer(name(prefix, serviceName, method));
     try (Context unused = timer.time()) {
       runnable.run();
-      totalSucceeded.inc();
+      onSuccess(serviceName, method);
     } catch (Throwable t) {
-      totalFailed.inc();
+      onFailure(serviceName, method);
       throw t;
     }
   }
 
-  public <T> T measure(Class<?> klass, String method, ThrowableSupplier<T, Throwable> supplier)
+  public <T> T measure(String serviceName, String method, ThrowableSupplier<T, Throwable> supplier)
       throws Throwable {
     // For test
     if (metricRegistry == null) {
       return supplier.get();
     }
 
-    Timer timer = metricRegistry.timer(name(klass, method));
+    Timer timer = metricRegistry.timer(name(prefix, serviceName, method));
     try (Context unused = timer.time()) {
       T ret = supplier.get();
-      totalSucceeded.inc();
+      onSuccess(serviceName, method);
       return ret;
     } catch (Throwable t) {
-      totalFailed.inc();
+      onFailure(serviceName, method);
       throw t;
     }
+  }
+
+  private void onSuccess(String serviceName, String method) {
+    totalSuccess.inc();
+    metricRegistry.counter(name(prefix, serviceName, method, SUCCESS_SUFFIX)).inc();
+  }
+
+  private void onFailure(String serviceName, String method) {
+    totalFailure.inc();
+    metricRegistry.counter(name(prefix, serviceName, method, FAILURE_SUFFIX)).inc();
   }
 }
