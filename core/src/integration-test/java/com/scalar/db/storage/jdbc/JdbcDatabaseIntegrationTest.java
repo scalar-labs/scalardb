@@ -29,7 +29,7 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     testEnv = new TestEnv();
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -42,9 +42,6 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
             .addClusteringKey(COL_NAME4)
             .addSecondaryIndex(COL_NAME3)
             .build());
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
 
     storage = new JdbcDatabase(testEnv.getJdbcConfig());
   }
@@ -52,8 +49,7 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     storage.close();
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 }

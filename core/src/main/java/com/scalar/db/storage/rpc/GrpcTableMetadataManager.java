@@ -16,6 +16,7 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
@@ -113,6 +114,11 @@ public class GrpcTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void addTableMetadata(String namespace, String table, TableMetadata metadata) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getTableNames(String namespace) {
     throw new UnsupportedOperationException();
   }
 }

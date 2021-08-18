@@ -97,7 +97,7 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
 
   private static void initMySql() throws Exception {
     testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
-    testEnv.register(
+    testEnv.createTable(
         NAMESPACE,
         TABLE_2,
         TableMetadata.newBuilder()
@@ -118,10 +118,6 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build());
-
-    testEnv.createMetadataTable();
-    testEnv.createTables();
-    testEnv.insertMetadata();
   }
 
   private static void initMultiStorage() {
@@ -176,8 +172,7 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
   }
 
   private static void cleanUpMySql() throws Exception {
-    testEnv.dropMetadataTable();
-    testEnv.dropTables();
+    testEnv.deleteTables();
     testEnv.close();
   }
 
