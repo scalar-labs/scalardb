@@ -12,6 +12,34 @@ public enum DataType {
   BLOB;
 
   /**
+   * Return this enum value that is equivalent to {@link com.datastax.driver.core.DataType}
+   *
+   * @return this enum value that is equivalent {@link com.datastax.driver.core.DataType}
+   */
+  public static DataType fromCassandraDataType(
+      com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
+    switch (cassandraDataTypeName) {
+      case INT:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case FLOAT:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case TEXT:
+        return DataType.TEXT;
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case BLOB:
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(
+            String.format("%s is not yet supported", cassandraDataTypeName));
+    }
+  }
+
+  /**
    * Returns the equivalent {@link com.datastax.driver.core.DataType}
    *
    * @return the equivalent {@link com.datastax.driver.core.DataType} to this enum value
@@ -33,29 +61,7 @@ public enum DataType {
       case BLOB:
         return com.datastax.driver.core.DataType.blob();
       default:
-        throw new UnsupportedOperationException(String.format("%s is not yet implemented", this));
-    }
-  }
-
-  public static DataType fromCassandraDataType(
-      com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
-    switch (cassandraDataTypeName) {
-      case INT:
-        return DataType.INT;
-      case BIGINT:
-        return DataType.BIGINT;
-      case FLOAT:
-        return DataType.FLOAT;
-      case DOUBLE:
-        return DataType.DOUBLE;
-      case TEXT:
-        return DataType.TEXT;
-      case BOOLEAN:
-        return DataType.BOOLEAN;
-      case BLOB:
-        return DataType.BLOB;
-      default:
-        throw new UnsupportedTypeException(cassandraDataTypeName.toString());
+        throw new UnsupportedOperationException(String.format("%s is not yet supported", this));
     }
   }
 }

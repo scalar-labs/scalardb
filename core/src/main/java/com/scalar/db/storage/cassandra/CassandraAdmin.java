@@ -1,5 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.scalar.db.util.Utility.getFullNamespaceName;
+import static com.scalar.db.util.Utility.getFullTableName;
+
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
@@ -27,40 +30,33 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String NETWORK_STRATEGY = "network-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
-  public final ClusterManager clusterManager;
+  private final ClusterManager clusterManager;
   private final CassandraTableMetadataManager metadataManager;
   private final Optional<String> namespacePrefix;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
-    clusterManager.getSession();
     metadataManager =
         new CassandraTableMetadataManager(clusterManager, config.getNamespacePrefix());
     namespacePrefix = config.getNamespacePrefix();
   }
 
   @VisibleForTesting
-  CassandraAdmin(DatabaseConfig config, ClusterManager clusterManager) {
+  CassandraAdmin(
+      CassandraTableMetadataManager metadataManager,
+      ClusterManager clusterManager,
+      Optional<String> namespacePrefix) {
     this.clusterManager = clusterManager;
-    this.clusterManager.getSession();
-    metadataManager =
-        new CassandraTableMetadataManager(clusterManager, config.getNamespacePrefix());
-    namespacePrefix = config.getNamespacePrefix();
-  }
-
-  @VisibleForTesting
-  CassandraAdmin(CassandraTableMetadataManager metadataManager, Optional<String> namespacePrefix) {
-    clusterManager = null;
     this.metadataManager = metadataManager;
-    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
+    this.namespacePrefix = namespacePrefix;
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    String fullNamespace = fullNamespace(namespace);
+    String fullNamespace = fullKeyspace(namespace);
     createNamespace(fullNamespace, options);
     createTableInternal(fullNamespace, table, metadata, options);
     createSecondaryIndex(fullNamespace, table, metadata.getSecondaryIndexNames());
@@ -69,29 +65,24 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     String dropTableQuery =
-        SchemaBuilder.dropTable(fullNamespace(namespace), table).getQueryString();
+        SchemaBuilder.dropTable(fullKeyspace(namespace), table).getQueryString();
     try {
       clusterManager.getSession().execute(dropTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("dropping the %s.%s table failed", fullNamespace(namespace), table), e);
+          String.format(
+              "dropping the %s table failed", getFullTableName(namespacePrefix, namespace, table)),
+          e);
     }
     metadataManager.deleteTableMetadata(namespace, table);
-    // TODO Replace with TableManager.getTableNames()
-    if (clusterManager
-        .getSession()
-        .getCluster()
-        .getMetadata()
-        .getKeyspace(fullNamespace(namespace))
-        .getTables()
-        .isEmpty()) {
+    if (metadataManager.getTableNames(namespace).isEmpty()) {
       String dropKeyspace =
-          SchemaBuilder.dropKeyspace(fullNamespace(namespace)).ifExists().getQueryString();
+          SchemaBuilder.dropKeyspace(fullKeyspace(namespace)).ifExists().getQueryString();
       try {
         clusterManager.getSession().execute(dropKeyspace);
       } catch (RuntimeException e) {
         throw new ExecutionException(
-            String.format("dropping the %s namespace failed", fullNamespace(namespace)), e);
+            String.format("dropping the %s namespace failed", fullKeyspace(namespace)), e);
       }
     }
   }
@@ -99,32 +90,34 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String truncateTableQuery =
-        QueryBuilder.truncate(fullNamespace(namespace), table).getQueryString();
+        QueryBuilder.truncate(fullKeyspace(namespace), table).getQueryString();
     try {
       clusterManager.getSession().execute(truncateTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("truncating the %s.%s table failed", fullNamespace(namespace), table), e);
+          String.format(
+              "truncating the %s table failed",
+              getFullTableName(namespacePrefix, namespace, table)),
+          e);
     }
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      return metadataManager.getTableMetadata(fullNamespace(namespace), table);
+      return metadataManager.getTableMetadata(namespace, table);
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }
   }
 
-  private String fullNamespace(String namespace) {
-    return namespacePrefix.map(s -> s + namespace).orElse(namespace);
+  private String fullKeyspace(String namespace) {
+    return getFullNamespaceName(namespacePrefix, namespace);
   }
 
   @VisibleForTesting
-  void createNamespace(String fullNamespace, Map<String, String> options)
-      throws ExecutionException {
-    CreateKeyspace query = SchemaBuilder.createKeyspace(fullNamespace).ifNotExists();
+  void createNamespace(String fullkeyspace, Map<String, String> options) throws ExecutionException {
+    CreateKeyspace query = SchemaBuilder.createKeyspace(fullkeyspace).ifNotExists();
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     NetworkStrategy networkStrategy =
         options.containsKey(NETWORK_STRATEGY)
@@ -144,15 +137,15 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           .execute(query.with().replication(replicationOptions).getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("creating the %s namespace failed", fullNamespace), e);
+          String.format("creating the keyspace %s failed", fullkeyspace), e);
     }
   }
 
   @VisibleForTesting
   void createTableInternal(
-      String fullNamespace, String table, TableMetadata metadata, Map<String, String> options)
+      String fullKeyspace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    Create createTable = SchemaBuilder.createTable(fullNamespace, table);
+    Create createTable = SchemaBuilder.createTable(fullKeyspace, table);
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =
@@ -199,24 +192,24 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       clusterManager.getSession().execute(createTableWithOptions.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("creating the table %s.%s failed", fullNamespace, table), e);
+          String.format("creating the table %s.%s failed", fullKeyspace, table), e);
     }
   }
 
   @VisibleForTesting
-  void createSecondaryIndex(String fullNamespace, String table, Set<String> secondaryIndexNames)
+  void createSecondaryIndex(String fullKeyspace, String table, Set<String> secondaryIndexNames)
       throws ExecutionException {
     for (String index : secondaryIndexNames) {
       String indexName =
           String.format("%s_%s_%s", table, DistributedStorageAdmin.INDEX_NAME_PREFIX, index);
       SchemaStatement createIndex =
-          SchemaBuilder.createIndex(indexName).onTable(fullNamespace, table).andColumn(index);
+          SchemaBuilder.createIndex(indexName).onTable(fullKeyspace, table).andColumn(index);
       try {
         clusterManager.getSession().execute(createIndex.getQueryString());
       } catch (RuntimeException e) {
         throw new ExecutionException(
             String.format(
-                "creating the secondary index for %s.%s.%s failed", fullNamespace, table, index),
+                "creating the secondary index for %s.%s.%s failed", fullKeyspace, table, index),
             e);
       }
     }
@@ -227,13 +220,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     clusterManager.close();
   }
 
-  public enum CompactionStrategy {
+  enum CompactionStrategy {
     STCS,
     LCS,
     TWCS
   }
 
-  public enum NetworkStrategy {
+  enum NetworkStrategy {
     SIMPLE_STRATEGY("SimpleStrategy"),
     NETWORK_TOPOLOGY_STRATEGY("NetworkTopologyStrategy");
     private final String strategyName;

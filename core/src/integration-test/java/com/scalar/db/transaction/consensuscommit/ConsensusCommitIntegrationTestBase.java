@@ -69,7 +69,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   protected static final int NUM_TYPES = 4;
   protected static final String ANY_ID_1 = "id1";
   protected static final String ANY_ID_2 = "id2";
-  protected static DistributedStorageAdmin admin;
+  static DistributedStorageAdmin admin;
   private ConsensusCommitManager manager;
   // assume that storage is a spied object
   private DistributedStorage storage;

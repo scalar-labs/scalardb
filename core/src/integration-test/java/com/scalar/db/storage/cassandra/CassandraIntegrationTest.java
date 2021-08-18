@@ -14,7 +14,6 @@ import org.junit.BeforeClass;
 
 public class CassandraIntegrationTest extends IntegrationTestBase {
 
-  private static final String INDEX = "test_index";
   private static final String CONTACT_POINT = "localhost";
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";

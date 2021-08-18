@@ -1,6 +1,10 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.scalar.db.util.Utility.getFullNamespaceName;
+import static com.scalar.db.util.Utility.getFullTableName;
+
 import com.datastax.driver.core.ClusteringOrder;
+import com.datastax.driver.core.KeyspaceMetadata;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -8,10 +12,12 @@ import com.scalar.db.exception.storage.ConnectionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class CassandraTableMetadataManager implements TableMetadataManager {
 
@@ -31,28 +37,27 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
-    return getTableMetadata(operation.forFullNamespace().get(), operation.forTable().get());
+    return getTableMetadata(operation.forNamespace().get(), operation.forTable().get());
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    // TODO replace by utility
-    String fullNamespace = namespacePrefix.orElse("") + namespace;
-    String fullName = fullNamespace + "." + table;
-    if (!tableMetadataMap.containsKey(fullName)) {
+    String fullNamespace = getFullNamespaceName(namespacePrefix, namespace);
+    String fullTableName = getFullTableName(namespacePrefix, namespace, table);
+    if (!tableMetadataMap.containsKey(fullTableName)) {
       try {
         com.datastax.driver.core.TableMetadata metadata =
             clusterManager.getMetadata(fullNamespace, table);
         if (metadata == null) {
           return null;
         }
-        tableMetadataMap.put(fullName, createTableMetadata(metadata));
+        tableMetadataMap.put(fullTableName, createTableMetadata(metadata));
       } catch (ConnectionException e) {
         throw new StorageRuntimeException("Failed to read the table metadata", e);
       }
     }
 
-    return tableMetadataMap.get(fullName);
+    return tableMetadataMap.get(fullTableName);
   }
 
   private TableMetadata createTableMetadata(com.datastax.driver.core.TableMetadata metadata) {
@@ -86,7 +91,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    String fullName = namespacePrefix.orElse("") + namespace + "." + table;
+    String fullName = getFullTableName(namespacePrefix, namespace, table);
     tableMetadataMap.remove(fullName);
   }
 
@@ -98,7 +103,17 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public Set<String> getTableNames(String namespace) {
-    // TODO To implement
-    throw new UnsupportedOperationException();
+    KeyspaceMetadata keyspace =
+        clusterManager
+            .getSession()
+            .getCluster()
+            .getMetadata()
+            .getKeyspace(getFullNamespaceName(namespacePrefix, namespace));
+    if (keyspace == null) {
+      return Collections.emptySet();
+    }
+    return keyspace.getTables().stream()
+        .map(com.datastax.driver.core.TableMetadata::getName)
+        .collect(Collectors.toSet());
   }
 }

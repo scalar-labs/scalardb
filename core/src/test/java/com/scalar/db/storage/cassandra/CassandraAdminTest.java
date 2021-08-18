@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,11 +13,11 @@ import com.datastax.driver.core.schemabuilder.SchemaStatement;
 import com.datastax.driver.core.schemabuilder.TableOptions;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.NetworkStrategy;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -32,18 +33,17 @@ import org.mockito.MockitoAnnotations;
 public class CassandraAdminTest {
 
   private static final String SAMPLE_PREFIX = "sample_prefix_";
-  @Mock CassandraTableMetadataManager metadataManager;
-  @Mock ClusterManager clusterManager;
-  @Mock DatabaseConfig config;
-  @Mock Session cassandraSession;
-  CassandraAdmin cassandraAdmin;
+  private CassandraAdmin cassandraAdmin;
+  @Mock private CassandraTableMetadataManager metadataManager;
+  @Mock private ClusterManager clusterManager;
+  @Mock private Session cassandraSession;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
-    when(config.getNamespacePrefix()).thenReturn(Optional.of(SAMPLE_PREFIX));
     when(clusterManager.getSession()).thenReturn(cassandraSession);
-    cassandraAdmin = new CassandraAdmin(config, clusterManager);
+    cassandraAdmin =
+        new CassandraAdmin(metadataManager, clusterManager, Optional.of(SAMPLE_PREFIX));
   }
 
   @Test
@@ -55,7 +55,7 @@ public class CassandraAdminTest {
     String namespace = "ns";
     String table = "table";
 
-    CassandraAdmin admin = new CassandraAdmin(metadataManager, namespacePrefix);
+    CassandraAdmin admin = new CassandraAdmin(metadataManager, clusterManager, namespacePrefix);
 
     // Act
     admin.getTableMetadata(namespace, table);
@@ -65,20 +65,20 @@ public class CassandraAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithNamespacePrefix()
+  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix()
       throws ExecutionException {
     // Arrange
     Optional<String> namespacePrefix = Optional.of("prefix");
     String namespace = "ns";
     String table = "table";
 
-    CassandraAdmin admin = new CassandraAdmin(metadataManager, namespacePrefix);
+    CassandraAdmin admin = new CassandraAdmin(metadataManager, clusterManager, namespacePrefix);
 
     // Act
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(metadataManager).getTableMetadata(namespacePrefix.get() + "_" + namespace, table);
+    verify(metadataManager).getTableMetadata(namespace, table);
   }
 
   @Test
@@ -127,6 +127,7 @@ public class CassandraAdminTest {
     options.put(
         CassandraAdmin.NETWORK_STRATEGY, NetworkStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
+
     // Act
     cassandraAdmin.createNamespace(SAMPLE_PREFIX + namespace, options);
 
@@ -149,6 +150,7 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     Map<String, String> options = new HashMap<>();
+
     // Act
     cassandraAdmin.createNamespace(SAMPLE_PREFIX + namespace, options);
 
@@ -275,10 +277,12 @@ public class CassandraAdminTest {
   }
 
   @Test
-  public void dropTable_WithCorrectParameters_ShouldDropTable() throws ExecutionException {
+  public void dropTable_WithCorrectParameters_ShouldDropTableAndNamespace()
+      throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
     String table = "sample_table";
+    when(metadataManager.getTableNames(any())).thenReturn(Collections.emptySet());
 
     // Act
     cassandraAdmin.dropTable(namespace, table);
@@ -287,6 +291,10 @@ public class CassandraAdminTest {
     String dropTableStatement =
         SchemaBuilder.dropTable(SAMPLE_PREFIX + namespace, table).getQueryString();
     verify(cassandraSession).execute(dropTableStatement);
+    verify(metadataManager).getTableNames(namespace);
+    String dropKeyspaceStatement =
+        SchemaBuilder.dropKeyspace(SAMPLE_PREFIX + namespace).ifExists().getQueryString();
+    verify(cassandraSession).execute(dropKeyspaceStatement);
   }
 
   @Test

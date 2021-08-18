@@ -38,7 +38,6 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
           .addSecondaryIndex("c6")
           .build();
   private static DistributedStorageAdmin admin;
-  private static CassandraAdmin cassandraAdmin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -48,15 +47,13 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
     DatabaseConfig config = new DatabaseConfig(props);
 
-    cassandraAdmin = new CassandraAdmin(config);
-    cassandraAdmin.createTable(NAMESPACE, TABLE, tableMetadata, new HashMap<>());
     admin = new CassandraAdmin(config);
+    admin.createTable(NAMESPACE, TABLE, tableMetadata, new HashMap<>());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    cassandraAdmin.dropTable(NAMESPACE, TABLE);
-    cassandraAdmin.close();
+    admin.dropTable(NAMESPACE, TABLE);
     admin.close();
   }
 
