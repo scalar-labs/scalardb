@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.schemabuilder.Create.Options;
 import com.datastax.driver.core.schemabuilder.KeyspaceOptions;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
@@ -90,7 +91,7 @@ public class CassandraAdminTest {
 
     // Act
     // Assert
-    Assertions.assertThatThrownBy(() -> cassandraAdmin.createNamespace(namespace, options))
+    Assertions.assertThatThrownBy(() -> cassandraAdmin.createKeyspace(namespace, options))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -104,7 +105,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
-    cassandraAdmin.createNamespace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -129,7 +130,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
-    cassandraAdmin.createNamespace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -152,7 +153,7 @@ public class CassandraAdminTest {
     Map<String, String> options = new HashMap<>();
 
     // Act
-    cassandraAdmin.createNamespace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -191,7 +192,7 @@ public class CassandraAdminTest {
         SAMPLE_PREFIX + namespace, table, tableMetadata, new HashMap<>());
 
     // Assert
-    TableOptions createTableStatement =
+    TableOptions<Options> createTableStatement =
         SchemaBuilder.createTable(SAMPLE_PREFIX + namespace, table)
             .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
             .addClusteringColumn("c4", com.datastax.driver.core.DataType.cint())
@@ -234,7 +235,7 @@ public class CassandraAdminTest {
     cassandraAdmin.createTableInternal(SAMPLE_PREFIX + namespace, table, tableMetadata, options);
 
     // Assert
-    TableOptions createTableStatement =
+    TableOptions<Options> createTableStatement =
         SchemaBuilder.createTable(SAMPLE_PREFIX + namespace, table)
             .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
             .addPartitionKey("c7", com.datastax.driver.core.DataType.text())

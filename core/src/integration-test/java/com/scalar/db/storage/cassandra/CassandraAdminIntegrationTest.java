@@ -16,8 +16,7 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
   private static final String CONTACT_POINT = "localhost";
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";
-
-  private static TableMetadata tableMetadata =
+  private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addPartitionKey("c2")
           .addPartitionKey("c1")
@@ -48,7 +47,7 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
 
     admin = new CassandraAdmin(config);
-    admin.createTable(NAMESPACE, TABLE, tableMetadata, new HashMap<>());
+    admin.createTable(NAMESPACE, TABLE, TABLE_METADATA, new HashMap<>());
   }
 
   @AfterClass

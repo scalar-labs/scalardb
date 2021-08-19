@@ -10,6 +10,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ConnectionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
@@ -23,13 +24,42 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   private final Map<String, TableMetadata> tableMetadataMap;
   private final ClusterManager clusterManager;
-  private final Optional<String> namespacePrefix;
+  private final Optional<String> keyspacePrefix;
 
   public CassandraTableMetadataManager(
       ClusterManager clusterManager, Optional<String> namespacePrefix) {
     this.clusterManager = clusterManager;
     tableMetadataMap = new ConcurrentHashMap<>();
-    this.namespacePrefix = namespacePrefix;
+    this.keyspacePrefix = namespacePrefix;
+  }
+
+  /**
+   * Return the ScalarDB datatype value that is equivalent to {@link
+   * com.datastax.driver.core.DataType}
+   *
+   * @return ScalarDB datatype that is equivalent {@link com.datastax.driver.core.DataType}
+   */
+  private DataType fromCassandraDataType(
+      com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
+    switch (cassandraDataTypeName) {
+      case INT:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case FLOAT:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case TEXT:
+        return DataType.TEXT;
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case BLOB:
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(
+            String.format("%s is not yet supported", cassandraDataTypeName));
+    }
   }
 
   @Override
@@ -42,12 +72,12 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    String fullNamespace = getFullNamespaceName(namespacePrefix, namespace);
-    String fullTableName = getFullTableName(namespacePrefix, namespace, table);
+    String fullKeyspace = getFullNamespaceName(keyspacePrefix, namespace);
+    String fullTableName = getFullTableName(keyspacePrefix, namespace, table);
     if (!tableMetadataMap.containsKey(fullTableName)) {
       try {
         com.datastax.driver.core.TableMetadata metadata =
-            clusterManager.getMetadata(fullNamespace, table);
+            clusterManager.getMetadata(fullKeyspace, table);
         if (metadata == null) {
           return null;
         }
@@ -64,10 +94,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     metadata
         .getColumns()
-        .forEach(
-            c ->
-                builder.addColumn(
-                    c.getName(), DataType.fromCassandraDataType(c.getType().getName())));
+        .forEach(c -> builder.addColumn(c.getName(), fromCassandraDataType(c.getType().getName())));
     metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
     for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
       String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
@@ -91,7 +118,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    String fullName = getFullTableName(namespacePrefix, namespace, table);
+    String fullName = getFullTableName(keyspacePrefix, namespace, table);
     tableMetadataMap.remove(fullName);
   }
 
@@ -108,7 +135,7 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
             .getSession()
             .getCluster()
             .getMetadata()
-            .getKeyspace(getFullNamespaceName(namespacePrefix, namespace));
+            .getKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
     if (keyspace == null) {
       return Collections.emptySet();
     }

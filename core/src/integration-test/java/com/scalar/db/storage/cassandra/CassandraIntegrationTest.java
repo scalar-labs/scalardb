@@ -17,7 +17,7 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
   private static final String CONTACT_POINT = "localhost";
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";
-  private static final TableMetadata tableMetadata =
+  private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addPartitionKey("c1")
           .addClusteringKey("c4")
@@ -28,7 +28,6 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
           .addColumn("c5", DataType.BOOLEAN)
           .addSecondaryIndex("c3")
           .build();
-
   private static DistributedStorage storage;
   private static CassandraAdmin cassandraAdmin;
 
@@ -42,7 +41,7 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
 
     cassandraAdmin = new CassandraAdmin(config);
-    cassandraAdmin.createTable(NAMESPACE, TABLE, tableMetadata, new HashMap<>());
+    cassandraAdmin.createTable(NAMESPACE, TABLE, TABLE_METADATA, new HashMap<>());
     storage = new Cassandra(config);
   }
 
