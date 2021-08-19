@@ -27,10 +27,10 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
   private final Optional<String> keyspacePrefix;
 
   public CassandraTableMetadataManager(
-      ClusterManager clusterManager, Optional<String> namespacePrefix) {
+      ClusterManager clusterManager, Optional<String> keyspacePrefix) {
     this.clusterManager = clusterManager;
     tableMetadataMap = new ConcurrentHashMap<>();
-    this.keyspacePrefix = namespacePrefix;
+    this.keyspacePrefix = keyspacePrefix;
   }
 
   /**

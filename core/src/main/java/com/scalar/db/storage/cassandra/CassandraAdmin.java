@@ -47,10 +47,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   CassandraAdmin(
       CassandraTableMetadataManager metadataManager,
       ClusterManager clusterManager,
-      Optional<String> namespacePrefix) {
+      Optional<String> keyspacePrefix) {
     this.clusterManager = clusterManager;
     this.metadataManager = metadataManager;
-    this.keyspacePrefix = namespacePrefix;
+    this.keyspacePrefix = keyspacePrefix;
   }
 
   @Override
@@ -58,7 +58,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     String fullKeyspace = fullKeyspace(namespace);
-    createKeyspace(fullKeyspace, options);
+    createKeyspaceIfNotExists(fullKeyspace, options);
     createTableInternal(fullKeyspace, table, metadata, options);
     createSecondaryIndex(fullKeyspace, table, metadata.getSecondaryIndexNames());
   }
@@ -116,7 +116,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   @VisibleForTesting
-  void createKeyspace(String fullKeyspace, Map<String, String> options) throws ExecutionException {
+  void createKeyspaceIfNotExists(String fullKeyspace, Map<String, String> options)
+      throws ExecutionException {
     CreateKeyspace query = SchemaBuilder.createKeyspace(fullKeyspace).ifNotExists();
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     NetworkStrategy networkStrategy =

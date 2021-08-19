@@ -91,7 +91,8 @@ public class CassandraAdminTest {
 
     // Act
     // Assert
-    Assertions.assertThatThrownBy(() -> cassandraAdmin.createKeyspace(namespace, options))
+    Assertions.assertThatThrownBy(
+            () -> cassandraAdmin.createKeyspaceIfNotExists(namespace, options))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -105,7 +106,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
-    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -130,7 +131,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
-    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -153,7 +154,7 @@ public class CassandraAdminTest {
     Map<String, String> options = new HashMap<>();
 
     // Act
-    cassandraAdmin.createKeyspace(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
