@@ -21,17 +21,13 @@ public class Table {
   protected TableMetadata tableMetadata;
   protected Map<String, String> options;
   protected boolean isTransactionTable = false;
+  protected Set<String> traveledKeys;
 
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
   private static final String PARTITION_KEY = "partition-key";
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
-
-  public static final String NETWORK_STRATEGY = "network-strategy";
-  public static final String COMPACTION_STRATEGY = "compaction-strategy";
-  public static final String REPLICATION_FACTOR = "replication-factor";
-  private static final String RU = "ru";
 
   private static final String TRANSACTION_COL_PREFIX = "before_";
 
@@ -68,6 +64,8 @@ public class Table {
       };
 
   public Table(String tableFullName, JsonObject tableDefinition) throws RuntimeException {
+    traveledKeys = new HashSet<String>();
+
     String[] fullName = tableFullName.split("\\.");
     if (fullName.length < 2) {
       throw new RuntimeException("Table full name must contains table name and namespace");
@@ -86,6 +84,7 @@ public class Table {
       throw new RuntimeException("Table must contains partition key");
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
+    traveledKeys.add(PARTITION_KEY);
     Set<String> partitionKeySet = new HashSet<String>();
     for (JsonElement pKey : partitionKeys) {
       partitionKeySet.add(pKey.getAsString());
@@ -96,6 +95,7 @@ public class Table {
     Set<String> clusteringKeySet = new HashSet<String>();
     if (tableDefinition.keySet().contains(CLUSTERING_KEY)) {
       JsonArray clusteringKeys = tableDefinition.get(CLUSTERING_KEY).getAsJsonArray();
+      traveledKeys.add(CLUSTERING_KEY);
       for (JsonElement cKeyRaw : clusteringKeys) {
         String cKey = "";
         String oder = "ASC";
@@ -119,6 +119,7 @@ public class Table {
     boolean transaction = false;
     if (tableDefinition.keySet().contains(TRANSACTION)) {
       transaction = tableDefinition.get(TRANSACTION).getAsBoolean();
+      traveledKeys.add(TRANSACTION);
       Logger.getGlobal().log(Level.FINE, "transaction: " + transaction);
     }
     // Add transaction metadata columns
@@ -135,6 +136,7 @@ public class Table {
       throw new RuntimeException("Table must contains columns");
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
+    traveledKeys.add(COLUMNS);
     for (Entry<String, JsonElement> col : columns.entrySet()) {
       String colName = col.getKey();
       DataType colDtype = dtypeMap.get(col.getValue().getAsString().toUpperCase());
@@ -152,35 +154,29 @@ public class Table {
     // Add secondary indexes
     if (tableDefinition.keySet().contains(SECONDARY_INDEX)) {
       JsonArray secondaryIndexes = tableDefinition.get(SECONDARY_INDEX).getAsJsonArray();
+      traveledKeys.add(SECONDARY_INDEX);
       for (JsonElement sIdx : secondaryIndexes) {
         tableBuilder.addSecondaryIndex(sIdx.getAsString());
       }
     }
 
-    Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
-    Logger.getGlobal()
-        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
-    Logger.getGlobal()
-        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
-    Logger.getGlobal()
-        .log(Level.FINE, "secondary indexes: " + tableBuilder.build().getSecondaryIndexNames());
+//    Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
+//    Logger.getGlobal()
+//        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
+//    Logger.getGlobal()
+//        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
+//    Logger.getGlobal()
+//        .log(Level.FINE, "secondary indexes: " + tableBuilder.build().getSecondaryIndexNames());
 
     return tableBuilder.build();
   }
 
   protected Map<String, String> buildOptions(JsonObject tableDefinition) {
     Map<String, String> options = new HashMap<String, String>();
-    if (tableDefinition.keySet().contains(RU)) {
-      options.put(RU, tableDefinition.get(RU).getAsString());
-    }
-    if (tableDefinition.keySet().contains(NETWORK_STRATEGY)) {
-      options.put(NETWORK_STRATEGY, tableDefinition.get(NETWORK_STRATEGY).getAsString());
-    }
-    if (tableDefinition.keySet().contains(COMPACTION_STRATEGY)) {
-      options.put(COMPACTION_STRATEGY, tableDefinition.get(COMPACTION_STRATEGY).getAsString());
-    }
-    if (tableDefinition.keySet().contains(REPLICATION_FACTOR)) {
-      options.put(REPLICATION_FACTOR, tableDefinition.get(REPLICATION_FACTOR).getAsString());
+    for (Map.Entry<String, ?> opt : tableDefinition.entrySet()) {
+      if (!traveledKeys.contains(opt.getKey())) {
+        options.put(opt.getKey(), opt.getValue().toString());
+      }
     }
     return options;
   }
