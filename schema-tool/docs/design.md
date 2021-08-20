@@ -2,7 +2,7 @@
 ## Introduction
 This document provides the design of Scalar DB schema tool, including dependency components, requirements, constraints, goals, architecture and detailed modules.
 ## System Overview
-Scalar DB schema tool is a Java CLI application using for manipulating schemas in specify databases which Scalar DB currently supported including Cosmos DB, Dynamo DB, Cassandra DB and JDBC database (MySQL, Postgres).
+Scalar DB schema tool is a Java CLI application used for manipulating schemas in specific databases which Scalar DB currently supports including Cosmos DB, Dynamo DB, Cassandra DB and JDBC database (MySQL, Postgres).
 ## Design Considerations
 ### Assumptions and Dependencies
 - Application will be written in Java.
@@ -25,6 +25,7 @@ Scalar DB schema tool is a Java CLI application using for manipulating schemas i
 - Extending for supporting new database can be achieved easily.
 ## Architecture
 Blocks diagram
+
 ![blocks-diagram](blocks-diagram.png)
 ## Detailed Design
 ### Data type mapping between Scalar DB and the other databases
