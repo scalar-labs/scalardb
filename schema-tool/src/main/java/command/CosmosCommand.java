@@ -2,7 +2,6 @@ package command;
 
 import com.scalar.db.config.DatabaseConfig;
 import core.SchemaOperator;
-import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
