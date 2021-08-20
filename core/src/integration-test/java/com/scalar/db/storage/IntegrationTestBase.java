@@ -9,6 +9,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
@@ -17,9 +18,11 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -28,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -42,14 +46,38 @@ public abstract class IntegrationTestBase {
   protected static final String COL_NAME3 = "c3";
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
-
+  protected static DistributedStorageAdmin admin;
   private DistributedStorage storage;
-
   private List<Put> puts;
   private List<Delete> deletes;
 
   protected void setUp(DistributedStorage storage) {
     this.storage = storage;
+  }
+
+ protected static void createTable(Map<String, String> options) throws ExecutionException {
+    admin.createTable(
+        NAMESPACE,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.INT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.BOOLEAN)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME4)
+            .addSecondaryIndex(COL_NAME3)
+            .build(),
+        options);
+  }
+
+  protected void deleteData() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE);
+  }
+
+  static protected void deleteTable() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE);
   }
 
   @Test
