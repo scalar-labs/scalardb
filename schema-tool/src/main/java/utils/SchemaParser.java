@@ -16,14 +16,14 @@ public class SchemaParser {
   List<Table> tableList;
   boolean hasTransactionTable = false;
 
-  public SchemaParser(String jsonFilePath) throws Exception {
+  public SchemaParser(String jsonFilePath, Map<String, String> metaOptions) throws Exception {
     tableList = new LinkedList<Table>();
     Reader reader = Files.newBufferedReader(Paths.get(jsonFilePath));
     JsonObject schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
 
     for (Map.Entry<String, JsonElement> table : schemaJson.entrySet()) {
       Logger.getGlobal().log(Level.FINE, "table full name: " + table.getKey());
-      Table t = new Table(table.getKey(), table.getValue().getAsJsonObject());
+      Table t = new Table(table.getKey(), table.getValue().getAsJsonObject(), metaOptions);
       tableList.add(t);
       if (t.isTransactionTable()) {
         hasTransactionTable = true;

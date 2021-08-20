@@ -5,8 +5,8 @@
       "c1"
     ],
     "clustering-key": [
-      "c4",
-      "c6"
+      "c4 ASC",
+      "c6 DESC"
     ],
     "columns": {
       "c1": "INT",

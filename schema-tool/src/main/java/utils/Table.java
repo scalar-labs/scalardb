@@ -63,7 +63,8 @@ public class Table {
         }
       };
 
-  public Table(String tableFullName, JsonObject tableDefinition) throws RuntimeException {
+  public Table(String tableFullName, JsonObject tableDefinition, Map<String, String> metaOptions)
+      throws RuntimeException {
     traveledKeys = new HashSet<String>();
 
     String[] fullName = tableFullName.split("\\.");
@@ -73,7 +74,7 @@ public class Table {
     namespace = fullName[0];
     tableName = fullName[1];
     tableMetadata = buildTableMetadata(tableDefinition);
-    options = buildOptions(tableDefinition);
+    options = buildOptions(tableDefinition, metaOptions);
   }
 
   protected TableMetadata buildTableMetadata(JsonObject tableDefinition) {
@@ -160,19 +161,21 @@ public class Table {
       }
     }
 
-//    Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
-//    Logger.getGlobal()
-//        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
-//    Logger.getGlobal()
-//        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
-//    Logger.getGlobal()
-//        .log(Level.FINE, "secondary indexes: " + tableBuilder.build().getSecondaryIndexNames());
+    //    Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
+    //    Logger.getGlobal()
+    //        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
+    //    Logger.getGlobal()
+    //        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
+    //    Logger.getGlobal()
+    //        .log(Level.FINE, "secondary indexes: " +
+    // tableBuilder.build().getSecondaryIndexNames());
 
     return tableBuilder.build();
   }
 
-  protected Map<String, String> buildOptions(JsonObject tableDefinition) {
-    Map<String, String> options = new HashMap<String, String>();
+  protected Map<String, String> buildOptions(
+      JsonObject tableDefinition, Map<String, String> metaOptions) {
+    Map<String, String> options = new HashMap<String, String>(metaOptions);
     for (Map.Entry<String, ?> opt : tableDefinition.entrySet()) {
       if (!traveledKeys.contains(opt.getKey())) {
         options.put(opt.getKey(), opt.getValue().toString());
