@@ -30,7 +30,8 @@ public class JdbcCommand implements Callable<Integer> {
 
   @Option(
       names = {"-D", "--delete"},
-      description = "Delete tables")
+      description = "Delete tables",
+      defaultValue = "false")
   Boolean deleteTables;
 
   @Override
