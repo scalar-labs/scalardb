@@ -2,13 +2,9 @@ package command;
 
 import core.SchemaOperator;
 import java.util.concurrent.Callable;
-import java.util.logging.Handler;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import utils.CoordinatorSchema;
 import utils.SchemaParser;
 
 @Command(name = "schema-tool", description = "Schema tool for Scalar DB")

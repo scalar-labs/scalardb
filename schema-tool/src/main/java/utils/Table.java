@@ -14,7 +14,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.text.html.Option;
 
 public class Table {
   protected String namespace;
@@ -120,7 +119,7 @@ public class Table {
     boolean transaction = false;
     if (tableDefinition.keySet().contains(TRANSACTION)) {
       transaction = tableDefinition.get(TRANSACTION).getAsBoolean();
-      Logger.getGlobal().log(Level.FINE,"transaction: " + transaction);
+      Logger.getGlobal().log(Level.FINE, "transaction: " + transaction);
     }
     // Add transaction metadata columns
     if (transaction) {
@@ -159,9 +158,12 @@ public class Table {
     }
 
     Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
-    Logger.getGlobal().log(Level.FINE,"partition keys: " + tableBuilder.build().getPartitionKeyNames());
-    Logger.getGlobal().log(Level.FINE,"clustering keys: " + tableBuilder.build().getClusteringKeyNames());
-    Logger.getGlobal().log(Level.FINE, "secondary indexes: " + tableBuilder.build().getSecondaryIndexNames());
+    Logger.getGlobal()
+        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
+    Logger.getGlobal()
+        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
+    Logger.getGlobal()
+        .log(Level.FINE, "secondary indexes: " + tableBuilder.build().getSecondaryIndexNames());
 
     return tableBuilder.build();
   }
@@ -182,7 +184,7 @@ public class Table {
     }
     return options;
   }
-  
+
   public String getNamespace() {
     return namespace;
   }
