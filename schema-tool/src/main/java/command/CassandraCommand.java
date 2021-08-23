@@ -87,15 +87,15 @@ public class CassandraCommand implements Callable<Integer> {
     }
     return 0;
   }
-}
 
-enum CassandraCompactStrategy {
-  STCS,
-  LCS,
-  TWCS
-}
+  enum CassandraCompactStrategy {
+    STCS,
+    LCS,
+    TWCS
+  }
 
-enum CassandraNetStrategy {
-  SimpleStrategy,
-  NetworkTopologyStrategy
+  enum CassandraNetStrategy {
+    SimpleStrategy,
+    NetworkTopologyStrategy
+  }
 }
