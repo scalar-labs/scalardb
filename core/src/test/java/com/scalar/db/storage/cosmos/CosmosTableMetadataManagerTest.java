@@ -10,7 +10,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
+import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.PartitionKey;
@@ -20,6 +22,7 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.Key;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -34,15 +37,18 @@ public class CosmosTableMetadataManagerTest {
   private static final String FULLNAME = ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME;
 
   private CosmosTableMetadataManager manager;
-  @Mock private CosmosContainer container;
+
+  @Mock private CosmosClient client;
   @Mock private CosmosTableMetadata metadata;
+  @Mock private CosmosDatabase database;
+  @Mock private CosmosContainer container;
   @Mock private CosmosItemResponse<CosmosTableMetadata> response;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
 
-    manager = new CosmosTableMetadataManager(container);
+    manager = new CosmosTableMetadataManager(client, Optional.empty());
 
     // Arrange
     when(metadata.getColumns()).thenReturn(ImmutableMap.of(ANY_NAME_1, "varchar"));
@@ -53,6 +59,8 @@ public class CosmosTableMetadataManagerTest {
   @Test
   public void getTableMetadata_ProperOperationGivenFirst_ShouldCallReadItem() {
     // Arrange
+    when(client.getDatabase(anyString())).thenReturn(database);
+    when(database.getContainer(anyString())).thenReturn(container);
     when(container.readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class)))
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
@@ -69,6 +77,8 @@ public class CosmosTableMetadataManagerTest {
   @Test
   public void getTableMetadata_SameTableGiven_ShouldCallReadItemOnce() {
     // Arrange
+    when(client.getDatabase(anyString())).thenReturn(database);
+    when(database.getContainer(anyString())).thenReturn(container);
     when(container.readItem(anyString(), any(PartitionKey.class), eq(CosmosTableMetadata.class)))
         .thenReturn(response);
     when(response.getItem()).thenReturn(metadata);
@@ -107,6 +117,8 @@ public class CosmosTableMetadataManagerTest {
   @Test
   public void getTableMetadata_CosmosExceptionThrown_ShouldThrowStorageRuntimeException() {
     // Arrange
+    when(client.getDatabase(anyString())).thenReturn(database);
+    when(database.getContainer(anyString())).thenReturn(container);
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(container)
