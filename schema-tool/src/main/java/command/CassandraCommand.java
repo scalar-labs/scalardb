@@ -2,6 +2,7 @@ package command;
 
 import com.scalar.db.config.DatabaseConfig;
 import core.SchemaOperator;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -14,38 +15,40 @@ import utils.SchemaParser;
 @Command(name = "--cassandra", description = "Using Cassandra DB")
 public class CassandraCommand implements Callable<Integer> {
 
-  @Option(names = "-h", description = "Cassandra host IP", required = true)
+  @Option(names = {"-h", "--host"}, description = "Cassandra host IP", required = true)
   String cassandraIP;
 
-  @Option(names = "-P", description = "Cassandra Port", defaultValue = "9042")
+  @Option(names = {"-P", "--port"}, description = "Cassandra Port", defaultValue = "9042")
   String cassandraPort;
 
-  @Option(names = "u", description = "Cassandra user", defaultValue = "cassandra")
+  @Option(names = {"-u", "--user"}, description = "Cassandra user", defaultValue = "cassandra")
   String cassandraUser;
 
-  @Option(names = "-p", description = "Cassandra password", defaultValue = "cassandra")
+  @Option(names = {"-p",
+      "--password"}, description = "Cassandra password", defaultValue = "cassandra")
   String cassandraPw;
 
   @Option(
-      names = "-n",
+      names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   String cassandraNetStrategy;
 
-  @Option(names = "-c", description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  String cassandraCompactStrategy;
+  @Option(names = {"-c",
+      "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
+  CassandraCompactStrategy cassandraCompactStrategy;
 
-  @Option(names = "-R", description = "Cassandra replication factor")
+  @Option(names = {"-R", "--replication-factor"}, description = "Cassandra replication factor")
   String cassandraReplicaFactor;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  String schemaFile;
+  Path schemaFile;
 
   @Option(
-      names = {"-D", "--delete"},
+      names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
   Boolean deleteTables;
@@ -67,7 +70,7 @@ public class CassandraCommand implements Callable<Integer> {
       metaOptions.put("network-strategy", cassandraNetStrategy);
     }
     if (cassandraCompactStrategy != null) {
-      metaOptions.put("compaction-strategy", cassandraCompactStrategy);
+      metaOptions.put("compaction-strategy", cassandraCompactStrategy.name());
     }
     if (cassandraReplicaFactor != null) {
       metaOptions.put("replication-factor", cassandraReplicaFactor);
@@ -75,7 +78,7 @@ public class CassandraCommand implements Callable<Integer> {
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile, metaOptions);
+    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {
       operator.deleteTables(schemaMap.getTables());
@@ -84,4 +87,10 @@ public class CassandraCommand implements Callable<Integer> {
     }
     return 0;
   }
+}
+
+enum CassandraCompactStrategy {
+  STCS,
+  LCS,
+  TWCS
 }

@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SchemaParser {
+
   List<Table> tableList;
   boolean hasTransactionTable = false;
 

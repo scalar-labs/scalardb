@@ -2,6 +2,7 @@ package command;
 
 import com.scalar.db.config.DatabaseConfig;
 import core.SchemaOperator;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -14,26 +15,35 @@ import utils.SchemaParser;
 @Command(name = "--dynamo", description = "Using Dynamo DB")
 public class DynamoCommand implements Callable<Integer> {
 
-  @Option(names = "-u", description = "AWS access key ID", required = true)
+  @Option(names = {"-u", "--user"}, description = "AWS access key ID", required = true)
   String awsKeyId;
 
-  @Option(names = "-p", description = "AWS access secret key", required = true)
+  @Option(names = {"-p", "--password"}, description = "AWS access secret key", required = true)
   String awsSecKey;
 
   @Option(names = "--region", description = "AWS region", required = true)
   String awsRegion;
 
-  @Option(names = "-r", description = "Base resource unit")
+  @Option(names = {"-r", "--ru"}, description = "Base resource unit")
   String dynamoRU;
+
+  @Option(names = "--no-scaling", description = "Disable auto-scaling for Dynamo DB")
+  Boolean dynamoNoScaling;
+
+  @Option(names = "no-backup", description = "Disable continuous backup for Dynamo DB")
+  Boolean dynamoNoBackup;
+
+  @Option(names = "--endpoint-override", description = "Endpoint with which the DynamoDB SDK should communicate")
+  String dynamoEndpointOverride;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  String schemaFile;
+  Path schemaFile;
 
   @Option(
-      names = {"-D", "--delete"},
+      names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
   Boolean deleteTables;
@@ -41,7 +51,7 @@ public class DynamoCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
 
-    Logger.getGlobal().info("Schema path: " + schemaFile);
+    Logger.getGlobal().info("Schema path: " + schemaFile.toString());
 
     Properties props = new Properties();
     props.setProperty("scalar.db.contact_points", awsRegion);
@@ -53,10 +63,19 @@ public class DynamoCommand implements Callable<Integer> {
     if (dynamoRU != null) {
       metaOptions.put("ru", dynamoRU);
     }
+    if (dynamoNoScaling != null) {
+      metaOptions.put("no-scaling", dynamoNoScaling.toString());
+    }
+    if (dynamoNoBackup != null) {
+      metaOptions.put("no-backup", dynamoNoBackup.toString());
+    }
+    if (dynamoEndpointOverride != null) {
+      props.setProperty("scalar.db.dynamo.endpoint-override", dynamoEndpointOverride);
+    }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile, metaOptions);
+    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {
       operator.deleteTables(schemaMap.getTables());

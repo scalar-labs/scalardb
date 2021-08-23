@@ -12,6 +12,7 @@ import utils.CoordinatorSchema;
 import utils.Table;
 
 public class SchemaOperator {
+
   protected AdminService service;
 
   public SchemaOperator(DatabaseConfig dbConfig) {
@@ -47,7 +48,8 @@ public class SchemaOperator {
                     + table.getNamespace()
                     + " successfully.");
       } catch (ExecutionException e) {
-        Logger.getGlobal().warning("Create table " + table.getTable() + " failed. " + e.getCause());
+        Logger.getGlobal()
+            .warning("Created table " + table.getTable() + " failed. " + e.getCause());
       }
     }
   }
@@ -58,7 +60,7 @@ public class SchemaOperator {
         service.dropTable(table.getNamespace(), table.getTable());
         Logger.getGlobal()
             .info(
-                "Delete table "
+                "Deleted table "
                     + table.getTable()
                     + " in namespace "
                     + table.getNamespace()

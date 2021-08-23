@@ -11,14 +11,16 @@ import picocli.CommandLine.Option;
     name = "schema-tool",
     description = "Schema tool for Scalar DB",
     subcommands = {
-      ConfigFileBasedCommand.class,
-      CosmosCommand.class,
-      DynamoCommand.class,
-      CassandraCommand.class,
-      JdbcCommand.class
+        ConfigFileBasedCommand.class,
+        CosmosCommand.class,
+        DynamoCommand.class,
+        CassandraCommand.class,
+        JdbcCommand.class
     })
 public class SchemaToolMain implements Runnable {
-  @Option(names = {"-h", "--help"}, defaultValue = "true")
+
+  @Option(names = {"-h",
+      "--help"}, usageHelp = true, description = "Displays this help message and quits.", defaultValue = "true")
   Boolean showHelp;
 
   public static void main(String... args) {
@@ -28,15 +30,7 @@ public class SchemaToolMain implements Runnable {
   @Override
   public void run() {
     if (showHelp) {
-      System.out.printf(
-          "Usage: schema-tool [COMMAND] [OPTIONS]\n"
-              + "Schema tool for Scalar DB\n"
-              + "Commands:\n"
-              + "  --config     Using config file for Scalar DB\n"
-              + "  --cosmos     Using Cosmos DB\n"
-              + "  --dynamo     Using Dynamo DB\n"
-              + "  --cassandra  Using Cassandra DB\n"
-              + "  --jdbc       Using JDBC type DB\n");
+      CommandLine.usage(this, System.out);
     }
   }
 }

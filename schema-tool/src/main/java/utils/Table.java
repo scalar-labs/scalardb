@@ -7,6 +7,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TableMetadata.Builder;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.Attribute;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Table {
+
   protected String namespace;
   protected String tableName;
   protected TableMetadata tableMetadata;
@@ -47,11 +49,11 @@ public class Table {
   private static final Map<String, DataType> transactionMetadataColumns =
       new HashMap<String, DataType>() {
         {
-          put("tx_committed_at", DataType.BIGINT);
-          put("tx_id", DataType.TEXT);
-          put("tx_prepared_at", DataType.BIGINT);
-          put("tx_state", DataType.INT);
-          put("tx_version", DataType.INT);
+          put(Attribute.COMMITTED_AT, DataType.BIGINT);
+          put(Attribute.ID, DataType.TEXT);
+          put(Attribute.PREPARED_AT, DataType.BIGINT);
+          put(Attribute.STATE, DataType.INT);
+          put(Attribute.VERSION, DataType.INT);
         }
       };
 
@@ -106,7 +108,7 @@ public class Table {
           tableBuilder.addClusteringKey(cKey);
         } else if (cKeyFull.length == 2
             && (cKeyFull[1].toUpperCase().equals("ASC")
-                || cKeyFull[1].toUpperCase().equals("DESC"))) {
+            || cKeyFull[1].toUpperCase().equals("DESC"))) {
           cKey = cKeyFull[0];
           oder = cKeyFull[1];
           tableBuilder.addClusteringKey(cKey, orderMap.get(oder.toUpperCase()));
@@ -160,15 +162,6 @@ public class Table {
         tableBuilder.addSecondaryIndex(sIdx.getAsString());
       }
     }
-
-    //    Logger.getGlobal().log(Level.FINE, "cols: " + tableBuilder.build().getColumnNames());
-    //    Logger.getGlobal()
-    //        .log(Level.FINE, "partition keys: " + tableBuilder.build().getPartitionKeyNames());
-    //    Logger.getGlobal()
-    //        .log(Level.FINE, "clustering keys: " + tableBuilder.build().getClusteringKeyNames());
-    //    Logger.getGlobal()
-    //        .log(Level.FINE, "secondary indexes: " +
-    // tableBuilder.build().getSecondaryIndexNames());
 
     return tableBuilder.build();
   }

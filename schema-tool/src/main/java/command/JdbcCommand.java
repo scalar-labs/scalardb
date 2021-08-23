@@ -2,6 +2,7 @@ package command;
 
 import com.scalar.db.config.DatabaseConfig;
 import core.SchemaOperator;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -13,23 +14,23 @@ import utils.SchemaParser;
 @Command(name = "--jdbc", description = "Using JDBC type DB")
 public class JdbcCommand implements Callable<Integer> {
 
-  @Option(names = "-j", description = "JDBC URL", required = true)
+  @Option(names = {"-j", "--jdbc-url"}, description = "JDBC URL", required = true)
   String jdbcURL;
 
-  @Option(names = "-u", description = "JDBC user", required = true)
+  @Option(names = {"-u", "--user"}, description = "JDBC user", required = true)
   String jdbcUser;
 
-  @Option(names = "-p", description = "JDBC password", required = true)
+  @Option(names = {"-p", "--password"}, description = "JDBC password", required = true)
   String jdbcPw;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  String schemaFile;
+  Path schemaFile;
 
   @Option(
-      names = {"-D", "--delete"},
+      names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
   Boolean deleteTables;
@@ -47,7 +48,7 @@ public class JdbcCommand implements Callable<Integer> {
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile, new HashMap<String, String>());
+    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), new HashMap<String, String>());
 
     if (deleteTables) {
       operator.deleteTables(schemaMap.getTables());

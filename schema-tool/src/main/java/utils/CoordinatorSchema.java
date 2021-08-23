@@ -3,22 +3,23 @@ package utils;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TableMetadata.Builder;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.Attribute;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CoordinatorSchema {
+
   private TableMetadata tableMetadata;
 
-  private static final String NAMESPACE = "coordinator";
-  private static final String TABLE = "state";
   private static final String PARTITION_KEY = "tx_id";
 
   private static final Map<String, DataType> columns =
       new HashMap<String, DataType>() {
         {
-          put("tx_id", DataType.TEXT);
-          put("tx_state", DataType.INT);
-          put("tx_created_at", DataType.BIGINT);
+          put(Attribute.ID, DataType.TEXT);
+          put(Attribute.STATE, DataType.INT);
+          put(Attribute.CREATED_AT, DataType.BIGINT);
         }
       };
 
@@ -32,11 +33,11 @@ public class CoordinatorSchema {
   }
 
   public String getNamespace() {
-    return NAMESPACE;
+    return Coordinator.NAMESPACE;
   }
 
   public String getTable() {
-    return TABLE;
+    return Coordinator.TABLE;
   }
 
   public TableMetadata getTableMetadata() {
