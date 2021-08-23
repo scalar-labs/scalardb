@@ -18,7 +18,7 @@ import picocli.CommandLine.Option;
       JdbcCommand.class
     })
 public class SchemaToolMain implements Runnable {
-  @Option(names = {"-h", "--help"})
+  @Option(names = {"-h", "--help"}, defaultValue = "true")
   Boolean showHelp;
 
   public static void main(String... args) {
