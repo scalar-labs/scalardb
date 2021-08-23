@@ -8,7 +8,7 @@ This tool creates Scalar DB schemas on Cosmos DB, DynamoDB, Cassandra and a JDBC
 
 # Usage
 ## Build & Run
-### Build a standalone application
+### Build application
 ```console
 $ ./gradlew installDist
 ```

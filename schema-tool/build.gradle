@@ -16,7 +16,6 @@ dependencies {
     implementation 'info.picocli:picocli:4.6.1'
     implementation 'com.google.inject:guice:5.0.1'
     implementation 'org.slf4j:slf4j-simple:1.7.21'
-
 }
 
 application {
