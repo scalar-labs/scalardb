@@ -1,6 +1,7 @@
 package com.scalar.db.api;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import java.util.Collections;
 import java.util.Map;
 
 /** An administrative interface for distributed storage implementations. */
@@ -20,6 +21,19 @@ public interface DistributedStorageAdmin {
   void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException;
+
+  /**
+   * Creates a new table without any options.
+   *
+   * @param namespace a namespace to create
+   * @param table a table to create
+   * @param metadata a metadata to create
+   * @throws ExecutionException if the operation failed
+   */
+  default void createTable(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    createTable(namespace, table, metadata, Collections.emptyMap());
+  }
 
   /**
    * Drops the specified table.
