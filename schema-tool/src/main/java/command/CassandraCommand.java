@@ -32,7 +32,7 @@ public class CassandraCommand implements Callable<Integer> {
       names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
-  String cassandraNetStrategy;
+  CassandraNetStrategy cassandraNetStrategy;
 
   @Option(names = {"-c",
       "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
@@ -67,7 +67,7 @@ public class CassandraCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<String, String>();
     if (cassandraNetStrategy != null) {
-      metaOptions.put("network-strategy", cassandraNetStrategy);
+      metaOptions.put("network-strategy", cassandraNetStrategy.name());
     }
     if (cassandraCompactStrategy != null) {
       metaOptions.put("compaction-strategy", cassandraCompactStrategy.name());
@@ -93,4 +93,9 @@ enum CassandraCompactStrategy {
   STCS,
   LCS,
   TWCS
+}
+
+enum CassandraNetStrategy {
+  SimpleStrategy,
+  NetworkTopologyStrategy
 }
