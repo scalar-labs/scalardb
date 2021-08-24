@@ -55,7 +55,7 @@ public class TestEnv implements Closeable {
       throws ExecutionException {
     schemaList.add(schema);
     tableList.add(table);
-    jdbcAdmin.createTable(schema, table, metadata, new HashMap<>());
+    jdbcAdmin.createTable(schema, table, metadata, false, new HashMap<>());
   }
 
   public void deleteTableData() throws ExecutionException {

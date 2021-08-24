@@ -12,6 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -42,14 +43,29 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }
 
@@ -65,6 +81,16 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
   }
 
   private String fullNamespace(String namespace) {

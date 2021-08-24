@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -70,15 +71,30 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
-    getAdmin(namespace, table).createTable(namespace, table, metadata, options);
+    getNamespaceAdmin(namespace).createNamespace(namespace, ifNotExists, options);
+  }
+
+  @Override
+  public void createTable(
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
+      throws ExecutionException {
+    getAdmin(namespace, table).createTable(namespace, table, metadata, ifNotExists, options);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     getAdmin(namespace, table).dropTable(namespace, table);
+  }
+
+  @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    getNamespaceAdmin(namespace).dropNamespace(namespace);
   }
 
   @Override
@@ -91,13 +107,27 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     return getAdmin(namespace, table).getTableMetadata(namespace, table);
   }
 
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    return getNamespaceAdmin(namespace).getNamespaceTableNames(namespace);
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    return getNamespaceAdmin(namespace).namespaceExists(namespace);
+  }
+
   private DistributedStorageAdmin getAdmin(String namespace, String table) {
     String fullTaleName = namespace + "." + table;
     DistributedStorageAdmin admin = tableAdminMap.get(fullTaleName);
     if (admin != null) {
       return admin;
     }
-    admin = namespaceAdminMap.get(namespace);
+    return getNamespaceAdmin(namespace);
+  }
+
+  private DistributedStorageAdmin getNamespaceAdmin(String namespace) {
+    DistributedStorageAdmin admin = namespaceAdminMap.get(namespace);
     return admin != null ? admin : defaultAdmin;
   }
 

@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -98,6 +98,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
+    admin.createNamespace(ConsensusCommitIntegrationTestBase.NAMESPACE);
     admin.createTable(
         ConsensusCommitIntegrationTestBase.NAMESPACE,
         ConsensusCommitIntegrationTestBase.TABLE_1,
@@ -116,6 +117,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addColumn(CREATED_AT, DataType.BIGINT)
             .addPartitionKey(ID)
             .build();
+    admin.createNamespace(Coordinator.NAMESPACE);
     admin.createTable(
         Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata, new HashMap<>());
   }
@@ -124,6 +126,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     admin.dropTable(NAMESPACE, TABLE_1);
     admin.dropTable(NAMESPACE, TABLE_2);
     admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+    admin.dropNamespace(NAMESPACE);
+    admin.dropNamespace(Coordinator.NAMESPACE);
     admin.close();
   }
 

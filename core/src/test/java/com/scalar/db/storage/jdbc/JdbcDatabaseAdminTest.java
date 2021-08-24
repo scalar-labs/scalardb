@@ -154,7 +154,7 @@ public class JdbcDatabaseAdminTest {
     when(dataSource.getConnection()).thenReturn(connection);
 
     // Act
-    admin.createTable(namespace, table, metadata, new HashMap<>());
+    admin.createTable(namespace, table, metadata, false, new HashMap<>());
 
     // Assert
     for (int i = 0; i < expectedSqlStatements.length; i++) {

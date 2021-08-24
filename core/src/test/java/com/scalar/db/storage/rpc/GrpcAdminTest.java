@@ -49,7 +49,7 @@ public class GrpcAdminTest {
     Map<String, String> options = Collections.emptyMap();
 
     // Act
-    admin.createTable(namespace, table, metadata, options);
+    admin.createTable(namespace, table, metadata, false, options);
 
     // Assert
     verify(stub).createTable(any());

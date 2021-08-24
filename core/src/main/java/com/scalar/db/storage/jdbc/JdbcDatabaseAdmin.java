@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.ThreadSafe;
@@ -129,8 +130,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+      throws ExecutionException {
+    // TODO To implement
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       try {
@@ -162,6 +174,12 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    // TODO To implement
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String truncateTableStatement =
         "TRUNCATE TABLE "
@@ -181,6 +199,18 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    // TODO To implement
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    // TODO To implement
+    throw new UnsupportedOperationException("implement later");
   }
 
   @Override

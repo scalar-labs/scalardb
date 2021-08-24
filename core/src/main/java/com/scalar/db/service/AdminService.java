@@ -5,6 +5,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
+import java.util.Set;
 
 public class AdminService implements DistributedStorageAdmin {
 
@@ -16,15 +17,30 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
-    admin.createTable(namespace, table, metadata, options);
+    admin.createNamespace(namespace, ifNotExists, options);
+  }
+
+  @Override
+  public void createTable(
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
+      throws ExecutionException {
+    admin.createTable(namespace, table, metadata, ifNotExists, options);
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     admin.dropTable(namespace, table);
+  }
+
+  @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    admin.dropNamespace(namespace);
   }
 
   @Override
@@ -35,6 +51,16 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return admin.getTableMetadata(namespace, table);
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    return admin.getNamespaceTableNames(namespace);
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    return admin.namespaceExists(namespace);
   }
 
   @Override

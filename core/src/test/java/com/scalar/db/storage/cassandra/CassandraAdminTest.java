@@ -12,6 +12,7 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
 import com.datastax.driver.core.schemabuilder.SchemaStatement;
 import com.datastax.driver.core.schemabuilder.TableOptions;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -91,8 +92,7 @@ public class CassandraAdminTest {
 
     // Act
     // Assert
-    Assertions.assertThatThrownBy(
-            () -> cassandraAdmin.createKeyspaceIfNotExists(namespace, options))
+    Assertions.assertThatThrownBy(() -> cassandraAdmin.createNamespace(namespace, false, options))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -106,7 +106,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
-    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createNamespace(namespace, true, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -131,7 +131,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
-    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createNamespace(namespace, true, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -154,7 +154,7 @@ public class CassandraAdminTest {
     Map<String, String> options = new HashMap<>();
 
     // Act
-    cassandraAdmin.createKeyspaceIfNotExists(SAMPLE_PREFIX + namespace, options);
+    cassandraAdmin.createNamespace(namespace, false, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -162,7 +162,6 @@ public class CassandraAdminTest {
     replicationOptions.put("replication_factor", "1");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .ifNotExists()
             .with()
             .replication(replicationOptions);
 
@@ -190,7 +189,7 @@ public class CassandraAdminTest {
             .build();
     // Act
     cassandraAdmin.createTableInternal(
-        SAMPLE_PREFIX + namespace, table, tableMetadata, new HashMap<>());
+        SAMPLE_PREFIX + namespace, table, tableMetadata, false, new HashMap<>());
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -233,7 +232,8 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
 
     // Act
-    cassandraAdmin.createTableInternal(SAMPLE_PREFIX + namespace, table, tableMetadata, options);
+    cassandraAdmin.createTableInternal(
+        SAMPLE_PREFIX + namespace, table, tableMetadata, false, options);
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -279,8 +279,7 @@ public class CassandraAdminTest {
   }
 
   @Test
-  public void dropTable_WithCorrectParameters_ShouldDropTableAndNamespace()
-      throws ExecutionException {
+  public void dropTable_WithCorrectParameters_ShouldDropTable() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
     String table = "sample_table";
@@ -293,10 +292,35 @@ public class CassandraAdminTest {
     String dropTableStatement =
         SchemaBuilder.dropTable(SAMPLE_PREFIX + namespace, table).getQueryString();
     verify(cassandraSession).execute(dropTableStatement);
+  }
+
+  @Test
+  public void dropNamespace_WithCorrectParameters_ShouldDropKeyspace() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+
+    // Act
+    cassandraAdmin.dropNamespace(namespace);
+
+    // Assert
+    String dropKeyspaceStaement =
+        SchemaBuilder.dropKeyspace(SAMPLE_PREFIX + namespace).getQueryString();
+    verify(cassandraSession).execute(dropKeyspaceStaement);
+  }
+
+  @Test
+  public void getNamespaceTableNames_ShouldReturnTableNames() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    Set<String> expectedTableNames = ImmutableSet.of("t1", "t2");
+    when(metadataManager.getTableNames(any())).thenReturn(expectedTableNames);
+
+    // Act
+    Set<String> actualTableNames = cassandraAdmin.getNamespaceTableNames(namespace);
+
+    // Assert
     verify(metadataManager).getTableNames(namespace);
-    String dropKeyspaceStatement =
-        SchemaBuilder.dropKeyspace(SAMPLE_PREFIX + namespace).ifExists().getQueryString();
-    verify(cassandraSession).execute(dropKeyspaceStatement);
+    Assertions.assertThat(actualTableNames).isEqualTo(expectedTableNames);
   }
 
   @Test

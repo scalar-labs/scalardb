@@ -27,6 +27,18 @@ public interface DistributedStorageAdmin {
    * Create a namespace
    *
    * @param namespace the namespace to create
+   * @param options namespace creation options
+   * @throws ExecutionException if the namespace already exists among other
+   */
+  default void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    createNamespace(namespace, false, options);
+  }
+
+  /**
+   * Create a namespace
+   *
+   * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
    *     already. If set to false, it will try to create the namespace but may throw an exception if
    *     it already exists
@@ -37,14 +49,20 @@ public interface DistributedStorageAdmin {
   }
 
   /**
+   * Create a namespace
+   *
+   * @param namespace the namespace to create
+   * @throws ExecutionException if the namespace already exits among other
+   */
+  default void createNamespace(String namespace) throws ExecutionException {
+    createNamespace(namespace, false, Collections.emptyMap());
+  }
+  /**
    * Creates a new table.
    *
    * @param namespace a namespace already created
    * @param table a table to create
    * @param metadata a metadata to create
-   * @param ifNotExists if set to true, the table will be created only if it does not exist already.
-   *     If set to false, it will try to create the table but may throw an exception if it already
-   *     exists
    * @param options options to create
    * @throws ExecutionException if the operation failed
    */
@@ -57,13 +75,19 @@ public interface DistributedStorageAdmin {
       throws ExecutionException;
 
   /**
-   * Drops the specified table.
+   * Creates a new table.
    *
-   * @param namespace a namespace to drop
-   * @param table a table to drop
+   * @param namespace a namespace already created
+   * @param table a table to create
+   * @param metadata a metadata to create
+   * @param options options to create
    * @throws ExecutionException if the operation failed
    */
-  void dropTable(String namespace, String table) throws ExecutionException;
+  default void createTable(
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      throws ExecutionException {
+    createTable(namespace, table, metadata, false, options);
+  }
 
   /**
    * Creates a new table.
@@ -81,6 +105,26 @@ public interface DistributedStorageAdmin {
       throws ExecutionException {
     createTable(namespace, table, metadata, ifNotExists, Collections.emptyMap());
   }
+  /**
+   * Creates a new table.
+   *
+   * @param namespace a namespace already created
+   * @param table a table to create
+   * @param metadata a metadata to create
+   * @throws ExecutionException if the operation failed
+   */
+  default void createTable(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    createTable(namespace, table, metadata, false, Collections.emptyMap());
+  }
+  /**
+   * Drops the specified table.
+   *
+   * @param namespace a namespace to drop
+   * @param table a table to drop
+   * @throws ExecutionException if the operation failed
+   */
+  void dropTable(String namespace, String table) throws ExecutionException;
 
   /**
    * Drops the specified namespace.
@@ -125,7 +169,7 @@ public interface DistributedStorageAdmin {
    * @return true if the namespace exists, false otherwise
    * @throws ExecutionException if the operation failed
    */
-  boolean isNamespaceExisting(String namespace) throws ExecutionException;
+  boolean namespaceExists(String namespace) throws ExecutionException;
 
   /** Closes connections to the storage. */
   void close();
