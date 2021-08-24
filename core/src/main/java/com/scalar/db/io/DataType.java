@@ -7,5 +7,5 @@ public enum DataType {
   FLOAT,
   DOUBLE,
   TEXT,
-  BLOB;
+  BLOB
 }

@@ -120,17 +120,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throws ExecutionException {
     CreateKeyspace query = SchemaBuilder.createKeyspace(fullKeyspace).ifNotExists();
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
-    NetworkStrategy networkStrategy =
+    ReplicationStrategy replicationStrategy =
         options.containsKey(NETWORK_STRATEGY)
-            ? NetworkStrategy.fromString(options.get(NETWORK_STRATEGY))
-            : NetworkStrategy.SIMPLE_STRATEGY;
+            ? ReplicationStrategy.fromString(options.get(NETWORK_STRATEGY))
+            : ReplicationStrategy.SIMPLE_STRATEGY;
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
-    if (networkStrategy == NetworkStrategy.SIMPLE_STRATEGY) {
-      replicationOptions.put("class", NetworkStrategy.SIMPLE_STRATEGY.toString());
+    if (replicationStrategy == ReplicationStrategy.SIMPLE_STRATEGY) {
+      replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
       replicationOptions.put("replication_factor", replicationFactor);
-    } else if (networkStrategy == NetworkStrategy.NETWORK_TOPOLOGY_STRATEGY) {
-      replicationOptions.put("class", NetworkStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
-      replicationOptions.put("dc1_name", replicationFactor);
+    } else if (replicationStrategy == ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY) {
+      replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+      replicationOptions.put("dc1", replicationFactor);
     }
     try {
       clusterManager
@@ -252,17 +252,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     TWCS
   }
 
-  enum NetworkStrategy {
+  enum ReplicationStrategy {
     SIMPLE_STRATEGY("SimpleStrategy"),
     NETWORK_TOPOLOGY_STRATEGY("NetworkTopologyStrategy");
     private final String strategyName;
 
-    NetworkStrategy(final String strategyName) {
+    ReplicationStrategy(final String strategyName) {
       this.strategyName = strategyName;
     }
 
-    public static NetworkStrategy fromString(String text) {
-      for (NetworkStrategy strategy : NetworkStrategy.values()) {
+    public static ReplicationStrategy fromString(String text) {
+      for (ReplicationStrategy strategy : ReplicationStrategy.values()) {
         if (strategy.strategyName.equalsIgnoreCase(text)) {
           return strategy;
         }

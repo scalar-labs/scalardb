@@ -17,7 +17,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
-import com.scalar.db.storage.cassandra.CassandraAdmin.NetworkStrategy;
+import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -102,7 +102,7 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     Map<String, String> options = new HashMap<>();
-    options.put(CassandraAdmin.NETWORK_STRATEGY, NetworkStrategy.SIMPLE_STRATEGY.toString());
+    options.put(CassandraAdmin.NETWORK_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
@@ -110,7 +110,7 @@ public class CassandraAdminTest {
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
-    replicationOptions.put("class", NetworkStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
     replicationOptions.put("replication_factor", "3");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
@@ -127,7 +127,7 @@ public class CassandraAdminTest {
     String namespace = "sample_ns";
     Map<String, String> options = new HashMap<>();
     options.put(
-        CassandraAdmin.NETWORK_STRATEGY, NetworkStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+        CassandraAdmin.NETWORK_STRATEGY, ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
@@ -135,7 +135,7 @@ public class CassandraAdminTest {
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
-    replicationOptions.put("class", NetworkStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+    replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
     replicationOptions.put("dc1_name", "5");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
@@ -147,7 +147,7 @@ public class CassandraAdminTest {
 
   @Test
   public void
-      createNamespace_WithoutStrategyNorReplicationFactor_ShouldExecuteCreateKeyspaceStatementWithSimpleStrategy()
+  createNamespace_WithoutReplicationStrategyNorReplicationFactor_ShouldExecuteCreateKeyspaceStatementWithSimpleStrategy()
           throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
@@ -158,7 +158,7 @@ public class CassandraAdminTest {
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
-    replicationOptions.put("class", NetworkStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
     replicationOptions.put("replication_factor", "1");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)

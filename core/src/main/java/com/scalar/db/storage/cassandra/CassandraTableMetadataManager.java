@@ -34,10 +34,10 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
   }
 
   /**
-   * Return the ScalarDB datatype value that is equivalent to {@link
+   * Return the Scalar DB datatype value that is equivalent to {@link
    * com.datastax.driver.core.DataType}
    *
-   * @return ScalarDB datatype that is equivalent {@link com.datastax.driver.core.DataType}
+   * @return Scalar DB datatype that is equivalent {@link com.datastax.driver.core.DataType}
    */
   private DataType fromCassandraDataType(
       com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
