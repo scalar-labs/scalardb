@@ -136,7 +136,7 @@ public class CassandraAdminTest {
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
-    replicationOptions.put("dc1_name", "5");
+    replicationOptions.put("dc1", "5");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
             .ifNotExists()
@@ -147,7 +147,7 @@ public class CassandraAdminTest {
 
   @Test
   public void
-  createNamespace_WithoutReplicationStrategyNorReplicationFactor_ShouldExecuteCreateKeyspaceStatementWithSimpleStrategy()
+      createNamespace_WithoutReplicationStrategyNorReplicationFactor_ShouldExecuteCreateKeyspaceStatementWithSimpleStrategy()
           throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
