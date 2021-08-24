@@ -21,6 +21,7 @@ public class DistributedStorageAdminService
     extends DistributedStorageAdminGrpc.DistributedStorageAdminImplBase {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(DistributedStorageAdminService.class);
+  private static final String SERVICE_NAME = "distributed_storage_admin";
 
   private final DistributedStorageAdmin admin;
   private final Metrics metrics;
@@ -44,7 +45,7 @@ public class DistributedStorageAdminService
           responseObserver.onCompleted();
         },
         responseObserver,
-        "createTable");
+        "create_table");
   }
 
   @Override
@@ -56,7 +57,7 @@ public class DistributedStorageAdminService
           responseObserver.onCompleted();
         },
         responseObserver,
-        "dropTable");
+        "drop_table");
   }
 
   @Override
@@ -68,7 +69,7 @@ public class DistributedStorageAdminService
           responseObserver.onCompleted();
         },
         responseObserver,
-        "truncateTable");
+        "truncate_table");
   }
 
   @Override
@@ -86,13 +87,13 @@ public class DistributedStorageAdminService
           responseObserver.onCompleted();
         },
         responseObserver,
-        "getTableMetadata");
+        "get_table_metadata");
   }
 
   private void execute(
       ThrowableRunnable<Throwable> runnable, StreamObserver<?> responseObserver, String method) {
     try {
-      metrics.measure(DistributedStorageAdminService.class, method, runnable);
+      metrics.measure(SERVICE_NAME, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());

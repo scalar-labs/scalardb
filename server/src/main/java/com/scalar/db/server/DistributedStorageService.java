@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 public class DistributedStorageService extends DistributedStorageGrpc.DistributedStorageImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(DistributedStorageService.class);
-
+  private static final String SERVICE_NAME = "distributed_storage";
   private static final int DEFAULT_SCAN_FETCH_COUNT = 100;
 
   private final DistributedStorage storage;
@@ -90,7 +90,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     }
 
     try {
-      metrics.measure(DistributedStorageService.class, method, runnable);
+      metrics.measure(SERVICE_NAME, method, runnable);
     } catch (IllegalArgumentException | IllegalStateException e) {
       responseObserver.onError(
           Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
@@ -193,8 +193,8 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     private boolean openScanner(ScanRequest request) {
       try {
         metrics.measure(
-            DistributedStorageService.class,
-            "scan.openScanner",
+            SERVICE_NAME,
+            "scan.open_scanner",
             () -> {
               Scan scan = ProtoUtil.toScan(request.getScan());
               scanner = storage.scan(scan);
@@ -215,7 +215,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
     private ScanResponse next(ScanRequest request) {
       try {
         return metrics.measure(
-            DistributedStorageService.class,
+            SERVICE_NAME,
             "scan.next",
             () -> {
               Iterator<Result> resultIterator = scanner.iterator();
