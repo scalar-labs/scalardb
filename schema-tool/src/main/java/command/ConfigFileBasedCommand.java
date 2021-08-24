@@ -41,7 +41,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   @Option(names = "--no-scaling", description = "Disable auto-scaling (supported in Dynamo DB, Cosmos DB)")
   Boolean noScaling;
 
-  @Option(names = "no-backup", description = "Disable continuous backup for Dynamo DB")
+  @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
   Boolean dynamoNoBackup;
 
   @Option(

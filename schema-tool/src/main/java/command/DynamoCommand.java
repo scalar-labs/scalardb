@@ -30,7 +30,7 @@ public class DynamoCommand implements Callable<Integer> {
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Dynamo DB")
   Boolean dynamoNoScaling;
 
-  @Option(names = "no-backup", description = "Disable continuous backup for Dynamo DB")
+  @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
   Boolean dynamoNoBackup;
 
   @Option(names = "--endpoint-override", description = "Endpoint with which the Dynamo DB SDK should communicate")
