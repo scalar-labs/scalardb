@@ -1,5 +1,17 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
+import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
+import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
+import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,12 +25,14 @@ import static org.mockito.Mockito.verify;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
@@ -29,11 +43,13 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -53,7 +69,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   protected static final int NUM_TYPES = 4;
   protected static final String ANY_ID_1 = "id1";
   protected static final String ANY_ID_2 = "id2";
-
+  static DistributedStorageAdmin admin;
   private ConsensusCommitManager manager;
   // assume that storage is a spied object
   private DistributedStorage storage;
@@ -61,6 +77,61 @@ public abstract class ConsensusCommitIntegrationTestBase {
   private Coordinator coordinator;
   // assume that recovery is a spied object
   private RecoveryHandler recovery;
+
+  protected static void createTables() throws ExecutionException {
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(VERSION, DataType.INT)
+            .addColumn(PREPARED_AT, DataType.BIGINT)
+            .addColumn(COMMITTED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(BEFORE_ID, DataType.TEXT)
+            .addColumn(BEFORE_STATE, DataType.INT)
+            .addColumn(BEFORE_VERSION, DataType.INT)
+            .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    admin.createTable(
+        ConsensusCommitIntegrationTestBase.NAMESPACE,
+        ConsensusCommitIntegrationTestBase.TABLE_1,
+        tableMetadata,
+        new HashMap<>());
+    admin.createTable(
+        ConsensusCommitIntegrationTestBase.NAMESPACE,
+        ConsensusCommitIntegrationTestBase.TABLE_2,
+        tableMetadata,
+        new HashMap<>());
+
+    TableMetadata coordinatorTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(CREATED_AT, DataType.BIGINT)
+            .addPartitionKey(ID)
+            .build();
+    admin.createTable(
+        Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata, new HashMap<>());
+  }
+
+  protected static void deleteTables() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE_1);
+    admin.dropTable(NAMESPACE, TABLE_2);
+    admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+    admin.close();
+  }
+
+  protected static void truncateTables() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE_1);
+    admin.truncateTable(NAMESPACE, TABLE_2);
+    admin.truncateTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+  }
 
   protected void setUp(
       ConsensusCommitManager manager,

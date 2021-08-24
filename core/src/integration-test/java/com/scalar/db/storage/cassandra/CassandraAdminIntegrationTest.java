@@ -1,101 +1,63 @@
 package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.io.DataType;
 import com.scalar.db.storage.AdminIntegrationTestBase;
+import java.util.HashMap;
 import java.util.Properties;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
 public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
-
-  private static final String INDEX1 = "test_index1";
-  private static final String INDEX2 = "test_index2";
   private static final String CONTACT_POINT = "localhost";
   private static final String USERNAME = "cassandra";
   private static final String PASSWORD = "cassandra";
-  private static final String CREATE_KEYSPACE_STMT =
-      "CREATE KEYSPACE "
-          + NAMESPACE
-          + " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 }";
-  private static final String CREATE_TABLE_STMT =
-      "CREATE TABLE "
-          + NAMESPACE
-          + "."
-          + TABLE
-          + " (c1 int, c2 text, c3 text, c4 int, c5 int, c6 text, c7 bigint, c8 float, c9 double,"
-          + " c10 boolean, c11 blob, PRIMARY KEY((c2, c1), c4, c3))"
-          + " WITH CLUSTERING ORDER BY (c4 ASC, c3 DESC)";
-  private static final String CREATE_INDEX_STMT1 =
-      "CREATE INDEX " + INDEX1 + " ON " + NAMESPACE + "." + TABLE + " (c5)";
-  private static final String CREATE_INDEX_STMT2 =
-      "CREATE INDEX " + INDEX2 + " ON " + NAMESPACE + "." + TABLE + " (c6)";
-  private static final String DROP_KEYSPACE_STMT = "DROP KEYSPACE " + NAMESPACE;
-
+  private static final TableMetadata TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addPartitionKey("c2")
+          .addPartitionKey("c1")
+          .addClusteringKey("c4", Order.ASC)
+          .addClusteringKey("c3", Order.DESC)
+          .addColumn("c1", DataType.INT)
+          .addColumn("c2", DataType.TEXT)
+          .addColumn("c3", DataType.TEXT)
+          .addColumn("c4", DataType.INT)
+          .addColumn("c5", DataType.INT)
+          .addColumn("c6", DataType.TEXT)
+          .addColumn("c7", DataType.BIGINT)
+          .addColumn("c8", DataType.FLOAT)
+          .addColumn("c9", DataType.DOUBLE)
+          .addColumn("c10", DataType.BOOLEAN)
+          .addColumn("c11", DataType.BLOB)
+          .addSecondaryIndex("c5")
+          .addSecondaryIndex("c6")
+          .build();
   private static DistributedStorageAdmin admin;
-
-  @Before
-  public void setUp() throws Exception {
-    setUp(admin);
-  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ProcessBuilder builder;
-    Process process;
-    int ret;
-
-    builder =
-        new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", CREATE_KEYSPACE_STMT);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE KEYSPACE failed.");
-    }
-
-    builder = new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", CREATE_TABLE_STMT);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE TABLE failed.");
-    }
-
-    builder = new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", CREATE_INDEX_STMT1);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE INDEX failed.");
-    }
-
-    builder = new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", CREATE_INDEX_STMT2);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE INDEX failed.");
-    }
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, CONTACT_POINT);
     props.setProperty(DatabaseConfig.USERNAME, USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
-    admin = new CassandraAdmin(new DatabaseConfig(props));
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    admin = new CassandraAdmin(config);
+    admin.createTable(NAMESPACE, TABLE, TABLE_METADATA, new HashMap<>());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    ProcessBuilder builder;
-    Process process;
-    int ret;
-
-    builder = new ProcessBuilder("cqlsh", "-u", USERNAME, "-p", PASSWORD, "-e", DROP_KEYSPACE_STMT);
-    process = builder.start();
-    ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("DROP KEYSPACE failed.");
-    }
-
+    admin.dropTable(NAMESPACE, TABLE);
     admin.close();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    setUp(admin);
   }
 }
