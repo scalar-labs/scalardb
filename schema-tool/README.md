@@ -1,10 +1,14 @@
 # Schema Tool for Scalar DB
-This tool creates Scalar DB schemas on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
-  - For Cosmos DB, this tool creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB.
-  - For DynamoDB, this tool creates tables named with the database names and table names, also inserts metadata which is required by Scalar DB.
-  - For Cassandra, this tool creates databases(keyspaces) and tables. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
-  - For a JDBC database, this tool creates databases(schemas, except Oracle) and tables, also inserts metadata which is required by Scalar DB.
-  - You don't have to add Scalar DB metadata for transactions. This tool automatically adds them when you set the `transaction` parameter `true` in your schema file.
+This tool used for creating, deleting schemas along with necessary metadata of Scalar DB on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
+  - For Cosmos DB, this tool works on databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB. You can specify the resource base unit, scaling option as well.
+  - For DynamoDB, this tool works on tables named with the database names, also inserts metadata which is required by Scalar DB. You can specify the resource base unit, backup and scaling option as well.
+  - For Cassandra, this tool works on databases(keyspaces) and tables, also inserts metadata which is required by Scalar DB. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
+  - For a JDBC database, this tool works on databases(schemas) and tables, also inserts metadata which is required by Scalar DB.
+  - Scalar DB metadata for transactions is automatically adds when you set the `transaction` parameter `true` in the schema file.
+
+There are two ways to specify general cli options in schema-tool.
+  - Pass a Scalar DB configuration file, and additional options of database-specific.
+  - Pass all the options separately.
 
 # Usage
 ## Build & Run
@@ -12,14 +16,110 @@ This tool creates Scalar DB schemas on Cosmos DB, DynamoDB, Cassandra and a JDBC
 ```console
 $ ./gradlew installDist
 ```
+The built cli application is `./build/install/schema-tool/bin/schema-tool`
 
-### Create tables
+### Available commands
+For using config file
+```console
+Usage: schema-tool --config [-D] [--no-backup] [--no-scaling]
+                            [-c=<cassandraCompactStrategy>] -f=<schemaFile>
+                            [-n=<cassandraNetStrategy>] [-r=<ru>]
+                            [-R=<cassandraReplicaFactor>] <configPath>
+Using config file for Scalar DB
+      <configPath>   Path to config file of Scalar DB
+  -c, --compaction-strategy=<cassandraCompactStrategy>
+                     Cassandra compaction strategy, should be LCS, STCS or TWCS
+  -D, --delete-all   Delete tables
+  -f, --schema-file=<schemaFile>
+                     Path to schema json file
+  -n, --network-strategy=<cassandraNetStrategy>
+                     Cassandra network strategy, should be SimpleStrategy or
+                       NetworkTopologyStrategy
+      --no-backup    Disable continuous backup for Dynamo DB
+      --no-scaling   Disable auto-scaling (supported in Dynamo DB, Cosmos DB)
+  -r, --ru=<ru>      Base resource unit (supported in Dynamo DB, Cosmos DB)
+  -R, --replication-factor=<cassandraReplicaFactor>
+                     Cassandra replication factor
+```
+For Cosmos DB
+```console
+    Usage: schema-tool --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<cosmosURI>
+                                -p=<cosmosKey> [-r=<cosmosRU>]
+    Using Cosmos DB
+      -D, --delete-all         Delete tables
+      -f, --schema-file=<schemaFile>
+                               Path to schema json file
+      -h, --host=<cosmosURI>   Cosmos DB account URI
+          --no-scaling         Disable auto-scaling for Cosmos DB
+      -p, --password=<cosmosKey>
+                               Cosmos DB key
+      -r, --ru=<cosmosRU>      Base resource unit
+```
+For Dynamo DB
+```console
+Usage: schema-tool --dynamo [-D] [--no-backup] [--no-scaling]
+                            [--endpoint-override=<dynamoEndpointOverride>]
+                            -f=<schemaFile> -p=<awsSecKey> [-r=<dynamoRU>]
+                            --region=<awsRegion> -u=<awsKeyId>
+Using Dynamo DB
+  -D, --delete-all           Delete tables
+      --endpoint-override=<dynamoEndpointOverride>
+                             Endpoint with which the Dynamo DB SDK should
+                               communicate
+  -f, --schema-file=<schemaFile>
+                             Path to schema json file
+      --no-backup            Disable continuous backup for Dynamo DB
+      --no-scaling           Disable auto-scaling for Dynamo DB
+  -p, --password=<awsSecKey> AWS access secret key
+  -r, --ru=<dynamoRU>        Base resource unit
+      --region=<awsRegion>   AWS region
+  -u, --user=<awsKeyId>      AWS access key ID
+```
+For Cassandra DB
+```console
+Usage: schema-tool --cassandra [-D] [-c=<cassandraCompactStrategy>]
+                               -f=<schemaFile> -h=<cassandraIP>
+                               [-n=<cassandraNetStrategy>] [-p=<cassandraPw>]
+                               [-P=<cassandraPort>]
+                               [-R=<cassandraReplicaFactor>]
+                               [-u=<cassandraUser>]
+Using Cassandra DB
+  -c, --compaction-strategy=<cassandraCompactStrategy>
+                             Cassandra compaction strategy, should be LCS, STCS
+                               or TWCS
+  -D, --delete-all           Delete tables
+  -f, --schema-file=<schemaFile>
+                             Path to schema json file
+  -h, --host=<cassandraIP>   Cassandra host IP
+  -n, --network-strategy=<cassandraNetStrategy>
+                             Cassandra network strategy, should be
+                               SimpleStrategy or NetworkTopologyStrategy
+  -p, --password=<cassandraPw>
+                             Cassandra password
+  -P, --port=<cassandraPort> Cassandra Port
+  -R, --replication-factor=<cassandraReplicaFactor>
+                             Cassandra replication factor
+  -u, --user=<cassandraUser> Cassandra user
+```
+For JDBC type database
+```console
+Usage: schema-tool --jdbc [-D] -f=<schemaFile> -j=<jdbcURL> -p=<jdbcPw>
+                          -u=<jdbcUser>
+Using JDBC type DB
+  -D, --delete-all           Delete tables
+  -f, --schema-file=<schemaFile>
+                             Path to schema json file
+  -j, --jdbc-url=<jdbcURL>   JDBC URL
+  -p, --password=<jdbcPw>    JDBC password
+  -u, --user=<jdbcUser>      JDBC user
+```
+### Create databases/keyspaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](sample_data/database.properties)
 ```console
 $ ./build/install/schema-tool/bin/schema-tool --config <PATH_TO_CONFIG_FILE> -f schema.json
 ```
 
-Using cli arguments for configuration
+Using cli arguments fully for configuration
 ```console
 # For Cosmos DB
 $ ./build/install/schema-tool/bin/schema-tool --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
