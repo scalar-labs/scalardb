@@ -33,7 +33,7 @@ public class DynamoCommand implements Callable<Integer> {
   @Option(names = "no-backup", description = "Disable continuous backup for Dynamo DB")
   Boolean dynamoNoBackup;
 
-  @Option(names = "--endpoint-override", description = "Endpoint with which the DynamoDB SDK should communicate")
+  @Option(names = "--endpoint-override", description = "Endpoint with which the Dynamo DB SDK should communicate")
   String dynamoEndpointOverride;
 
   @Option(
