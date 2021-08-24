@@ -151,8 +151,7 @@ public class JdbcTableMetadataManager implements TableMetadataManager {
       @Nullable KeyType keyType,
       @Nullable Ordering.Order ckOrder,
       boolean indexed,
-      int ordinalPosition)
-      throws SQLException {
+      int ordinalPosition) {
 
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",

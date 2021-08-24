@@ -81,11 +81,7 @@ public class Record {
     if (!other.getClusteringKey().equals(clusteringKey)) {
       return false;
     }
-    if (!other.getValues().equals(values)) {
-      return false;
-    }
-
-    return true;
+    return other.getValues().equals(values);
   }
 
   @Override

@@ -77,15 +77,7 @@ public class Delete extends Mutation {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof Delete)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return o instanceof Delete;
   }
 
   @Override

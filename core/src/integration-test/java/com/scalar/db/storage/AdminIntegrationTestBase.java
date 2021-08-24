@@ -28,7 +28,7 @@ public abstract class AdminIntegrationTestBase {
 
   private DistributedStorageAdmin admin;
 
-  public void setUp(DistributedStorageAdmin admin) throws Exception {
+  public void setUp(DistributedStorageAdmin admin) {
     this.admin = admin;
   }
 

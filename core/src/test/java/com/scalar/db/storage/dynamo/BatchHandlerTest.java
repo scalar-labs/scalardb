@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -58,7 +58,7 @@ public class BatchHandlerTest {
   @Mock private TransactWriteItemsResponse transactWriteResponse;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new BatchHandler(client, metadataManager);
@@ -71,41 +71,29 @@ public class BatchHandlerTest {
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .withValue(ANY_NAME_4, ANY_INT_2);
-
-    return put;
+    return new Put(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME)
+        .withValue(ANY_NAME_3, ANY_INT_1)
+        .withValue(ANY_NAME_4, ANY_INT_2);
   }
 
   private Delete prepareDelete() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
   public void handle_TooManyOperationsGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     List<Put> mutations = new ArrayList<>();
-    IntStream.range(0, 26)
-        .forEach(
-            i -> {
-              mutations.add(preparePut());
-            });
+    IntStream.range(0, 26).forEach(i -> mutations.add(preparePut()));
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(mutations);
-            })
+    assertThatThrownBy(() -> handler.handle(mutations))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -125,10 +113,7 @@ public class BatchHandlerTest {
     DynamoMutation dynamoMutation4 = new DynamoMutation(delete2, metadataManager);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2, delete1, delete2));
-            })
+    assertThatCode(() -> handler.handle(Arrays.asList(put1, put2, delete1, delete2)))
         .doesNotThrowAnyException();
 
     // Assert
@@ -174,11 +159,7 @@ public class BatchHandlerTest {
             .withValue(ANY_NAME_4, ANY_INT_2);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(Arrays.asList(put1, put2))).doesNotThrowAnyException();
 
     // Assert
     verify(client).transactWriteItems(any(TransactWriteItemsRequest.class));
@@ -191,11 +172,7 @@ public class BatchHandlerTest {
     Put put2 = preparePut().forTable(ANOTHER_TABLE_NAME);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(Arrays.asList(put1, put2))).doesNotThrowAnyException();
 
     // Assert
     verify(client).transactWriteItems(any(TransactWriteItemsRequest.class));
@@ -215,10 +192,7 @@ public class BatchHandlerTest {
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put, delete));
-            })
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -232,10 +206,7 @@ public class BatchHandlerTest {
     Put put2 = preparePut();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }

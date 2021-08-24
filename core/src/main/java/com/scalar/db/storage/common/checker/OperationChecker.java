@@ -18,7 +18,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class OperationChecker {
 
   private final TableMetadataManager metadataManager;

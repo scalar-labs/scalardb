@@ -19,7 +19,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class ResultInterpreterTest {
 
   private static final String ANY_NAME_1 = "name1";
@@ -38,7 +37,7 @@ public class ResultInterpreterTest {
   @Mock private TableMetadata tableMetadata;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
   }
 

@@ -1,7 +1,8 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -20,7 +21,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
-import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +28,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class CommitHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -110,14 +109,14 @@ public class CommitHandlerTest {
           CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act
     handler.commit(snapshot);
 
     // Assert
-    verify(storage, times(4)).mutate(any(List.class));
+    verify(storage, times(4)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
   }
 
@@ -127,14 +126,14 @@ public class CommitHandlerTest {
           CoordinatorException {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithSamePartitionPut();
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
 
     // Act
     handler.commit(snapshot);
 
     // Assert
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
   }
 
@@ -144,15 +143,12 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(NoMutationException.class);
-    doThrow(toThrow).when(storage).mutate(any(List.class));
+    doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(recovery).rollback(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(CommitConflictException.class)
         .hasCause(toThrow);
 
@@ -169,15 +165,12 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(ExecutionException.class);
-    doThrow(toThrow).when(storage).mutate(any(List.class));
+    doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(recovery).rollback(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(CommitException.class)
         .hasCause(toThrow);
 
@@ -196,7 +189,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
     CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(any(List.class));
+    doThrow(toThrow1).when(storage).mutate(anyList());
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -207,11 +200,7 @@ public class CommitHandlerTest {
     doNothing().when(recovery).rollback(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -229,7 +218,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
     CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(any(List.class));
+    doThrow(toThrow1).when(storage).mutate(anyList());
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -237,10 +226,7 @@ public class CommitHandlerTest {
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
@@ -259,7 +245,7 @@ public class CommitHandlerTest {
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow1 = mock(ExecutionException.class);
     CoordinatorException toThrow2 = mock(CoordinatorException.class);
-    doThrow(toThrow1).when(storage).mutate(any(List.class));
+    doThrow(toThrow1).when(storage).mutate(anyList());
     doThrow(toThrow2)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
@@ -267,10 +253,7 @@ public class CommitHandlerTest {
     doThrow(toThrow2).when(coordinator).getState(ANY_ID);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
@@ -288,7 +271,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -296,15 +279,12 @@ public class CommitHandlerTest {
     doNothing().when(recovery).rollback(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(CommitException.class)
         .hasCause(toThrow);
 
     // Assert
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(recovery).rollback(snapshot);
@@ -318,7 +298,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -334,7 +314,7 @@ public class CommitHandlerTest {
     handler.commit(snapshot);
 
     // Assert
-    verify(storage, times(4)).mutate(any(List.class));
+    verify(storage, times(4)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
@@ -348,7 +328,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -362,14 +342,10 @@ public class CommitHandlerTest {
     doNothing().when(recovery).rollback(any(Snapshot.class));
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
-        .isInstanceOf(CommitException.class);
+    assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
@@ -383,7 +359,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -394,14 +370,11 @@ public class CommitHandlerTest {
     doReturn(Optional.empty()).when(coordinator).getState(ANY_ID);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
@@ -415,7 +388,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     CoordinatorException toThrow = mock(CoordinatorException.class);
-    doNothing().when(storage).mutate(any(List.class));
+    doNothing().when(storage).mutate(anyList());
     doThrow(toThrow)
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -426,14 +399,11 @@ public class CommitHandlerTest {
     doThrow(toThrow).when(coordinator).getState(ANY_ID);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.commit(snapshot);
-            })
+    assertThatThrownBy(() -> handler.commit(snapshot))
         .isInstanceOf(UnknownTransactionStatusException.class);
 
     // Assert
-    verify(storage, times(2)).mutate(any(List.class));
+    verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
@@ -447,7 +417,7 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(ExecutionException.class);
-    doNothing().doNothing().doThrow(toThrow).when(storage).mutate(any(List.class));
+    doNothing().doNothing().doThrow(toThrow).when(storage).mutate(anyList());
     doNothing()
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
@@ -456,7 +426,7 @@ public class CommitHandlerTest {
     handler.commit(snapshot);
 
     // Assert
-    verify(storage, times(3)).mutate(any(List.class));
+    verify(storage, times(3)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator, never()).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(recovery, never()).rollback(snapshot);

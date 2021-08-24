@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -44,7 +44,7 @@ public class DeleteStatementHandlerTest {
   @Mock private DeleteItemResponse response;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new DeleteStatementHandler(client, metadataManager);
@@ -57,11 +57,9 @@ public class DeleteStatementHandlerTest {
   private Delete prepareDelete() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -72,11 +70,7 @@ public class DeleteStatementHandlerTest {
     DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<DeleteItemRequest> captor = ArgumentCaptor.forClass(DeleteItemRequest.class);
@@ -96,10 +90,7 @@ public class DeleteStatementHandlerTest {
     Delete delete = prepareDelete();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
+    assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -118,11 +109,7 @@ public class DeleteStatementHandlerTest {
     DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<DeleteItemRequest> captor = ArgumentCaptor.forClass(DeleteItemRequest.class);
@@ -144,11 +131,7 @@ public class DeleteStatementHandlerTest {
     DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<DeleteItemRequest> captor = ArgumentCaptor.forClass(DeleteItemRequest.class);
@@ -171,11 +154,7 @@ public class DeleteStatementHandlerTest {
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
-        .isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
   }
 
   @Test
@@ -190,10 +169,7 @@ public class DeleteStatementHandlerTest {
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
+    assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }

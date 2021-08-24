@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -51,7 +51,7 @@ public class PutStatementHandlerTest {
   @Mock private UpdateItemResponse updateResponse;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new PutStatementHandler(client, metadataManager);
@@ -64,14 +64,11 @@ public class PutStatementHandlerTest {
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .withValue(ANY_NAME_4, ANY_INT_2);
-
-    return put;
+    return new Put(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME)
+        .withValue(ANY_NAME_3, ANY_INT_1)
+        .withValue(ANY_NAME_4, ANY_INT_2);
   }
 
   @Test
@@ -85,11 +82,7 @@ public class PutStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(put)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
@@ -118,11 +111,7 @@ public class PutStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(put)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
@@ -143,10 +132,7 @@ public class PutStatementHandlerTest {
     doThrow(toThrow).when(client).updateItem(any(UpdateItemRequest.class));
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(put);
-            })
+    assertThatThrownBy(() -> handler.handle(put))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -164,11 +150,7 @@ public class PutStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(put)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
@@ -192,11 +174,7 @@ public class PutStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMap();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(put)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<UpdateItemRequest> captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
@@ -217,10 +195,6 @@ public class PutStatementHandlerTest {
     Put put = preparePut().withCondition(new PutIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(put);
-            })
-        .isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(() -> handler.handle(put)).isInstanceOf(NoMutationException.class);
   }
 }

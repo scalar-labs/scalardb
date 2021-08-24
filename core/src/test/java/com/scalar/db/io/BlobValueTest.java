@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import org.junit.Test;
 
-/** */
 public class BlobValueTest {
   private static final String ANY_NAME = "name";
   private static final String ANOTHER_NAME = "another_name";

@@ -52,7 +52,7 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
   }
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     storage.with(NAMESPACE, TABLE);
     setUp(storage);
   }

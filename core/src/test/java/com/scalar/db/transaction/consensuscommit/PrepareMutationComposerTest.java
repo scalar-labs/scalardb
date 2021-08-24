@@ -29,7 +29,6 @@ import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 
-/** */
 public class PrepareMutationComposerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -53,7 +52,7 @@ public class PrepareMutationComposerTest {
   private List<Mutation> mutations;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     mutations = new ArrayList<>();
     composer = new PrepareMutationComposer(ANY_ID_3, mutations, ANY_TIME_5);
   }
@@ -193,10 +192,7 @@ public class PrepareMutationComposerTest {
     Delete delete = prepareDelete();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              composer.add(delete, null);
-            })
+    assertThatThrownBy(() -> composer.add(delete, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

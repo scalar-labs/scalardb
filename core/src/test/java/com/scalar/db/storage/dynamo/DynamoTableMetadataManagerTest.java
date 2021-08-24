@@ -2,7 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -44,7 +44,7 @@ public class DynamoTableMetadataManagerTest {
   @Mock private GetItemResponse response;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     manager = new DynamoTableMetadataManager(client, Optional.empty());
@@ -139,10 +139,7 @@ public class DynamoTableMetadataManagerTest {
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getTableMetadata(get);
-            })
+    assertThatThrownBy(() -> manager.getTableMetadata(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -156,10 +153,7 @@ public class DynamoTableMetadataManagerTest {
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getTableMetadata(get);
-            })
+    assertThatThrownBy(() -> manager.getTableMetadata(get))
         .isInstanceOf(StorageRuntimeException.class)
         .hasCause(toThrow);
   }

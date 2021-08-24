@@ -44,11 +44,8 @@ public class DeleteStatementHandler extends MutateStatementHandler {
   @Nonnull
   protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
     checkArgument(operation, Delete.class);
-
     BoundStatement bound = prepared.bind();
-    bound = bind(bound, (Delete) operation);
-
-    return bound;
+    return bind(bound, (Delete) operation);
   }
 
   @Override
@@ -64,10 +61,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
 
     del.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
     del.getClusteringKey()
-        .ifPresent(
-            k -> {
-              k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
-            });
+        .ifPresent(k -> k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker()))));
 
     setCondition(where, del);
 

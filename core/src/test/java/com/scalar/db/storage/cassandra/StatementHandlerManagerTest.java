@@ -17,7 +17,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class StatementHandlerManagerTest {
   private StatementHandlerManager manager;
   @Mock private SelectStatementHandler select;
@@ -32,7 +31,7 @@ public class StatementHandlerManagerTest {
   @Mock private PutIfNotExists putIfNotExists;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
   }
 
@@ -51,14 +50,13 @@ public class StatementHandlerManagerTest {
 
     // Act Assert
     assertThatCode(
-            () -> {
-              StatementHandlerManager.builder()
-                  .select(select)
-                  .insert(insert)
-                  .update(update)
-                  .delete(delete)
-                  .build();
-            })
+            () ->
+                StatementHandlerManager.builder()
+                    .select(select)
+                    .insert(insert)
+                    .update(update)
+                    .delete(delete)
+                    .build())
         .doesNotThrowAnyException();
   }
 
@@ -68,13 +66,12 @@ public class StatementHandlerManagerTest {
 
     // Act Assert
     assertThatThrownBy(
-            () -> {
-              StatementHandlerManager.builder()
-                  .select(select)
-                  .insert(insert)
-                  .update(update)
-                  .build();
-            })
+            () ->
+                StatementHandlerManager.builder()
+                    .select(select)
+                    .insert(insert)
+                    .update(update)
+                    .build())
         .isInstanceOf(IllegalArgumentException.class);
   }
 

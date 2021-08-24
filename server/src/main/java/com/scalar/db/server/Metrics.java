@@ -14,12 +14,14 @@ import com.scalar.db.util.ThrowableSupplier;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.dropwizard.DropwizardExports;
 import io.prometheus.client.exporter.MetricsServlet;
+import javax.annotation.concurrent.ThreadSafe;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class Metrics {
   private static final Logger LOGGER = LoggerFactory.getLogger(Metrics.class);
   private static final String PRODUCT_NAME = "scalardb";

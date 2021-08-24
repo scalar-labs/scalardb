@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
 
-/** */
 public class BigIntValueTest {
   private static final String ANY_NAME = "name";
   private static final String ANOTHER_NAME = "another_name";
@@ -225,10 +224,6 @@ public class BigIntValueTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new BigIntValue(null, 0);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new BigIntValue(null, 0)).isInstanceOf(NullPointerException.class);
   }
 }

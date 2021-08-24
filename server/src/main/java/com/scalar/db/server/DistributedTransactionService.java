@@ -37,9 +37,11 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class DistributedTransactionService
     extends DistributedTransactionGrpc.DistributedTransactionImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(DistributedTransactionService.class);
