@@ -11,7 +11,7 @@ public interface DistributedStorageAdmin {
   String INDEX_NAME_PREFIX = "index";
 
   /**
-   * Create a namespace
+   * Creates a namespace
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
@@ -20,7 +20,7 @@ public interface DistributedStorageAdmin {
   void createNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
   /**
-   * Create a namespace
+   * Creates a namespace
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
@@ -38,7 +38,7 @@ public interface DistributedStorageAdmin {
   }
 
   /**
-   * Create a namespace
+   * Creates a namespace
    *
    * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
@@ -54,7 +54,7 @@ public interface DistributedStorageAdmin {
   }
 
   /**
-   * Create a namespace
+   * Creates a namespace
    *
    * @param namespace the namespace to create
    * @throws ExecutionException if the namespace already exits among other
@@ -78,7 +78,7 @@ public interface DistributedStorageAdmin {
   /**
    * Creates a new table.
    *
-   * @param namespace a namespace already created
+   * @param namespace an existing namespace
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
@@ -103,7 +103,7 @@ public interface DistributedStorageAdmin {
   /**
    * Creates a new table.
    *
-   * @param namespace a namespace already created
+   * @param namespace an existing namespace
    * @param table a table to create
    * @param metadata a metadata to create
    * @param ifNotExists if set to true, the table will be created only if it does not exist already.
@@ -122,7 +122,7 @@ public interface DistributedStorageAdmin {
   /**
    * Creates a new table.
    *
-   * @param namespace a namespace already created
+   * @param namespace an existing namespace
    * @param table a table to create
    * @param metadata a metadata to create
    * @throws ExecutionException if the operation failed

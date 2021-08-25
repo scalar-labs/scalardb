@@ -50,7 +50,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    // TODO To implement
     throw new UnsupportedOperationException("implement later");
   }
 
@@ -68,7 +67,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    // TODO To implement
     throw new UnsupportedOperationException("implement later");
   }
 
@@ -88,13 +86,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    // TODO To implement
     throw new UnsupportedOperationException("implement later");
   }
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    // TODO To implement
     throw new UnsupportedOperationException("implement later");
   }
 
