@@ -271,27 +271,23 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void dropTable_forMysqlWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
+  public void dropTable_forMysql_shouldDropTable() throws Exception {
     dropTable_forX_shouldDropTable(RdbEngine.MYSQL, "DROP TABLE `ns_prefixmy_ns`.`foo_table`");
   }
 
   @Test
-  public void dropTable_forPostgresqlWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
+  public void dropTable_forPostgresql_shouldDropTable() throws Exception {
     dropTable_forX_shouldDropTable(
         RdbEngine.POSTGRESQL, "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"");
   }
 
   @Test
-  public void dropTable_forSqlServerWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
+  public void dropTable_forSqlServer_shouldDropTable() throws Exception {
     dropTable_forX_shouldDropTable(RdbEngine.SQL_SERVER, "DROP TABLE [ns_prefixmy_ns].[foo_table]");
   }
 
   @Test
-  public void dropTable_forOracleWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
+  public void dropTable_forOracle_shouldDropTable() throws Exception {
     dropTable_forX_shouldDropTable(RdbEngine.ORACLE, "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"");
   }
 
