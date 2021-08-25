@@ -40,7 +40,7 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     admin = new CosmosAdmin(config);
     storage = new Cosmos(config);
     HashMap<String, String> options = new HashMap<>();
-    options.put(CosmosAdmin.RU, "5000");
+    options.put(CosmosAdmin.RU, "4000");
     createTable(options);
   }
 

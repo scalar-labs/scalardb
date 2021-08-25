@@ -207,7 +207,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private ThroughputProperties calculateThroughput(Map<String, String> options) {
     int ru = Integer.parseInt(options.getOrDefault(RU, DEFAULT_RU));
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
-    if (ru <= 4000 || noScaling) {
+    if (ru < 4000 || noScaling) {
       return ThroughputProperties.createManualThroughput(ru);
     } else {
       return ThroughputProperties.createAutoscaledThroughput(ru);

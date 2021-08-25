@@ -41,8 +41,8 @@ import org.jooq.impl.DSL;
  */
 @ThreadSafe
 public class CosmosTableMetadataManager implements TableMetadataManager {
-  private static final String METADATA_DATABASE = "scalardb";
-  private static final String METADATA_CONTAINER = "metadata";
+  static final String METADATA_DATABASE = "scalardb";
+  static final String METADATA_CONTAINER = "metadata";
   private final CosmosClient client;
   private final Optional<String> databasePrefix;
   private final Map<String, TableMetadata> tableMetadataMap;
@@ -185,9 +185,9 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
 
   private void createMetadataDatabaseAndContainerIfNotExists() {
     String metadataDatabase = getFullNamespaceName(databasePrefix, METADATA_DATABASE);
-    ThroughputProperties autoscaledThroughput =
+    ThroughputProperties manualThroughput =
         ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_RU));
-    client.createDatabaseIfNotExists(metadataDatabase, autoscaledThroughput);
+    client.createDatabaseIfNotExists(metadataDatabase, manualThroughput);
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(METADATA_CONTAINER, "/id");
     client.getDatabase(metadataDatabase).createContainerIfNotExists(containerProperties);

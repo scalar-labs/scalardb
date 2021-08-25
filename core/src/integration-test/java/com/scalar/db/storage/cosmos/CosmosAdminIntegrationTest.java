@@ -56,7 +56,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
             .addSecondaryIndex(COL_NAME5)
             .addSecondaryIndex(COL_NAME6)
             .build(),
-        ImmutableMap.of(CosmosAdmin.RU, "5000"));
+        ImmutableMap.of(CosmosAdmin.RU, "4000"));
   }
 
   @AfterClass

@@ -6,6 +6,7 @@ import com.scalar.db.util.ImmutableLinkedHashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -22,43 +23,69 @@ public class CosmosTableMetadata {
 
   public CosmosTableMetadata() {}
 
-  public void setId(String id) {
-    this.id = id;
-  }
-
-  public void setPartitionKeyNames(List<String> partitionKeyNames) {
-    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
-  }
-
-  public void setClusteringKeyNames(List<String> clusteringKeyNames) {
-    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
-  }
-
-  public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
-    this.secondaryIndexNames = ImmutableSortedSet.copyOf(secondaryIndexNames);
-  }
-
-  public void setColumns(Map<String, String> columns) {
-    this.columns = ImmutableMap.copyOf(columns);
-  }
-
   public String getId() {
     return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
   }
 
   public LinkedHashSet<String> getPartitionKeyNames() {
     return partitionKeyNames;
   }
 
+  public void setPartitionKeyNames(List<String> partitionKeyNames) {
+    this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
+  }
+
   public LinkedHashSet<String> getClusteringKeyNames() {
     return clusteringKeyNames;
+  }
+
+  public void setClusteringKeyNames(List<String> clusteringKeyNames) {
+    this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
   }
 
   public Set<String> getSecondaryIndexNames() {
     return secondaryIndexNames;
   }
 
+  public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
+    this.secondaryIndexNames = ImmutableSortedSet.copyOf(secondaryIndexNames);
+  }
+
   public Map<String, String> getColumns() {
     return columns;
+  }
+
+  public void setColumns(Map<String, String> columns) {
+    this.columns = ImmutableMap.copyOf(columns);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CosmosTableMetadata that = (CosmosTableMetadata) o;
+    return Objects.equals(getId(), that.getId())
+        && Objects.equals(getPartitionKeyNames(), that.getPartitionKeyNames())
+        && Objects.equals(getClusteringKeyNames(), that.getClusteringKeyNames())
+        && Objects.equals(getSecondaryIndexNames(), that.getSecondaryIndexNames())
+        && Objects.equals(getColumns(), that.getColumns());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        getId(),
+        getPartitionKeyNames(),
+        getClusteringKeyNames(),
+        getSecondaryIndexNames(),
+        getColumns());
   }
 }
