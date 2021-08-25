@@ -14,25 +14,27 @@ public interface DistributedStorageAdmin {
    * Create a namespace
    *
    * @param namespace the namespace to create
-   * @param ifNotExists if set to true, the namespace will be created only if it does not exist
-   *     already. If set to false, it will try to create the namespace but may throw an exception if
-   *     it already exists
    * @param options namespace creation options
    * @throws ExecutionException if the operation failed
    */
-  void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
-      throws ExecutionException;
+  void createNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
   /**
    * Create a namespace
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
+   * @param ifNotExists if set to true, the namespace will be created only if it does not exist
+   *     already. If set to false, it will try to create the namespace but may throw an exception if
+   *     it already exists
    * @throws ExecutionException if the namespace already exists among other
    */
-  default void createNamespace(String namespace, Map<String, String> options)
+  default void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
       throws ExecutionException {
-    createNamespace(namespace, false, options);
+    if (ifNotExists && namespaceExists(namespace)) {
+      return;
+    }
+    createNamespace(namespace, options);
   }
 
   /**
@@ -45,7 +47,10 @@ public interface DistributedStorageAdmin {
    * @throws ExecutionException if the operation failed
    */
   default void createNamespace(String namespace, boolean ifNotExists) throws ExecutionException {
-    createNamespace(namespace, ifNotExists, Collections.emptyMap());
+    if (ifNotExists && namespaceExists(namespace)) {
+      return;
+    }
+    createNamespace(namespace, Collections.emptyMap());
   }
 
   /**
@@ -55,7 +60,7 @@ public interface DistributedStorageAdmin {
    * @throws ExecutionException if the namespace already exits among other
    */
   default void createNamespace(String namespace) throws ExecutionException {
-    createNamespace(namespace, false, Collections.emptyMap());
+    createNamespace(namespace, Collections.emptyMap());
   }
   /**
    * Creates a new table.
@@ -67,11 +72,7 @@ public interface DistributedStorageAdmin {
    * @throws ExecutionException if the operation failed
    */
   void createTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException;
 
   /**
@@ -80,13 +81,23 @@ public interface DistributedStorageAdmin {
    * @param namespace a namespace already created
    * @param table a table to create
    * @param metadata a metadata to create
+   * @param ifNotExists if set to true, the table will be created only if it does not exist already.
+   *     If set to false, it will try to create the table but may throw an exception if it already
+   *     exists
    * @param options options to create
    * @throws ExecutionException if the operation failed
    */
   default void createTable(
-      String namespace, String table, TableMetadata metadata, Map<String, String> options)
+      String namespace,
+      String table,
+      TableMetadata metadata,
+      boolean ifNotExists,
+      Map<String, String> options)
       throws ExecutionException {
-    createTable(namespace, table, metadata, false, options);
+    if (ifNotExists && getNamespaceTableNames(namespace).contains(table)) {
+      return;
+    }
+    createTable(namespace, table, metadata, options);
   }
 
   /**
@@ -103,7 +114,10 @@ public interface DistributedStorageAdmin {
   default void createTable(
       String namespace, String table, TableMetadata metadata, boolean ifNotExists)
       throws ExecutionException {
-    createTable(namespace, table, metadata, ifNotExists, Collections.emptyMap());
+    if (ifNotExists && getNamespaceTableNames(namespace).contains(table)) {
+      return;
+    }
+    createTable(namespace, table, metadata, Collections.emptyMap());
   }
   /**
    * Creates a new table.
@@ -115,7 +129,7 @@ public interface DistributedStorageAdmin {
    */
   default void createTable(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    createTable(namespace, table, metadata, false, Collections.emptyMap());
+    createTable(namespace, table, metadata, Collections.emptyMap());
   }
   /**
    * Drops the specified table.

@@ -40,7 +40,6 @@ public class DistributedStorageAdminService
               request.getNamespace(),
               request.getTable(),
               ProtoUtil.toTableMetadata(request.getTableMetadata()),
-              false,
               request.getOptionsMap());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();

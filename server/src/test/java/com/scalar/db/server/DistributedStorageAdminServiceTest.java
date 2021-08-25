@@ -59,7 +59,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.createTable(request, responseObserver);
 
     // Assert
-    verify(admin).createTable(any(), any(), any(), any(), anyMap());
+    verify(admin).createTable(any(), any(), any(), anyMap());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }

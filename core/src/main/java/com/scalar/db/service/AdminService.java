@@ -17,20 +17,16 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+  public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    admin.createNamespace(namespace, ifNotExists, options);
+    admin.createNamespace(namespace, options);
   }
 
   @Override
   public void createTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    admin.createTable(namespace, table, metadata, ifNotExists, options);
+    admin.createTable(namespace, table, metadata, options);
   }
 
   @Override

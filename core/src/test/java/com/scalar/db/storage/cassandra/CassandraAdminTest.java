@@ -1,9 +1,13 @@
 package com.scalar.db.storage.cassandra;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create.Options;
@@ -27,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -92,7 +97,7 @@ public class CassandraAdminTest {
 
     // Act
     // Assert
-    Assertions.assertThatThrownBy(() -> cassandraAdmin.createNamespace(namespace, false, options))
+    Assertions.assertThatThrownBy(() -> cassandraAdmin.createNamespace(namespace, options))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -106,7 +111,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
-    cassandraAdmin.createNamespace(namespace, true, options);
+    cassandraAdmin.createNamespace(namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -114,7 +119,6 @@ public class CassandraAdminTest {
     replicationOptions.put("replication_factor", "3");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .ifNotExists()
             .with()
             .replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
@@ -131,7 +135,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
-    cassandraAdmin.createNamespace(namespace, true, options);
+    cassandraAdmin.createNamespace(namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -139,7 +143,6 @@ public class CassandraAdminTest {
     replicationOptions.put("dc1", "5");
     KeyspaceOptions query =
         SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .ifNotExists()
             .with()
             .replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
@@ -154,7 +157,7 @@ public class CassandraAdminTest {
     Map<String, String> options = new HashMap<>();
 
     // Act
-    cassandraAdmin.createNamespace(namespace, false, options);
+    cassandraAdmin.createNamespace(namespace, options);
 
     // Assert
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
@@ -189,7 +192,7 @@ public class CassandraAdminTest {
             .build();
     // Act
     cassandraAdmin.createTableInternal(
-        SAMPLE_PREFIX + namespace, table, tableMetadata, false, new HashMap<>());
+        SAMPLE_PREFIX + namespace, table, tableMetadata, new HashMap<>());
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -232,8 +235,7 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
 
     // Act
-    cassandraAdmin.createTableInternal(
-        SAMPLE_PREFIX + namespace, table, tableMetadata, false, options);
+    cassandraAdmin.createTableInternal(SAMPLE_PREFIX + namespace, table, tableMetadata, options);
 
     // Assert
     TableOptions<Options> createTableStatement =
@@ -336,5 +338,24 @@ public class CassandraAdminTest {
     String truncateTableStatement =
         QueryBuilder.truncate(SAMPLE_PREFIX + namespace, table).getQueryString();
     verify(cassandraSession).execute(truncateTableStatement);
+  }
+
+  @Test
+  public void namespaceExists_WithExistingNamespace_ShouldReturnTrue() throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    Cluster cluster = mock(Cluster.class);
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspace);
+
+    // Act
+    // Assert
+    Assert.assertTrue(cassandraAdmin.namespaceExists(namespace));
+
+    verify(metadata).getKeyspace(SAMPLE_PREFIX + namespace);
   }
 }

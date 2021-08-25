@@ -48,7 +48,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+  public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     // TODO To implement
     throw new UnsupportedOperationException("implement later");
@@ -56,11 +56,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     throw new UnsupportedOperationException("implement later");
   }

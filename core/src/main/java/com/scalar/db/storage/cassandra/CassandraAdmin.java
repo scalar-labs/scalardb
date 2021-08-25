@@ -56,25 +56,18 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void createTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     String fullKeyspace = fullKeyspace(namespace);
-    createTableInternal(fullKeyspace, table, metadata, ifNotExists, options);
+    createTableInternal(fullKeyspace, table, metadata, options);
     createSecondaryIndex(fullKeyspace, table, metadata.getSecondaryIndexNames());
   }
 
   @Override
-  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+  public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     CreateKeyspace query =
         SchemaBuilder.createKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
-    if (ifNotExists) {
-      query = query.ifNotExists();
-    }
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(NETWORK_STRATEGY)
@@ -162,7 +155,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
+          clusterManager
+              .getSession()
+              .getCluster()
+              .getMetadata()
+              .getKeyspace(fullKeyspace(namespace));
       return keyspace != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
@@ -175,16 +172,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createTableInternal(
-      String fullKeyspace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String fullKeyspace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     Create createTable = SchemaBuilder.createTable(fullKeyspace, table);
-    if (ifNotExists) {
-      createTable = createTable.ifNotExists();
-    }
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =

@@ -9,7 +9,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -55,7 +54,9 @@ public class TestEnv implements Closeable {
       throws ExecutionException {
     schemaList.add(schema);
     tableList.add(table);
-    jdbcAdmin.createTable(schema, table, metadata, false, new HashMap<>());
+    jdbcAdmin.createNamespace(schema, true);
+    jdbcAdmin.createTable(schema, table, metadata, false);
+    jdbcAdmin.createTable(schema, table, metadata, true);
   }
 
   public void deleteTableData() throws ExecutionException {
@@ -67,6 +68,11 @@ public class TestEnv implements Closeable {
   public void deleteTables() throws Exception {
     for (int i = 0; i < tableList.size(); i++) {
       jdbcAdmin.dropTable(schemaList.get(i), tableList.get(i));
+    }
+    for (String namespace : schemaList) {
+      if (jdbcAdmin.namespaceExists(namespace)) {
+        jdbcAdmin.dropNamespace(namespace);
+      }
     }
   }
 

@@ -17,6 +17,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
@@ -130,26 +131,29 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public void createNamespace(String namespace, boolean ifNotExists, Map<String, String> options)
+  public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    // TODO To implement
-    throw new UnsupportedOperationException("implement later");
+    String fullNamespace = enclose(getFullNamespaceName(schemaPrefix, namespace));
+    try (Connection connection = dataSource.getConnection()) {
+      if (rdbEngine == RdbEngine.ORACLE) {
+        execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
+        execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+      } else {
+        execute(connection, "CREATE SCHEMA " + fullNamespace);
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("creating the schema failed", e);
+    }
   }
 
   @Override
   public void createTable(
-      String namespace,
-      String table,
-      TableMetadata metadata,
-      boolean ifNotExists,
-      Map<String, String> options)
+      String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       try {
         connection.setAutoCommit(false);
         connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-
-        createSchemaIfNotExists(connection, namespace);
         createTableInternal(connection, namespace, table, metadata);
         createIndex(connection, namespace, table, metadata);
 
@@ -168,15 +172,27 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     dropTableInternal(namespace, table);
     metadataManager.deleteTableMetadata(namespace, table);
-    if (metadataManager.getTableNames(namespace).isEmpty()) {
-      dropSchema(namespace);
-    }
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    // TODO To implement
-    throw new UnsupportedOperationException("implement later");
+    String dropStatement;
+    if (rdbEngine == RdbEngine.ORACLE) {
+      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, namespace));
+    } else {
+      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, namespace));
+    }
+
+    try (Connection connection = dataSource.getConnection()) {
+      execute(connection, dropStatement);
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          String.format(
+              "error dropping the %s %s",
+              rdbEngine == RdbEngine.ORACLE ? "user" : "schema",
+              getFullNamespaceName(schemaPrefix, namespace)),
+          e);
+    }
   }
 
   @Override
@@ -203,14 +219,48 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    // TODO To implement
-    throw new UnsupportedOperationException("implement later");
+    try {
+      return metadataManager.getTableNames(namespace);
+    } catch (StorageRuntimeException e) {
+      throw new ExecutionException("retrieving the namespace table names failed", e);
+    }
   }
 
   @Override
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    // TODO To implement
-    throw new UnsupportedOperationException("implement later");
+    String namespaceExistsStatement = "";
+    switch (rdbEngine) {
+      case POSTGRESQL:
+      case MYSQL:
+        namespaceExistsStatement =
+            "SELECT 1 FROM "
+                + encloseFullTableName("information_schema", "schemata")
+                + " WHERE "
+                + enclose("schema_name")
+                + " = ?";
+        break;
+      case ORACLE:
+        namespaceExistsStatement =
+            "SELECT 1 FROM " + enclose("ALL_USERS") + " WHERE " + enclose("USERNAME") + " = ?";
+        break;
+      case SQL_SERVER:
+        namespaceExistsStatement =
+            "SELECT 1 FROM "
+                + encloseFullTableName("sys", "schemas")
+                + " WHERE "
+                + enclose("name")
+                + " = ?";
+        break;
+    }
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(namespaceExistsStatement)) {
+      preparedStatement.setString(1, getFullNamespaceName(schemaPrefix, namespace));
+      return preparedStatement.executeQuery().next();
+    } catch (SQLException e) {
+      throw new ExecutionException("checking if the namespace exists failed", e);
+    }
   }
 
   @Override
@@ -219,47 +269,6 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       dataSource.close();
     } catch (SQLException e) {
       LOGGER.error("failed to close the dataSource", e);
-    }
-  }
-
-  private void createSchemaIfNotExists(Connection connection, String schema) throws SQLException {
-    switch (rdbEngine) {
-      case MYSQL:
-      case POSTGRESQL:
-        execute(
-            connection,
-            "CREATE SCHEMA IF NOT EXISTS " + enclose(getFullNamespaceName(schemaPrefix, schema)));
-        break;
-      case SQL_SERVER:
-        try {
-          execute(
-              connection, "CREATE SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, schema)));
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the schema already exists
-          if (e.getErrorCode() != 2714) {
-            throw e;
-          }
-        }
-        break;
-      case ORACLE:
-        try {
-          execute(
-              connection,
-              "CREATE USER "
-                  + enclose(getFullNamespaceName(schemaPrefix, schema))
-                  + " IDENTIFIED BY \"oracle\"");
-        } catch (SQLException e) {
-          // Suppress the exception thrown when the user already exists
-          if (e.getErrorCode() != 1920) {
-            throw e;
-          }
-        }
-        execute(
-            connection,
-            "ALTER USER "
-                + enclose(getFullNamespaceName(schemaPrefix, schema))
-                + " quota unlimited on USERS");
-        break;
     }
   }
 
@@ -294,6 +303,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
                 .map(this::enclose)
                 .collect(Collectors.joining(","))
             + "))";
+
     execute(connection, createTableStatement);
   }
 
@@ -368,26 +378,6 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       throw new ExecutionException(
           "error dropping the table " + getFullTableName(schemaPrefix, schema, table), e);
-    }
-  }
-
-  private void dropSchema(String schema) throws ExecutionException {
-    String dropStatement;
-    if (rdbEngine == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, schema));
-    } else {
-      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, schema));
-    }
-
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, dropStatement);
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          String.format(
-              "error dropping the %s %s",
-              rdbEngine == RdbEngine.ORACLE ? "user" : "schema",
-              getFullNamespaceName(schemaPrefix, schema)),
-          e);
     }
   }
 }
