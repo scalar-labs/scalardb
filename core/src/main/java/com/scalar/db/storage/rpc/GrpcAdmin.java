@@ -62,7 +62,6 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    // TODO Update the request to support ifNotExists parameter
     execute(
         () ->
             stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)

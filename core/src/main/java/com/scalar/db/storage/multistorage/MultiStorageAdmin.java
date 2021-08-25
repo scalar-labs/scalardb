@@ -73,7 +73,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    getNamespaceAdmin(namespace).createNamespace(namespace, options);
+    throw new UnsupportedOperationException("implement later");
   }
 
   @Override
@@ -90,7 +90,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    getNamespaceAdmin(namespace).dropNamespace(namespace);
+    throw new UnsupportedOperationException("implement later");
   }
 
   @Override
@@ -105,12 +105,12 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    return getNamespaceAdmin(namespace).getNamespaceTableNames(namespace);
+    throw new UnsupportedOperationException("implement later");
   }
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    return getNamespaceAdmin(namespace).namespaceExists(namespace);
+    throw new UnsupportedOperationException("implement later");
   }
 
   private DistributedStorageAdmin getAdmin(String namespace, String table) {
@@ -119,11 +119,7 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
     if (admin != null) {
       return admin;
     }
-    return getNamespaceAdmin(namespace);
-  }
-
-  private DistributedStorageAdmin getNamespaceAdmin(String namespace) {
-    DistributedStorageAdmin admin = namespaceAdminMap.get(namespace);
+    admin = namespaceAdminMap.get(namespace);
     return admin != null ? admin : defaultAdmin;
   }
 
