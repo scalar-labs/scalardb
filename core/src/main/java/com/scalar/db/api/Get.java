@@ -83,15 +83,7 @@ public class Get extends Selection {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof Get)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+    return o instanceof Get;
   }
 
   @Override

@@ -12,9 +12,11 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class RecoveryHandler {
   static final long TRANSACTION_LIFETIME_MILLIS = 15000;
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
@@ -29,7 +31,7 @@ public class RecoveryHandler {
   // lazy recovery in read phase
   public void recover(Selection selection, TransactionResult result) {
     LOGGER.info("recovering for " + result.getId());
-    Optional<Coordinator.State> state = null;
+    Optional<Coordinator.State> state;
     try {
       state = coordinator.getState(result.getId());
     } catch (CoordinatorException e) {

@@ -16,7 +16,7 @@ enum CosmosErrorCode {
 
   private final int code;
 
-  private CosmosErrorCode(int code) {
+  CosmosErrorCode(int code) {
     this.code = code;
   }
 

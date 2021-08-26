@@ -5,12 +5,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A {@code Value} for a boolean data
  *
  * @author Hiroyuki Yamada
  */
+@Immutable
 public final class BooleanValue implements Value<Boolean> {
   private static final String ANONYMOUS = "";
   private final String name;

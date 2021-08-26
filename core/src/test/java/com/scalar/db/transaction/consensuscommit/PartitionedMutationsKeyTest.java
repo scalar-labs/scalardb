@@ -6,7 +6,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.io.Key;
 import org.junit.Test;
 
-/** */
 public class PartitionedMutationsKeyTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";

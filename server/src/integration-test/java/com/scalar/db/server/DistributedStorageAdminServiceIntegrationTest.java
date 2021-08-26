@@ -27,7 +27,7 @@ public class DistributedStorageAdminServiceIntegrationTest extends AdminIntegrat
   private static DistributedStorageAdmin admin;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     setUp(admin);
   }
 

@@ -26,7 +26,7 @@ public class Scan extends Selection {
   private boolean startInclusive;
   private Optional<Key> endClusteringKey;
   private boolean endInclusive;
-  private List<Ordering> orderings;
+  private final List<Ordering> orderings;
   private int limit;
 
   /**
@@ -252,8 +252,7 @@ public class Scan extends Selection {
             .add("endClusteringKey", endClusteringKey)
             .add("endInclusive", endInclusive)
             .add("orderings", orderings)
-            .add("limit", limit)
-            .toString();
+            .add("limit", limit);
   }
 
   /** An optional parameter of {@link Scan} command to specify ordering of returned results. */

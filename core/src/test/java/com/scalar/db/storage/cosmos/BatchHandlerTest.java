@@ -3,8 +3,9 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -34,6 +35,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -59,8 +61,10 @@ public class BatchHandlerTest {
   @Mock private CosmosStoredProcedure storedProcedure;
   @Mock private CosmosStoredProcedureResponse spResponse;
 
+  @Captor ArgumentCaptor<List<Object>> captor;
+
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new BatchHandler(client, metadataManager);
@@ -75,24 +79,19 @@ public class BatchHandlerTest {
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .withValue(ANY_NAME_4, ANY_INT_2);
-
-    return put;
+    return new Put(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME)
+        .withValue(ANY_NAME_3, ANY_INT_1)
+        .withValue(ANY_NAME_4, ANY_INT_2);
   }
 
   private Delete prepareDelete() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -100,7 +99,7 @@ public class BatchHandlerTest {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
-    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+    when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
     Put put1 = preparePut();
@@ -120,15 +119,11 @@ public class BatchHandlerTest {
     String query4 = cosmosMutation4.makeConditionalQuery();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2, delete1, delete2));
-            })
+    assertThatCode(() -> handler.handle(Arrays.asList(put1, put2, delete1, delete2)))
         .doesNotThrowAnyException();
 
     // Assert
     verify(cosmosScripts).getStoredProcedure("mutate.js");
-    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(4);
@@ -157,17 +152,14 @@ public class BatchHandlerTest {
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(storedProcedure)
-        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
     Put put = preparePut().withCondition(new PutIfNotExists());
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put, delete));
-            })
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))
         .isInstanceOf(NoMutationException.class);
   }
 
@@ -179,16 +171,13 @@ public class BatchHandlerTest {
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(storedProcedure)
-        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
 
     Put put1 = preparePut();
     Put put2 = preparePut();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(Arrays.asList(put1, put2));
-            })
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put1, put2)))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }

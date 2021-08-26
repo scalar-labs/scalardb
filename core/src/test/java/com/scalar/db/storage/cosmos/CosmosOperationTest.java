@@ -2,7 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +35,7 @@ public class CosmosOperationTest {
   @Mock private TableMetadata metadata;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
@@ -48,10 +48,7 @@ public class CosmosOperationTest {
     CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              cosmosOperation.checkArgument(Get.class);
-            })
+    assertThatThrownBy(() -> cosmosOperation.checkArgument(Get.class))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

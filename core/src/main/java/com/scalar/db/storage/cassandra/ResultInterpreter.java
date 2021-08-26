@@ -21,7 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class ResultInterpreter {
 
   private final TableMetadata metadata;

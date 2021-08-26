@@ -12,9 +12,9 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
 
-@Immutable
+@ThreadSafe
 public class StorageService implements DistributedStorage {
   private final DistributedStorage storage;
 

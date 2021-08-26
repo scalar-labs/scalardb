@@ -2,7 +2,7 @@ package com.scalar.db.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class BatchComposerTest {
   private BatchComposer spy;
   @Mock private BatchStatement batch;
@@ -35,7 +34,7 @@ public class BatchComposerTest {
   @Mock private Delete del;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     spy = Mockito.spy(new BatchComposer(batch, handlers));
@@ -49,11 +48,7 @@ public class BatchComposerTest {
     when(handlers.select()).thenReturn(select);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              spy.visit(get);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> spy.visit(get)).doesNotThrowAnyException();
 
     // Assert
     verify(handlers).select();
@@ -67,11 +62,7 @@ public class BatchComposerTest {
     when(handlers.select()).thenReturn(select);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              spy.visit(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> spy.visit(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(handlers).select();
@@ -84,11 +75,7 @@ public class BatchComposerTest {
     when(handlers.get(any(Operation.class))).thenReturn(insert);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              spy.visit(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> spy.visit(put)).doesNotThrowAnyException();
 
     // Assert
     verify(spy).composeWith(insert, put);
@@ -100,11 +87,7 @@ public class BatchComposerTest {
     when(handlers.get(any(Operation.class))).thenReturn(update);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              spy.visit(put);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> spy.visit(put)).doesNotThrowAnyException();
 
     // Assert
     verify(spy).composeWith(update, put);
@@ -116,11 +99,7 @@ public class BatchComposerTest {
     when(handlers.delete()).thenReturn(delete);
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              spy.visit(del);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> spy.visit(del)).doesNotThrowAnyException();
 
     // Assert
     verify(spy).composeWith(delete, del);
@@ -129,10 +108,7 @@ public class BatchComposerTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new BatchComposer(null, null);
-            })
+    assertThatThrownBy(() -> new BatchComposer(null, null))
         .isInstanceOf(NullPointerException.class);
   }
 }

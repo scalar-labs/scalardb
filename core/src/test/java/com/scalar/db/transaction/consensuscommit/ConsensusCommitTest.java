@@ -2,7 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -20,6 +20,7 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
@@ -59,7 +60,7 @@ public class ConsensusCommitTest {
   public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
     // Arrange
     TransactionResult result = mock(TransactionResult.class);
-    when(crud.get(get)).thenReturn(Optional.of((Result) result));
+    when(crud.get(get)).thenReturn(Optional.of(result));
 
     // Act Assert
     Optional<Result> actual = consensus.get(get);
@@ -76,14 +77,10 @@ public class ConsensusCommitTest {
     TransactionResult result = mock(TransactionResult.class);
     UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
     when(crud.get(get)).thenThrow(toThrow);
-    when(toThrow.getResults()).thenReturn(Arrays.asList(result));
+    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              consensus.get(get);
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+    assertThatThrownBy(() -> consensus.get(get)).isInstanceOf(UncommittedRecordException.class);
 
     // Assert
     verify(recovery).recover(get, result);
@@ -93,7 +90,7 @@ public class ConsensusCommitTest {
   public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
     // Arrange
     TransactionResult result = mock(TransactionResult.class);
-    List<Result> results = Arrays.asList(result);
+    List<Result> results = Collections.singletonList(result);
     when(crud.scan(scan)).thenReturn(results);
 
     // Act Assert

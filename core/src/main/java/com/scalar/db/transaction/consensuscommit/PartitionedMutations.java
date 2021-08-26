@@ -16,6 +16,7 @@ import javax.annotation.concurrent.Immutable;
 public class PartitionedMutations {
   private final ImmutableListMultimap<Key, Mutation> partitions;
 
+  @SafeVarargs
   public PartitionedMutations(Collection<? extends Mutation>... collections) {
     ImmutableListMultimap.Builder<Key, Mutation> builder = ImmutableListMultimap.builder();
     for (Collection<? extends Mutation> collection : collections) {

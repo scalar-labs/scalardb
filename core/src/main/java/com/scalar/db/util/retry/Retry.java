@@ -20,6 +20,8 @@ public final class Retry {
     E create(String message, @Nullable Throwable cause);
   }
 
+  private Retry() {}
+
   public static <T, E extends Throwable> T executeWithRetries(
       ThrowableSupplier<T, E> supplier, ExceptionFactory<E> exceptionFactory) throws E {
     int interval = RETRY_INITIAL_INTERVAL_MILLIS;

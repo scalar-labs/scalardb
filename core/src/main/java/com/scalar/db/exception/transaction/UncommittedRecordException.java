@@ -3,7 +3,7 @@ package com.scalar.db.exception.transaction;
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class UncommittedRecordException extends CrudConflictException {
@@ -15,7 +15,7 @@ public class UncommittedRecordException extends CrudConflictException {
 
   public UncommittedRecordException(TransactionResult result, String message, Throwable cause) {
     super(message, cause);
-    results = Arrays.asList(result);
+    results = Collections.singletonList(result);
   }
 
   public UncommittedRecordException(List<TransactionResult> results, String message) {
@@ -26,7 +26,7 @@ public class UncommittedRecordException extends CrudConflictException {
       List<TransactionResult> results, String message, Throwable cause) {
     super(message, cause);
     this.results = new ArrayList<>();
-    results.forEach(r -> this.results.add(r));
+    this.results.addAll(results);
   }
 
   public List<TransactionResult> getResults() {

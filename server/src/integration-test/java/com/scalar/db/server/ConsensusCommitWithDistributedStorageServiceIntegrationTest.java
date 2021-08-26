@@ -27,7 +27,6 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestB
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.RecoveryHandler;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
@@ -48,7 +47,7 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
   private static DistributedStorage originalStorage;
 
   @Before
-  public void setUp() throws SQLException {
+  public void setUp() {
     DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));

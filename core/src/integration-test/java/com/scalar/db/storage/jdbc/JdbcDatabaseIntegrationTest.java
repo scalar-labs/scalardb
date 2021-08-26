@@ -16,7 +16,7 @@ public class JdbcDatabaseIntegrationTest extends IntegrationTestBase {
   private static DistributedStorage storage;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     storage.with(NAMESPACE, TABLE);
     setUp(storage);
   }

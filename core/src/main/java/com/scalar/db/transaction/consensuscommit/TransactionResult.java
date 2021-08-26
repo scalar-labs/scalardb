@@ -66,10 +66,7 @@ public class TransactionResult implements Result {
       return false;
     }
     TransactionResult other = (TransactionResult) o;
-    if (this.values.equals(other.values)) {
-      return true;
-    }
-    return false;
+    return this.values.equals(other.values);
   }
 
   @Override
@@ -98,9 +95,6 @@ public class TransactionResult implements Result {
   }
 
   public boolean isCommitted() {
-    if (getState().equals(TransactionState.COMMITTED)) {
-      return true;
-    }
-    return false;
+    return getState().equals(TransactionState.COMMITTED);
   }
 }

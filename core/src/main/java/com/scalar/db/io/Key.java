@@ -57,7 +57,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
-   * Constructs a {@code Key} with a single {@link Value} as a integer type
+   * Constructs a {@code Key} with a single {@link Value} as an integer type
    *
    * @param name name of the {@code Value}
    * @param value content of the {@code Value}
@@ -172,6 +172,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     return helper.toString();
   }
 
+  @Nonnull
   @Override
   public Iterator<Value<?>> iterator() {
     return values.iterator();

@@ -57,7 +57,7 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     setUp(admin);
   }
 }

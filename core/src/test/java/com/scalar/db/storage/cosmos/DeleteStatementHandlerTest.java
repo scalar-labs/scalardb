@@ -3,9 +3,10 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -35,6 +36,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -54,13 +56,15 @@ public class DeleteStatementHandlerTest {
   @Mock private CosmosContainer container;
   @Mock private CosmosTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
-  @Mock private CosmosItemResponse response;
+  @Mock private CosmosItemResponse<Object> response;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;
   @Mock private CosmosStoredProcedureResponse spResponse;
 
+  @Captor ArgumentCaptor<List<Object>> captor;
+
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new DeleteStatementHandler(client, metadataManager);
@@ -79,11 +83,9 @@ public class DeleteStatementHandlerTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -95,11 +97,7 @@ public class DeleteStatementHandlerTest {
     Delete delete = prepareDelete();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     verify(container)
@@ -117,10 +115,7 @@ public class DeleteStatementHandlerTest {
     Delete delete = prepareDelete();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
+    assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -132,7 +127,7 @@ public class DeleteStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
-    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+    when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
@@ -144,15 +139,10 @@ public class DeleteStatementHandlerTest {
     String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     verify(cosmosScripts).getStoredProcedure("mutate.js");
-    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(1);
@@ -166,7 +156,7 @@ public class DeleteStatementHandlerTest {
     // Arrange
     when(container.getScripts()).thenReturn(cosmosScripts);
     when(cosmosScripts.getStoredProcedure(anyString())).thenReturn(storedProcedure);
-    when(storedProcedure.execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class)))
+    when(storedProcedure.execute(anyList(), any(CosmosStoredProcedureRequestOptions.class)))
         .thenReturn(spResponse);
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
@@ -174,15 +164,10 @@ public class DeleteStatementHandlerTest {
     String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(delete);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
 
     // Assert
     verify(cosmosScripts).getStoredProcedure("mutate.js");
-    ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
     verify(storedProcedure)
         .execute(captor.capture(), any(CosmosStoredProcedureRequestOptions.class));
     assertThat(captor.getValue().get(0)).isEqualTo(1);
@@ -199,17 +184,13 @@ public class DeleteStatementHandlerTest {
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(storedProcedure)
-        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
     when(toThrow.getSubStatusCode()).thenReturn(CosmosErrorCode.PRECONDITION_FAILED.get());
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
-        .isInstanceOf(NoMutationException.class);
+    assertThatThrownBy(() -> handler.handle(delete)).isInstanceOf(NoMutationException.class);
   }
 
   @Test
@@ -220,15 +201,12 @@ public class DeleteStatementHandlerTest {
     CosmosException toThrow = mock(CosmosException.class);
     doThrow(toThrow)
         .when(storedProcedure)
-        .execute(any(List.class), any(CosmosStoredProcedureRequestOptions.class));
+        .execute(anyList(), any(CosmosStoredProcedureRequestOptions.class));
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(delete);
-            })
+    assertThatThrownBy(() -> handler.handle(delete))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }

@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public abstract class MutateStatementHandler extends StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MutateStatementHandler.class);
-  private final String MUTATION_STORED_PROCEDURE = "mutate.js";
+  private static final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
   public MutateStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
     super(client, metadataManager);
@@ -29,9 +29,7 @@ public abstract class MutateStatementHandler extends StatementHandler {
   @Nonnull
   public List<Record> handle(Operation operation) throws ExecutionException {
     try {
-      List<Record> results = execute(operation);
-
-      return results;
+      return execute(operation);
     } catch (CosmosException e) {
       throwException(e);
     }
