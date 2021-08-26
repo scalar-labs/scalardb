@@ -62,6 +62,7 @@ public interface DistributedStorageAdmin {
   default void createNamespace(String namespace) throws ExecutionException {
     createNamespace(namespace, Collections.emptyMap());
   }
+
   /**
    * Creates a new table.
    *
@@ -119,6 +120,7 @@ public interface DistributedStorageAdmin {
     }
     createTable(namespace, table, metadata, Collections.emptyMap());
   }
+
   /**
    * Creates a new table.
    *
@@ -131,6 +133,7 @@ public interface DistributedStorageAdmin {
       throws ExecutionException {
     createTable(namespace, table, metadata, Collections.emptyMap());
   }
+
   /**
    * Drops the specified table.
    *
