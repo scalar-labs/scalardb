@@ -52,7 +52,7 @@ public class OperationCheckerTest {
   private OperationChecker operationChecker;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata

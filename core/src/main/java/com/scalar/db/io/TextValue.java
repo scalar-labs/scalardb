@@ -171,7 +171,7 @@ public final class TextValue implements Value<Optional<String>> {
   }
 
   @Override
-  public int compareTo(Value<Optional<String>> o) {
+  public int compareTo(@Nonnull Value<Optional<String>> o) {
     if (value.isPresent() && o.get().isPresent()) {
       return ComparisonChain.start()
           .compare(value.get(), o.get().get())

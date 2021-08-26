@@ -40,7 +40,7 @@ public class ResultImplTest {
   private Map<String, Value<?>> values;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     metadata =
         TableMetadata.newBuilder()
             .addColumn(ANY_NAME_1, DataType.TEXT)

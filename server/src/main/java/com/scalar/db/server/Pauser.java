@@ -37,10 +37,9 @@ public final class Pauser {
   }
 
   /**
-   * All of the gPRC endpoints that will be paused/unpaused need to call this method before
-   * processing.
+   * All the gPRC endpoints that will be paused/unpaused need to call this method before processing.
    *
-   * @return when it's paused, returns false. Otherwise returns true
+   * @return when it's paused, returns false. Otherwise, returns true
    */
   public boolean preProcess() {
     // To avoid the race condition, we need to increment "outstandingRequestCount" before
@@ -76,8 +75,7 @@ public final class Pauser {
   }
 
   /**
-   * All of the gPRC endpoints that will be paused/unpaused need to call this method after
-   * processing.
+   * All the gPRC endpoints that will be paused/unpaused need to call this method after processing.
    */
   public void postProcess() {
     outstandingRequestCount.decrement();

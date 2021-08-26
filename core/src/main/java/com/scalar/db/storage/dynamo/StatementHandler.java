@@ -41,7 +41,8 @@ public abstract class StatementHandler {
   public abstract List<Map<String, AttributeValue>> handle(Operation operation)
       throws ExecutionException;
 
-  protected void checkArgument(Operation actual, Class<? extends Operation>... expected) {
+  @SafeVarargs
+  protected final void checkArgument(Operation actual, Class<? extends Operation>... expected) {
     for (Class<? extends Operation> e : expected) {
       if (e.isInstance(actual)) {
         return;

@@ -2,13 +2,17 @@ package com.scalar.db.storage.rpc;
 
 import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class GrpcConfig extends DatabaseConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcConfig.class);
 

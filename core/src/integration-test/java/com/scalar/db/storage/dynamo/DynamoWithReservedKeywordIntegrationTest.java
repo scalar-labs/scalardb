@@ -67,7 +67,7 @@ public class DynamoWithReservedKeywordIntegrationTest {
   private static Dynamo dynamo;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     dynamo.with(NAMESPACE, TABLE);
   }
 

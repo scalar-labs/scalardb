@@ -26,9 +26,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class DistributedStorageService extends DistributedStorageGrpc.DistributedStorageImplBase {
   private static final Logger LOGGER = LoggerFactory.getLogger(DistributedStorageService.class);
   private static final String SERVICE_NAME = "distributed_storage";

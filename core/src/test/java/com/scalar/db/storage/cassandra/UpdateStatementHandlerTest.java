@@ -2,9 +2,9 @@ package com.scalar.db.storage.cassandra;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +27,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class UpdateStatementHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -48,7 +47,7 @@ public class UpdateStatementHandlerTest {
   @Mock private BoundStatement bound;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new UpdateStatementHandler(session);
@@ -56,24 +55,20 @@ public class UpdateStatementHandlerTest {
 
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Put put =
-        new Put(partitionKey)
-            .withValue(ANY_NAME_2, ANY_INT_1)
-            .withValue(ANY_NAME_3, ANY_INT_2)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return put;
+    return new Put(partitionKey)
+        .withValue(ANY_NAME_2, ANY_INT_1)
+        .withValue(ANY_NAME_3, ANY_INT_2)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   private Put preparePutWithClusteringKey() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return put;
+    return new Put(partitionKey, clusteringKey)
+        .withValue(ANY_NAME_3, ANY_INT_1)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   private void configureBehavior(String expected) {
@@ -382,16 +377,11 @@ public class UpdateStatementHandlerTest {
     verify(bound).setSerialConsistencyLevel(ConsistencyLevel.SERIAL);
   }
 
-  /** Unit testing for handle() method is covered in InsertStatementHandlerTest */
-
   /** Unit testing for checkArgument() method is covered in InsertStatementHandlerTest */
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new UpdateStatementHandler(null);
-            })
+    assertThatThrownBy(() -> new UpdateStatementHandler(null))
         .isInstanceOf(NullPointerException.class);
   }
 }

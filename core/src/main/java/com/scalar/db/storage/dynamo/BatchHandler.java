@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.concurrent.ThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CancellationReason;
@@ -29,7 +27,6 @@ import software.amazon.awssdk.services.dynamodb.model.Update;
  */
 @ThreadSafe
 public class BatchHandler {
-  static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
   private final DynamoDbClient client;
   private final DynamoTableMetadataManager metadataManager;
 

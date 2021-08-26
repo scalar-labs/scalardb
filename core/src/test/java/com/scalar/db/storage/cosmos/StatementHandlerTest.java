@@ -11,17 +11,14 @@ public class StatementHandlerTest {
   @Mock private CosmosTableMetadataManager metadataManager;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
   }
 
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new SelectStatementHandler(null, metadataManager);
-            })
+    assertThatThrownBy(() -> new SelectStatementHandler(null, metadataManager))
         .isInstanceOf(NullPointerException.class);
   }
 }

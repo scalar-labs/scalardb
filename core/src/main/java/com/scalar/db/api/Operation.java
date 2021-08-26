@@ -69,9 +69,7 @@ public abstract class Operation {
     }
 
     if (namespace.isPresent() && namespacePrefix.isPresent()) {
-      StringBuilder builder = new StringBuilder(namespacePrefix.get());
-      builder.append(namespace.get());
-      return Optional.of(builder.toString());
+      return Optional.of(namespacePrefix.get() + namespace.get());
     } else {
       return namespace;
     }

@@ -2,7 +2,7 @@ package com.scalar.db.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class ClusterManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -65,10 +64,7 @@ public class ClusterManagerTest {
     when(cluster.getMetadata()).thenThrow(toThrow);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
-            })
+    assertThatThrownBy(() -> manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME))
         .isInstanceOf(ConnectionException.class)
         .hasCause(toThrow);
   }

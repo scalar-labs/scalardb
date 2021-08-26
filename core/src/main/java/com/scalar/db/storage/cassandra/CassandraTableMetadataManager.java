@@ -19,7 +19,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class CassandraTableMetadataManager implements TableMetadataManager {
 
   private final Map<String, TableMetadata> tableMetadataMap;

@@ -49,10 +49,7 @@ public class DeleteIfExists implements MutationCondition {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof DeleteIfExists)) {
-      return false;
-    }
-    return true;
+    return o instanceof DeleteIfExists;
   }
 
   @Override

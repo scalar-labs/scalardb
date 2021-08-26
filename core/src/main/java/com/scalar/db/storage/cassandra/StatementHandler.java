@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 public abstract class StatementHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(StatementHandler.class);
   protected final Session session;
-  protected StatementCache cache;
+  protected final StatementCache cache;
 
   /**
    * Constructs a {@code StatementHandler} with the specified {@link Session} and a new {@link
@@ -138,6 +138,7 @@ public abstract class StatementHandler {
     }
   }
 
+  @SafeVarargs
   public static void checkArgument(Operation actual, Class<? extends Operation>... expected) {
     for (Class<? extends Operation> e : expected) {
       if (e.isInstance(actual)) {

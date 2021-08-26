@@ -8,7 +8,6 @@ import com.scalar.db.io.Value;
 import java.util.Optional;
 import org.junit.Test;
 
-/** */
 public class DeleteTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -78,11 +77,7 @@ public class DeleteTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new Delete(null);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Delete(null)).isInstanceOf(NullPointerException.class);
   }
 
   @Test
