@@ -47,7 +47,7 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
   private static DatabaseConfig config;
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() {
     DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));

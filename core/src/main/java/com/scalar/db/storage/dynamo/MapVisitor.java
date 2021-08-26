@@ -107,9 +107,9 @@ public class MapVisitor implements ValueVisitor {
     value
         .get()
         .ifPresent(
-            b -> {
-              values.put(
-                  value.getName(), AttributeValue.builder().b(SdkBytes.fromByteArray(b)).build());
-            });
+            b ->
+                values.put(
+                    value.getName(),
+                    AttributeValue.builder().b(SdkBytes.fromByteArray(b)).build()));
   }
 }

@@ -89,10 +89,9 @@ public class ConditionalMutator implements MutationConditionVisitor {
       preparedStatement.executeUpdate();
       isMutated = true;
     } catch (SQLException e) {
-      if (e.getSQLState().equals("23000") || e.getSQLState().equals("23505")) {
-        // The duplicate key error
-        // "23000" is for MySQL/Oracle/SQL Server and "23505" is for PostgreSQL
-      } else {
+      // ignore the duplicate key error
+      // "23000" is for MySQL/Oracle/SQL Server and "23505" is for PostgreSQL
+      if (!e.getSQLState().equals("23000") && !e.getSQLState().equals("23505")) {
         sqlException = e;
       }
     }

@@ -672,7 +672,7 @@ public class JdbcTableMetadataManagerTest {
 
   // Utility class used to mock ResultSet for getTableMetadata test
   static class GetColumnsResultSetMocker implements org.mockito.stubbing.Answer<Object> {
-    List<Row> rows;
+    final List<Row> rows;
     int row = -1;
 
     public GetColumnsResultSetMocker(List<Row> rows) {
@@ -720,7 +720,7 @@ public class JdbcTableMetadataManagerTest {
 
   // Utility class used to mock ResultSet for getTablesNames test
   static class GetTablesNamesResultSetMocker implements org.mockito.stubbing.Answer<Object> {
-    List<Row> rows;
+    final List<Row> rows;
     int row = -1;
 
     public GetTablesNamesResultSetMocker(List<Row> rows) {

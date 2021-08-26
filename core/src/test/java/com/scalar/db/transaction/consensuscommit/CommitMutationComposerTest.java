@@ -29,7 +29,6 @@ import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 
-/** */
 public class CommitMutationComposerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";

@@ -131,7 +131,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   }
 
   @Override
-  public int compareTo(Value<Optional<byte[]>> o) {
+  public int compareTo(@Nonnull Value<Optional<byte[]>> o) {
     if (value.isPresent() && o.get().isPresent()) {
       return ComparisonChain.start()
           .compare(value.get(), o.get().get(), UnsignedBytes.lexicographicalComparator())

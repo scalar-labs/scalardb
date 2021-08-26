@@ -50,7 +50,7 @@ public interface Value<T> extends Comparable<Value<T>> {
   }
 
   /**
-   * Returns the content of this {@code Value} as a integer type
+   * Returns the content of this {@code Value} as an integer type
    *
    * @return the content of this {@code Value}
    */

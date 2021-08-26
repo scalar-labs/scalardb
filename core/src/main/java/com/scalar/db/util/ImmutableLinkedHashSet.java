@@ -3,6 +3,7 @@ package com.scalar.db.util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import javax.annotation.Nonnull;
 
 @SuppressFBWarnings("UR_UNINIT_READ_CALLED_FROM_SUPER_CONSTRUCTOR")
 public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
@@ -35,7 +36,7 @@ public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
   }
 
   @Override
-  public boolean addAll(Collection<? extends E> coll) {
+  public boolean addAll(@Nonnull Collection<? extends E> coll) {
     if (!immutable) {
       return super.addAll(coll);
     }
@@ -51,7 +52,7 @@ public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
   }
 
   @Override
-  public boolean retainAll(Collection<?> coll) {
+  public boolean retainAll(@Nonnull Collection<?> coll) {
     if (!immutable) {
       return super.retainAll(coll);
     }

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -45,6 +46,7 @@ public class SelectStatementHandler extends StatementHandler {
     super(client, metadataManager);
   }
 
+  @Nonnull
   @Override
   public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
     checkArgument(operation, Get.class, Scan.class);

@@ -41,9 +41,7 @@ public abstract class StatementHandler {
   @Nonnull
   public List<Record> handle(Operation operation) throws ExecutionException {
     try {
-      List<Record> results = execute(operation);
-
-      return results;
+      return execute(operation);
     } catch (RuntimeException e) {
       LOGGER.error(e.getMessage());
       throw new ExecutionException(e.getMessage(), e);

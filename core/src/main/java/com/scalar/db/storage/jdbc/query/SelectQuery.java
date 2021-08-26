@@ -78,11 +78,11 @@ public interface SelectQuery extends Query {
                         .get()
                         .get()
                         .subList(0, startClusteringKey.get().size() - 1)));
-      } else if (endClusteringKey.isPresent()) {
-        commonClusteringKey =
-            Optional.of(
-                new Key(
-                    endClusteringKey.get().get().subList(0, endClusteringKey.get().size() - 1)));
+      } else {
+        endClusteringKey.ifPresent(
+            values ->
+                commonClusteringKey =
+                    Optional.of(new Key(values.get().subList(0, values.size() - 1))));
       }
 
       if (startClusteringKey.isPresent()) {

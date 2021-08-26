@@ -1,7 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionalExpression;
@@ -39,7 +39,7 @@ public class CosmosMutationTest {
   @Mock private TableMetadata metadata;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
@@ -50,24 +50,19 @@ public class CosmosMutationTest {
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Put put =
-        new Put(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_INT_1)
-            .withValue(ANY_NAME_4, ANY_INT_2);
-
-    return put;
+    return new Put(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME)
+        .withValue(ANY_NAME_3, ANY_INT_1)
+        .withValue(ANY_NAME_4, ANY_INT_2);
   }
 
   private Delete prepareDelete() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test

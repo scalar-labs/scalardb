@@ -19,12 +19,12 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public final class ValueBinder implements ValueVisitor {
-  private Consumer consumer;
+  private Consumer<Object> consumer;
 
   /** Constructs {@code ValueBinder} */
   public ValueBinder() {}
 
-  public void set(Consumer consumer) {
+  public void set(Consumer<Object> consumer) {
     this.consumer = consumer;
   }
 

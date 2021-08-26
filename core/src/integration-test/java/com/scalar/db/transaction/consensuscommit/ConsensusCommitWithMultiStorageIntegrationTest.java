@@ -25,7 +25,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.After;
@@ -49,7 +48,7 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
   private static DistributedStorage originalStorage;
 
   @Before
-  public void setUp() throws SQLException {
+  public void setUp() {
     DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));

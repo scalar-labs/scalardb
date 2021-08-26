@@ -44,7 +44,7 @@ public class QueryBuilderTest {
   }
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata

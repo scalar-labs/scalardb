@@ -4,7 +4,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.ScannerIterator;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -76,7 +75,7 @@ public class ScannerImpl implements Scanner {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     try {
       resultSet.close();
     } catch (SQLException e) {

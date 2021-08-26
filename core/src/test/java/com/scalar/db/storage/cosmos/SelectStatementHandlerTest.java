@@ -3,9 +3,9 @@ package com.scalar.db.storage.cosmos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,7 +25,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,7 +59,7 @@ public class SelectStatementHandlerTest {
   @Mock private CosmosPagedIterable<Record> responseIterable;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new SelectStatementHandler(client, metadataManager);
@@ -101,11 +100,7 @@ public class SelectStatementHandlerTest {
     Get get = prepareGet();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(get);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
     verify(container).readItem(id, cosmosPartitionKey, Record.class);
@@ -117,18 +112,14 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
         "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(get);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -163,10 +154,7 @@ public class SelectStatementHandlerTest {
     Get get = prepareGet();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(get);
-            })
+    assertThatThrownBy(() -> handler.handle(get))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -177,17 +165,13 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan = prepareScan();
     String query = "select * from Record r where r.concatenatedPartitionKey = '" + ANY_TEXT_1 + "'";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -199,7 +183,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
@@ -207,11 +191,7 @@ public class SelectStatementHandlerTest {
         "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -228,10 +208,7 @@ public class SelectStatementHandlerTest {
     Scan scan = prepareScan();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(scan);
-            })
+    assertThatThrownBy(() -> handler.handle(scan))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -242,7 +219,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan =
         prepareScan()
@@ -263,11 +240,7 @@ public class SelectStatementHandlerTest {
             + "')";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -279,7 +252,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan =
         prepareScan()
@@ -316,11 +289,7 @@ public class SelectStatementHandlerTest {
             + "')";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -332,7 +301,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan =
         prepareScan()
@@ -353,11 +322,7 @@ public class SelectStatementHandlerTest {
             + "')";
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -369,7 +334,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan =
         prepareScan()
@@ -390,11 +355,7 @@ public class SelectStatementHandlerTest {
             + ANY_LIMIT;
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
@@ -406,7 +367,7 @@ public class SelectStatementHandlerTest {
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
-    when(responseIterable.iterator()).thenReturn(Arrays.asList(expected).iterator());
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan =
         prepareScan()
@@ -430,11 +391,7 @@ public class SelectStatementHandlerTest {
             + ANY_LIMIT;
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));

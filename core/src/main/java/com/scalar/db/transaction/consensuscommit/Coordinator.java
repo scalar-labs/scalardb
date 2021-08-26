@@ -20,12 +20,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Immutable
+@ThreadSafe
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
@@ -62,7 +61,7 @@ public class Coordinator {
         throw new CoordinatorException("can't get coordinator state.");
       }
       try {
-        return storage.get(get).map(r -> new Coordinator.State(r));
+        return storage.get(get).map(State::new);
       } catch (ExecutionException e) {
         LOGGER.warn("can't get coordinator state.", e);
       }
@@ -81,12 +80,7 @@ public class Coordinator {
             .forNamespace(NAMESPACE)
             .forTable(TABLE);
 
-    state
-        .getMetadata()
-        .ifPresent(
-            m -> {
-              put.withValue(Attribute.METADATA, m);
-            });
+    state.getMetadata().ifPresent(m -> put.withValue(Attribute.METADATA, m));
     return put;
   }
 
@@ -149,7 +143,6 @@ public class Coordinator {
       return state;
     }
 
-    @Nonnull
     public long getCreatedAt() {
       return createdAt;
     }
