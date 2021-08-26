@@ -7,39 +7,42 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import utils.SchemaParser;
+import schema.SchemaParser;
 
 @Command(name = "--cassandra", description = "Using Cassandra DB")
 public class CassandraCommand implements Callable<Integer> {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
+
   @Option(names = {"-h", "--host"}, description = "Cassandra host IP", required = true)
-  String cassandraIP;
+  String hostIP;
 
   @Option(names = {"-P", "--port"}, description = "Cassandra Port", defaultValue = "9042")
-  String cassandraPort;
+  String port;
 
   @Option(names = {"-u", "--user"}, description = "Cassandra user", defaultValue = "cassandra")
-  String cassandraUser;
+  String user;
 
   @Option(names = {"-p",
       "--password"}, description = "Cassandra password", defaultValue = "cassandra")
-  String cassandraPw;
+  String password;
 
   @Option(
       names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
-  CassandraNetStrategy cassandraNetStrategy;
+  ReplicationStrategy replicationStrategy;
 
   @Option(names = {"-c",
       "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  CassandraCompactStrategy cassandraCompactStrategy;
+  CompactStrategy compactStrategy;
 
   @Option(names = {"-R", "--replication-factor"}, description = "Cassandra replication factor")
-  String cassandraReplicaFactor;
+  String replicaFactor;
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -55,46 +58,45 @@ public class CassandraCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-
-    Logger.getGlobal().info("Schema path: " + schemaFile);
+    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty("scalar.db.contact_points", cassandraIP);
-    props.setProperty("scalar.db.contact_port", cassandraPort);
-    props.setProperty("scalar.db.username", cassandraUser);
-    props.setProperty("scalar.db.password", cassandraPw);
+    props.setProperty("scalar.db.contact_points", hostIP);
+    props.setProperty("scalar.db.contact_port", port);
+    props.setProperty("scalar.db.username", user);
+    props.setProperty("scalar.db.password", password);
     props.setProperty("scalar.db.storage", "cassandra");
 
-    Map<String, String> metaOptions = new HashMap<String, String>();
-    if (cassandraNetStrategy != null) {
-      metaOptions.put("network-strategy", cassandraNetStrategy.name());
+    Map<String, String> metaOptions = new HashMap<>();
+    if (replicationStrategy != null) {
+      metaOptions.put("network-strategy", replicationStrategy.name());
     }
-    if (cassandraCompactStrategy != null) {
-      metaOptions.put("compaction-strategy", cassandraCompactStrategy.name());
+    if (compactStrategy != null) {
+      metaOptions.put("compaction-strategy", compactStrategy.name());
     }
-    if (cassandraReplicaFactor != null) {
-      metaOptions.put("replication-factor", cassandraReplicaFactor);
+    if (replicaFactor != null) {
+      metaOptions.put("replication-factor", replicaFactor);
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), metaOptions);
+    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {
-      operator.deleteTables(schemaMap.getTables());
+      operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaMap.hasTransactionTable(), schemaMap.getTables());
+      operator.createTables(schemaParser.getTables());
     }
     return 0;
   }
 
-  enum CassandraCompactStrategy {
+  enum CompactStrategy {
     STCS,
     LCS,
     TWCS
   }
 
-  enum CassandraNetStrategy {
+  enum ReplicationStrategy {
     SimpleStrategy,
     NetworkTopologyStrategy
   }

@@ -1,5 +1,6 @@
-package utils;
+package schema;
 
+import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -9,35 +10,31 @@ import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@Immutable
 public class SchemaParser {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaParser.class);
   List<Table> tableList;
-  boolean hasTransactionTable = false;
 
   public SchemaParser(String jsonFilePath, Map<String, String> metaOptions) throws Exception {
-    tableList = new LinkedList<Table>();
+    tableList = new LinkedList<>();
     Reader reader = Files.newBufferedReader(Paths.get(jsonFilePath));
     JsonObject schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
 
-    for (Map.Entry<String, JsonElement> table : schemaJson.entrySet()) {
-      Logger.getGlobal().log(Level.FINE, "table full name: " + table.getKey());
-      Table t = new Table(table.getKey(), table.getValue().getAsJsonObject(), metaOptions);
-      tableList.add(t);
-      if (t.isTransactionTable()) {
-        hasTransactionTable = true;
-      }
-    }
+    tableList = schemaJson.entrySet().stream().map(
+        table -> new Table(table.getKey(), table.getValue().getAsJsonObject(), metaOptions))
+        .collect(
+            Collectors.toList());
+
     reader.close();
   }
 
   public List<Table> getTables() {
-    return tableList;
-  }
-
-  public boolean hasTransactionTable() {
-    return hasTransactionTable;
+    return ImmutableList.copyOf(tableList);
   }
 }

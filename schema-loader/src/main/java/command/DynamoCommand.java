@@ -7,14 +7,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import utils.SchemaParser;
+import schema.SchemaParser;
 
 @Command(name = "--dynamo", description = "Using Dynamo DB")
 public class DynamoCommand implements Callable<Integer> {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
   @Option(names = {"-u", "--user"}, description = "AWS access key ID", required = true)
   String awsKeyId;
 
@@ -25,16 +27,16 @@ public class DynamoCommand implements Callable<Integer> {
   String awsRegion;
 
   @Option(names = {"-r", "--ru"}, description = "Base resource unit")
-  String dynamoRU;
+  String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Dynamo DB")
-  Boolean dynamoNoScaling;
+  Boolean noScaling;
 
   @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
-  Boolean dynamoNoBackup;
+  Boolean noBackup;
 
   @Option(names = "--endpoint-override", description = "Endpoint with which the Dynamo DB SDK should communicate")
-  String dynamoEndpointOverride;
+  String endpointOverride;
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -51,7 +53,7 @@ public class DynamoCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
 
-    Logger.getGlobal().info("Schema path: " + schemaFile.toString());
+    LOGGER.info("Schema path: " + schemaFile.toString());
 
     Properties props = new Properties();
     props.setProperty("scalar.db.contact_points", awsRegion);
@@ -59,28 +61,28 @@ public class DynamoCommand implements Callable<Integer> {
     props.setProperty("scalar.db.password", awsSecKey);
     props.setProperty("scalar.db.storage", "dynamo");
 
-    Map<String, String> metaOptions = new HashMap<String, String>();
-    if (dynamoRU != null) {
-      metaOptions.put("ru", dynamoRU);
+    Map<String, String> metaOptions = new HashMap<>();
+    if (ru != null) {
+      metaOptions.put("ru", ru);
     }
-    if (dynamoNoScaling != null) {
-      metaOptions.put("no-scaling", dynamoNoScaling.toString());
+    if (noScaling != null) {
+      metaOptions.put("no-scaling", noScaling.toString());
     }
-    if (dynamoNoBackup != null) {
-      metaOptions.put("no-backup", dynamoNoBackup.toString());
+    if (noBackup != null) {
+      metaOptions.put("no-backup", noBackup.toString());
     }
-    if (dynamoEndpointOverride != null) {
-      props.setProperty("scalar.db.dynamo.endpoint-override", dynamoEndpointOverride);
+    if (endpointOverride != null) {
+      props.setProperty("scalar.db.dynamo.endpoint-override", endpointOverride);
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), metaOptions);
+    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {
-      operator.deleteTables(schemaMap.getTables());
+      operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaMap.hasTransactionTable(), schemaMap.getTables());
+      operator.createTables(schemaParser.getTables());
     }
     return 0;
   }

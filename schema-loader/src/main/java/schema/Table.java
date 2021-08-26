@@ -1,4 +1,4 @@
-package utils;
+package schema;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -13,27 +13,20 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Table {
 
-  protected String namespace;
-  protected String tableName;
-  protected TableMetadata tableMetadata;
-  protected Map<String, String> options;
-  protected boolean isTransactionTable = false;
-  protected Set<String> traveledKeys;
+  private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
   private static final String PARTITION_KEY = "partition-key";
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
-
   private static final String TRANSACTION_COL_PREFIX = "before_";
-
-  private static final Map<String, DataType> dtypeMap =
+  private static final Map<String, DataType> dataTypeMap =
       new HashMap<String, DataType>() {
         {
           put("BOOLEAN", DataType.BOOLEAN);
@@ -45,7 +38,6 @@ public class Table {
           put("BLOB", DataType.BLOB);
         }
       };
-
   private static final Map<String, DataType> transactionMetadataColumns =
       new HashMap<String, DataType>() {
         {
@@ -56,7 +48,6 @@ public class Table {
           put(Attribute.VERSION, DataType.INT);
         }
       };
-
   private static final Map<String, Order> orderMap =
       new HashMap<String, Order>() {
         {
@@ -64,10 +55,16 @@ public class Table {
           put("DESC", Order.DESC);
         }
       };
+  private String namespace;
+  private String tableName;
+  private TableMetadata tableMetadata;
+  private Map<String, String> options;
+  private boolean isTransactionTable = false;
+  private Set<String> traveledKeys;
 
   public Table(String tableFullName, JsonObject tableDefinition, Map<String, String> metaOptions)
       throws RuntimeException {
-    traveledKeys = new HashSet<String>();
+    traveledKeys = new HashSet<>();
 
     String[] fullName = tableFullName.split("\\.");
     if (fullName.length < 2) {
@@ -88,34 +85,34 @@ public class Table {
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
-    Set<String> partitionKeySet = new HashSet<String>();
-    for (JsonElement pKey : partitionKeys) {
-      partitionKeySet.add(pKey.getAsString());
-      tableBuilder.addPartitionKey(pKey.getAsString());
+    Set<String> partitionKeySet = new HashSet<>();
+    for (JsonElement partitionKey : partitionKeys) {
+      partitionKeySet.add(partitionKey.getAsString());
+      tableBuilder.addPartitionKey(partitionKey.getAsString());
     }
 
     // Add clustering keys
-    Set<String> clusteringKeySet = new HashSet<String>();
+    Set<String> clusteringKeySet = new HashSet<>();
     if (tableDefinition.keySet().contains(CLUSTERING_KEY)) {
       JsonArray clusteringKeys = tableDefinition.get(CLUSTERING_KEY).getAsJsonArray();
       traveledKeys.add(CLUSTERING_KEY);
-      for (JsonElement cKeyRaw : clusteringKeys) {
-        String cKey = "";
+      for (JsonElement clusteringKeyRaw : clusteringKeys) {
+        String clusteringKey = "";
         String oder = "ASC";
-        String[] cKeyFull = cKeyRaw.getAsString().split(" ");
-        if (cKeyFull.length < 2) {
-          cKey = cKeyFull[0];
-          tableBuilder.addClusteringKey(cKey);
-        } else if (cKeyFull.length == 2
-            && (cKeyFull[1].toUpperCase().equals("ASC")
-            || cKeyFull[1].toUpperCase().equals("DESC"))) {
-          cKey = cKeyFull[0];
-          oder = cKeyFull[1];
-          tableBuilder.addClusteringKey(cKey, orderMap.get(oder.toUpperCase()));
+        String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split(" ");
+        if (clusteringKeyFull.length < 2) {
+          clusteringKey = clusteringKeyFull[0];
+          tableBuilder.addClusteringKey(clusteringKey);
+        } else if (clusteringKeyFull.length == 2
+            && (clusteringKeyFull[1].toUpperCase().equals("ASC")
+            || clusteringKeyFull[1].toUpperCase().equals("DESC"))) {
+          clusteringKey = clusteringKeyFull[0];
+          oder = clusteringKeyFull[1];
+          tableBuilder.addClusteringKey(clusteringKey, orderMap.get(oder.toUpperCase()));
         } else {
           throw new RuntimeException("Invalid clustering keys");
         }
-        clusteringKeySet.add(cKey);
+        clusteringKeySet.add(clusteringKey);
       }
     }
 
@@ -123,7 +120,7 @@ public class Table {
     if (tableDefinition.keySet().contains(TRANSACTION)) {
       transaction = tableDefinition.get(TRANSACTION).getAsBoolean();
       traveledKeys.add(TRANSACTION);
-      Logger.getGlobal().log(Level.FINE, "transaction: " + transaction);
+      LOGGER.debug("transaction: " + transaction);
     }
     // Add transaction metadata columns
     if (transaction) {
@@ -140,17 +137,17 @@ public class Table {
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
-    for (Entry<String, JsonElement> col : columns.entrySet()) {
-      String colName = col.getKey();
-      DataType colDtype = dtypeMap.get(col.getValue().getAsString().toUpperCase());
-      if (colDtype == null) {
-        throw new RuntimeException("Invalid column type for column " + colName);
+    for (Entry<String, JsonElement> column : columns.entrySet()) {
+      String columnName = column.getKey();
+      DataType columnDataType = dataTypeMap.get(column.getValue().getAsString().toUpperCase());
+      if (columnDataType == null) {
+        throw new RuntimeException("Invalid column type for column " + columnName);
       }
-      tableBuilder.addColumn(colName, colDtype);
+      tableBuilder.addColumn(columnName, columnDataType);
       if (transaction
-          && !partitionKeySet.contains(colName)
-          && !clusteringKeySet.contains(colName)) {
-        tableBuilder.addColumn(TRANSACTION_COL_PREFIX + colName, colDtype);
+          && !partitionKeySet.contains(columnName)
+          && !clusteringKeySet.contains(columnName)) {
+        tableBuilder.addColumn(TRANSACTION_COL_PREFIX + columnName, columnDataType);
       }
     }
 
@@ -168,10 +165,10 @@ public class Table {
 
   protected Map<String, String> buildOptions(
       JsonObject tableDefinition, Map<String, String> metaOptions) {
-    Map<String, String> options = new HashMap<String, String>(metaOptions);
-    for (Map.Entry<String, ?> opt : tableDefinition.entrySet()) {
-      if (!traveledKeys.contains(opt.getKey())) {
-        options.put(opt.getKey(), opt.getValue().toString());
+    Map<String, String> options = new HashMap<>(metaOptions);
+    for (Map.Entry<String, ?> option : tableDefinition.entrySet()) {
+      if (!traveledKeys.contains(option.getKey())) {
+        options.put(option.getKey(), option.getValue().toString());
       }
     }
     return options;

@@ -7,20 +7,44 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.AdminService;
 import com.scalar.db.service.StorageModule;
 import java.util.List;
-import java.util.logging.Logger;
-import utils.CoordinatorSchema;
-import utils.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import schema.CoordinatorSchema;
+import schema.Table;
 
 public class SchemaOperator {
 
-  protected AdminService service;
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOperator.class);
+
+  private AdminService service;
 
   public SchemaOperator(DatabaseConfig dbConfig) {
     Injector injector = Guice.createInjector(new StorageModule(dbConfig));
     service = injector.getInstance(AdminService.class);
   }
 
-  public void createTables(boolean hasTransactionTable, List<Table> tableList) {
+  public void createTables(List<Table> tableList) {
+    boolean hasTransactionTable = false;
+
+
+    for (Table table : tableList) {
+      if (table.isTransactionTable()) {
+        hasTransactionTable = true;
+      }
+      try {
+        service.createTable(
+            table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
+        LOGGER.info(
+            "Create table "
+                + table.getTable()
+                + " in namespace "
+                + table.getNamespace()
+                + " successfully.");
+      } catch (ExecutionException e) {
+        LOGGER.warn("Created table " + table.getTable() + " failed. " + e.getCause());
+      }
+    }
+
     if (hasTransactionTable) {
       CoordinatorSchema coordinatorSchema = new CoordinatorSchema();
       try {
@@ -29,27 +53,9 @@ public class SchemaOperator {
             coordinatorSchema.getTable(),
             coordinatorSchema.getTableMetadata(),
             null);
-        Logger.getGlobal().info("Created coordinator schema.");
+        LOGGER.info("Created coordinator schema.");
       } catch (ExecutionException e) {
-        Logger.getGlobal()
-            .warning("Ignored coordinator schema creation. " + e.getCause().getMessage());
-      }
-    }
-
-    for (Table table : tableList) {
-      try {
-        service.createTable(
-            table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
-        Logger.getGlobal()
-            .info(
-                "Create table "
-                    + table.getTable()
-                    + " in namespace "
-                    + table.getNamespace()
-                    + " successfully.");
-      } catch (ExecutionException e) {
-        Logger.getGlobal()
-            .warning("Created table " + table.getTable() + " failed. " + e.getCause());
+        LOGGER.warn("Ignored coordinator schema creation. " + e.getCause().getMessage());
       }
     }
   }
@@ -58,15 +64,14 @@ public class SchemaOperator {
     for (Table table : tableList) {
       try {
         service.dropTable(table.getNamespace(), table.getTable());
-        Logger.getGlobal()
-            .info(
-                "Deleted table "
-                    + table.getTable()
-                    + " in namespace "
-                    + table.getNamespace()
-                    + " successfully.");
+        LOGGER.info(
+            "Deleted table "
+                + table.getTable()
+                + " in namespace "
+                + table.getNamespace()
+                + " successfully.");
       } catch (ExecutionException e) {
-        Logger.getGlobal().warning("Delete table " + table.getTable() + " failed. " + e.getCause());
+        LOGGER.warn("Delete table " + table.getTable() + " failed. " + e.getCause());
       }
     }
   }

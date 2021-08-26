@@ -1,4 +1,4 @@
-package utils;
+package schema;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TableMetadata.Builder;
@@ -10,10 +10,7 @@ import java.util.Map;
 
 public class CoordinatorSchema {
 
-  private TableMetadata tableMetadata;
-
   private static final String PARTITION_KEY = "tx_id";
-
   private static final Map<String, DataType> columns =
       new HashMap<String, DataType>() {
         {
@@ -22,6 +19,7 @@ public class CoordinatorSchema {
           put(Attribute.CREATED_AT, DataType.BIGINT);
         }
       };
+  private TableMetadata tableMetadata;
 
   public CoordinatorSchema() {
     Builder tableBuilder = TableMetadata.newBuilder();

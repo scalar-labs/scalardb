@@ -1,22 +1,26 @@
 package command;
 
 import com.scalar.db.config.DatabaseConfig;
-import command.CassandraCommand.CassandraCompactStrategy;
-import command.CassandraCommand.CassandraNetStrategy;
+import command.CassandraCommand.CompactStrategy;
+import command.CassandraCommand.ReplicationStrategy;
 import core.SchemaOperator;
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import utils.SchemaParser;
+import schema.SchemaParser;
 
 @Command(name = "--config", description = "Using config file for Scalar DB")
 public class ConfigFileBasedCommand implements Callable<Integer> {
+
+  private static final Logger LOGGER = LoggerFactory
+      .getLogger(ConfigFileBasedCommand.class);
 
   @Parameters(index = "0", description = "Path to config file of Scalar DB")
   Path configPath;
@@ -25,14 +29,14 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
-  CassandraNetStrategy cassandraNetStrategy;
+  ReplicationStrategy replicationStrategy;
 
   @Option(names = {"-c",
       "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  CassandraCompactStrategy cassandraCompactStrategy;
+  CompactStrategy compactStrategy;
 
   @Option(names = {"-R", "--replication-factor"}, description = "Cassandra replication factor")
-  String cassandraReplicaFactor;
+  String replicaFactor;
 
   @Option(names = {"-r",
       "--ru"}, description = "Base resource unit (supported in Dynamo DB, Cosmos DB)")
@@ -59,18 +63,18 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
 
-    Logger.getGlobal().info("Config path: " + configPath);
-    Logger.getGlobal().info("Schema path: " + schemaFile);
+    LOGGER.info("Config path: " + configPath);
+    LOGGER.info("Schema path: " + schemaFile);
 
-    Map<String, String> metaOptions = new HashMap<String, String>();
-    if (cassandraNetStrategy != null) {
-      metaOptions.put("network-strategy", cassandraNetStrategy.name());
+    Map<String, String> metaOptions = new HashMap<>();
+    if (replicationStrategy != null) {
+      metaOptions.put("network-strategy", replicationStrategy.name());
     }
-    if (cassandraCompactStrategy != null) {
-      metaOptions.put("compaction-strategy", cassandraCompactStrategy.name());
+    if (compactStrategy != null) {
+      metaOptions.put("compaction-strategy", compactStrategy.name());
     }
-    if (cassandraReplicaFactor != null) {
-      metaOptions.put("replication-factor", cassandraReplicaFactor);
+    if (replicaFactor != null) {
+      metaOptions.put("replication-factor", replicaFactor);
     }
     if (ru != null) {
       metaOptions.put("ru", ru);
@@ -84,12 +88,12 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
     DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), metaOptions);
+    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {
-      operator.deleteTables(schemaMap.getTables());
+      operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaMap.hasTransactionTable(), schemaMap.getTables());
+      operator.createTables(schemaParser.getTables());
     }
     return 0;
   }

@@ -6,22 +6,25 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import utils.SchemaParser;
+import schema.SchemaParser;
 
 @Command(name = "--jdbc", description = "Using JDBC type DB")
 public class JdbcCommand implements Callable<Integer> {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
+
   @Option(names = {"-j", "--jdbc-url"}, description = "JDBC URL", required = true)
-  String jdbcURL;
+  String url;
 
   @Option(names = {"-u", "--user"}, description = "JDBC user", required = true)
-  String jdbcUser;
+  String user;
 
   @Option(names = {"-p", "--password"}, description = "JDBC password", required = true)
-  String jdbcPw;
+  String password;
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -38,22 +41,22 @@ public class JdbcCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
 
-    Logger.getGlobal().info("Schema path: " + schemaFile);
+    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty("scalar.db.contact_points", jdbcURL);
-    props.setProperty("scalar.db.username", jdbcUser);
-    props.setProperty("scalar.db.password", jdbcPw);
+    props.setProperty("scalar.db.contact_points", url);
+    props.setProperty("scalar.db.username", user);
+    props.setProperty("scalar.db.password", password);
     props.setProperty("scalar.db.storage", "jdbc");
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);
-    SchemaParser schemaMap = new SchemaParser(schemaFile.toString(), new HashMap<String, String>());
+    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), new HashMap<>());
 
     if (deleteTables) {
-      operator.deleteTables(schemaMap.getTables());
+      operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaMap.hasTransactionTable(), schemaMap.getTables());
+      operator.createTables(schemaParser.getTables());
     }
 
     return 0;
