@@ -50,7 +50,6 @@ import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -100,8 +99,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
     admin.createNamespace(NAMESPACE);
-    admin.createTable(NAMESPACE, TABLE_1, tableMetadata, new HashMap<>());
-    admin.createTable(NAMESPACE, TABLE_2, tableMetadata, new HashMap<>());
+    admin.createTable(NAMESPACE, TABLE_1, tableMetadata);
+    admin.createTable(NAMESPACE, TABLE_2, tableMetadata);
 
     TableMetadata coordinatorTableMetadata =
         TableMetadata.newBuilder()
