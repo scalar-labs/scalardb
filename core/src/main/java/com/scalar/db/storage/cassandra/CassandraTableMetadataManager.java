@@ -132,17 +132,21 @@ public class CassandraTableMetadataManager implements TableMetadataManager {
 
   @Override
   public Set<String> getTableNames(String namespace) {
-    KeyspaceMetadata keyspace =
-        clusterManager
-            .getSession()
-            .getCluster()
-            .getMetadata()
-            .getKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
-    if (keyspace == null) {
-      return Collections.emptySet();
+    try {
+      KeyspaceMetadata keyspace =
+          clusterManager
+              .getSession()
+              .getCluster()
+              .getMetadata()
+              .getKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
+      if (keyspace == null) {
+        return Collections.emptySet();
+      }
+      return keyspace.getTables().stream()
+          .map(com.datastax.driver.core.TableMetadata::getName)
+          .collect(Collectors.toSet());
+    } catch (RuntimeException e) {
+      throw new StorageRuntimeException("getting the table names failed", e);
     }
-    return keyspace.getTables().stream()
-        .map(com.datastax.driver.core.TableMetadata::getName)
-        .collect(Collectors.toSet());
   }
 }

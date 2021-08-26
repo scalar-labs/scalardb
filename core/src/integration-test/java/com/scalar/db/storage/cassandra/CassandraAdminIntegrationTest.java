@@ -6,7 +6,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.AdminIntegrationTestBase;
-import java.util.HashMap;
 import java.util.Properties;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -47,12 +46,14 @@ public class CassandraAdminIntegrationTest extends AdminIntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
 
     admin = new CassandraAdmin(config);
-    admin.createTable(NAMESPACE, TABLE, TABLE_METADATA, new HashMap<>());
+    admin.createNamespace(NAMESPACE);
+    admin.createTable(NAMESPACE, TABLE, TABLE_METADATA);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
     admin.close();
   }
 

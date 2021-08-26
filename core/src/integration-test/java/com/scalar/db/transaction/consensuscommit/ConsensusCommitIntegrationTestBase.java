@@ -46,10 +46,8 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -98,16 +96,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
-    admin.createTable(
-        ConsensusCommitIntegrationTestBase.NAMESPACE,
-        ConsensusCommitIntegrationTestBase.TABLE_1,
-        tableMetadata,
-        new HashMap<>());
-    admin.createTable(
-        ConsensusCommitIntegrationTestBase.NAMESPACE,
-        ConsensusCommitIntegrationTestBase.TABLE_2,
-        tableMetadata,
-        new HashMap<>());
+    admin.createNamespace(NAMESPACE);
+    admin.createTable(NAMESPACE, TABLE_1, tableMetadata);
+    admin.createTable(NAMESPACE, TABLE_2, tableMetadata);
 
     TableMetadata coordinatorTableMetadata =
         TableMetadata.newBuilder()
@@ -116,14 +107,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addColumn(CREATED_AT, DataType.BIGINT)
             .addPartitionKey(ID)
             .build();
-    admin.createTable(
-        Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata, new HashMap<>());
+    admin.createNamespace(Coordinator.NAMESPACE);
+    admin.createTable(Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata);
   }
 
   protected static void deleteTables() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE_1);
     admin.dropTable(NAMESPACE, TABLE_2);
     admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+    admin.dropNamespace(NAMESPACE);
+    admin.dropNamespace(Coordinator.NAMESPACE);
     admin.close();
   }
 
@@ -1741,7 +1734,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly(
           String table1, String table2) throws CrudException, CoordinatorException {
     // Arrange
-    Coordinator.State state = new State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
     coordinator.putState(state);
 
     // Act
