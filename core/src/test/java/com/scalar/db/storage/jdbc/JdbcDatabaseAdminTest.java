@@ -112,7 +112,8 @@ public class JdbcDatabaseAdminTest {
         RdbEngine.ORACLE,
         "CREATE USER \"ns_prefixmy_ns\" IDENTIFIED BY \"oracle\"",
         "ALTER USER \"ns_prefixmy_ns\" quota unlimited on USERS",
-        "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"ns_prefixmy_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")");
   }
