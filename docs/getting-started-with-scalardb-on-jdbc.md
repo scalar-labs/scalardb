@@ -8,7 +8,7 @@ This document briefly explains how you can get started with Scalar DB on JDBC da
 Scalar DB is written in Java and uses a JDBC database as an underlining storage implementation, so the following software is required to run it.
 
 * [Oracle JDK 8](https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (OpenJDK 8) or higher
-* A JDBC database instance. We officially support MySQL, PostgreSQL and Oracle database for now (, we also have the SQL Server implementation though)
+* A JDBC database instance. We officially support MySQL, PostgreSQL, and Oracle Database for now (we also have the SQL Server implementation though)
 * Other libraries used from the above are automatically installed through gradle
 
 From here, we assume Oracle JDK 8 and a JDBC database is properly installed in your local environment, and it is running in your localhost.
