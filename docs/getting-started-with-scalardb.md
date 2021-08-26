@@ -80,60 +80,58 @@ is a simple electronic money application with storage service.
 
 ```java
 public class ElectronicMoneyWithStorage extends ElectronicMoney {
-  private final StorageService service;
 
-  public ElectronicMoneyWithStorage() {
-    Injector injector = Guice.createInjector(new StorageModule(new DatabaseConfig(props)));
-    service = injector.getInstance(StorageService.class);
-    service.with(NAMESPACE, TABLENAME);
+  private final DistributedStorage storage;
+
+  public ElectronicMoneyWithStorage() throws IOException {
+    StorageFactory factory = new StorageFactory(dbConfig);
+    storage = factory.getStorage();
+    storage.with(NAMESPACE, TABLENAME);
   }
 
   @Override
   public void charge(String id, int amount) throws ExecutionException {
     // Retrieve the current balance for id
-    Get get = new Get(new Key(new TextValue(ID, id)));
-    Optional<Result> result = service.get(get);
+    Get get = new Get(new Key(ID, id));
+    Optional<Result> result = storage.get(get);
 
     // Calculate the balance
     int balance = amount;
     if (result.isPresent()) {
-      int current = ((IntValue) result.get().getValue(BALANCE).get()).get();
+      int current = result.get().getValue(BALANCE).get().getAsInt();
       balance += current;
     }
 
     // Update the balance
-    Put put = new Put(new Key(new TextValue(ID, id))).withValue(new IntValue(BALANCE, balance));
-    service.put(put);
+    Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
+    storage.put(put);
   }
 
   @Override
   public void pay(String fromId, String toId, int amount) throws ExecutionException {
     // Retrieve the current balances for ids
-    Get fromGet = new Get(new Key(new TextValue(ID, fromId)));
-    Get toGet = new Get(new Key(new TextValue(ID, toId)));
-    Optional<Result> fromResult = service.get(fromGet);
-    Optional<Result> toResult = service.get(toGet);
+    Get fromGet = new Get(new Key(ID, fromId));
+    Get toGet = new Get(new Key(ID, toId));
+    Optional<Result> fromResult = storage.get(fromGet);
+    Optional<Result> toResult = storage.get(toGet);
 
     // Calculate the balances (it assumes that both accounts exist)
-    int newFromBalance = ((IntValue) (fromResult.get().getValue(BALANCE).get())).get() - amount;
-    int newToBalance = ((IntValue) (toResult.get().getValue(BALANCE).get())).get() + amount;
+    int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
+    int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
     if (newFromBalance < 0) {
       throw new RuntimeException(fromId + " doesn't have enough balance.");
     }
 
     // Update the balances
-    Put fromPut =
-        new Put(new Key(new TextValue(ID, fromId)))
-            .withValue(new IntValue(BALANCE, newFromBalance));
-    Put toPut =
-        new Put(new Key(new TextValue(ID, toId))).withValue(new IntValue(BALANCE, newToBalance));
-    service.put(fromPut);
-    service.put(toPut);
+    Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
+    Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
+    storage.put(fromPut);
+    storage.put(toPut);
   }
 
   @Override
   public void close() {
-    service.close();
+    storage.close();
   }
 }
 ```
@@ -206,33 +204,33 @@ With the transaction capability of Scalar DB, we can make such operations to be 
 Now we can update the code as follows to make it transactional.
 ```java
 public class ElectronicMoneyWithTransaction extends ElectronicMoney {
-  private final TransactionService service;
 
-  public ElectronicMoneyWithTransaction() {
-    Injector injector = Guice.createInjector(new TransactionModule(new DatabaseConfig(props)));
-    service = injector.getInstance(TransactionService.class);
-    service.with(NAMESPACE, TABLENAME);
+  private final DistributedTransactionManager manager;
+
+  public ElectronicMoneyWithTransaction() throws IOException {
+    TransactionFactory factory = new TransactionFactory(dbConfig);
+    manager = factory.getTransactionManager();
+    manager.with(NAMESPACE, TABLENAME);
   }
 
   @Override
-  public void charge(String id, int amount)
-      throws CrudException, CommitException, UnknownTransactionStatusException {
+  public void charge(String id, int amount) throws TransactionException {
     // Start a transaction
-    DistributedTransaction tx = service.start();
+    DistributedTransaction tx = manager.start();
 
     // Retrieve the current balance for id
-    Get get = new Get(new Key(new TextValue(ID, id)));
+    Get get = new Get(new Key(ID, id));
     Optional<Result> result = tx.get(get);
 
     // Calculate the balance
     int balance = amount;
     if (result.isPresent()) {
-      int current = ((IntValue) result.get().getValue(BALANCE).get()).get();
+      int current = result.get().getValue(BALANCE).get().getAsInt();
       balance += current;
     }
 
     // Update the balance
-    Put put = new Put(new Key(new TextValue(ID, id))).withValue(new IntValue(BALANCE, balance));
+    Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
     tx.put(put);
 
     // Commit the transaction (records are automatically recovered in case of failure)
@@ -240,30 +238,26 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
   }
 
   @Override
-  public void pay(String fromId, String toId, int amount)
-      throws CrudException, CommitException, UnknownTransactionStatusException {
+  public void pay(String fromId, String toId, int amount) throws TransactionException {
     // Start a transaction
-    DistributedTransaction tx = service.start();
+    DistributedTransaction tx = manager.start();
 
     // Retrieve the current balances for ids
-    Get fromGet = new Get(new Key(new TextValue(ID, fromId)));
-    Get toGet = new Get(new Key(new TextValue(ID, toId)));
+    Get fromGet = new Get(new Key(ID, fromId));
+    Get toGet = new Get(new Key(ID, toId));
     Optional<Result> fromResult = tx.get(fromGet);
     Optional<Result> toResult = tx.get(toGet);
 
     // Calculate the balances (it assumes that both accounts exist)
-    int newFromBalance = ((IntValue) (fromResult.get().getValue(BALANCE).get())).get() - amount;
-    int newToBalance = ((IntValue) (toResult.get().getValue(BALANCE).get())).get() + amount;
+    int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
+    int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
     if (newFromBalance < 0) {
       throw new RuntimeException(fromId + " doesn't have enough balance.");
     }
 
     // Update the balances
-    Put fromPut =
-        new Put(new Key(new TextValue(ID, fromId)))
-            .withValue(new IntValue(BALANCE, newFromBalance));
-    Put toPut =
-        new Put(new Key(new TextValue(ID, toId))).withValue(new IntValue(BALANCE, newToBalance));
+    Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
+    Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
     tx.put(fromPut);
     tx.put(toPut);
 
@@ -273,13 +267,13 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
 
   @Override
   public void close() {
-    service.close();
+    manager.close();
   }
 }
 ```
 
-As you can see, it's not very different from the code with `StorageService`.
-This code instead uses `TransactionService` and all the CRUD operations are done through the `DistributedTransaction` object returned from `TransactionService.start()`.
+As you can see, it's not very different from the code with `DistributedStorage`.
+This code instead uses `DistributedTransactionManager` and all the CRUD operations are done through the `DistributedTransaction` object returned from `DistributedTransactionManager.start()`.
 
 Now let's run the application with transaction mode.
 ```

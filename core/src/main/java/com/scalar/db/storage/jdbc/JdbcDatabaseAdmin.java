@@ -303,8 +303,21 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
                 .map(this::enclose)
                 .collect(Collectors.joining(","))
             + "))";
-
+    if (rdbEngine == RdbEngine.ORACLE) {
+      // For Oracle Database, add ROWDEPENDENCIES to the table to improve the performance
+      createTableStatement += " ROWDEPENDENCIES";
+    }
     execute(connection, createTableStatement);
+
+    if (rdbEngine == RdbEngine.ORACLE) {
+      // For Oracle Database, set INITRANS to 3 and MAXTRANS to 255 for the table to improve the
+      // performance
+      String alterTableStatement =
+          "ALTER TABLE "
+              + enclosedFullTableName(getFullNamespaceName(schemaPrefix, schema), table, rdbEngine)
+              + " INITRANS 3 MAXTRANS 255";
+      execute(connection, alterTableStatement);
+    }
   }
 
   /**
