@@ -1,4 +1,4 @@
-# Schema Tool for Scalar DB
+# Schema Loader for Scalar DB
 This tool used for creating, deleting schemas along with necessary metadata of Scalar DB on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
   - For Cosmos DB, this tool works on databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB. You can specify the resource base unit, scaling option as well.
   - For DynamoDB, this tool works on tables named with the database names, also inserts metadata which is required by Scalar DB. You can specify the resource base unit, backup and scaling option as well.
@@ -6,7 +6,7 @@ This tool used for creating, deleting schemas along with necessary metadata of S
   - For a JDBC database, this tool works on databases(schemas) and tables, also inserts metadata which is required by Scalar DB.
   - Scalar DB metadata for transactions is automatically adds when you set the `transaction` parameter `true` in the schema file.
 
-There are two ways to specify general cli options in schema-tool.
+There are two ways to specify general cli options in schema-loader.
   - Pass a Scalar DB configuration file, and additional options of database-specific.
   - Pass all the options separately.
 
@@ -16,12 +16,12 @@ There are two ways to specify general cli options in schema-tool.
 ```console
 $ ./gradlew installDist
 ```
-The built cli application is `./build/install/schema-tool/bin/schema-tool`
+The built cli application is `./build/install/schema-loader/bin/schema-loader`
 
 ### Available commands
 For using config file
 ```console
-Usage: schema-tool --config [-D] [--no-backup] [--no-scaling]
+Usage: schema-loader --config [-D] [--no-backup] [--no-scaling]
                             [-c=<cassandraCompactStrategy>] -f=<schemaFile>
                             [-n=<cassandraNetStrategy>] [-r=<ru>]
                             [-R=<cassandraReplicaFactor>] <configPath>
@@ -43,7 +43,7 @@ Using config file for Scalar DB
 ```
 For Cosmos DB
 ```console
-    Usage: schema-tool --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<cosmosURI>
+    Usage: schema-loader --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<cosmosURI>
                                 -p=<cosmosKey> [-r=<cosmosRU>]
     Using Cosmos DB
       -D, --delete-all         Delete tables
@@ -57,7 +57,7 @@ For Cosmos DB
 ```
 For Dynamo DB
 ```console
-Usage: schema-tool --dynamo [-D] [--no-backup] [--no-scaling]
+Usage: schema-loader --dynamo [-D] [--no-backup] [--no-scaling]
                             [--endpoint-override=<dynamoEndpointOverride>]
                             -f=<schemaFile> -p=<awsSecKey> [-r=<dynamoRU>]
                             --region=<awsRegion> -u=<awsKeyId>
@@ -77,7 +77,7 @@ Using Dynamo DB
 ```
 For Cassandra DB
 ```console
-Usage: schema-tool --cassandra [-D] [-c=<cassandraCompactStrategy>]
+Usage: schema-loader --cassandra [-D] [-c=<cassandraCompactStrategy>]
                                -f=<schemaFile> -h=<cassandraIP>
                                [-n=<cassandraNetStrategy>] [-p=<cassandraPw>]
                                [-P=<cassandraPort>]
@@ -103,7 +103,7 @@ Using Cassandra DB
 ```
 For JDBC type database
 ```console
-Usage: schema-tool --jdbc [-D] -f=<schemaFile> -j=<jdbcURL> -p=<jdbcPw>
+Usage: schema-loader --jdbc [-D] -f=<schemaFile> -j=<jdbcURL> -p=<jdbcPw>
                           -u=<jdbcUser>
 Using JDBC type DB
   -D, --delete-all           Delete tables
@@ -116,27 +116,27 @@ Using JDBC type DB
 ### Create databases/keyspaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](sample_data/database.properties)
 ```console
-$ ./build/install/schema-tool/bin/schema-tool --config <PATH_TO_CONFIG_FILE> -f schema.json
+$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json
 ```
 
 Using cli arguments fully for configuration
 ```console
 # For Cosmos DB
-$ ./build/install/schema-tool/bin/schema-tool --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ ./build/install/schema-loader/bin/schema-loader --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
 
 ```console
 # For DynamoDB
-$ ./build/install/schema-tool/bin/schema-tool --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ ./build/install/schema-loader/bin/schema-loader --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
   - `-r` option is almost the same as Cosmos DB option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
 
 ```console
 # For Cassandra
-$ ./build/install/schema-tool/bin/schema-tool --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
@@ -146,7 +146,7 @@ $ ./build/install/schema-tool/bin/schema-tool --cassandra -h <CASSANDRA_IP> [-P 
 
 ```console
 # For a JDBC database
-$ ./build/install/schema-tool/bin/schema-tool --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
+$ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
 ```
 
   - Note that this tool doesn't create schemas for the Oracle database. Please create the schemas manually for this case.
@@ -154,34 +154,34 @@ $ ./build/install/schema-tool/bin/schema-tool --jdbc -j <JDBC URL> -u <USER> -p 
 ### Delete tables
 Using config file
 ```console
-$ ./build/install/schema-tool/bin/schema-tool --config <PATH_TO_CONFIG_FILE> -f schema.json -D
+$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json -D
 ```
 
 Using cli arguments
 
 ```console
 # For Cosmos DB
-$ ./build/install/schema-tool/bin/schema-tool --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
+$ ./build/install/schema-loader/bin/schema-loader --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
 ```
 
 ```console
 # For DynamoDB
-$ ./build/install/schema-tool/bin/schema-tool --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
+$ ./build/install/schema-loader/bin/schema-loader --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
 
 ```console
 # For Cassandra
-$ ./build/install/schema-tool/bin/schema-tool --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+$ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
 ```
 
 ```console
 # For a JDBC database
-$ ./build/install/schema-tool/bin/schema-tool --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
+$ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
 ```
 
 ### Show help
 ```console
-$ ./build/install/schema-tool/bin/schema-tool --help
+$ ./build/install/schema-loader/bin/schema-loader --help
 ```
 
 ### Sample schema file
@@ -256,11 +256,11 @@ $ ./build/install/schema-tool/bin/schema-tool --help
 ### RU
 You can scale the throughput of Cosmos DB and DynamoDB by specifying `-r` option (which applies to all the tables) or `ru` parameter for each table. Those configurations are ignored in Cassandra. The default values are `400` for Cosmos DB and `10` for DynamoDB respectively, which are set without `-r` option.
 
-Note that the schema tool abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
-So, please set an appropriate value depending on the database implementations. Please also note that the schema tool sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
+Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
+So, please set an appropriate value depending on the database implementations. Please also note that the schema loader sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
 
 ### Auto-scaling
-By default, the schema tool enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
+By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
 
 ## Data type mapping for JDBC databases
 

@@ -4,11 +4,11 @@ apply plugin: 'signing'
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'schema-tool'
+            artifactId = 'schema-loader'
             from components.java
             pom {
-                name = 'Scalar DB schema tool'
-                description = 'Schema tool of Scalar DB, used for manipulating schema in Scalar DB'
+                name = 'Scalar DB Schema Loader'
+                description = 'Schema Loader of Scalar DB, used for manipulating schema in Scalar DB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

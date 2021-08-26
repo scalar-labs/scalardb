@@ -1,8 +1,8 @@
-# Scalar DB Schema Tool Design Document
+# Scalar DB Schema Loader Design Document
 ## Introduction
-This document provides the design of Scalar DB schema tool, including dependency components, requirements, constraints, goals, architecture and detailed modules.
+This document provides the design of Scalar DB schema loader, including dependency components, requirements, constraints, goals, architecture and detailed modules.
 ## System Overview
-Scalar DB schema tool is a Java CLI application used for manipulating schemas in specific databases which Scalar DB currently supports including Cosmos DB, Dynamo DB, Cassandra DB and JDBC database (MySQL, Postgres).
+Scalar DB schema loader is a Java CLI application used for manipulating schemas in specific databases which Scalar DB currently supports including Cosmos DB, Dynamo DB, Cassandra DB and JDBC database (MySQL, Postgres).
 ## Design Considerations
 ### Assumptions and Dependencies
 - Application will be written in Java.
@@ -44,10 +44,10 @@ Data types in Scalar DB and their mapping to the data types of other databases.
 #### RU
 Scaling the throughput of Cosmos DB and DynamoDB by specifying `-r` option (which applies to all the tables) or `ru` parameter for each table. Those configurations are ignored in Cassandra. The default values are `400` for Cosmos DB and `10` for DynamoDB respectively, which are set without `-r` option.
 
-Note that the schema tool abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
-So, please set an appropriate value depending on the database implementations. Please also note that the schema tool sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
+Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
+So, please set an appropriate value depending on the database implementations. Please also note that the schema loader sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
 #### Auto-scaling
-By default, the schema tool enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
+By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
 
 ### Schema file sample
 ```json

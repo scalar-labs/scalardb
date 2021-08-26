@@ -8,8 +8,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(
-    name = "schema-tool",
-    description = "Schema tool for Scalar DB",
+    name = "schema-loader",
+    description = "Schema Loader for Scalar DB",
     subcommands = {
         ConfigFileBasedCommand.class,
         CosmosCommand.class,

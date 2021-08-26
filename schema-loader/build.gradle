@@ -3,7 +3,7 @@ plugins {
     id 'application'
 }
 
-archivesBaseName = "schema-tool"
+archivesBaseName = "schema-loader"
 
 repositories {
     mavenCentral()
