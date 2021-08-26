@@ -5,6 +5,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -15,6 +16,12 @@ public class AdminService implements DistributedStorageAdmin {
   @Inject
   public AdminService(DistributedStorageAdmin admin) {
     this.admin = admin;
+  }
+
+  @Override
+  public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    admin.createNamespace(namespace, options);
   }
 
   @Override
@@ -30,6 +37,11 @@ public class AdminService implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    admin.dropNamespace(namespace);
+  }
+
+  @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     admin.truncateTable(namespace, table);
   }
@@ -37,6 +49,16 @@ public class AdminService implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return admin.getTableMetadata(namespace, table);
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    return admin.getNamespaceTableNames(namespace);
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    return admin.namespaceExists(namespace);
   }
 
   @Override

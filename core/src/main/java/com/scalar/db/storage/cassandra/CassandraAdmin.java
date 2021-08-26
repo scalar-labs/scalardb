@@ -3,6 +3,7 @@ package com.scalar.db.storage.cassandra;
 import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
+import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
@@ -58,9 +59,38 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     String fullKeyspace = fullKeyspace(namespace);
-    createKeyspaceIfNotExists(fullKeyspace, options);
     createTableInternal(fullKeyspace, table, metadata, options);
     createSecondaryIndex(fullKeyspace, table, metadata.getSecondaryIndexNames());
+  }
+
+  @Override
+  public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    CreateKeyspace query =
+        SchemaBuilder.createKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
+    String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
+    ReplicationStrategy replicationStrategy =
+        options.containsKey(NETWORK_STRATEGY)
+            ? ReplicationStrategy.fromString(options.get(NETWORK_STRATEGY))
+            : ReplicationStrategy.SIMPLE_STRATEGY;
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    if (replicationStrategy == ReplicationStrategy.SIMPLE_STRATEGY) {
+      replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+      replicationOptions.put("replication_factor", replicationFactor);
+    } else if (replicationStrategy == ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY) {
+      replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+      replicationOptions.put("dc1", replicationFactor);
+    }
+    try {
+      clusterManager
+          .getSession()
+          .execute(query.with().replication(replicationOptions).getQueryString());
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "creating the keyspace %s failed", getFullNamespaceName(keyspacePrefix, namespace)),
+          e);
+    }
   }
 
   @Override
@@ -76,15 +106,16 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           e);
     }
     metadataManager.deleteTableMetadata(namespace, table);
-    if (metadataManager.getTableNames(namespace).isEmpty()) {
-      String dropKeyspace =
-          SchemaBuilder.dropKeyspace(fullKeyspace(namespace)).ifExists().getQueryString();
-      try {
-        clusterManager.getSession().execute(dropKeyspace);
-      } catch (RuntimeException e) {
-        throw new ExecutionException(
-            String.format("dropping the %s keyspace failed", fullKeyspace(namespace)), e);
-      }
+  }
+
+  @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    String dropKeyspace = SchemaBuilder.dropKeyspace(fullKeyspace(namespace)).getQueryString();
+    try {
+      clusterManager.getSession().execute(dropKeyspace);
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format("dropping the %s keyspace failed", fullKeyspace(namespace)), e);
     }
   }
 
@@ -111,35 +142,32 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String fullKeyspace(String keyspace) {
-    return getFullNamespaceName(keyspacePrefix, keyspace);
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    try {
+      return metadataManager.getTableNames(namespace);
+    } catch (StorageRuntimeException e) {
+      throw new ExecutionException("retrieving the table names of the namespace failed", e);
+    }
   }
 
-  @VisibleForTesting
-  void createKeyspaceIfNotExists(String fullKeyspace, Map<String, String> options)
-      throws ExecutionException {
-    CreateKeyspace query = SchemaBuilder.createKeyspace(fullKeyspace).ifNotExists();
-    String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
-    ReplicationStrategy replicationStrategy =
-        options.containsKey(NETWORK_STRATEGY)
-            ? ReplicationStrategy.fromString(options.get(NETWORK_STRATEGY))
-            : ReplicationStrategy.SIMPLE_STRATEGY;
-    Map<String, Object> replicationOptions = new LinkedHashMap<>();
-    if (replicationStrategy == ReplicationStrategy.SIMPLE_STRATEGY) {
-      replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
-      replicationOptions.put("replication_factor", replicationFactor);
-    } else if (replicationStrategy == ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY) {
-      replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
-      replicationOptions.put("dc1", replicationFactor);
-    }
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
-      clusterManager
-          .getSession()
-          .execute(query.with().replication(replicationOptions).getQueryString());
+      KeyspaceMetadata keyspace =
+          clusterManager
+              .getSession()
+              .getCluster()
+              .getMetadata()
+              .getKeyspace(fullKeyspace(namespace));
+      return keyspace != null;
     } catch (RuntimeException e) {
-      throw new ExecutionException(
-          String.format("creating the keyspace %s failed", fullKeyspace), e);
+      throw new ExecutionException("checking if the namespace exists failed", e);
     }
+  }
+
+  private String fullKeyspace(String keyspace) {
+    return getFullNamespaceName(keyspacePrefix, keyspace);
   }
 
   @VisibleForTesting
