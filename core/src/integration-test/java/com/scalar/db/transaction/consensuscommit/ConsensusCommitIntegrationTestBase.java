@@ -12,7 +12,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
-import static com.scalar.db.transaction.consensuscommit.Coordinator.TABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,7 +46,6 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -125,7 +123,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   protected static void truncateTables() throws ExecutionException {
     admin.truncateTable(NAMESPACE, TABLE_1);
     admin.truncateTable(NAMESPACE, TABLE_2);
-    admin.truncateTable(Coordinator.NAMESPACE, TABLE);
+    admin.truncateTable(Coordinator.NAMESPACE, Coordinator.TABLE);
   }
 
   protected void setUp(
@@ -362,7 +360,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(State.class));
+    verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
   @Test
@@ -405,7 +403,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator).putState(new State(ANY_ID_2, TransactionState.ABORTED));
+    verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
@@ -692,7 +690,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(State.class));
+    verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
   @Test
@@ -735,7 +733,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator).putState(new State(ANY_ID_2, TransactionState.ABORTED));
+    verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
     verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
@@ -1003,7 +1001,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     // one for prepare, one for commit
     verify(storage, times(2)).mutate(anyList());
-    verify(coordinator).putState(any(State.class));
+    verify(coordinator).putState(any(Coordinator.State.class));
   }
 
   @Test
@@ -1025,7 +1023,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     // twice for prepare, twice for commit
     verify(storage, times(4)).mutate(anyList());
-    verify(coordinator).putState(any(State.class));
+    verify(coordinator).putState(any(Coordinator.State.class));
   }
 
   private void putAndCommit_GetsAndPutsGiven_ShouldCommitProperly(String fromTable, String toTable)
@@ -1736,7 +1734,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly(
           String table1, String table2) throws CrudException, CoordinatorException {
     // Arrange
-    State state = new State(ANY_ID_1, TransactionState.ABORTED);
+    Coordinator.State state = new Coordinator.State(ANY_ID_1, TransactionState.ABORTED);
     coordinator.putState(state);
 
     // Act
@@ -2278,7 +2276,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (coordinatorState == null) {
       return;
     }
-    State state = new State(ANY_ID_2, coordinatorState);
+    Coordinator.State state = new Coordinator.State(ANY_ID_2, coordinatorState);
     coordinator.putState(state);
   }
 
