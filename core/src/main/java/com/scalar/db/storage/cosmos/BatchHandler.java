@@ -19,10 +19,10 @@ import org.slf4j.LoggerFactory;
  */
 @ThreadSafe
 public class BatchHandler {
-  static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(BatchHandler.class);
+  private static final String MUTATION_STORED_PROCEDURE = "mutate.js";
   private final CosmosClient client;
   private final CosmosTableMetadataManager metadataManager;
-  private final String MUTATION_STORED_PROCEDURE = "mutate.js";
 
   /**
    * Constructs a {@code BatchHandler} with the specified {@link CosmosClient} and {@link

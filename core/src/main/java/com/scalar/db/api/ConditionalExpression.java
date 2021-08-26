@@ -2,12 +2,14 @@ package com.scalar.db.api;
 
 import com.scalar.db.io.Value;
 import java.util.Objects;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * A conditional expression used in {@link MutationCondition}.
  *
  * @author Hiroyuki Yamada
  */
+@Immutable
 public class ConditionalExpression {
   private final String name;
   private final Value<?> value;

@@ -1,7 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
@@ -30,7 +30,7 @@ public class DynamoOperationTest {
   @Mock private TableMetadata metadata;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
@@ -43,12 +43,9 @@ public class DynamoOperationTest {
   private Get prepareGet() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Get get =
-        new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-
-    return get;
+    return new Get(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test

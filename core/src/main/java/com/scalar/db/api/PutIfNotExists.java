@@ -49,10 +49,7 @@ public class PutIfNotExists implements MutationCondition {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof PutIfNotExists)) {
-      return false;
-    }
-    return true;
+    return o instanceof PutIfNotExists;
   }
 
   @Override

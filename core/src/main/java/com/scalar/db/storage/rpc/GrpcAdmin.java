@@ -101,7 +101,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+  public TableMetadata getTableMetadata(String namespace, String table) {
     return metadataManager.getTableMetadata(namespace, table);
   }
 

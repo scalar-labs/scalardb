@@ -2,7 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Java6Assertions.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,17 +23,17 @@ import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class CrudHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -119,7 +119,9 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.COMMITTED));
     when(snapshot.containsKey(new Snapshot.Key(get))).thenReturn(false);
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(storage.get(get)).thenReturn(expected);
 
     // Act
@@ -142,11 +144,7 @@ public class CrudHandlerTest {
     when(storage.get(get)).thenReturn(expected);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.get(get);
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+    assertThatThrownBy(() -> handler.get(get)).isInstanceOf(UncommittedRecordException.class);
   }
 
   @Test
@@ -174,12 +172,7 @@ public class CrudHandlerTest {
     when(storage.get(get)).thenThrow(toThrow);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.get(get);
-            })
-        .isInstanceOf(CrudException.class)
-        .hasCause(toThrow);
+    assertThatThrownBy(() -> handler.get(get)).isInstanceOf(CrudException.class).hasCause(toThrow);
   }
 
   @Test
@@ -189,8 +182,10 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
     when(snapshot.get(any(Snapshot.Key.class))).thenReturn(Optional.empty());
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     // doCallRealMethod().when(scanner).forEach(any(Consumer.class));
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -217,18 +212,15 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(false, TransactionState.PREPARED);
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
     // Act
-    assertThatThrownBy(
-            () -> {
-              handler.scan(scan);
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(UncommittedRecordException.class);
 
     // Assert
-    verify(snapshot, never()).put(any(Snapshot.Key.class), any(Optional.class));
+    verify(snapshot, never())
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
   }
 
   @Test
@@ -237,17 +229,13 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(false, TransactionState.COMMITTED);
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     // this is needed for forEach
     // doCallRealMethod().when(scanner).forEach(any(Consumer.class));
     when(storage.scan(scan)).thenReturn(scanner);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.scan(scan);
-            })
-        .isInstanceOf(CrudRuntimeException.class);
+    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(CrudRuntimeException.class);
   }
 
   @Test
@@ -256,8 +244,10 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
     Snapshot.Key key =
         new Snapshot.Key(
@@ -267,7 +257,7 @@ public class CrudHandlerTest {
             result.getClusteringKey().get());
     when(snapshot.get(scan))
         .thenReturn(Optional.empty())
-        .thenReturn(Optional.of(Arrays.asList(key)));
+        .thenReturn(Optional.of(Collections.singletonList(key)));
     when(snapshot.containsKey(key)).thenReturn(false).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
@@ -299,7 +289,7 @@ public class CrudHandlerTest {
             new HashMap<>(),
             new HashMap<>());
     handler = new CrudHandler(storage, snapshot);
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
     // Act
@@ -319,8 +309,10 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    doNothing().when(snapshot).put(any(Snapshot.Key.class), any(Optional.class));
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
     Snapshot.Key key =
         new Snapshot.Key(
@@ -357,7 +349,7 @@ public class CrudHandlerTest {
             new HashMap<>(),
             new HashMap<>());
     handler = new CrudHandler(storage, snapshot);
-    when(scanner.iterator()).thenReturn(Arrays.asList(result).iterator());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
     // Act

@@ -6,7 +6,9 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class AdminService implements DistributedStorageAdmin {
 
   private final DistributedStorageAdmin admin;

@@ -16,7 +16,7 @@ public class JdbcDatabaseAdminIntegrationTest extends AdminIntegrationTestBase {
   private static DistributedStorageAdmin admin;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     setUp(admin);
   }
 

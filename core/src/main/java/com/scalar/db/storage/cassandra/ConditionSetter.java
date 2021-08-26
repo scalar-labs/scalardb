@@ -48,10 +48,7 @@ public class ConditionSetter implements MutationConditionVisitor {
     List<ConditionalExpression> expressions = condition.getExpressions();
     Update.Conditions cond = update.onlyIf(createClauseWith(expressions.get(0)));
     IntStream.range(1, expressions.size())
-        .forEach(
-            i -> {
-              cond.and(createClauseWith(expressions.get(i)));
-            });
+        .forEach(i -> cond.and(createClauseWith(expressions.get(i))));
   }
 
   /**
@@ -88,10 +85,7 @@ public class ConditionSetter implements MutationConditionVisitor {
     List<ConditionalExpression> expressions = condition.getExpressions();
     Delete.Conditions cond = delete.onlyIf(createClauseWith(expressions.get(0)));
     IntStream.range(1, expressions.size())
-        .forEach(
-            i -> {
-              cond.and(createClauseWith(expressions.get(i)));
-            });
+        .forEach(i -> cond.and(createClauseWith(expressions.get(i))));
   }
 
   /**

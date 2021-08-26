@@ -46,7 +46,7 @@ public class ItemSorterTest {
   private TableMetadata metadata;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     metadata =
         TableMetadata.newBuilder()
             .addColumn(ANY_NAME_1, DataType.TEXT)

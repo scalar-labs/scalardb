@@ -14,9 +14,11 @@ import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class DistributedStorageAdminService
     extends DistributedStorageAdminGrpc.DistributedStorageAdminImplBase {
   private static final Logger LOGGER =

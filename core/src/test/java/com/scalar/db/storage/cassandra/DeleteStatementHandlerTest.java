@@ -2,9 +2,9 @@ package com.scalar.db.storage.cassandra;
 
 import static com.scalar.db.api.ConditionalExpression.Operator;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -30,7 +30,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-/** */
 public class DeleteStatementHandlerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
@@ -50,7 +49,7 @@ public class DeleteStatementHandlerTest {
   @Mock private BoundStatement bound;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new DeleteStatementHandler(session);
@@ -58,18 +57,15 @@ public class DeleteStatementHandlerTest {
 
   private Delete prepareDelete() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Delete del = new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Delete prepareDeleteWithClusteringKey() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
-    Delete del =
-        new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
-            .forTable(ANY_TABLE_NAME);
-    return del;
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_KEYSPACE_NAME)
+        .forTable(ANY_TABLE_NAME);
   }
 
   private void configureBehavior(String expected) {
@@ -369,20 +365,14 @@ public class DeleteStatementHandlerTest {
     Operation operation = mock(Put.class);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              StatementHandler.checkArgument(operation, Delete.class);
-            })
+    assertThatThrownBy(() -> StatementHandler.checkArgument(operation, Delete.class))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new DeleteStatementHandler(null);
-            })
+    assertThatThrownBy(() -> new DeleteStatementHandler(null))
         .isInstanceOf(NullPointerException.class);
   }
 }

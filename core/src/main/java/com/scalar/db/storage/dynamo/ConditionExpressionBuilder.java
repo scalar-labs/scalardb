@@ -42,12 +42,7 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
    */
   @Override
   public void visit(PutIf condition) {
-    condition
-        .getExpressions()
-        .forEach(
-            e -> {
-              expressions.add(createConditionWith(e));
-            });
+    condition.getExpressions().forEach(e -> expressions.add(createConditionWith(e)));
   }
 
   /**
@@ -77,12 +72,7 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
    */
   @Override
   public void visit(DeleteIf condition) {
-    condition
-        .getExpressions()
-        .forEach(
-            e -> {
-              expressions.add(createConditionWith(e));
-            });
+    condition.getExpressions().forEach(e -> expressions.add(createConditionWith(e)));
   }
 
   /**

@@ -1,9 +1,9 @@
 package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -39,7 +39,7 @@ public class CosmosTableMetadataManagerTest {
   @Mock private CosmosItemResponse<CosmosTableMetadata> response;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     manager = new CosmosTableMetadataManager(container);
@@ -97,10 +97,7 @@ public class CosmosTableMetadataManagerTest {
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getTableMetadata(get);
-            })
+    assertThatThrownBy(() -> manager.getTableMetadata(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -116,10 +113,7 @@ public class CosmosTableMetadataManagerTest {
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              manager.getTableMetadata(get);
-            })
+    assertThatThrownBy(() -> manager.getTableMetadata(get))
         .isInstanceOf(StorageRuntimeException.class)
         .hasCause(toThrow);
   }

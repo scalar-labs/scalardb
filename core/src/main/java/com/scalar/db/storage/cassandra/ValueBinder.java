@@ -115,9 +115,7 @@ public final class ValueBinder implements ValueVisitor {
     value
         .get()
         .ifPresent(
-            b -> {
-              bound.setBytes(i, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
-            });
+            b -> bound.setBytes(i, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip()));
     i++;
   }
 }

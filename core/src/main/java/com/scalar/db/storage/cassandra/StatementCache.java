@@ -14,7 +14,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class StatementCache {
   private static final int DEFAULT_CACHE_SIZE = 128;
-  private Cache<String, PreparedStatement> cache;
+  private final Cache<String, PreparedStatement> cache;
 
   /** Constructs a cache with default cache size (= 128). */
   public StatementCache() {

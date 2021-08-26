@@ -13,12 +13,14 @@ import com.scalar.db.io.Value;
 import java.util.Collection;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 import org.jooq.Field;
 import org.jooq.SQLDialect;
 import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
 
 /** A class to treating utilities for a mutation */
+@Immutable
 public class CosmosMutation extends CosmosOperation {
   CosmosMutation(Mutation mutation, CosmosTableMetadataManager metadataManager) {
     super(mutation, metadataManager);
@@ -58,11 +60,7 @@ public class CosmosMutation extends CosmosOperation {
     record.setId(getId());
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey());
     record.setPartitionKey(toMap(put.getPartitionKey().get()));
-    put.getClusteringKey()
-        .ifPresent(
-            k -> {
-              record.setClusteringKey(toMap(k.get()));
-            });
+    put.getClusteringKey().ifPresent(k -> record.setClusteringKey(toMap(k.get())));
     record.setValues(toMap(put.getValues().values()));
 
     return record;
@@ -99,12 +97,7 @@ public class CosmosMutation extends CosmosOperation {
     }
 
     ConditionalQueryBuilder builder = new ConditionalQueryBuilder(select);
-    mutation
-        .getCondition()
-        .ifPresent(
-            c -> {
-              c.accept(builder);
-            });
+    mutation.getCondition().ifPresent(c -> c.accept(builder));
 
     return builder.getQuery();
   }

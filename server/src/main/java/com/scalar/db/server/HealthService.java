@@ -4,7 +4,9 @@ import io.grpc.health.v1.HealthCheckRequest;
 import io.grpc.health.v1.HealthCheckResponse;
 import io.grpc.health.v1.HealthGrpc;
 import io.grpc.stub.StreamObserver;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class HealthService extends HealthGrpc.HealthImplBase {
 
   @Override

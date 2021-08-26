@@ -5,11 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import org.junit.Test;
 
-/** */
 public class ScanTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -67,21 +66,17 @@ public class ScanTest {
     assertThat((Iterable<? extends Value<?>>) scan.getPartitionKey()).isEqualTo(partitionKey);
     assertThat(scan.getStartClusteringKey()).isEqualTo(Optional.of(startClusteringKey));
     assertThat(scan.getEndClusteringKey()).isEqualTo(Optional.of(endClusteringKey));
-    assertThat(scan.getProjections()).isEqualTo(Arrays.asList(ANY_NAME_1));
+    assertThat(scan.getProjections()).isEqualTo(Collections.singletonList(ANY_NAME_1));
     assertThat(scan.getStartInclusive()).isFalse();
     assertThat(scan.getEndInclusive()).isFalse();
-    assertThat(scan.getOrderings()).isEqualTo(Arrays.asList(ordering));
+    assertThat(scan.getOrderings()).isEqualTo(Collections.singletonList(ordering));
     assertThat(scan.getLimit()).isEqualTo(100);
   }
 
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new Scan(null);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Scan(null)).isInstanceOf(NullPointerException.class);
   }
 
   @Test

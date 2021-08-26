@@ -84,8 +84,7 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly()
-      throws ExecutionException {
+  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly() {
     // Arrange
     String namespace = "namespace";
     String table = "table";

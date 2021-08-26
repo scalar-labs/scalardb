@@ -34,7 +34,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
   private static DistributedStorageAdmin admin;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     setUp(admin);
   }
 
@@ -59,7 +59,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setUpBeforeClass() {
     String contactPoint = System.getProperty("scalardb.cosmos.uri");
     String password = System.getProperty("scalardb.cosmos.password");
     namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
@@ -107,7 +107,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass() {
     CosmosDatabase database = client.getDatabase(database(METADATA_DATABASE));
     database.getContainer(METADATA_CONTAINER).delete();
     database.delete();

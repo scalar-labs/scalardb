@@ -7,7 +7,6 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +78,7 @@ public class TestEnv implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     jdbcAdmin.close();
   }
 }

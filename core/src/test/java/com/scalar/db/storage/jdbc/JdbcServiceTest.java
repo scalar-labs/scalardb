@@ -71,7 +71,7 @@ public class JdbcServiceTest {
   private JdbcService jdbcService;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
     jdbcService =
         new JdbcService(tableMetadataManager, operationChecker, queryBuilder, Optional.empty());

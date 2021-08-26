@@ -9,14 +9,14 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.Scan;
 import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * A manager for all the statements
  *
  * @author Hiroyui Yamada
  */
-@Immutable
+@ThreadSafe
 public class StatementHandlerManager {
   private final SelectStatementHandler select;
   private final InsertStatementHandler insert;
@@ -56,7 +56,7 @@ public class StatementHandlerManager {
       return select();
     } else if (operation instanceof Put) {
       MutationCondition condition = ((Put) operation).getCondition().orElse(null);
-      if (condition != null && (condition instanceof PutIf || condition instanceof PutIfExists)) {
+      if (condition instanceof PutIf || condition instanceof PutIfExists) {
         return update();
       } else {
         return insert();

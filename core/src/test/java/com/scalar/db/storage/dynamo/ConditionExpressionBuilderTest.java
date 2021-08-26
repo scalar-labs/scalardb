@@ -20,7 +20,7 @@ public class ConditionExpressionBuilderTest {
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
   }
 

@@ -83,20 +83,12 @@ public abstract class MutateStatementHandler extends StatementHandler {
   }
 
   protected void setCondition(BuiltStatement statement, Mutation mutation) {
-    mutation
-        .getCondition()
-        .ifPresent(
-            c -> {
-              c.accept(new ConditionSetter(statement));
-            });
+    mutation.getCondition().ifPresent(c -> c.accept(new ConditionSetter(statement)));
   }
 
   protected void bindCondition(ValueBinder binder, Mutation mutation) {
     mutation
         .getCondition()
-        .ifPresent(
-            c -> {
-              c.getExpressions().forEach(e -> e.getValue().accept(binder));
-            });
+        .ifPresent(c -> c.getExpressions().forEach(e -> e.getValue().accept(binder)));
   }
 }
