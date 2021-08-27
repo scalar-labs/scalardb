@@ -111,7 +111,6 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
         new ArrayList<>(tableMetadata.getClusteringKeyNames()));
     cosmosTableMetadata.setSecondaryIndexNames(tableMetadata.getSecondaryIndexNames());
     Map<String, String> columnTypeByName = new HashMap<>();
-    // TODO Is it required to call name.toLowerCase()
     tableMetadata
         .getColumnNames()
         .forEach(
@@ -152,7 +151,7 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
           .deleteItem(
               fullTableName, new PartitionKey(fullTableName), new CosmosItemRequestOptions());
       tableMetadataMap.remove(fullTableName);
-      // Delete the metadata container and table is there is no more metadata stored
+      // Delete the metadata container and table if there is no more metadata stored
       if (!getContainer()
           .queryItems(
               "SELECT * FROM " + METADATA_CONTAINER,
@@ -201,11 +200,10 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
 
   @Override
   public Set<String> getTableNames(String namespace) {
-    if (!isMetadataContainerExisting()) {
+    if (!metadataContainerExists()) {
       return Collections.emptySet();
     }
     String fullDatabase = getFullNamespaceName(databasePrefix, namespace);
-    // TODO test if this request works
     String selectAllDatabaseContainer =
         DSL.using(SQLDialect.DEFAULT)
             .selectFrom(METADATA_CONTAINER)
@@ -225,14 +223,15 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
     }
   }
 
-  private boolean isMetadataContainerExisting() {
+  private boolean metadataContainerExists() {
     try {
       client
           .getDatabase(getFullNamespaceName(databasePrefix, METADATA_DATABASE))
           .getContainer(METADATA_CONTAINER)
           .read();
-    } catch (CosmosException e) {
-      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+    } catch (RuntimeException e) {
+      if (e instanceof CosmosException
+          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
         return false;
       }
       throw new StorageRuntimeException("reading the metadata container failed", e);

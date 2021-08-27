@@ -68,7 +68,7 @@ public class CosmosTableMetadata {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof CosmosTableMetadata)) {
       return false;
     }
     CosmosTableMetadata that = (CosmosTableMetadata) o;

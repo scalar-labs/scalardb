@@ -55,7 +55,7 @@ public abstract class IntegrationTestBase {
     this.storage = storage;
   }
 
- protected static void createTable(Map<String, String> options) throws ExecutionException {
+  protected static void createTable(Map<String, String> options) throws ExecutionException {
     admin.createTable(
         NAMESPACE,
         TABLE,
@@ -76,7 +76,7 @@ public abstract class IntegrationTestBase {
     admin.truncateTable(NAMESPACE, TABLE);
   }
 
-  static protected void deleteTable() throws ExecutionException {
+  protected static void deleteTable() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE);
   }
 

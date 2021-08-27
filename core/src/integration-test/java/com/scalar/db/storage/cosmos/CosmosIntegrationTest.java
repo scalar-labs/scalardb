@@ -5,6 +5,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.IntegrationTestBase;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.Properties;
@@ -41,12 +42,16 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     storage = new Cosmos(config);
     HashMap<String, String> options = new HashMap<>();
     options.put(CosmosAdmin.RU, "4000");
-    createTable(options);
+    // TODO Remove cast
+    ((CosmosAdmin) admin).createNamespace(NAMESPACE, options);
+    createTable(Collections.emptyMap());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws ExecutionException {
     deleteTable();
+    // TODO Remove cast
+    ((CosmosAdmin) admin).dropNamespace(NAMESPACE);
     admin.close();
     storage.close();
   }

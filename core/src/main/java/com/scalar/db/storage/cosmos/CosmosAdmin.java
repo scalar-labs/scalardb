@@ -5,7 +5,7 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
-import com.azure.cosmos.implementation.NotFoundException;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -68,8 +69,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   @VisibleForTesting
-  CosmosAdmin(CosmosTableMetadataManager metadataManager, Optional<String> databasePrefix) {
-    client = null;
+  CosmosAdmin(
+      CosmosClient cosmosClient,
+      CosmosTableMetadataManager metadataManager,
+      Optional<String> databasePrefix) {
+    this.client = cosmosClient;
     this.metadataManager = metadataManager;
     this.databasePrefix = databasePrefix;
   }
@@ -79,35 +83,32 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
-      createDatabaseIfNotExists(namespace, options);
       createContainer(namespace, table, metadata);
-    } catch (RuntimeException e) {
-      throw new ExecutionException("creating the database failed", e);
-    }
-    try {
       metadataManager.addTableMetadata(namespace, table, metadata);
-    } catch (StorageRuntimeException e) {
-      throw new ExecutionException("adding the metadata for the created table failed", e);
+    } catch (RuntimeException e) {
+      throw new ExecutionException("creating the container failed", e);
     }
   }
 
   private void createContainer(String database, String table, TableMetadata metadata)
       throws ExecutionException {
+    if (!containerExists(fullDatabase(database))) {
+      throw new ExecutionException("the database does not exists");
+    }
     CosmosDatabase cosmosDatabase = client.getDatabase(fullDatabase(database));
-    IndexingPolicy indexingPolicy = new IndexingPolicy();
-    ArrayList<IncludedPath> paths = new ArrayList<>();
-    paths.add(new IncludedPath(PARTITION_KEY_PATH));
-    paths.add(new IncludedPath(CLUSTERING_KEY_PATH));
-    paths.addAll(
-        metadata.getSecondaryIndexNames().stream()
-            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH + index + "/?"))
-            .collect(Collectors.toList()));
-    indexingPolicy.setIncludedPaths(paths);
-    indexingPolicy.setExcludedPaths(Collections.singletonList(new ExcludedPath(EXCLUDED_PATH)));
-    CosmosContainerProperties properties =
-        new CosmosContainerProperties(table, CONTAINER_PARTITION_KEY)
-            .setIndexingPolicy(indexingPolicy);
-    cosmosDatabase.createContainerIfNotExists(properties);
+    CosmosContainerProperties properties = computeContainerProperties(table, metadata);
+    cosmosDatabase.createContainer(properties);
+
+    CosmosStoredProcedureProperties storedProcedureProperties =
+        computeContainerStoredProcedureProperties();
+    cosmosDatabase
+        .getContainer(table)
+        .getScripts()
+        .createStoredProcedure(storedProcedureProperties);
+  }
+
+  private CosmosStoredProcedureProperties computeContainerStoredProcedureProperties()
+      throws ExecutionException {
     String storedProcedure;
     try (InputStream storedProcedureInputStream =
         getClass().getClassLoader().getResourceAsStream(STORED_PROCEDURE_PATH)) {
@@ -120,59 +121,77 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     } catch (IOException | NullPointerException e) {
       throw new ExecutionException("reading the stored procedure failed", e);
     }
-    CosmosStoredProcedureProperties storedProcedureProperties =
-        new CosmosStoredProcedureProperties(STORED_PROCEDURE_FILE_NAME, storedProcedure);
-    cosmosDatabase
-        .getContainer(table)
-        .getScripts()
-        .createStoredProcedure(storedProcedureProperties);
+    return new CosmosStoredProcedureProperties(STORED_PROCEDURE_FILE_NAME, storedProcedure);
   }
 
-  private void createDatabaseIfNotExists(String database, Map<String, String> options)
+  private CosmosContainerProperties computeContainerProperties(
+      String table, TableMetadata metadata) {
+    IndexingPolicy indexingPolicy = new IndexingPolicy();
+    ArrayList<IncludedPath> paths = new ArrayList<>();
+    paths.add(new IncludedPath(PARTITION_KEY_PATH));
+    paths.add(new IncludedPath(CLUSTERING_KEY_PATH));
+    paths.addAll(
+        metadata.getSecondaryIndexNames().stream()
+            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH + index + "/?"))
+            .collect(Collectors.toList()));
+    indexingPolicy.setIncludedPaths(paths);
+    indexingPolicy.setExcludedPaths(Collections.singletonList(new ExcludedPath(EXCLUDED_PATH)));
+
+    return new CosmosContainerProperties(table, CONTAINER_PARTITION_KEY)
+        .setIndexingPolicy(indexingPolicy);
+  }
+
+  // TODO Add @Override
+  public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    if (isDatabaseNotExisting(fullDatabase(database))) {
-      client.createDatabase(fullDatabase(database), calculateThroughput(options));
-    } else {
-      // If the table already exists, we still update the RU if it is superior to the current one
-      CosmosDatabase cosmosDatabase = client.getDatabase(fullDatabase(database));
-      int ru = Integer.parseInt(options.getOrDefault(RU, DEFAULT_RU));
-      if (ru > cosmosDatabase.readThroughput().getMinThroughput()) {
-        cosmosDatabase.replaceThroughput(calculateThroughput(options));
-      }
+    try {
+      client.createDatabase(fullDatabase(namespace), calculateThroughput(options));
+    } catch (RuntimeException e) {
+      throw new ExecutionException("creating the database failed", e);
     }
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
-    if (isDatabaseNotExisting(fullDatabase)) {
+    if (!containerExists(fullDatabase)) {
       throw new ExecutionException("the database does not exist");
     }
     CosmosDatabase database = client.getDatabase(fullDatabase);
-    if (isContainerNotExisting(database, table)) {
+    if (!containerExists(database, table)) {
       throw new ExecutionException("the container does not exist");
     }
 
     try {
       database.getContainer(table).delete();
       metadataManager.deleteTableMetadata(namespace, table);
-      // Delete the database if it does not contain any container
-      if (metadataManager.getTableNames(namespace).isEmpty()) {
-        database.delete();
-      }
     } catch (StorageRuntimeException e) {
       throw new ExecutionException("deleting the container failed", e);
+    }
+  }
+
+  // TODO add @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    String fullDatabase = fullDatabase(namespace);
+    if (!containerExists(fullDatabase)) {
+      throw new ExecutionException("the database does not exist");
+    }
+
+    try {
+      client.getDatabase(fullDatabase).delete();
+    } catch (StorageRuntimeException e) {
+      throw new ExecutionException("deleting the database failed", e);
     }
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
-    if (isDatabaseNotExisting(fullDatabase)) {
+    if (!containerExists(fullDatabase)) {
       throw new ExecutionException("the database does not exist");
     }
     CosmosDatabase database = client.getDatabase(fullDatabase);
-    if (isContainerNotExisting(database, table)) {
+    if (!containerExists(database, table)) {
       throw new ExecutionException("the container does not exist");
     }
     try {
@@ -182,7 +201,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               "SELECT * FROM " + table, new CosmosQueryRequestOptions(), Record.class);
       records.forEach(record -> container.deleteItem(record, new CosmosItemRequestOptions()));
     } catch (RuntimeException e) {
-      throw new ExecutionException("truncating the table failed", e);
+      throw new ExecutionException("truncating the container failed", e);
     }
   }
 
@@ -191,7 +210,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try {
       return metadataManager.getTableMetadata(namespace, table);
     } catch (StorageRuntimeException e) {
-      throw new ExecutionException("getting a table metadata failed", e);
+      throw new ExecutionException("getting the container metadata failed", e);
     }
   }
 
@@ -213,30 +232,46 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       return ThroughputProperties.createAutoscaledThroughput(ru);
     }
   }
+  // TODO Add @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    return containerExists(fullDatabase(namespace));
+  }
 
-  private boolean isDatabaseNotExisting(String id) throws ExecutionException {
+  private boolean containerExists(String id) throws ExecutionException {
     try {
       client.getDatabase(id).read();
-    } catch (NotFoundException e) {
-      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return true;
+    } catch (RuntimeException e) {
+      if (e instanceof CosmosException
+          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
       }
       throw new ExecutionException(String.format("reading the database %s failed", id), e);
     }
-    return false;
+    return true;
   }
 
-  private boolean isContainerNotExisting(CosmosDatabase database, String containerId)
+
+  // TODO Add @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    try {
+      return metadataManager.getTableNames(namespace);
+    } catch (RuntimeException e) {
+      throw new ExecutionException("retrieving the container names of the database failed", e);
+    }
+  }
+
+  private boolean containerExists(CosmosDatabase database, String containerId)
       throws ExecutionException {
     try {
       database.getContainer(containerId).read();
-    } catch (NotFoundException e) {
-      if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
-        return true;
+    } catch (RuntimeException e) {
+      if (e instanceof CosmosException
+          && ((CosmosException) e).getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
+        return false;
       }
       throw new ExecutionException(
           String.format("reading the container %s failed", containerId), e);
     }
-    return false;
+    return true;
   }
 }
