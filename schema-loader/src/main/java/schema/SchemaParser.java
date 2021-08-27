@@ -1,7 +1,6 @@
 package schema;
 
 import com.google.common.collect.ImmutableList;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.Reader;
@@ -12,13 +11,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 public class SchemaParser {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaParser.class);
   List<Table> tableList;
 
   public SchemaParser(String jsonFilePath, Map<String, String> metaOptions) throws Exception {

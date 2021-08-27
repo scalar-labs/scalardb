@@ -26,7 +26,6 @@ public class SchemaOperator {
   public void createTables(List<Table> tableList) {
     boolean hasTransactionTable = false;
 
-
     for (Table table : tableList) {
       if (table.isTransactionTable()) {
         hasTransactionTable = true;
