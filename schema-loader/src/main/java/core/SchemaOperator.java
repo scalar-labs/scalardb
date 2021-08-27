@@ -31,8 +31,14 @@ public class SchemaOperator {
         hasTransactionTable = true;
       }
       try {
+        service.createNamespace(table.getNamespace(), true, table.getOptions());
+      } catch (ExecutionException e) {
+        LOGGER.warn("Create namespace " + table.getNamespace() + " failed. " + e.getCause());
+      }
+      try {
         service.createTable(
-            table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
+            table.getNamespace(), table.getTable(), table.getTableMetadata(), false,
+            table.getOptions());
         LOGGER.info(
             "Create table "
                 + table.getTable()
@@ -40,7 +46,8 @@ public class SchemaOperator {
                 + table.getNamespace()
                 + " successfully.");
       } catch (ExecutionException e) {
-        LOGGER.warn("Created table " + table.getTable() + " failed. " + e.getCause());
+        LOGGER.warn("Create table " + table.getTable() + " in namespace "
+            + table.getNamespace() + " failed. " + e.getCause());
       }
     }
 
@@ -51,10 +58,10 @@ public class SchemaOperator {
             coordinatorSchema.getNamespace(),
             coordinatorSchema.getTable(),
             coordinatorSchema.getTableMetadata(),
+            true,
             null);
-        LOGGER.info("Created coordinator schema.");
       } catch (ExecutionException e) {
-        LOGGER.warn("Ignored coordinator schema creation. " + e.getCause().getMessage());
+        LOGGER.warn("Failed on coordinator schema creation. " + e.getCause().getMessage());
       }
     }
   }
