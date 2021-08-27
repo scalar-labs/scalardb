@@ -1,12 +1,12 @@
 package com.scalar.db.storage.cosmos;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.IntegrationTestBase;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.After;
@@ -40,18 +40,13 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
     admin = new CosmosAdmin(config);
     storage = new Cosmos(config);
-    HashMap<String, String> options = new HashMap<>();
-    options.put(CosmosAdmin.RU, "4000");
-    // TODO Remove cast
-    ((CosmosAdmin) admin).createNamespace(NAMESPACE, options);
+    admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.RU, "4000"));
     createTable(Collections.emptyMap());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws ExecutionException {
     deleteTable();
-    // TODO Remove cast
-    ((CosmosAdmin) admin).dropNamespace(NAMESPACE);
     admin.close();
     storage.close();
   }

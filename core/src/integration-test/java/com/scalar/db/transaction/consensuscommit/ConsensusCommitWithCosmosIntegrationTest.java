@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.mockito.Mockito.spy;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -36,7 +37,7 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
     config = new DatabaseConfig(props);
     originalStorage = new Cosmos(config);
     admin = new CosmosAdmin(config);
-    createTables();
+    createTables(ImmutableMap.of(CosmosAdmin.RU, "4000"));
   }
 
   @AfterClass

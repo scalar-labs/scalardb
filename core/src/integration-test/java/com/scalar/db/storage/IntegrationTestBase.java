@@ -78,6 +78,7 @@ public abstract class IntegrationTestBase {
 
   protected static void deleteTable() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
   }
 
   @Test

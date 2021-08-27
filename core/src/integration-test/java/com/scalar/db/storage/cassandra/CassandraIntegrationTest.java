@@ -47,8 +47,7 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    cassandraAdmin.dropTable(NAMESPACE, TABLE);
-    cassandraAdmin.dropNamespace(NAMESPACE);
+    deleteTable();
     cassandraAdmin.close();
   }
 
@@ -60,6 +59,6 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
 
   @After
   public void tearDown() throws Exception {
-    cassandraAdmin.truncateTable(NAMESPACE, TABLE);
+    deleteData();
   }
 }

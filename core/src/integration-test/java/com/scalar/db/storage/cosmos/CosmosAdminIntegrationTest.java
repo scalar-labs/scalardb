@@ -34,6 +34,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
     admin = new CosmosAdmin(new DatabaseConfig(props));
+    admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.RU, "4000"));
     admin.createTable(
         NAMESPACE,
         TABLE,
@@ -55,13 +56,13 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
             .addClusteringKey(COL_NAME3, Scan.Ordering.Order.DESC)
             .addSecondaryIndex(COL_NAME5)
             .addSecondaryIndex(COL_NAME6)
-            .build(),
-        ImmutableMap.of(CosmosAdmin.RU, "4000"));
+            .build());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
     admin.close();
   }
 

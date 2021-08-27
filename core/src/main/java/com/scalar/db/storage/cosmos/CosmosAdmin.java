@@ -141,7 +141,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         .setIndexingPolicy(indexingPolicy);
   }
 
-  // TODO Add @Override
+  @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
     try {
@@ -170,7 +170,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  // TODO add @Override
+  @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
     if (!containerExists(fullDatabase)) {
@@ -232,7 +232,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       return ThroughputProperties.createAutoscaledThroughput(ru);
     }
   }
-  // TODO Add @Override
+
+  @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
     return containerExists(fullDatabase(namespace));
   }
@@ -250,8 +251,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return true;
   }
 
-
-  // TODO Add @Override
+  @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
       return metadataManager.getTableNames(namespace);
