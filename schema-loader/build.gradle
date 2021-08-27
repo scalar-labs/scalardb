@@ -16,6 +16,11 @@ dependencies {
     implementation 'info.picocli:picocli:4.6.1'
     implementation 'com.google.inject:guice:5.0.1'
     implementation 'org.slf4j:slf4j-simple:1.7.21'
+
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
 }
 
 application {

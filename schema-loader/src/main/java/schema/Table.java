@@ -1,5 +1,6 @@
 package schema;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -61,6 +62,11 @@ public class Table {
   private Map<String, String> options;
   private boolean isTransactionTable = false;
   private Set<String> traveledKeys;
+
+  @VisibleForTesting
+  public Table(Set<String> traveledKeys) {
+    this.traveledKeys = traveledKeys;
+  }
 
   public Table(String tableFullName, JsonObject tableDefinition, Map<String, String> metaOptions)
       throws RuntimeException {
@@ -166,9 +172,9 @@ public class Table {
   protected Map<String, String> buildOptions(
       JsonObject tableDefinition, Map<String, String> metaOptions) {
     Map<String, String> options = new HashMap<>(metaOptions);
-    for (Map.Entry<String, ?> option : tableDefinition.entrySet()) {
+    for (Map.Entry<String, JsonElement> option : tableDefinition.entrySet()) {
       if (!traveledKeys.contains(option.getKey())) {
-        options.put(option.getKey(), option.getValue().toString());
+        options.put(option.getKey(), option.getValue().getAsString());
       }
     }
     return options;
