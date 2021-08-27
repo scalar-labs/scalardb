@@ -54,6 +54,7 @@ public class SchemaOperator {
     if (hasTransactionTable) {
       CoordinatorSchema coordinatorSchema = new CoordinatorSchema();
       try {
+        service.createNamespace(coordinatorSchema.getNamespace(), true, null);
         service.createTable(
             coordinatorSchema.getNamespace(),
             coordinatorSchema.getTable(),
