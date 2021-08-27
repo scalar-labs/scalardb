@@ -13,6 +13,7 @@ import com.azure.cosmos.models.CosmosStoredProcedureProperties;
 import com.azure.cosmos.models.ExcludedPath;
 import com.azure.cosmos.models.IncludedPath;
 import com.azure.cosmos.models.IndexingPolicy;
+import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.annotations.VisibleForTesting;
@@ -196,10 +197,18 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
     try {
       CosmosContainer container = database.getContainer(table);
+
       CosmosPagedIterable<Record> records =
           container.queryItems(
-              "SELECT * FROM " + table, new CosmosQueryRequestOptions(), Record.class);
-      records.forEach(record -> container.deleteItem(record, new CosmosItemRequestOptions()));
+              "SELECT t.id, t.concatenatedPartitionKey FROM " + table + " t",
+              new CosmosQueryRequestOptions(),
+              Record.class);
+      records.forEach(
+          record ->
+              container.deleteItem(
+                  record.getId(),
+                  new PartitionKey(record.getConcatenatedPartitionKey()),
+                  new CosmosItemRequestOptions()));
     } catch (RuntimeException e) {
       throw new ExecutionException("truncating the container failed", e);
     }
