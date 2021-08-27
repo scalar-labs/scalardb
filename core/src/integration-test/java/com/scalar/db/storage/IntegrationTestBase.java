@@ -26,6 +26,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,7 +47,10 @@ public abstract class IntegrationTestBase {
   protected static final String COL_NAME3 = "c3";
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
+
+  @SuppressFBWarnings("MS_CANNOT_BE_FINAL")
   protected static DistributedStorageAdmin admin;
+
   private DistributedStorage storage;
   private List<Put> puts;
   private List<Delete> deletes;

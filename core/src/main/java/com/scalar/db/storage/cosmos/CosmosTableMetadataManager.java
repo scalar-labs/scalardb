@@ -20,7 +20,6 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,7 +62,7 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    String fullName = Utility.getFullTableName(databasePrefix, namespace, table);
+    String fullName = getFullTableName(databasePrefix, namespace, table);
     if (!tableMetadataMap.containsKey(fullName)) {
       CosmosTableMetadata cosmosTableMetadata = readMetadata(fullName);
       if (cosmosTableMetadata == null) {
