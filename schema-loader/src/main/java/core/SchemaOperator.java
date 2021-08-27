@@ -6,7 +6,9 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.AdminService;
 import com.scalar.db.service.StorageModule;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import schema.CoordinatorSchema;
@@ -68,6 +70,7 @@ public class SchemaOperator {
   }
 
   public void deleteTables(List<Table> tableList) {
+    List<String> namespaces = new LinkedList<>();
     for (Table table : tableList) {
       try {
         service.dropTable(table.getNamespace(), table.getTable());
@@ -77,8 +80,22 @@ public class SchemaOperator {
                 + " in namespace "
                 + table.getNamespace()
                 + " successfully.");
+        namespaces.add(table.getNamespace());
       } catch (ExecutionException e) {
         LOGGER.warn("Delete table " + table.getTable() + " failed. " + e.getCause());
+      }
+    }
+    for (String namespace : namespaces) {
+      try {
+        if (service.getNamespaceTableNames(namespace).isEmpty()) {
+          try {
+            service.dropNamespace(namespace);
+          } catch (ExecutionException e) {
+            LOGGER.warn("Delete namespace " + namespace + " failed. " + e.getCause());
+          }
+        }
+      } catch (ExecutionException e) {
+        LOGGER.warn("Get table from namespace " + namespace + " failed. " + e.getCause());
       }
     }
   }
