@@ -3,16 +3,16 @@ workflows:
   version: 2
   scalardb-ci:
     jobs:
-      - check
-      - integration-test-for-cassandra
+#      - check
+#      - integration-test-for-cassandra
       - integration-test-for-cosmos
-      - integration-test-for-dynamo
-      - integration-test-for-jdbc-mysql
-      - integration-test-for-jdbc-postgresql
-      - integration-test-for-jdbc-oracle
-      - integration-test-for-jdbc-sqlserver
-      - integration-test-for-multi-storage
-      - integration-test-for-scalardb-server
+#      - integration-test-for-dynamo
+#      - integration-test-for-jdbc-mysql
+#      - integration-test-for-jdbc-postgresql
+#      - integration-test-for-jdbc-oracle
+#      - integration-test-for-jdbc-sqlserver
+#      - integration-test-for-multi-storage
+#      - integration-test-for-scalardb-server
 jobs:
   check:
     docker:
@@ -162,9 +162,9 @@ jobs:
 
       # run tests!
       - run:
-          name : Run integration test
           commmand: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.username=${COSMOS_USERNAME} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
           no_output_timeout: 30m
+
       - run:
           name: Save Gradle integration test reports
           command: |
