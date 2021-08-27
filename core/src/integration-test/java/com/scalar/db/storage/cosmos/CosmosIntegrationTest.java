@@ -6,7 +6,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.IntegrationTestBase;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.After;
@@ -40,8 +39,7 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
     admin = new CosmosAdmin(config);
     storage = new Cosmos(config);
-    admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.RU, "4000"));
-    createTable(Collections.emptyMap());
+    createTable(ImmutableMap.of(CosmosAdmin.RU, "4000"));
   }
 
   @AfterClass

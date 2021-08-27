@@ -5,6 +5,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.IntegrationTestBase;
+import java.util.Collections;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -40,8 +41,7 @@ public class CassandraIntegrationTest extends IntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
 
     cassandraAdmin = new CassandraAdmin(config);
-    cassandraAdmin.createNamespace(NAMESPACE);
-    cassandraAdmin.createTable(NAMESPACE, TABLE, TABLE_METADATA);
+    createTable(Collections.emptyMap());
     storage = new Cassandra(config);
   }
 

@@ -51,11 +51,8 @@ public abstract class IntegrationTestBase {
   private List<Put> puts;
   private List<Delete> deletes;
 
-  protected void setUp(DistributedStorage storage) {
-    this.storage = storage;
-  }
-
   protected static void createTable(Map<String, String> options) throws ExecutionException {
+    admin.createNamespace(NAMESPACE, options);
     admin.createTable(
         NAMESPACE,
         TABLE,
@@ -72,13 +69,17 @@ public abstract class IntegrationTestBase {
         options);
   }
 
-  protected void deleteData() throws ExecutionException {
-    admin.truncateTable(NAMESPACE, TABLE);
-  }
-
   protected static void deleteTable() throws ExecutionException {
     admin.dropTable(NAMESPACE, TABLE);
     admin.dropNamespace(NAMESPACE);
+  }
+
+  protected void setUp(DistributedStorage storage) {
+    this.storage = storage;
+  }
+
+  protected void deleteData() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE);
   }
 
   @Test

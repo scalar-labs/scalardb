@@ -23,44 +23,44 @@ public class CosmosTableMetadata {
 
   public CosmosTableMetadata() {}
 
-  public String getId() {
-    return id;
-  }
-
   public void setId(String id) {
     this.id = id;
-  }
-
-  public LinkedHashSet<String> getPartitionKeyNames() {
-    return partitionKeyNames;
   }
 
   public void setPartitionKeyNames(List<String> partitionKeyNames) {
     this.partitionKeyNames = new ImmutableLinkedHashSet<>(partitionKeyNames);
   }
 
-  public LinkedHashSet<String> getClusteringKeyNames() {
-    return clusteringKeyNames;
-  }
-
   public void setClusteringKeyNames(List<String> clusteringKeyNames) {
     this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
-  }
-
-  public Set<String> getSecondaryIndexNames() {
-    return secondaryIndexNames;
   }
 
   public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
     this.secondaryIndexNames = ImmutableSortedSet.copyOf(secondaryIndexNames);
   }
 
-  public Map<String, String> getColumns() {
-    return columns;
-  }
-
   public void setColumns(Map<String, String> columns) {
     this.columns = ImmutableMap.copyOf(columns);
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public LinkedHashSet<String> getPartitionKeyNames() {
+    return partitionKeyNames;
+  }
+
+  public LinkedHashSet<String> getClusteringKeyNames() {
+    return clusteringKeyNames;
+  }
+
+  public Set<String> getSecondaryIndexNames() {
+    return secondaryIndexNames;
+  }
+
+  public Map<String, String> getColumns() {
+    return columns;
   }
 
   @Override
