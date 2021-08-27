@@ -45,7 +45,7 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
   private static DistributedStorageAdmin admin;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     setUp(admin);
   }
 
@@ -70,7 +70,7 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setUpBeforeClass() {
     String endpointOverride =
         System.getProperty("scalardb.dynamo.endpoint_override", "http://localhost:8000");
     String region = System.getProperty("scalardb.dynamo.region", "us-west-2");
@@ -172,7 +172,7 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass() {
     client.deleteTable(
         DeleteTableRequest.builder().tableName(table(METADATA_DATABASE, METADATA_TABLE)).build());
 

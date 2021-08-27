@@ -9,6 +9,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -28,6 +29,7 @@ public class PutStatementHandler extends StatementHandler {
     super(client, metadataManager);
   }
 
+  @Nonnull
   @Override
   public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
     checkArgument(operation, Put.class);

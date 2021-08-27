@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.Test;
 
-/** */
 public class GetTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -117,10 +116,7 @@ public class GetTest {
 
     // Act Assert
     List<String> projections = get.getProjections();
-    assertThatThrownBy(
-            () -> {
-              projections.add(ANY_NAME_3);
-            })
+    assertThatThrownBy(() -> projections.add(ANY_NAME_3))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -140,11 +136,7 @@ public class GetTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new Get(null);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Get(null)).isInstanceOf(NullPointerException.class);
   }
 
   @Test

@@ -8,9 +8,9 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Optional;
-import javax.annotation.concurrent.Immutable;
+import javax.annotation.concurrent.ThreadSafe;
 
-@Immutable
+@ThreadSafe
 public class TransactionService implements DistributedTransactionManager {
   private final DistributedTransactionManager manager;
 

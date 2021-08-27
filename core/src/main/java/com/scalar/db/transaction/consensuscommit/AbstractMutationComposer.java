@@ -9,7 +9,9 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public abstract class AbstractMutationComposer implements MutationComposer {
   protected final String id;
   protected final List<Mutation> mutations;

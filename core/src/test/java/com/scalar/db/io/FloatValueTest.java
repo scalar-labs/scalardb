@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.Test;
 
-/** */
 public class FloatValueTest {
   private static final String ANY_NAME = "name";
   private static final String ANOTHER_NAME = "another_name";
@@ -222,10 +221,6 @@ public class FloatValueTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new FloatValue(null, 1.0f);
-            })
-        .isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new FloatValue(null, 1.0f)).isInstanceOf(NullPointerException.class);
   }
 }

@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
 
-/** */
 public class TransactionResultTest {
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
@@ -111,12 +110,7 @@ public class TransactionResultTest {
 
     // Assert
     assertThat(values.size()).isEqualTo(given.getValues().size());
-    given
-        .getValues()
-        .forEach(
-            (k, v) -> {
-              assertThat(values.get(v.getName())).isEqualTo(v);
-            });
+    given.getValues().forEach((k, v) -> assertThat(values.get(v.getName())).isEqualTo(v));
   }
 
   @Test

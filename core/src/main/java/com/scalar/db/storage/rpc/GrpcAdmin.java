@@ -15,6 +15,7 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -52,6 +53,12 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -77,6 +84,11 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     execute(
         () ->
@@ -89,8 +101,18 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+  public TableMetadata getTableMetadata(String namespace, String table) {
     return metadataManager.getTableMetadata(namespace, table);
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
   }
 
   private static void execute(Runnable runnable) throws ExecutionException {

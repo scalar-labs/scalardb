@@ -52,7 +52,7 @@ public class SelectStatementHandler extends StatementHandler {
   @Nonnull
   protected PreparedStatement prepare(Operation operation) {
     checkArgument(operation, Get.class, Scan.class);
-    Select select = null;
+    Select select;
 
     if (operation instanceof Get) {
       select = prepare((Get) operation);
@@ -67,15 +67,11 @@ public class SelectStatementHandler extends StatementHandler {
   @Nonnull
   protected BoundStatement bind(PreparedStatement prepared, Operation operation) {
     checkArgument(operation, Get.class, Scan.class);
-    BoundStatement bound = prepared.bind();
-
     if (operation instanceof Get) {
-      bound = bind(bound, (Get) operation);
+      return bind(prepared.bind(), (Get) operation);
     } else {
-      bound = bind(bound, (Scan) operation);
+      return bind(prepared.bind(), (Scan) operation);
     }
-
-    return bound;
   }
 
   @Override
@@ -102,7 +98,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     List<Ordering> orderings = getOrderings(scan.getOrderings());
     if (!orderings.isEmpty()) {
-      select.orderBy(orderings.toArray(new Ordering[orderings.size()]));
+      select.orderBy(orderings.toArray(new Ordering[0]));
     }
 
     if (scan.getLimit() > 0) {
@@ -123,7 +119,7 @@ public class SelectStatementHandler extends StatementHandler {
     if (projections.isEmpty()) {
       selection.all();
     } else {
-      projections.forEach(p -> selection.column(p));
+      projections.forEach(selection::column);
     }
   }
 
@@ -139,10 +135,7 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private void setKey(Select.Where statement, Optional<Key> key) {
-    key.ifPresent(
-        k -> {
-          k.forEach(v -> statement.and(eq(v.getName(), bindMarker())));
-        });
+    key.ifPresent(k -> k.forEach(v -> statement.and(eq(v.getName(), bindMarker()))));
   }
 
   private void setStart(Select.Where statement, Scan scan) {
@@ -230,10 +223,7 @@ public class SelectStatementHandler extends StatementHandler {
 
   private List<Ordering> getOrderings(List<Scan.Ordering> scanOrderings) {
     List<Ordering> orderings = new ArrayList<>(scanOrderings.size());
-    scanOrderings.forEach(
-        o -> {
-          orderings.add(getOrdering(o));
-        });
+    scanOrderings.forEach(o -> orderings.add(getOrdering(o)));
     return orderings;
   }
 }

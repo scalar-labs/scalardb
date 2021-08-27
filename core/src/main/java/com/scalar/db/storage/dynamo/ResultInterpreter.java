@@ -17,8 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+@ThreadSafe
 public class ResultInterpreter {
 
   private final List<String> projections;

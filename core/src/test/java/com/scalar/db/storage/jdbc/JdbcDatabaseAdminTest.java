@@ -1,6 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
-import static org.mockito.ArgumentMatchers.startsWith;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,10 +12,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +79,6 @@ public class JdbcDatabaseAdminTest {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
-        "CREATE SCHEMA IF NOT EXISTS `ns_prefixmy_ns`",
         "CREATE TABLE `ns_prefixmy_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` FLOAT, PRIMARY KEY (`c3`,`c1`,`c4`))",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON `ns_prefixmy_ns`.`foo_table` (`c4`)",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON `ns_prefixmy_ns`.`foo_table` (`c1`)");
@@ -88,7 +89,6 @@ public class JdbcDatabaseAdminTest {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
-        "CREATE SCHEMA IF NOT EXISTS \"ns_prefixmy_ns\"",
         "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")");
@@ -99,7 +99,6 @@ public class JdbcDatabaseAdminTest {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
-        "CREATE SCHEMA [ns_prefixmy_ns]",
         "CREATE TABLE [ns_prefixmy_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000),[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON [ns_prefixmy_ns].[foo_table] ([c4])",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON [ns_prefixmy_ns].[foo_table] ([c1])");
@@ -110,11 +109,40 @@ public class JdbcDatabaseAdminTest {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
-        "CREATE USER \"ns_prefixmy_ns\" IDENTIFIED BY \"oracle\"",
-        "ALTER USER \"ns_prefixmy_ns\" quota unlimited on USERS",
-        "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE TABLE \"ns_prefixmy_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"ns_prefixmy_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c4 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_ns_prefixmy_ns_foo_table_c1 ON \"ns_prefixmy_ns\".\"foo_table\" (\"c1\")");
+  }
+
+  @Test
+  public void createNamespace_forMysql_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.MYSQL, "CREATE SCHEMA `ns_prefixmy_ns`");
+  }
+
+  @Test
+  public void createNamespace_forPostgresql_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.POSTGRESQL, "CREATE SCHEMA \"ns_prefixmy_ns\"");
+  }
+
+  @Test
+  public void createNamespace_forSqlServer_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.SQL_SERVER, "CREATE SCHEMA [ns_prefixmy_ns]");
+  }
+
+  @Test
+  public void createNamespace_forOracle_shouldExecuteCreateNamespaceStatement()
+      throws ExecutionException, SQLException {
+    createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+        RdbEngine.ORACLE,
+        "CREATE USER \"ns_prefixmy_ns\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"ns_prefixmy_ns\" quota unlimited on USERS");
   }
 
   private void createTable_forX_shouldExecuteCreateTableStatement(
@@ -161,6 +189,35 @@ public class JdbcDatabaseAdminTest {
       verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
     }
     verify(metadataManager).addTableMetadata(namespace, table, metadata);
+  }
+
+  private void createNamespace_forX_shouldExecuteCreateNamespaceStatement(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespacePrefix = "ns_prefix";
+    String namespace = "my_ns";
+    JdbcDatabaseAdmin admin =
+        new JdbcDatabaseAdmin(dataSource, metadataManager, Optional.of(namespacePrefix), rdbEngine);
+    Connection connection = mock(Connection.class);
+    List<Statement> mockedStatements = new ArrayList<>();
+
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    // Act
+    admin.createNamespace(namespace);
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
   }
 
   @Test
@@ -215,42 +272,75 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void dropTable_forMysqlWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
-    dropTable_forXWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema(
-        RdbEngine.MYSQL, "DROP TABLE `ns_prefixmy_ns`.`foo_table`", "DROP SCHEMA `ns_prefixmy_ns`");
+  public void dropTable_forMysql_shouldDropTable() throws Exception {
+    dropTable_forX_shouldDropTable(RdbEngine.MYSQL, "DROP TABLE `ns_prefixmy_ns`.`foo_table`");
   }
 
   @Test
-  public void dropTable_forPostgresqlWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
+  public void dropTable_forPostgresql_shouldDropTable() throws Exception {
+    dropTable_forX_shouldDropTable(
+        RdbEngine.POSTGRESQL, "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"");
+  }
+
+  @Test
+  public void dropTable_forSqlServer_shouldDropTable() throws Exception {
+    dropTable_forX_shouldDropTable(RdbEngine.SQL_SERVER, "DROP TABLE [ns_prefixmy_ns].[foo_table]");
+  }
+
+  @Test
+  public void dropTable_forOracle_shouldDropTable() throws Exception {
+    dropTable_forX_shouldDropTable(RdbEngine.ORACLE, "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"");
+  }
+
+  @Test
+  public void dropNamespace_forMysql_shouldDropNamespace() throws Exception {
+    dropSchema_forX_shouldDropSchema(RdbEngine.MYSQL, "DROP SCHEMA `ns_prefixmy_ns`");
+  }
+
+  @Test
+  public void dropNamespace_forPostgresql_shouldDropNamespace() throws Exception {
+    dropSchema_forX_shouldDropSchema(RdbEngine.POSTGRESQL, "DROP SCHEMA \"ns_prefixmy_ns\"");
+  }
+
+  @Test
+  public void dropNamespace_forSqlServer_shouldDropNamespace() throws Exception {
+    dropSchema_forX_shouldDropSchema(RdbEngine.SQL_SERVER, "DROP SCHEMA [ns_prefixmy_ns]");
+  }
+
+  @Test
+  public void dropNamespace_forOracle_shouldDropNamespace() throws Exception {
+    dropSchema_forX_shouldDropSchema(RdbEngine.ORACLE, "DROP USER \"ns_prefixmy_ns\"");
+  }
+
+  @Test
+  public void namespaceExists_forMysqlWithExistingNamespace_shouldReturnTrue() throws Exception {
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.MYSQL, "SELECT 1 FROM `information_schema`.`schemata` WHERE `schema_name` = ?");
+  }
+
+  @Test
+  public void namespaceExists_forPostgresqlWithExistingNamespace_shouldReturnTrue()
       throws Exception {
-    dropTable_forXWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema(
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
         RdbEngine.POSTGRESQL,
-        "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"",
-        "DROP SCHEMA \"ns_prefixmy_ns\"");
+        "SELECT 1 FROM \"information_schema\".\"schemata\" WHERE \"schema_name\" = ?");
   }
 
   @Test
-  public void dropTable_forSqlServerWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
+  public void namespaceExists_forSqlServerWithExistingNamespace_shouldReturnTrue()
       throws Exception {
-    dropTable_forXWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema(
-        RdbEngine.SQL_SERVER,
-        "DROP TABLE [ns_prefixmy_ns].[foo_table]",
-        "DROP SCHEMA [ns_prefixmy_ns]");
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.SQL_SERVER, "SELECT 1 FROM [sys].[schemas] WHERE [name] = ?");
   }
 
   @Test
-  public void dropTable_forOracleWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema()
-      throws Exception {
-    dropTable_forXWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema(
-        RdbEngine.ORACLE,
-        "DROP TABLE \"ns_prefixmy_ns\".\"foo_table\"",
-        "DROP USER \"ns_prefixmy_ns\"");
+  public void namespaceExists_forOracleWithExistingNamespace_shouldReturnTrue() throws Exception {
+    namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+        RdbEngine.ORACLE, "SELECT 1 FROM \"ALL_USERS\" WHERE \"USERNAME\" = ?");
   }
 
-  private void dropTable_forXWithOnlyOneTableLeftInNamespace_shouldDropTableAndSchema(
-      RdbEngine rdbEngine, String expectedDropTableStatement, String expectedDropSchemaStatement)
-      throws Exception {
+  private void dropTable_forX_shouldDropTable(
+      RdbEngine rdbEngine, String expectedDropTableStatement) throws Exception {
     // Arrange
     String namespacePrefix = "ns_prefix";
     String namespace = "my_ns";
@@ -264,7 +354,7 @@ public class JdbcDatabaseAdminTest {
 
     when(connection.createStatement()).thenReturn(dropTableStatement, dropSchemaStatement);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(metadataManager.getTableNames(namespace)).thenReturn(Collections.emptySet());
+    when(connection.createStatement()).thenReturn(dropTableStatement);
 
     // Act
     admin.dropTable(namespace, table);
@@ -272,55 +362,53 @@ public class JdbcDatabaseAdminTest {
     // Assert
     verify(dropTableStatement).execute(expectedDropTableStatement);
     verify(metadataManager).deleteTableMetadata(namespace, table);
-    verify(dropSchemaStatement).execute(expectedDropSchemaStatement);
   }
 
-  @Test
-  public void dropTable_forMysqlWithSeveralTableLeftInNamespace_shouldOnlyDropTable()
-      throws Exception {
-    dropTable_forXWithSeveralTableLeftInNamespace_shouldOnlyDropTable(RdbEngine.MYSQL);
-  }
-
-  @Test
-  public void dropTable_forPostgresqlWithSeveralTableLeftInNamespace_shouldOnlyDropTable()
-      throws Exception {
-    dropTable_forXWithSeveralTableLeftInNamespace_shouldOnlyDropTable(RdbEngine.POSTGRESQL);
-  }
-
-  @Test
-  public void dropTable_forSqlServerWithSeveralTableLeftInNamespace_shouldOnlyDropTable()
-      throws Exception {
-    dropTable_forXWithSeveralTableLeftInNamespace_shouldOnlyDropTable(RdbEngine.SQL_SERVER);
-  }
-
-  @Test
-  public void dropTable_forOracleWithSeveralTableLeftInNamespace_shouldOnlyDropTable()
-      throws Exception {
-    dropTable_forXWithSeveralTableLeftInNamespace_shouldOnlyDropTable(RdbEngine.ORACLE);
-  }
-
-  private void dropTable_forXWithSeveralTableLeftInNamespace_shouldOnlyDropTable(
-      RdbEngine rdbEngine) throws Exception {
+  private void dropSchema_forX_shouldDropSchema(
+      RdbEngine rdbEngine, String expectedDropSchemaStatement) throws Exception {
     // Arrange
     String namespacePrefix = "ns_prefix";
     String namespace = "my_ns";
-    String table = "foo_table";
     JdbcDatabaseAdmin admin =
         new JdbcDatabaseAdmin(dataSource, metadataManager, Optional.of(namespacePrefix), rdbEngine);
 
     Connection connection = mock(Connection.class);
-    Statement dropTableStatement = mock(Statement.class);
+    Statement dropSchemaStatement = mock(Statement.class);
 
-    when(connection.createStatement()).thenReturn(dropTableStatement);
     when(dataSource.getConnection()).thenReturn(connection);
-    when(metadataManager.getTableNames(namespace)).thenReturn(Collections.singleton("bar_table"));
+    when(connection.createStatement()).thenReturn(dropSchemaStatement);
 
     // Act
-    admin.dropTable(namespace, table);
+    admin.dropNamespace(namespace);
 
     // Assert
-    verify(dropTableStatement).execute(startsWith("DROP TABLE"));
-    verify(metadataManager).deleteTableMetadata(namespace, table);
-    verify(connection).createStatement();
+    verify(dropSchemaStatement).execute(expectedDropSchemaStatement);
+  }
+
+  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
+  private void namespaceExists_forXWithExistingNamespace_ShouldReturnTrue(
+      RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
+    // Arrange
+    String namespacePrefix = "ns_prefix";
+    String namespace = "my_ns";
+    JdbcDatabaseAdmin admin =
+        new JdbcDatabaseAdmin(dataSource, metadataManager, Optional.of(namespacePrefix), rdbEngine);
+
+    Connection connection = mock(Connection.class);
+    PreparedStatement selectStatement = mock(PreparedStatement.class);
+    ResultSet results = mock(ResultSet.class);
+
+    when(dataSource.getConnection()).thenReturn(connection);
+    when(connection.prepareStatement(any())).thenReturn(selectStatement);
+    when(results.next()).thenReturn(true);
+    when(selectStatement.executeQuery()).thenReturn(results);
+
+    // Act
+    // Assert
+    assertTrue(admin.namespaceExists(namespace));
+
+    verify(selectStatement).executeQuery();
+    verify(connection).prepareStatement(expectedSelectStatement);
+    verify(selectStatement).setString(1, namespacePrefix + namespace);
   }
 }

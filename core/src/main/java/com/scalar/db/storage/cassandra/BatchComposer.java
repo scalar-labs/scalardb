@@ -57,7 +57,7 @@ public class BatchComposer implements OperationVisitor {
   }
 
   /**
-   * Adds a insert/update statement to the batch
+   * Adds an insert/update statement to the batch
    *
    * @param put {@code Put} command to add
    */

@@ -99,9 +99,6 @@ public class MapVisitor implements ValueVisitor {
   public void visit(BlobValue value) {
     value
         .get()
-        .ifPresent(
-            b -> {
-              values.put(value.getName(), (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
-            });
+        .ifPresent(b -> values.put(value.getName(), ByteBuffer.allocate(b.length).put(b).flip()));
   }
 }

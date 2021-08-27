@@ -8,7 +8,6 @@ import com.scalar.db.io.DataType;
 import java.util.Iterator;
 import org.junit.Test;
 
-/** */
 public class TableMetadataTest {
 
   private static final String COL_NAME1 = "c1";

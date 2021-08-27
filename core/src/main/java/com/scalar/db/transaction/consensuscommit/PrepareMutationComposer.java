@@ -153,11 +153,8 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   }
 
   private boolean isBeforeRequired(Value<?> value, Key primary, Optional<Key> clustering) {
-    if (!value.getName().startsWith(Attribute.BEFORE_PREFIX)
-        && !isValueInKeys(value, primary, clustering)) {
-      return true;
-    }
-    return false;
+    return !value.getName().startsWith(Attribute.BEFORE_PREFIX)
+        && !isValueInKeys(value, primary, clustering);
   }
 
   private boolean isValueInKeys(Value<?> value, Key primary, Optional<Key> clustering) {

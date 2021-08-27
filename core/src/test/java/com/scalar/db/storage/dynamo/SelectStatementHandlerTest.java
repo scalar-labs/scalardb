@@ -3,7 +3,7 @@ package com.scalar.db.storage.dynamo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,7 +15,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,7 +56,7 @@ public class SelectStatementHandlerTest {
   @Mock private QueryResponse queryResponse;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     handler = new SelectStatementHandler(client, metadataManager);
@@ -96,11 +95,7 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expectedKeys = dynamoOperation.getKeyMap();
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(get);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<GetItemRequest> captor = ArgumentCaptor.forClass(GetItemRequest.class);
@@ -129,8 +124,7 @@ public class SelectStatementHandlerTest {
   public void handle_GetOperationWithIndexGiven_ShouldCallQuery() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
@@ -140,11 +134,7 @@ public class SelectStatementHandlerTest {
         DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(get);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -163,10 +153,7 @@ public class SelectStatementHandlerTest {
     Get get = prepareGet();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(get);
-            })
+    assertThatThrownBy(() -> handler.handle(get))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -175,8 +162,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationGiven_ShouldCallQuery() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
     Scan scan = prepareScan();
     String expectedKeyCondition =
         DynamoOperation.PARTITION_KEY + " = " + DynamoOperation.PARTITION_KEY_ALIAS;
@@ -187,11 +173,7 @@ public class SelectStatementHandlerTest {
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -205,8 +187,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithIndexGiven_ShouldCallQuery() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
@@ -216,11 +197,7 @@ public class SelectStatementHandlerTest {
         DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -239,10 +216,7 @@ public class SelectStatementHandlerTest {
     Scan scan = prepareScan();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              handler.handle(scan);
-            })
+    assertThatThrownBy(() -> handler.handle(scan))
         .isInstanceOf(ExecutionException.class)
         .hasCause(toThrow);
   }
@@ -251,8 +225,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithSingleClusteringKey_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
         prepareScan()
@@ -277,11 +250,7 @@ public class SelectStatementHandlerTest {
         DynamoOperation.RANGE_KEY_ALIAS + "1", AttributeValue.builder().s(ANY_TEXT_3).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -295,8 +264,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithMultipleClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
         prepareScan()
@@ -344,11 +312,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder().s(ANY_TEXT_2).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -363,8 +327,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithOrderingAndLimit_ShouldCallQueryWithProperRequest() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
         prepareScan()
@@ -391,11 +354,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder().s(ANY_TEXT_2).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
@@ -411,8 +370,7 @@ public class SelectStatementHandlerTest {
   public void handle_ScanOperationWithMultipleOrdering_ShouldCallQueryWithProperRequest() {
     // Arrange
     when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
-    Map<String, AttributeValue> expected = new HashMap<>();
-    when(queryResponse.items()).thenReturn(Arrays.asList(expected));
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Scan scan =
         prepareScan()
@@ -440,11 +398,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder().s(ANY_TEXT_2).build());
 
     // Act Assert
-    assertThatCode(
-            () -> {
-              handler.handle(scan);
-            })
-        .doesNotThrowAnyException();
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
 
     // Assert
     ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);

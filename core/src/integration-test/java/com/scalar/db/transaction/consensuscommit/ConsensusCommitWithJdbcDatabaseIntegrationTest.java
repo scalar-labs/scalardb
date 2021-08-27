@@ -19,7 +19,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import java.sql.SQLException;
 import java.util.Arrays;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -33,7 +32,7 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
   private static DistributedStorage originalStorage;
 
   @Before
-  public void setUp() throws SQLException {
+  public void setUp() {
     DistributedStorage storage = spy(originalStorage);
     Coordinator coordinator = spy(new Coordinator(storage));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));

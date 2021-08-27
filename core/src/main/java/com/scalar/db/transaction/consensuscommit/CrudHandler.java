@@ -60,7 +60,7 @@ public class CrudHandler {
 
     Optional<List<Snapshot.Key>> keysInSnapshot = snapshot.get(scan);
     if (keysInSnapshot.isPresent()) {
-      keysInSnapshot.get().forEach(key -> snapshot.get(key).ifPresent(r -> results.add(r)));
+      keysInSnapshot.get().forEach(key -> snapshot.get(key).ifPresent(results::add));
       return results;
     }
 
@@ -111,7 +111,7 @@ public class CrudHandler {
   private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
       get.withConsistency(Consistency.LINEARIZABLE);
-      return storage.get(get).map(r -> new TransactionResult(r));
+      return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
       throw new CrudException("get failed.", e);
     }

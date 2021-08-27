@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
 
-/** */
 public class KeyTest {
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -190,10 +189,7 @@ public class KeyTest {
 
     // Act Assert
     List<Value<?>> values = key.get();
-    assertThatThrownBy(
-            () -> {
-              values.add(new TextValue(ANY_NAME_3, ANY_TEXT_3));
-            })
+    assertThatThrownBy(() -> values.add(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -351,10 +347,7 @@ public class KeyTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              new Key((List<Value<?>>) null);
-            })
+    assertThatThrownBy(() -> new Key((List<Value<?>>) null))
         .isInstanceOf(NullPointerException.class);
   }
 }

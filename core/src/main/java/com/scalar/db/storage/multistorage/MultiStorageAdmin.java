@@ -10,14 +10,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * An implementation with multi-storage for {@link DistributedStorageAdmin}.
  *
- * <p>This implementation holds multiple DistributedStorageAdmin instances. It chooses a instance on
- * the basis of the specified configuration and a given operation. If there is a conflict between a
- * table mapping and a namespace mapping, it prefers the table mapping because table mappings are
+ * <p>This implementation holds multiple DistributedStorageAdmin instances. It chooses an instance
+ * on the basis of the specified configuration and a given operation. If there is a conflict between
+ * a table mapping and a namespace mapping, it prefers the table mapping because table mappings are
  * more specific than namespace mappings.
  *
  * @author Toshihiro Suzuki
@@ -70,6 +71,12 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void createNamespace(String namespace, Map<String, String> options)
+      throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
@@ -82,6 +89,11 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  public void dropNamespace(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     getAdmin(namespace, table).truncateTable(namespace, table);
   }
@@ -89,6 +101,16 @@ public class MultiStorageAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     return getAdmin(namespace, table).getTableMetadata(namespace, table);
+  }
+
+  @Override
+  public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
+  }
+
+  @Override
+  public boolean namespaceExists(String namespace) throws ExecutionException {
+    throw new UnsupportedOperationException("implement later");
   }
 
   private DistributedStorageAdmin getAdmin(String namespace, String table) {
