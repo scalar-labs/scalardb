@@ -162,6 +162,7 @@ jobs:
 
       # run tests!
       - run:
+          name : Run integration test
           commmand: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.username=${COSMOS_USERNAME} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
           no_output_timeout: 30m
       - run:
