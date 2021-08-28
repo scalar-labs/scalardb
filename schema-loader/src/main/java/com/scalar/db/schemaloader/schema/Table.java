@@ -1,12 +1,12 @@
-package schema;
+package com.scalar.db.schemaloader.schema;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.api.TableMetadata.Builder;
 import com.scalar.db.io.DataType;
 import com.scalar.db.transaction.consensuscommit.Attribute;
 import java.util.HashMap;
@@ -27,41 +27,35 @@ public class Table {
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
   private static final String TRANSACTION_COL_PREFIX = "before_";
-  private static final Map<String, DataType> dataTypeMap =
-      new HashMap<String, DataType>() {
-        {
-          put("BOOLEAN", DataType.BOOLEAN);
-          put("INT", DataType.INT);
-          put("BIGINT", DataType.BIGINT);
-          put("FLOAT", DataType.FLOAT);
-          put("DOUBLE", DataType.DOUBLE);
-          put("TEXT", DataType.TEXT);
-          put("BLOB", DataType.BLOB);
-        }
-      };
-  private static final Map<String, DataType> transactionMetadataColumns =
-      new HashMap<String, DataType>() {
-        {
-          put(Attribute.COMMITTED_AT, DataType.BIGINT);
-          put(Attribute.ID, DataType.TEXT);
-          put(Attribute.PREPARED_AT, DataType.BIGINT);
-          put(Attribute.STATE, DataType.INT);
-          put(Attribute.VERSION, DataType.INT);
-        }
-      };
-  private static final Map<String, Order> orderMap =
-      new HashMap<String, Order>() {
-        {
-          put("ASC", Order.ASC);
-          put("DESC", Order.DESC);
-        }
-      };
+  private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
+      ImmutableMap.<String, DataType>builder()
+          .put("BOOLEAN", DataType.BOOLEAN)
+          .put("INT", DataType.INT)
+          .put("BIGINT", DataType.BIGINT)
+          .put("FLOAT", DataType.FLOAT)
+          .put("DOUBLE", DataType.DOUBLE)
+          .put("TEXT", DataType.TEXT)
+          .put("BLOB", DataType.BLOB)
+          .build();
+  private static final ImmutableMap<String, DataType> TRANSACTION_META_COLUMNS =
+      ImmutableMap.<String, DataType>builder()
+          .put(Attribute.COMMITTED_AT, DataType.BIGINT)
+          .put(Attribute.ID, DataType.TEXT)
+          .put(Attribute.PREPARED_AT, DataType.BIGINT)
+          .put(Attribute.STATE, DataType.INT)
+          .put(Attribute.VERSION, DataType.INT)
+          .build();
+  private static final ImmutableMap<String, Order> ORDER_MAP =
+      ImmutableMap.<String, Order>builder().put("ASC", Order.ASC).put("DESC", Order.DESC).build();
   private String namespace;
   private String tableName;
   private TableMetadata tableMetadata;
   private Map<String, String> options;
   private boolean isTransactionTable = false;
   private Set<String> traveledKeys;
+
+  @VisibleForTesting
+  public Table() {}
 
   @VisibleForTesting
   public Table(Set<String> traveledKeys) {
@@ -72,7 +66,7 @@ public class Table {
       throws RuntimeException {
     traveledKeys = new HashSet<>();
 
-    String[] fullName = tableFullName.split("\\.");
+    String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
       throw new RuntimeException("Table full name must contains table name and namespace");
     }
@@ -83,7 +77,7 @@ public class Table {
   }
 
   protected TableMetadata buildTableMetadata(JsonObject tableDefinition) {
-    Builder tableBuilder = TableMetadata.newBuilder();
+    TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
 
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
@@ -103,18 +97,18 @@ public class Table {
       JsonArray clusteringKeys = tableDefinition.get(CLUSTERING_KEY).getAsJsonArray();
       traveledKeys.add(CLUSTERING_KEY);
       for (JsonElement clusteringKeyRaw : clusteringKeys) {
-        String clusteringKey = "";
-        String oder = "ASC";
-        String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split(" ");
+        String clusteringKey;
+        String oder;
+        String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split(" ", -1);
         if (clusteringKeyFull.length < 2) {
           clusteringKey = clusteringKeyFull[0];
           tableBuilder.addClusteringKey(clusteringKey);
         } else if (clusteringKeyFull.length == 2
             && (clusteringKeyFull[1].toUpperCase().equals("ASC")
-            || clusteringKeyFull[1].toUpperCase().equals("DESC"))) {
+                || clusteringKeyFull[1].toUpperCase().equals("DESC"))) {
           clusteringKey = clusteringKeyFull[0];
           oder = clusteringKeyFull[1];
-          tableBuilder.addClusteringKey(clusteringKey, orderMap.get(oder.toUpperCase()));
+          tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(oder.toUpperCase()));
         } else {
           throw new RuntimeException("Invalid clustering keys");
         }
@@ -128,10 +122,11 @@ public class Table {
       traveledKeys.add(TRANSACTION);
       LOGGER.debug("transaction: " + transaction);
     }
+
     // Add transaction metadata columns
     if (transaction) {
       isTransactionTable = true;
-      for (Map.Entry<String, DataType> col : transactionMetadataColumns.entrySet()) {
+      for (Map.Entry<String, DataType> col : TRANSACTION_META_COLUMNS.entrySet()) {
         tableBuilder.addColumn(col.getKey(), col.getValue());
         tableBuilder.addColumn(TRANSACTION_COL_PREFIX + col.getKey(), col.getValue());
       }
@@ -145,7 +140,7 @@ public class Table {
     traveledKeys.add(COLUMNS);
     for (Entry<String, JsonElement> column : columns.entrySet()) {
       String columnName = column.getKey();
-      DataType columnDataType = dataTypeMap.get(column.getValue().getAsString().toUpperCase());
+      DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
       if (columnDataType == null) {
         throw new RuntimeException("Invalid column type for column " + columnName);
       }

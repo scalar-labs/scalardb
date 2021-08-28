@@ -23,7 +23,6 @@
       "c4"
     ]
   },
-
   "sample_db.sample_table1": {
     "transaction": true,
     "partition-key": [
@@ -40,7 +39,6 @@
       "c5": "BOOLEAN"
     }
   },
-
   "sample_db.sample_table2": {
     "transaction": false,
     "partition-key": [

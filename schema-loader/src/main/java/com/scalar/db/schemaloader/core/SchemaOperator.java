@@ -1,28 +1,25 @@
-package core;
+package com.scalar.db.schemaloader.core;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.service.AdminService;
-import com.scalar.db.service.StorageModule;
-import java.util.LinkedList;
+import com.scalar.db.schemaloader.schema.CoordinatorSchema;
+import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.service.StorageFactory;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import schema.CoordinatorSchema;
-import schema.Table;
 
 public class SchemaOperator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOperator.class);
 
-  private AdminService service;
+  private final DistributedStorageAdmin admin;
 
   public SchemaOperator(DatabaseConfig dbConfig) {
-    Injector injector = Guice.createInjector(new StorageModule(dbConfig));
-    service = injector.getInstance(AdminService.class);
+    StorageFactory storageFactory = new StorageFactory(dbConfig);
+    admin = storageFactory.getAdmin();
   }
 
   public void createTables(List<Table> tableList) {
@@ -33,13 +30,16 @@ public class SchemaOperator {
         hasTransactionTable = true;
       }
       try {
-        service.createNamespace(table.getNamespace(), true, table.getOptions());
+        admin.createNamespace(table.getNamespace(), true, table.getOptions());
       } catch (ExecutionException e) {
         LOGGER.warn("Create namespace " + table.getNamespace() + " failed. " + e.getCause());
       }
       try {
-        service.createTable(
-            table.getNamespace(), table.getTable(), table.getTableMetadata(), false,
+        admin.createTable(
+            table.getNamespace(),
+            table.getTable(),
+            table.getTableMetadata(),
+            false,
             table.getOptions());
         LOGGER.info(
             "Create table "
@@ -48,16 +48,21 @@ public class SchemaOperator {
                 + table.getNamespace()
                 + " successfully.");
       } catch (ExecutionException e) {
-        LOGGER.warn("Create table " + table.getTable() + " in namespace "
-            + table.getNamespace() + " failed. " + e.getCause());
+        LOGGER.warn(
+            "Create table "
+                + table.getTable()
+                + " in namespace "
+                + table.getNamespace()
+                + " failed. "
+                + e.getCause());
       }
     }
 
     if (hasTransactionTable) {
       CoordinatorSchema coordinatorSchema = new CoordinatorSchema();
       try {
-        service.createNamespace(coordinatorSchema.getNamespace(), true, null);
-        service.createTable(
+        admin.createNamespace(coordinatorSchema.getNamespace(), true, null);
+        admin.createTable(
             coordinatorSchema.getNamespace(),
             coordinatorSchema.getTable(),
             coordinatorSchema.getTableMetadata(),
@@ -70,10 +75,10 @@ public class SchemaOperator {
   }
 
   public void deleteTables(List<Table> tableList) {
-    List<String> namespaces = new LinkedList<>();
+    List<String> namespaces = new ArrayList<>();
     for (Table table : tableList) {
       try {
-        service.dropTable(table.getNamespace(), table.getTable());
+        admin.dropTable(table.getNamespace(), table.getTable());
         LOGGER.info(
             "Deleted table "
                 + table.getTable()
@@ -87,9 +92,9 @@ public class SchemaOperator {
     }
     for (String namespace : namespaces) {
       try {
-        if (service.getNamespaceTableNames(namespace).isEmpty()) {
+        if (admin.getNamespaceTableNames(namespace).isEmpty()) {
           try {
-            service.dropNamespace(namespace);
+            admin.dropNamespace(namespace);
           } catch (ExecutionException e) {
             LOGGER.warn("Delete namespace " + namespace + " failed. " + e.getCause());
           }

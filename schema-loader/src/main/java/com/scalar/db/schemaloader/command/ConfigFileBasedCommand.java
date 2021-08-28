@@ -1,9 +1,10 @@
-package command;
+package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import command.CassandraCommand.CompactStrategy;
-import command.CassandraCommand.ReplicationStrategy;
-import core.SchemaOperator;
+import com.scalar.db.schemaloader.command.CassandraCommand.CompactStrategy;
+import com.scalar.db.schemaloader.command.CassandraCommand.ReplicationStrategy;
+import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -14,13 +15,11 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import schema.SchemaParser;
 
 @Command(name = "--config", description = "Using config file for Scalar DB")
 public class ConfigFileBasedCommand implements Callable<Integer> {
 
-  private static final Logger LOGGER = LoggerFactory
-      .getLogger(ConfigFileBasedCommand.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileBasedCommand.class);
 
   @Parameters(index = "0", description = "Path to config file of Scalar DB")
   Path configPath;
@@ -31,18 +30,24 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   ReplicationStrategy replicationStrategy;
 
-  @Option(names = {"-c",
-      "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
+  @Option(
+      names = {"-c", "--compaction-strategy"},
+      description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
   CompactStrategy compactStrategy;
 
-  @Option(names = {"-R", "--replication-factor"}, description = "Cassandra replication factor")
+  @Option(
+      names = {"-R", "--replication-factor"},
+      description = "Cassandra replication factor")
   String replicaFactor;
 
-  @Option(names = {"-r",
-      "--ru"}, description = "Base resource unit (supported in Dynamo DB, Cosmos DB)")
+  @Option(
+      names = {"-r", "--ru"},
+      description = "Base resource unit (supported in Dynamo DB, Cosmos DB)")
   String ru;
 
-  @Option(names = "--no-scaling", description = "Disable auto-scaling (supported in Dynamo DB, Cosmos DB)")
+  @Option(
+      names = "--no-scaling",
+      description = "Disable auto-scaling (supported in Dynamo DB, Cosmos DB)")
   Boolean noScaling;
 
   @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")

@@ -1,7 +1,8 @@
-package command;
+package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Properties;
@@ -10,20 +11,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import schema.SchemaParser;
 
 @Command(name = "--jdbc", description = "Using JDBC type DB")
 public class JdbcCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
 
-  @Option(names = {"-j", "--jdbc-url"}, description = "JDBC URL", required = true)
+  @Option(
+      names = {"-j", "--jdbc-url"},
+      description = "JDBC URL",
+      required = true)
   String url;
 
-  @Option(names = {"-u", "--user"}, description = "JDBC user", required = true)
+  @Option(
+      names = {"-u", "--user"},
+      description = "JDBC user",
+      required = true)
   String user;
 
-  @Option(names = {"-p", "--password"}, description = "JDBC password", required = true)
+  @Option(
+      names = {"-p", "--password"},
+      description = "JDBC password",
+      required = true)
   String password;
 
   @Option(

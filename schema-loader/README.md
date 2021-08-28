@@ -1,4 +1,4 @@
-# Schema Loader for Scalar DB
+# Scalar DB Schema Loader
 This tool used for creating, deleting schemas along with necessary metadata of Scalar DB on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
   - For Cosmos DB, this tool works on databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB. You can specify the resource base unit, scaling option as well.
   - For DynamoDB, this tool works on tables named with the database names, also inserts metadata which is required by Scalar DB. You can specify the resource base unit, backup and scaling option as well.

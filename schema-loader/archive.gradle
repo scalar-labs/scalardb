@@ -4,7 +4,7 @@ apply plugin: 'signing'
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'schema-loader'
+            artifactId = 'scalardb-schema-loader'
             from components.java
             pom {
                 name = 'Scalar DB Schema Loader'

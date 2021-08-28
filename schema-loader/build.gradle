@@ -3,7 +3,7 @@ plugins {
     id 'application'
 }
 
-archivesBaseName = "schema-loader"
+archivesBaseName = "scalardb-schema-loader"
 
 repositories {
     mavenCentral()
@@ -12,10 +12,10 @@ repositories {
 dependencies {
     implementation project(':core')
 
-    implementation 'com.google.code.gson:gson:2.8.7'
-    implementation 'info.picocli:picocli:4.6.1'
-    implementation 'com.google.inject:guice:5.0.1'
-    implementation 'org.slf4j:slf4j-simple:1.7.21'
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
+    implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
 
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
@@ -24,7 +24,7 @@ dependencies {
 }
 
 application {
-    setMainClassName('SchemaToolMain')
+    setMainClassName('com.scalar.db.schemaloader.SchemaLoader')
 }
 
 // for release

@@ -1,7 +1,8 @@
-package command;
+package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,22 +12,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import schema.SchemaParser;
 
 @Command(name = "--dynamo", description = "Using Dynamo DB")
 public class DynamoCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
-  @Option(names = {"-u", "--user"}, description = "AWS access key ID", required = true)
+
+  @Option(
+      names = {"-u", "--user"},
+      description = "AWS access key ID",
+      required = true)
   String awsKeyId;
 
-  @Option(names = {"-p", "--password"}, description = "AWS access secret key", required = true)
+  @Option(
+      names = {"-p", "--password"},
+      description = "AWS access secret key",
+      required = true)
   String awsSecKey;
 
   @Option(names = "--region", description = "AWS region", required = true)
   String awsRegion;
 
-  @Option(names = {"-r", "--ru"}, description = "Base resource unit")
+  @Option(
+      names = {"-r", "--ru"},
+      description = "Base resource unit")
   String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Dynamo DB")
@@ -35,7 +44,9 @@ public class DynamoCommand implements Callable<Integer> {
   @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
   Boolean noBackup;
 
-  @Option(names = "--endpoint-override", description = "Endpoint with which the Dynamo DB SDK should communicate")
+  @Option(
+      names = "--endpoint-override",
+      description = "Endpoint with which the Dynamo DB SDK should communicate")
   String endpointOverride;
 
   @Option(

@@ -1,7 +1,8 @@
-package command;
+package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,19 +12,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import schema.SchemaParser;
 
 @Command(name = "--cosmos", description = "Using Cosmos DB")
 public class CosmosCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
-  @Option(names = {"-h", "--host"}, description = "Cosmos DB account URI", required = true)
+
+  @Option(
+      names = {"-h", "--host"},
+      description = "Cosmos DB account URI",
+      required = true)
   String uri;
 
-  @Option(names = {"-p", "--password"}, description = "Cosmos DB key", required = true)
+  @Option(
+      names = {"-p", "--password"},
+      description = "Cosmos DB key",
+      required = true)
   String key;
 
-  @Option(names = {"-r", "--ru"}, description = "Base resource unit", defaultValue = "400")
+  @Option(
+      names = {"-r", "--ru"},
+      description = "Base resource unit",
+      defaultValue = "400")
   String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")

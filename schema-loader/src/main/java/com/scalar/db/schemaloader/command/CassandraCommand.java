@@ -1,7 +1,8 @@
-package command;
+package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,24 +12,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import schema.SchemaParser;
 
 @Command(name = "--cassandra", description = "Using Cassandra DB")
 public class CassandraCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
 
-  @Option(names = {"-h", "--host"}, description = "Cassandra host IP", required = true)
+  @Option(
+      names = {"-h", "--host"},
+      description = "Cassandra host IP",
+      required = true)
   String hostIP;
 
-  @Option(names = {"-P", "--port"}, description = "Cassandra Port", defaultValue = "9042")
+  @Option(
+      names = {"-P", "--port"},
+      description = "Cassandra Port",
+      defaultValue = "9042")
   String port;
 
-  @Option(names = {"-u", "--user"}, description = "Cassandra user", defaultValue = "cassandra")
+  @Option(
+      names = {"-u", "--user"},
+      description = "Cassandra user",
+      defaultValue = "cassandra")
   String user;
 
-  @Option(names = {"-p",
-      "--password"}, description = "Cassandra password", defaultValue = "cassandra")
+  @Option(
+      names = {"-p", "--password"},
+      description = "Cassandra password",
+      defaultValue = "cassandra")
   String password;
 
   @Option(
@@ -37,11 +48,14 @@ public class CassandraCommand implements Callable<Integer> {
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   ReplicationStrategy replicationStrategy;
 
-  @Option(names = {"-c",
-      "--compaction-strategy"}, description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
+  @Option(
+      names = {"-c", "--compaction-strategy"},
+      description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
   CompactStrategy compactStrategy;
 
-  @Option(names = {"-R", "--replication-factor"}, description = "Cassandra replication factor")
+  @Option(
+      names = {"-R", "--replication-factor"},
+      description = "Cassandra replication factor")
   String replicaFactor;
 
   @Option(
