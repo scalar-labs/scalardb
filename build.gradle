@@ -46,6 +46,7 @@ subprojects {
         spotbugsVersion = '4.3.0'
         errorproneVersion = '2.8.0'
         errorproneJavacVersion = '9+181-r4173-1'
+        gsonVersion = '2.8.7'
     }
 
     repositories {
