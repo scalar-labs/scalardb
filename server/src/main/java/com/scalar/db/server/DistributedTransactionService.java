@@ -48,14 +48,14 @@ public class DistributedTransactionService
   private static final String SERVICE_NAME = "distributed_transaction";
 
   private final DistributedTransactionManager manager;
-  private final Pauser pauser;
+  private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
   @Inject
   public DistributedTransactionService(
-      DistributedTransactionManager manager, Pauser pauser, Metrics metrics) {
+      DistributedTransactionManager manager, GateKeeper gateKeeper, Metrics metrics) {
     this.manager = manager;
-    this.pauser = pauser;
+    this.gateKeeper = gateKeeper;
     this.metrics = metrics;
   }
 
@@ -122,7 +122,7 @@ public class DistributedTransactionService
   }
 
   private boolean preProcess(StreamObserver<?> responseObserver) {
-    if (!pauser.preProcess()) {
+    if (!gateKeeper.letIn()) {
       respondUnavailableError(responseObserver);
       return false;
     }
@@ -135,7 +135,7 @@ public class DistributedTransactionService
   }
 
   private void postProcess() {
-    pauser.postProcess();
+    gateKeeper.letOut();
   }
 
   private static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {

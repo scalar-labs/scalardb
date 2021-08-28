@@ -1,6 +1,9 @@
 package com.scalar.db.server.config;
 
 import com.google.common.base.Strings;
+import com.scalar.db.server.GateKeeper;
+import com.scalar.db.server.LockFreeGateKeeper;
+import com.scalar.db.server.SynchronizedGateKeeper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,6 +22,7 @@ public class ServerConfig {
   public static final String PREFIX = "scalar.db.server.";
   public static final String PORT = PREFIX + "port";
   public static final String PROMETHEUS_EXPORTER_PORT = PREFIX + "prometheus_exporter_port";
+  public static final String GATE_KEEPER_TYPE = PREFIX + "gate_keeper_type";
 
   public static final int DEFAULT_PORT = 60051;
   public static final int DEFAULT_PROMETHEUS_EXPORTER_PORT = 8080;
@@ -26,6 +30,7 @@ public class ServerConfig {
   private final Properties props;
   private int port;
   private int prometheusExporterPort;
+  private Class<? extends GateKeeper> gateKeeperClass;
 
   public ServerConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -49,6 +54,21 @@ public class ServerConfig {
   private void load() {
     port = getInt(PORT, DEFAULT_PORT);
     prometheusExporterPort = getInt(PROMETHEUS_EXPORTER_PORT, DEFAULT_PROMETHEUS_EXPORTER_PORT);
+
+    gateKeeperClass = LockFreeGateKeeper.class;
+    if (!Strings.isNullOrEmpty(props.getProperty(GATE_KEEPER_TYPE))) {
+      switch (props.getProperty(GATE_KEEPER_TYPE).toLowerCase()) {
+        case "lock-free":
+          gateKeeperClass = LockFreeGateKeeper.class;
+          break;
+        case "synchronized":
+          gateKeeperClass = SynchronizedGateKeeper.class;
+          break;
+        default:
+          throw new IllegalArgumentException(
+              "the gate keeper type '" + props.getProperty(GATE_KEEPER_TYPE) + "' isn't supported");
+      }
+    }
   }
 
   private int getInt(String name, int defaultValue) {
@@ -73,5 +93,9 @@ public class ServerConfig {
 
   public int getPrometheusExporterPort() {
     return prometheusExporterPort;
+  }
+
+  public Class<? extends GateKeeper> getGateKeeperClass() {
+    return gateKeeperClass;
   }
 }

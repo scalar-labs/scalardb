@@ -18,29 +18,34 @@ public class AdminService extends AdminGrpc.AdminImplBase {
 
   private static final long MAX_PAUSE_WAIT_TIME_MILLIS = 10000; // 10 seconds
 
-  private final Pauser pauser;
+  private final GateKeeper gateKeeper;
 
   @Inject
-  public AdminService(Pauser pauser) {
-    this.pauser = pauser;
+  public AdminService(GateKeeper gateKeeper) {
+    this.gateKeeper = gateKeeper;
   }
 
   @Override
   public void pause(PauseRequest request, StreamObserver<Empty> responseObserver) {
-    pauser.pause();
+    gateKeeper.close();
 
     if (request.getWaitOutstanding()) {
       LOGGER.warn("Pausing... waiting until outstanding requests are all finished");
-      if (!pauser.await(MAX_PAUSE_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS)) {
-        pauser.unpause();
-
-        String message = "Failed to pause";
+      boolean drained = false;
+      try {
+        drained = gateKeeper.awaitDrained(MAX_PAUSE_WAIT_TIME_MILLIS, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        // ignored
+      }
+      if (!drained) {
+        gateKeeper.open();
+        String message = "failed to finish processing outstanding requests within the time limit.";
         LOGGER.warn(message);
-        responseObserver.onError(Status.INTERNAL.withDescription(message).asRuntimeException());
+        responseObserver.onError(
+            Status.FAILED_PRECONDITION.withDescription(message).asRuntimeException());
         return;
       }
     }
-
     LOGGER.warn("Paused");
 
     responseObserver.onNext(Empty.getDefaultInstance());
@@ -49,7 +54,7 @@ public class AdminService extends AdminGrpc.AdminImplBase {
 
   @Override
   public void unpause(Empty request, StreamObserver<Empty> responseObserver) {
-    pauser.unpause();
+    gateKeeper.open();
     LOGGER.warn("Unpaused");
     responseObserver.onNext(Empty.getDefaultInstance());
     responseObserver.onCompleted();
