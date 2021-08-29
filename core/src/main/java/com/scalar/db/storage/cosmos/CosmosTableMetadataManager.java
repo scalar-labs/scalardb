@@ -153,9 +153,9 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
       // Delete the metadata container and table if there is no more metadata stored
       if (!getContainer()
           .queryItems(
-              "SELECT * FROM " + METADATA_CONTAINER,
+              "SELECT 1 FROM " + METADATA_CONTAINER + " OFFSET 0 LIMIT 1",
               new CosmosQueryRequestOptions(),
-              CosmosTableMetadata.class)
+              Object.class)
           .stream()
           .findFirst()
           .isPresent()) {

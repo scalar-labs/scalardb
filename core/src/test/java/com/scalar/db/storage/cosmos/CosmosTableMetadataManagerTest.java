@@ -249,10 +249,9 @@ public class CosmosTableMetadataManagerTest {
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
     @SuppressWarnings("unchecked")
-    CosmosPagedIterable<CosmosTableMetadata> queryResults =
-        (CosmosPagedIterable<CosmosTableMetadata>) mock(CosmosPagedIterable.class);
-    when(container.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
-        .thenReturn(queryResults);
+    CosmosPagedIterable<Object> queryResults =
+        (CosmosPagedIterable<Object>) mock(CosmosPagedIterable.class);
+    when(container.queryItems(anyString(), any(), eq(Object.class))).thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.empty());
 
     // Act
@@ -275,10 +274,9 @@ public class CosmosTableMetadataManagerTest {
     when(client.getDatabase(anyString())).thenReturn(database);
     when(database.getContainer(anyString())).thenReturn(container);
     @SuppressWarnings("unchecked")
-    CosmosPagedIterable<CosmosTableMetadata> queryResults =
-        (CosmosPagedIterable<CosmosTableMetadata>) mock(CosmosPagedIterable.class);
-    when(container.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
-        .thenReturn(queryResults);
+    CosmosPagedIterable<Object> queryResults =
+        (CosmosPagedIterable<Object>) mock(CosmosPagedIterable.class);
+    when(container.queryItems(anyString(), any(), eq(Object.class))).thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.of(new CosmosTableMetadata()));
 
     // Act
