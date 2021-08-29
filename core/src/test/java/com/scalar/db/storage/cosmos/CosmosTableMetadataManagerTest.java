@@ -236,7 +236,7 @@ public class CosmosTableMetadataManagerTest {
     assertThat(actualTableNames).containsExactly("t1", "t2");
     verify(container)
         .queryItems(
-            eq("select * from metadata where metadata.id like 'db_pfx_sample_db.%'"),
+            eq("SELECT * FROM metadata WHERE metadata.id LIKE 'db_pfx_sample_db.%'"),
             refEq(new CosmosQueryRequestOptions()),
             eq(CosmosTableMetadata.class));
   }

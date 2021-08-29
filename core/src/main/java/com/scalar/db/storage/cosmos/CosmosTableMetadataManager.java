@@ -29,9 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
-import org.jooq.SQLDialect;
-import org.jooq.conf.ParamType;
-import org.jooq.impl.DSL;
 
 /**
  * A manager to read and cache {@link TableMetadata} to know the type of each column
@@ -204,10 +201,13 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
     }
     String fullDatabase = getFullNamespaceName(databasePrefix, namespace);
     String selectAllDatabaseContainer =
-        DSL.using(SQLDialect.DEFAULT)
-            .selectFrom(METADATA_CONTAINER)
-            .where(DSL.field(METADATA_CONTAINER + ".id").like(fullDatabase + ".%"))
-            .getSQL(ParamType.INLINED);
+        "SELECT * FROM "
+            + METADATA_CONTAINER
+            + " WHERE "
+            + METADATA_CONTAINER
+            + ".id LIKE '"
+            + fullDatabase
+            + ".%'";
     try {
       return getContainer()
           .queryItems(
