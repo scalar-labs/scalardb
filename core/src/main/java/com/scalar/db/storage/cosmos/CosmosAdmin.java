@@ -116,9 +116,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     try (InputStream storedProcedureInputStream =
             Objects.requireNonNull(
                 getClass().getClassLoader().getResourceAsStream(STORED_PROCEDURE_PATH));
-        InputStreamReader inputStream =
+        InputStreamReader inputStreamReader =
             new InputStreamReader(storedProcedureInputStream, StandardCharsets.UTF_8);
-        BufferedReader bufferedReader = new BufferedReader(inputStream)) {
+        BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
       storedProcedure =
           bufferedReader.lines().reduce("", (prev, cur) -> prev + cur + System.lineSeparator());
     } catch (IOException | NullPointerException e) {
