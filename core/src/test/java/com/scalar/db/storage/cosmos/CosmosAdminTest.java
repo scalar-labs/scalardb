@@ -18,6 +18,7 @@ import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
+import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.common.collect.ImmutableMap;
@@ -195,6 +196,10 @@ public class CosmosAdminTest {
     when(database.getContainer(any())).thenReturn(container);
     Record record1 = mock(Record.class);
     Record record2 = mock(Record.class);
+    when(record1.getId()).thenReturn("id1");
+    when(record1.getConcatenatedPartitionKey()).thenReturn("p1");
+    when(record2.getId()).thenReturn("id2");
+    when(record2.getConcatenatedPartitionKey()).thenReturn("p2");
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Record> queryResults =
         (CosmosPagedIterable<Record>) mock(CosmosPagedIterable.class);
@@ -211,9 +216,15 @@ public class CosmosAdminTest {
     // Assert
     verify(container)
         .queryItems(
-            eq("SELECT * FROM " + table), refEq(new CosmosQueryRequestOptions()), eq(Record.class));
-    verify(container).deleteItem(eq(record1), refEq(new CosmosItemRequestOptions()));
-    verify(container).deleteItem(eq(record2), refEq(new CosmosItemRequestOptions()));
+            eq("SELECT t.id, t.concatenatedPartitionKey FROM " + table + " t"),
+            refEq(new CosmosQueryRequestOptions()),
+            eq(Record.class));
+    verify(container)
+        .deleteItem(
+            eq("id1"), refEq(new PartitionKey("p1")), refEq(new CosmosItemRequestOptions()));
+    verify(container)
+        .deleteItem(
+            eq("id2"), refEq(new PartitionKey("p2")), refEq(new CosmosItemRequestOptions()));
   }
 
   @Test

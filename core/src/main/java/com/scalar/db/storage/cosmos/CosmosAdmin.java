@@ -44,8 +44,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_RU = "400";
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
-  private static final String CONTAINER_PARTITION_KEY = "/concatenatedPartitionKey";
-  private static final String PARTITION_KEY_PATH = "/concatenatedPartitionKey/?";
+  private static final String ID = "id";
+  private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
+  private static final String CONTAINER_PARTITION_KEY = "/" + CONCATENATED_PARTITION_KEY;
+  private static final String PARTITION_KEY_PATH = CONTAINER_PARTITION_KEY + "/?";
   private static final String CLUSTERING_KEY_PATH = "/clusteringKey/*";
   private static final String SECONDARY_INDEX_KEY_PATH = "/values/";
   private static final String EXCLUDED_PATH = "/*";
@@ -93,7 +95,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private void createContainer(String database, String table, TableMetadata metadata)
       throws ExecutionException {
-    if (!containerExists(fullDatabase(database))) {
+    if (!databaseExists(fullDatabase(database))) {
       throw new ExecutionException("the database does not exists");
     }
     CosmosDatabase cosmosDatabase = client.getDatabase(fullDatabase(database));
@@ -155,7 +157,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
-    if (!containerExists(fullDatabase)) {
+    if (!databaseExists(fullDatabase)) {
       throw new ExecutionException("the database does not exist");
     }
     CosmosDatabase database = client.getDatabase(fullDatabase);
@@ -174,7 +176,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
-    if (!containerExists(fullDatabase)) {
+    if (!databaseExists(fullDatabase)) {
       throw new ExecutionException("the database does not exist");
     }
 
@@ -188,19 +190,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
     String fullDatabase = fullDatabase(namespace);
-    if (!containerExists(fullDatabase)) {
-      throw new ExecutionException("the database does not exist");
-    }
-    CosmosDatabase database = client.getDatabase(fullDatabase);
-    if (!containerExists(database, table)) {
-      throw new ExecutionException("the container does not exist");
-    }
     try {
+      CosmosDatabase database = client.getDatabase(fullDatabase);
       CosmosContainer container = database.getContainer(table);
 
       CosmosPagedIterable<Record> records =
           container.queryItems(
-              "SELECT t.id, t.concatenatedPartitionKey FROM " + table + " t",
+              "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + table + " t",
               new CosmosQueryRequestOptions(),
               Record.class);
       records.forEach(
@@ -244,10 +240,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    return containerExists(fullDatabase(namespace));
+    return databaseExists(fullDatabase(namespace));
   }
 
-  private boolean containerExists(String id) throws ExecutionException {
+  private boolean databaseExists(String id) throws ExecutionException {
     try {
       client.getDatabase(id).read();
     } catch (RuntimeException e) {
