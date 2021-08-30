@@ -101,7 +101,7 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void createNamespace_WithCustomRuEqualTo4000_ShouldCreateDatabaseithAutoscaledThroughput()
+  public void createNamespace_WithCustomRuEqualTo4000_ShouldCreateDatabaseWithAutoscaledThroughput()
       throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -119,7 +119,7 @@ public class CosmosAdminTest {
 
   @Test
   public void
-      createNamespace_WithCustomRuEqualTo4000AndNoScalling_ShouldCreateDatabaseWithManualThroughput()
+      createNamespace_WithCustomRuEqualTo4000AndNoScaling_ShouldCreateDatabaseWithManualThroughput()
           throws ExecutionException {
     // Arrange
     String namespace = "ns";
@@ -228,7 +228,7 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void getNamespaceTablenames_ShouldExecuteManagerMethod() throws ExecutionException {
+  public void getNamespaceTableNames_ShouldExecuteManagerMethod() throws ExecutionException {
     // Arrange
     String namespace = "ns";
     Set<String> tableNames = ImmutableSet.of("t1", "t2");
