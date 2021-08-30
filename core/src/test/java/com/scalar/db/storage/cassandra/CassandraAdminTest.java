@@ -107,7 +107,8 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     Map<String, String> options = new HashMap<>();
-    options.put(CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    options.put(
+        CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
     options.put(CassandraAdmin.REPLICATION_FACTOR, "3");
 
     // Act
@@ -131,7 +132,8 @@ public class CassandraAdminTest {
     String namespace = "sample_ns";
     Map<String, String> options = new HashMap<>();
     options.put(
-        CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
+        CassandraAdmin.REPLICATION_STRATEGY,
+        ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
     options.put(CassandraAdmin.REPLICATION_FACTOR, "5");
 
     // Act
