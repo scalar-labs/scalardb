@@ -29,7 +29,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class CassandraAdmin implements DistributedStorageAdmin {
 
-  public static final String NETWORK_STRATEGY = "network-strategy";
+  public static final String REPLICATION_STRATEGY = "replication-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
   private final ClusterManager clusterManager;
@@ -70,8 +70,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         SchemaBuilder.createKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
-        options.containsKey(NETWORK_STRATEGY)
-            ? ReplicationStrategy.fromString(options.get(NETWORK_STRATEGY))
+        options.containsKey(REPLICATION_STRATEGY)
+            ? ReplicationStrategy.fromString(options.get(REPLICATION_STRATEGY))
             : ReplicationStrategy.SIMPLE_STRATEGY;
     Map<String, Object> replicationOptions = new LinkedHashMap<>();
     if (replicationStrategy == ReplicationStrategy.SIMPLE_STRATEGY) {
