@@ -6,6 +6,7 @@ import com.scalar.db.util.ImmutableLinkedHashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -60,5 +61,31 @@ public class CosmosTableMetadata {
 
   public Map<String, String> getColumns() {
     return columns;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof CosmosTableMetadata)) {
+      return false;
+    }
+    CosmosTableMetadata that = (CosmosTableMetadata) o;
+    return Objects.equals(getId(), that.getId())
+        && Objects.equals(getPartitionKeyNames(), that.getPartitionKeyNames())
+        && Objects.equals(getClusteringKeyNames(), that.getClusteringKeyNames())
+        && Objects.equals(getSecondaryIndexNames(), that.getSecondaryIndexNames())
+        && Objects.equals(getColumns(), that.getColumns());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        getId(),
+        getPartitionKeyNames(),
+        getClusteringKeyNames(),
+        getSecondaryIndexNames(),
+        getColumns());
   }
 }

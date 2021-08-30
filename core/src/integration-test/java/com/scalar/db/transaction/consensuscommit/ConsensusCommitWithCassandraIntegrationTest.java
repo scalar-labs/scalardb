@@ -7,6 +7,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
+import java.util.Collections;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -31,7 +32,7 @@ public class ConsensusCommitWithCassandraIntegrationTest
     props.setProperty(DatabaseConfig.PASSWORD, PASSWORD);
     config = new DatabaseConfig(props);
     admin = new CassandraAdmin(config);
-    createTables();
+    createTables(Collections.emptyMap());
 
     originalStorage = new Cassandra(config);
   }
