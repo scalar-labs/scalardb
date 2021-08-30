@@ -7,29 +7,25 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARE
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
 import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
+import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
 import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
 import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
 import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.mockito.Mockito.spy;
 
-import com.google.common.base.Joiner;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
@@ -45,40 +41,8 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
   private static final String MYSQL_PASSWORD = "mysql";
 
   private static TestEnv testEnv;
+  private static CassandraAdmin cassandraAdmin;
   private static DistributedStorage originalStorage;
-
-  @Before
-  public void setUp() {
-    DistributedStorage storage = spy(originalStorage);
-    Coordinator coordinator = spy(new Coordinator(storage));
-    RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
-    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
-
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, "dummy");
-    props.setProperty(DatabaseConfig.USERNAME, "dummy");
-    props.setProperty(DatabaseConfig.PASSWORD, "dummy");
-
-    ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage, new DatabaseConfig(props), coordinator, recovery, commit);
-    setUp(manager, storage, coordinator, recovery);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    truncateCassandra();
-    truncateMySql();
-  }
-
-  private void truncateCassandra() throws Exception {
-    executeStatement(truncateTableStatement(NAMESPACE, TABLE_1));
-    executeStatement(truncateTableStatement(Coordinator.NAMESPACE, Coordinator.TABLE));
-  }
-
-  private void truncateMySql() throws Exception {
-    testEnv.deleteTableData();
-  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -88,10 +52,43 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
   }
 
   private static void initCassandra() throws Exception {
-    executeStatement(createNamespaceStatement(Coordinator.NAMESPACE));
-    executeStatement(createCoordinatorTableStatement(Coordinator.NAMESPACE, Coordinator.TABLE));
-    executeStatement(createNamespaceStatement(NAMESPACE));
-    executeStatement(createTableStatement(NAMESPACE, TABLE_1));
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, CASSANDRA_CONTACT_POINT);
+    props.setProperty(DatabaseConfig.USERNAME, CASSANDRA_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, CASSANDRA_PASSWORD);
+    cassandraAdmin = new CassandraAdmin(new DatabaseConfig(props));
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(VERSION, DataType.INT)
+            .addColumn(PREPARED_AT, DataType.BIGINT)
+            .addColumn(COMMITTED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
+            .addColumn(BEFORE_ID, DataType.TEXT)
+            .addColumn(BEFORE_STATE, DataType.INT)
+            .addColumn(BEFORE_VERSION, DataType.INT)
+            .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
+            .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    cassandraAdmin.createNamespace(NAMESPACE);
+    cassandraAdmin.createTable(NAMESPACE, TABLE_1, tableMetadata);
+
+    TableMetadata coordinatorTableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ID, DataType.TEXT)
+            .addColumn(STATE, DataType.INT)
+            .addColumn(CREATED_AT, DataType.BIGINT)
+            .addPartitionKey(ID)
+            .build();
+    cassandraAdmin.createNamespace(Coordinator.NAMESPACE);
+    cassandraAdmin.createTable(Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata);
   }
 
   private static void initMySql() throws Exception {
@@ -166,8 +163,11 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
   }
 
   private static void cleanUpCassandra() throws Exception {
-    executeStatement(dropNamespaceStatement(NAMESPACE));
-    executeStatement(dropNamespaceStatement(Coordinator.NAMESPACE));
+    cassandraAdmin.dropTable(NAMESPACE, TABLE_1);
+    cassandraAdmin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+    cassandraAdmin.dropNamespace(NAMESPACE);
+    cassandraAdmin.dropNamespace(Coordinator.NAMESPACE);
+    cassandraAdmin.close();
   }
 
   private static void cleanUpMySql() throws Exception {
@@ -175,126 +175,36 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
     testEnv.close();
   }
 
-  private static String createNamespaceStatement(String namespace) {
-    return Joiner.on(" ")
-        .skipNulls()
-        .join(
-            new String[] {
-              "CREATE KEYSPACE",
-              namespace,
-              "WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 }",
-            });
+  @Before
+  public void setUp() {
+    DistributedStorage storage = spy(originalStorage);
+    Coordinator coordinator = spy(new Coordinator(storage));
+    RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
+
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, "dummy");
+    props.setProperty(DatabaseConfig.USERNAME, "dummy");
+    props.setProperty(DatabaseConfig.PASSWORD, "dummy");
+
+    ConsensusCommitManager manager =
+        new ConsensusCommitManager(
+            storage, new DatabaseConfig(props), coordinator, recovery, commit);
+    setUp(manager, storage, coordinator, recovery);
   }
 
-  private static String dropNamespaceStatement(String namespace) {
-    return Joiner.on(" ")
-        .skipNulls()
-        .join(
-            new String[] {
-              "DROP KEYSPACE", namespace,
-            });
+  @After
+  public void tearDown() throws Exception {
+    truncateCassandra();
+    truncateMySql();
   }
 
-  private static String createTableStatement(String namespace, String table) {
-    return Joiner.on(" ")
-        .skipNulls()
-        .join(
-            new String[] {
-              "CREATE TABLE",
-              namespace + "." + table,
-              "(",
-              ACCOUNT_ID,
-              "int,",
-              ACCOUNT_TYPE,
-              "int,",
-              BALANCE,
-              "int,",
-              Attribute.ID,
-              "text,",
-              Attribute.VERSION,
-              "int,",
-              Attribute.STATE,
-              "int,",
-              Attribute.PREPARED_AT,
-              "bigint,",
-              Attribute.COMMITTED_AT,
-              "bigint,",
-              Attribute.BEFORE_PREFIX + BALANCE,
-              "int,",
-              Attribute.BEFORE_ID,
-              "text,",
-              Attribute.BEFORE_VERSION,
-              "int,",
-              Attribute.BEFORE_STATE,
-              "int,",
-              Attribute.BEFORE_PREPARED_AT,
-              "bigint,",
-              Attribute.BEFORE_COMMITTED_AT,
-              "bigint,",
-              "PRIMARY KEY",
-              "((" + ACCOUNT_ID + "),",
-              ACCOUNT_TYPE + ")",
-              ")",
-            });
+  private void truncateCassandra() throws Exception {
+    cassandraAdmin.truncateTable(NAMESPACE, TABLE_1);
+    cassandraAdmin.truncateTable(Coordinator.NAMESPACE, Coordinator.TABLE);
   }
 
-  private static String createCoordinatorTableStatement(String namespace, String table) {
-    return Joiner.on(" ")
-        .skipNulls()
-        .join(
-            new String[] {
-              "CREATE TABLE",
-              namespace + "." + table,
-              "(",
-              Attribute.ID,
-              "text,",
-              Attribute.STATE,
-              "int,",
-              Attribute.CREATED_AT,
-              "bigint,",
-              "PRIMARY KEY",
-              "(" + Attribute.ID + ")",
-              ")",
-            });
-  }
-
-  private static String truncateTableStatement(String namespace, String table) {
-    return Joiner.on(" ")
-        .skipNulls()
-        .join(
-            new String[] {
-              "TRUNCATE", namespace + "." + table,
-            });
-  }
-
-  private static void executeStatement(String statement) throws IOException {
-    ProcessBuilder builder =
-        new ProcessBuilder(
-            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", statement);
-    builder.redirectErrorStream(true);
-
-    BufferedReader reader = null;
-    try {
-      Process process = builder.start();
-      reader =
-          new BufferedReader(
-              new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-      while (true) {
-        String line = reader.readLine();
-        if (line == null) break;
-        System.out.println(line);
-      }
-
-      int ret = process.waitFor();
-      if (ret != 0) {
-        Assert.fail("failed to execute " + statement);
-      }
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    } finally {
-      if (reader != null) {
-        reader.close();
-      }
-    }
+  private void truncateMySql() throws Exception {
+    testEnv.deleteTableData();
   }
 }
