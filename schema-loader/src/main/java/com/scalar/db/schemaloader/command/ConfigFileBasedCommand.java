@@ -5,6 +5,7 @@ import com.scalar.db.schemaloader.command.CassandraCommand.CompactStrategy;
 import com.scalar.db.schemaloader.command.CassandraCommand.ReplicationStrategy;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -22,48 +23,48 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileBasedCommand.class);
 
   @Parameters(index = "0", description = "Path to config file of Scalar DB")
-  Path configPath;
+  private Path configPath;
 
   @Option(
       names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
-  ReplicationStrategy replicationStrategy;
+  private ReplicationStrategy replicationStrategy;
 
   @Option(
       names = {"-c", "--compaction-strategy"},
       description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  CompactStrategy compactStrategy;
+  private CompactStrategy compactStrategy;
 
   @Option(
       names = {"-R", "--replication-factor"},
       description = "Cassandra replication factor")
-  String replicaFactor;
+  private String replicaFactor;
 
   @Option(
       names = {"-r", "--ru"},
       description = "Base resource unit (supported in Dynamo DB, Cosmos DB)")
-  String ru;
+  private String ru;
 
   @Option(
       names = "--no-scaling",
       description = "Disable auto-scaling (supported in Dynamo DB, Cosmos DB)")
-  Boolean noScaling;
+  private Boolean noScaling;
 
   @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
-  Boolean dynamoNoBackup;
+  private Boolean dynamoNoBackup;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  Path schemaFile;
+  private Path schemaFile;
 
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  Boolean deleteTables;
+  private Boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
@@ -73,13 +74,13 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (replicationStrategy != null) {
-      metaOptions.put("network-strategy", replicationStrategy.name());
+      metaOptions.put(CassandraAdmin.NETWORK_STRATEGY, replicationStrategy.name());
     }
     if (compactStrategy != null) {
-      metaOptions.put("compaction-strategy", compactStrategy.name());
+      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactStrategy.name());
     }
     if (replicaFactor != null) {
-      metaOptions.put("replication-factor", replicaFactor);
+      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
     }
     if (ru != null) {
       metaOptions.put("ru", ru);

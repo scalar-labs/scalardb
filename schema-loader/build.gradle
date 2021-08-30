@@ -1,6 +1,8 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.spotbugs' version '4.7.1'
+    id 'net.ltgt.errorprone' version '2.0.2'
 }
 
 archivesBaseName = "scalardb-schema-loader"
@@ -21,10 +23,32 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+
+    // for SpotBugs
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
 application {
     setMainClassName('com.scalar.db.schemaloader.SchemaLoader')
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+spotbugsMain.reports {
+    html.enabled = true
+}
+spotbugsTest.reports {
+    html.enabled = true
 }
 
 // for release
@@ -35,4 +59,11 @@ distZip {
 // for docker
 distTar {
     archiveFileName = "${project.name}.tar"
+}
+
+// for archiving and uploading to maven central
+if (!project.gradle.startParameter.taskNames.isEmpty() &&
+        (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
+                project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
+    apply from: 'archive.gradle'
 }

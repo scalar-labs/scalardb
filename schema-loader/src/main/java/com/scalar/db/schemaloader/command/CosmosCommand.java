@@ -22,34 +22,34 @@ public class CosmosCommand implements Callable<Integer> {
       names = {"-h", "--host"},
       description = "Cosmos DB account URI",
       required = true)
-  String uri;
+  private String uri;
 
   @Option(
       names = {"-p", "--password"},
       description = "Cosmos DB key",
       required = true)
-  String key;
+  private String key;
 
   @Option(
       names = {"-r", "--ru"},
       description = "Base resource unit",
       defaultValue = "400")
-  String ru;
+  private String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
-  Boolean noScaling;
+  private Boolean noScaling;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  Path schemaFile;
+  private Path schemaFile;
 
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  Boolean deleteTables;
+  private Boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
@@ -57,9 +57,9 @@ public class CosmosCommand implements Callable<Integer> {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty("scalar.db.contact_points", uri);
-    props.setProperty("scalar.db.password", key);
-    props.setProperty("scalar.db.storage", "cosmos");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, uri);
+    props.setProperty(DatabaseConfig.PASSWORD, key);
+    props.setProperty(DatabaseConfig.STORAGE, "cosmos");
 
     Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {

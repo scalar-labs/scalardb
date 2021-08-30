@@ -26,7 +26,7 @@ public class SchemaLoader implements Runnable {
       usageHelp = true,
       description = "Displays this help message and quits.",
       defaultValue = "true")
-  Boolean showHelp;
+  private Boolean showHelp;
 
   public static void main(String... args) {
     new CommandLine(new SchemaLoader()).execute(args);

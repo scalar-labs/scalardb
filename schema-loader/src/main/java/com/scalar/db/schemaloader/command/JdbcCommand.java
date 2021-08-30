@@ -21,31 +21,31 @@ public class JdbcCommand implements Callable<Integer> {
       names = {"-j", "--jdbc-url"},
       description = "JDBC URL",
       required = true)
-  String url;
+  private String url;
 
   @Option(
       names = {"-u", "--user"},
       description = "JDBC user",
       required = true)
-  String user;
+  private String user;
 
   @Option(
       names = {"-p", "--password"},
       description = "JDBC password",
       required = true)
-  String password;
+  private String password;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  Path schemaFile;
+  private Path schemaFile;
 
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  Boolean deleteTables;
+  private Boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
@@ -53,10 +53,10 @@ public class JdbcCommand implements Callable<Integer> {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty("scalar.db.contact_points", url);
-    props.setProperty("scalar.db.username", user);
-    props.setProperty("scalar.db.password", password);
-    props.setProperty("scalar.db.storage", "jdbc");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, url);
+    props.setProperty(DatabaseConfig.USERNAME, user);
+    props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig);

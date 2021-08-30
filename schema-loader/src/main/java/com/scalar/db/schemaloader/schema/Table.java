@@ -104,8 +104,8 @@ public class Table {
           clusteringKey = clusteringKeyFull[0];
           tableBuilder.addClusteringKey(clusteringKey);
         } else if (clusteringKeyFull.length == 2
-            && (clusteringKeyFull[1].toUpperCase().equals("ASC")
-                || clusteringKeyFull[1].toUpperCase().equals("DESC"))) {
+            && (clusteringKeyFull[1].equalsIgnoreCase("ASC")
+                || clusteringKeyFull[1].equalsIgnoreCase("DESC"))) {
           clusteringKey = clusteringKeyFull[0];
           oder = clusteringKeyFull[1];
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(oder.toUpperCase()));

@@ -3,6 +3,7 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,74 +23,74 @@ public class CassandraCommand implements Callable<Integer> {
       names = {"-h", "--host"},
       description = "Cassandra host IP",
       required = true)
-  String hostIP;
+  private String hostIP;
 
   @Option(
       names = {"-P", "--port"},
       description = "Cassandra Port",
       defaultValue = "9042")
-  String port;
+  private String port;
 
   @Option(
       names = {"-u", "--user"},
       description = "Cassandra user",
       defaultValue = "cassandra")
-  String user;
+  private String user;
 
   @Option(
       names = {"-p", "--password"},
       description = "Cassandra password",
       defaultValue = "cassandra")
-  String password;
+  private String password;
 
   @Option(
       names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
-  ReplicationStrategy replicationStrategy;
+  private ReplicationStrategy replicationStrategy;
 
   @Option(
       names = {"-c", "--compaction-strategy"},
       description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  CompactStrategy compactStrategy;
+  private CompactStrategy compactStrategy;
 
   @Option(
       names = {"-R", "--replication-factor"},
       description = "Cassandra replication factor")
-  String replicaFactor;
+  private String replicaFactor;
 
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to schema json file",
       required = true)
-  Path schemaFile;
+  private Path schemaFile;
 
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  Boolean deleteTables;
+  private Boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty("scalar.db.contact_points", hostIP);
-    props.setProperty("scalar.db.contact_port", port);
-    props.setProperty("scalar.db.username", user);
-    props.setProperty("scalar.db.password", password);
-    props.setProperty("scalar.db.storage", "cassandra");
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIP);
+    props.setProperty(DatabaseConfig.CONTACT_PORT, port);
+    props.setProperty(DatabaseConfig.USERNAME, user);
+    props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "cassandra");
 
     Map<String, String> metaOptions = new HashMap<>();
     if (replicationStrategy != null) {
-      metaOptions.put("network-strategy", replicationStrategy.name());
+      metaOptions.put(CassandraAdmin.NETWORK_STRATEGY, replicationStrategy.name());
     }
     if (compactStrategy != null) {
-      metaOptions.put("compaction-strategy", compactStrategy.name());
+      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactStrategy.name());
     }
     if (replicaFactor != null) {
-      metaOptions.put("replication-factor", replicaFactor);
+      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
