@@ -7,13 +7,12 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.jdbc.test.TestEnv;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -37,15 +36,107 @@ public class MultiStorageAdminIntegrationTest {
   private static final String MYSQL_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
   private static final String MYSQL_USERNAME = "root";
   private static final String MYSQL_PASSWORD = "mysql";
-
   private static TestEnv testEnv;
   private static MultiStorageAdmin multiStorageAdmin;
+  private static CassandraAdmin cassandraAdmin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     initCassandra();
     initMySql();
     initMultiStorageAdmin();
+  }
+
+  private static void initCassandra() throws Exception {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, CASSANDRA_CONTACT_POINT);
+    props.setProperty(DatabaseConfig.USERNAME, CASSANDRA_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, CASSANDRA_PASSWORD);
+    DatabaseConfig config = new DatabaseConfig(props);
+    cassandraAdmin = new CassandraAdmin(config);
+    cassandraAdmin.createNamespace(NAMESPACE1);
+    cassandraAdmin.createNamespace(NAMESPACE2);
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c1")
+            .addClusteringKey("c4")
+            .addColumn("c1", DataType.INT)
+            .addColumn("c2", DataType.TEXT)
+            .addColumn("c3", DataType.INT)
+            .addColumn("c4", DataType.INT)
+            .addColumn("c5", DataType.BOOLEAN)
+            .build();
+    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
+      cassandraAdmin.createTable(NAMESPACE1, table, tableMetadata);
+    }
+    cassandraAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata);
+  }
+
+  private static void initMySql() throws Exception {
+    testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.TEXT)
+            .addColumn(COL_NAME2, DataType.INT)
+            .addColumn(COL_NAME3, DataType.BOOLEAN)
+            .addPartitionKey(COL_NAME1)
+            .build();
+    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
+      testEnv.createTable(NAMESPACE1, table, tableMetadata);
+    }
+    testEnv.createTable(NAMESPACE2, TABLE1, tableMetadata);
+  }
+
+  private static void initMultiStorageAdmin() {
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
+
+    // Define storages, cassandra and mysql
+    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
+    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
+
+    // Define table mapping from table1 to cassandra, and from table2 to mysql
+    props.setProperty(
+        MultiStorageConfig.TABLE_MAPPING,
+        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":mysql");
+
+    // Define namespace mapping from namespace2 to mysql
+    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":mysql");
+
+    // The default storage is cassandra
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+
+    multiStorageAdmin = new MultiStorageAdmin(new MultiStorageConfig(props));
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    multiStorageAdmin.close();
+    cleanUpCassandra();
+    cleanUpMySql();
+  }
+
+  private static void cleanUpCassandra() throws Exception {
+    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
+      cassandraAdmin.dropTable(NAMESPACE1, table);
+    }
+    cassandraAdmin.dropNamespace(NAMESPACE1);
+    cassandraAdmin.dropTable(NAMESPACE2, TABLE1);
+    cassandraAdmin.dropNamespace(NAMESPACE2);
+    cassandraAdmin.close();
+  }
+
+  private static void cleanUpMySql() throws Exception {
+    testEnv.deleteTables();
+    testEnv.close();
   }
 
   @Test
@@ -204,133 +295,5 @@ public class MultiStorageAdminIntegrationTest {
     assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isNull();
 
     assertThat(tableMetadata.getSecondaryIndexNames()).isEmpty();
-  }
-
-  private static void initCassandra() throws Exception {
-    createKeyspace(NAMESPACE1);
-    createKeyspace(NAMESPACE2);
-
-    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      createTable(NAMESPACE1, table);
-    }
-    createTable(NAMESPACE2, TABLE1);
-  }
-
-  private static void createKeyspace(String keyspace) throws IOException, InterruptedException {
-    String createKeyspaceStmt =
-        "CREATE KEYSPACE "
-            + keyspace
-            + " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1 }";
-    ProcessBuilder builder =
-        new ProcessBuilder(
-            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createKeyspaceStmt);
-    Process process = builder.start();
-    int ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE KEYSPACE failed: " + keyspace);
-    }
-  }
-
-  private static void createTable(String keyspace, String table)
-      throws IOException, InterruptedException {
-    String createTableStmt =
-        "CREATE TABLE "
-            + keyspace
-            + "."
-            + table
-            + " (c1 int, c2 text, c3 int, c4 int, c5 boolean, PRIMARY KEY((c1), c4))";
-
-    ProcessBuilder builder =
-        new ProcessBuilder(
-            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", createTableStmt);
-    Process process = builder.start();
-    int ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("CREATE TABLE failed: " + keyspace + "." + table);
-    }
-  }
-
-  private static void initMySql() throws Exception {
-    testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
-
-    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      testEnv.createTable(
-          NAMESPACE1,
-          table,
-          TableMetadata.newBuilder()
-              .addColumn(COL_NAME1, DataType.TEXT)
-              .addColumn(COL_NAME2, DataType.INT)
-              .addColumn(COL_NAME3, DataType.BOOLEAN)
-              .addPartitionKey(COL_NAME1)
-              .build());
-    }
-    testEnv.createTable(
-        NAMESPACE2,
-        TABLE1,
-        TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.TEXT)
-            .addColumn(COL_NAME2, DataType.INT)
-            .addColumn(COL_NAME3, DataType.BOOLEAN)
-            .addPartitionKey(COL_NAME1)
-            .build());
-  }
-
-  private static void initMultiStorageAdmin() {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
-
-    // Define storages, cassandra and mysql
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
-
-    // Define table mapping from table1 to cassandra, and from table2 to mysql
-    props.setProperty(
-        MultiStorageConfig.TABLE_MAPPING,
-        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":mysql");
-
-    // Define namespace mapping from namespace2 to mysql
-    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":mysql");
-
-    // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
-
-    multiStorageAdmin = new MultiStorageAdmin(new MultiStorageConfig(props));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    multiStorageAdmin.close();
-    cleanUpCassandra();
-    cleanUpMySql();
-  }
-
-  private static void cleanUpCassandra() throws Exception {
-    dropKeyspace(NAMESPACE1);
-    dropKeyspace(NAMESPACE2);
-  }
-
-  private static void dropKeyspace(String keyspace) throws IOException, InterruptedException {
-    String dropKeyspaceStmt = "DROP KEYSPACE " + keyspace;
-    ProcessBuilder builder =
-        new ProcessBuilder(
-            "cqlsh", "-u", CASSANDRA_USERNAME, "-p", CASSANDRA_PASSWORD, "-e", dropKeyspaceStmt);
-    Process process = builder.start();
-    int ret = process.waitFor();
-    if (ret != 0) {
-      Assert.fail("DROP KEYSPACE failed: " + keyspace);
-    }
-  }
-
-  private static void cleanUpMySql() throws Exception {
-    testEnv.deleteTables();
-    testEnv.close();
   }
 }
