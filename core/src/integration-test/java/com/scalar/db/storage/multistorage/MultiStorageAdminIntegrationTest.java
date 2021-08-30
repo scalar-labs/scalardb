@@ -58,13 +58,13 @@ public class MultiStorageAdminIntegrationTest {
     cassandraAdmin.createNamespace(NAMESPACE2);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
-            .addPartitionKey("c1")
-            .addClusteringKey("c4")
-            .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.TEXT)
-            .addColumn("c3", DataType.INT)
-            .addColumn("c4", DataType.INT)
-            .addColumn("c5", DataType.BOOLEAN)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME4)
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.TEXT)
+            .addColumn(COL_NAME3, DataType.INT)
+            .addColumn(COL_NAME4, DataType.INT)
+            .addColumn(COL_NAME5, DataType.BOOLEAN)
             .build();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
       cassandraAdmin.createTable(NAMESPACE1, table, tableMetadata);
