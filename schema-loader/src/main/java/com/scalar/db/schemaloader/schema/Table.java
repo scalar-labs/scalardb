@@ -98,7 +98,7 @@ public class Table {
       traveledKeys.add(CLUSTERING_KEY);
       for (JsonElement clusteringKeyRaw : clusteringKeys) {
         String clusteringKey;
-        String oder;
+        String order;
         String[] clusteringKeyFull = clusteringKeyRaw.getAsString().split(" ", -1);
         if (clusteringKeyFull.length < 2) {
           clusteringKey = clusteringKeyFull[0];
@@ -107,8 +107,8 @@ public class Table {
             && (clusteringKeyFull[1].equalsIgnoreCase("ASC")
                 || clusteringKeyFull[1].equalsIgnoreCase("DESC"))) {
           clusteringKey = clusteringKeyFull[0];
-          oder = clusteringKeyFull[1];
-          tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(oder.toUpperCase()));
+          order = clusteringKeyFull[1];
+          tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
           throw new RuntimeException("Invalid clustering keys");
         }
