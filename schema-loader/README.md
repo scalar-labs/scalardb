@@ -149,8 +149,6 @@ $ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> 
 $ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
 ```
 
-  - Note that this tool doesn't create schemas for the Oracle database. Please create the schemas manually for this case.
-
 ### Delete tables
 Using config file
 ```console
