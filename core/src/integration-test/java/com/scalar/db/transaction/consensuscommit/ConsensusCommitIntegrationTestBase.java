@@ -49,6 +49,7 @@ import com.scalar.db.io.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
@@ -76,7 +77,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   // assume that recovery is a spied object
   private RecoveryHandler recovery;
 
-  protected static void createTables() throws ExecutionException {
+  protected static void createTables(Map<String, String> options) throws ExecutionException {
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(ACCOUNT_ID, DataType.INT)
@@ -96,9 +97,9 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
             .build();
-    admin.createNamespace(NAMESPACE);
-    admin.createTable(NAMESPACE, TABLE_1, tableMetadata);
-    admin.createTable(NAMESPACE, TABLE_2, tableMetadata);
+    admin.createNamespace(NAMESPACE, options);
+    admin.createTable(NAMESPACE, TABLE_1, tableMetadata, options);
+    admin.createTable(NAMESPACE, TABLE_2, tableMetadata, options);
 
     TableMetadata coordinatorTableMetadata =
         TableMetadata.newBuilder()
@@ -107,8 +108,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
             .addColumn(CREATED_AT, DataType.BIGINT)
             .addPartitionKey(ID)
             .build();
-    admin.createNamespace(Coordinator.NAMESPACE);
-    admin.createTable(Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata);
+    admin.createNamespace(Coordinator.NAMESPACE, options);
+    admin.createTable(Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata, options);
   }
 
   protected static void deleteTables() throws ExecutionException {
