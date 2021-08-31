@@ -7,7 +7,9 @@ import com.scalar.db.schemaloader.schema.CoordinatorSchema;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +72,7 @@ public class SchemaOperator {
   }
 
   public void deleteTables(List<Table> tableList) {
-    List<String> namespaces = new ArrayList<>();
+    Set<String> namespaces = new HashSet<>();
     for (Table table : tableList) {
       try {
         admin.dropTable(table.getNamespace(), table.getTable());
