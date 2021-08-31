@@ -4,7 +4,7 @@ This tool used for creating, deleting schemas along with necessary metadata of S
   - For DynamoDB, this tool works on tables named with the database names, also inserts metadata which is required by Scalar DB. You can specify the resource base unit, backup and scaling option as well.
   - For Cassandra, this tool works on databases(keyspaces) and tables, also inserts metadata which is required by Scalar DB. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
   - For a JDBC database, this tool works on databases(schemas) and tables, also inserts metadata which is required by Scalar DB.
-  - Scalar DB metadata for transactions is automatically adds when you set the `transaction` parameter `true` in the schema file.
+  - Scalar DB metadata for transactions are automatically added when you set the `transaction` parameter `true` in the schema file.
 
 There are two ways to specify general cli options in schema-loader.
   - Pass a Scalar DB configuration file, and additional options of database-specific.
