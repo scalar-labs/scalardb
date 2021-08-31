@@ -6,7 +6,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.schema.CoordinatorSchema;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
