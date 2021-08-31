@@ -7,8 +7,8 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.server.GateKeeper;
 import com.scalar.db.server.Metrics;
-import com.scalar.db.server.Pauser;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
@@ -23,6 +23,11 @@ public class ServerModule extends AbstractModule {
     this.config = config;
     storageFactory = new StorageFactory(databaseConfig);
     transactionFactory = new TransactionFactory(databaseConfig);
+  }
+
+  @Override
+  protected void configure() {
+    bind(GateKeeper.class).to(config.getGateKeeperClass()).in(Singleton.class);
   }
 
   @Provides
@@ -41,12 +46,6 @@ public class ServerModule extends AbstractModule {
   @Singleton
   DistributedTransactionManager provideDistributedTransactionManager() {
     return transactionFactory.getTransactionManager();
-  }
-
-  @Provides
-  @Singleton
-  Pauser providePauser() {
-    return new Pauser();
   }
 
   @Provides

@@ -34,7 +34,7 @@ import org.mockito.MockitoAnnotations;
 public class DistributedStorageServiceTest {
 
   @Mock private DistributedStorage storage;
-  @Mock private Pauser pauser;
+  @Mock private GateKeeper gateKeeper;
   @Captor private ArgumentCaptor<StatusRuntimeException> exceptionCaptor;
 
   private DistributedStorageService storageService;
@@ -44,8 +44,8 @@ public class DistributedStorageServiceTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    storageService = new DistributedStorageService(storage, pauser, new Metrics());
-    when(pauser.preProcess()).thenReturn(true);
+    storageService = new DistributedStorageService(storage, gateKeeper, new Metrics());
+    when(gateKeeper.letIn()).thenReturn(true);
   }
 
   @Test
@@ -101,12 +101,12 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void get_PauserReturnsFalse_ShouldThrowUnavailableError() {
+  public void get_GateKeeperReturnsFalse_ShouldThrowUnavailableError() {
     // Arrange
     GetRequest request = GetRequest.newBuilder().build();
     @SuppressWarnings("unchecked")
     StreamObserver<GetResponse> responseObserver = mock(StreamObserver.class);
-    when(pauser.preProcess()).thenReturn(false);
+    when(gateKeeper.letIn()).thenReturn(false);
 
     // Act
     storageService.get(request, responseObserver);
@@ -288,14 +288,14 @@ public class DistributedStorageServiceTest {
   }
 
   @Test
-  public void mutate_PauserReturnsFalse_ShouldThrowUnavailableError() {
+  public void mutate_GateKeeperReturnsFalse_ShouldThrowUnavailableError() {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
     MutateRequest request =
         MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(new Put(partitionKey))).build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
-    when(pauser.preProcess()).thenReturn(false);
+    when(gateKeeper.letIn()).thenReturn(false);
 
     // Act
     storageService.mutate(request, responseObserver);
