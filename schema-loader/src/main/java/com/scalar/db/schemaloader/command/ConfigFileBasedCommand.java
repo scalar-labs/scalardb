@@ -74,7 +74,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (replicationStrategy != null) {
-      metaOptions.put(CassandraAdmin.NETWORK_STRATEGY, replicationStrategy.name());
+      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.name());
     }
     if (compactStrategy != null) {
       metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactStrategy.name());
