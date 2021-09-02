@@ -30,12 +30,14 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommit;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
@@ -956,6 +958,61 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Act Assert
     assertThatThrownBy(() -> manager.start(transactionId))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
+      throws TransactionException {
+    // Arrange
+    GrpcTransaction transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    // Act
+    TransactionState state = manager.getState(transaction.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void getState_forFailedTransaction_ShouldReturnAbortedState()
+      throws TransactionException {
+    // Arrange
+    GrpcTransaction transaction1 = manager.start();
+    transaction1.get(prepareGet(0, 0, TABLE_1));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    GrpcTransaction transaction2 = manager.start();
+    transaction2.get(prepareGet(0, 0, TABLE_1));
+    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction2.commit();
+
+    assertThatCode(transaction1::commit).isInstanceOf(CommitException.class);
+
+    // Act
+    TransactionState state = manager.getState(transaction1.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws TransactionException {
+    // Arrange
+    GrpcTransaction transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    // Act
+    manager.abort(transaction.getId());
+
+    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+
+    // Assert
+    TransactionState state = manager.getState(transaction.getId());
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
   private GrpcTransaction prepareTransfer(
