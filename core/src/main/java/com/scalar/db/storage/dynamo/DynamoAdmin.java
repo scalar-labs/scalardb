@@ -18,13 +18,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClient;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClientBuilder;
+import software.amazon.awssdk.services.applicationautoscaling.model.DeleteScalingPolicyRequest;
+import software.amazon.awssdk.services.applicationautoscaling.model.DeregisterScalableTargetRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.MetricType;
+import software.amazon.awssdk.services.applicationautoscaling.model.ObjectNotFoundException;
 import software.amazon.awssdk.services.applicationautoscaling.model.PolicyType;
 import software.amazon.awssdk.services.applicationautoscaling.model.PredefinedMetricSpecification;
 import software.amazon.awssdk.services.applicationautoscaling.model.PutScalingPolicyRequest;
@@ -42,13 +47,16 @@ import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.Projection;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
+  static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
   static final String PARTITION_KEY = "concatenatedPartitionKey";
   static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
@@ -219,8 +227,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         noScaling = true;
       }
     }
-    controlAutoScaling(
-        namespace, table, noScaling, metadata.getSecondaryIndexNames(), Optional.ofNullable(ru));
+    if (!noScaling) {
+      controlAutoScaling(
+          namespace, table, false, metadata.getSecondaryIndexNames(), Optional.ofNullable(ru));
+    }
 
     // backup control
     boolean noBackup = DEFAULT_NO_BACKUP;
@@ -229,7 +239,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         noBackup = true;
       }
     }
-    controlContinuousBackup(namespace, table, noBackup);
+    if (!noBackup) {
+      controlContinuousBackup(namespace, table, false);
+    }
 
     try {
       client.createTable(requestBuilder.build());
@@ -274,6 +286,34 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private String fullNamespace(String namespace) {
     return namespacePrefix.map(s -> s + namespace).orElse(namespace);
+  }
+
+  private void controlContinuousBackup(String namespace, String table, boolean noBackup)
+      throws ExecutionException {
+    if (!noBackup) {
+      try {
+        client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Unable to enable continuous backup for "
+                + Utility.getFullTableName(namespacePrefix, namespace, table));
+      }
+    } else {
+      LOGGER.info("Continuous backup for "
+          + Utility.getFullTableName(namespacePrefix, namespace, table) + " is disable by default from Dynamo DB");
+    }
+  }
+
+  private PointInTimeRecoverySpecification buildPointInTimeRecoverySpecification() {
+    return PointInTimeRecoverySpecification.builder().pointInTimeRecoveryEnabled(true).build();
+  }
+
+  private UpdateContinuousBackupsRequest buildUpdateContinuousBackupsRequest(
+      String namespace, String table) {
+    return UpdateContinuousBackupsRequest.builder()
+        .tableName(Utility.getFullTableName(namespacePrefix, namespace, table))
+        .pointInTimeRecoverySpecification(buildPointInTimeRecoverySpecification())
+        .build();
   }
 
   private void controlAutoScaling(
@@ -335,7 +375,72 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
 
     } else {
-      // TODO
+      List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList =
+          new LinkedList<>();
+      List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new LinkedList<>();
+
+      // write, read scaling of table
+      for (String scalingType : TABLE_SCALING_TYPE) {
+        deregisterScalableTargetRequestList.add(
+            buildDeregisterScalableTargetRequest(
+                getTableResourceID(namespace, table), scalingType));
+        deleteScalingPolicyRequestList.add(
+            buildDeleteScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
+      }
+
+      // write, read scaling of global indexes (secondary indexes)
+      for (String secondaryIndex : secondaryIndexes) {
+        for (String scalingType : SECONDARY_INDEX_SCALING_TYPE) {
+          deregisterScalableTargetRequestList.add(
+              buildDeregisterScalableTargetRequest(
+                  getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+          deleteScalingPolicyRequestList.add(
+              buildDeleteScalingPolicyRequest(
+                  getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+        }
+      }
+
+      // make request
+      Iterator<DeregisterScalableTargetRequest> deregisterScalableTargetRequestIterator =
+          deregisterScalableTargetRequestList.iterator();
+      Iterator<DeleteScalingPolicyRequest> deleteScalingPolicyRequestIterator =
+          deleteScalingPolicyRequestList.iterator();
+      while (deregisterScalableTargetRequestIterator.hasNext()
+          && deleteScalingPolicyRequestIterator.hasNext()) {
+        DeregisterScalableTargetRequest deregisterScalableTargetRequest =
+            deregisterScalableTargetRequestIterator.next();
+        try {
+          applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
+        } catch (Exception e) {
+          if (e instanceof ObjectNotFoundException) {
+            LOGGER.warn(
+                "Scalable target for "
+                    + deregisterScalableTargetRequest.resourceId()
+                    + " not existed for deregister");
+          } else {
+            throw new ExecutionException(
+                "Unable to deregister scalable target for "
+                    + deregisterScalableTargetRequest.resourceId());
+          }
+        }
+
+        DeleteScalingPolicyRequest deleteScalingPolicyRequest =
+            deleteScalingPolicyRequestIterator.next();
+        try {
+          applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
+        } catch (Exception e) {
+          if (e instanceof ObjectNotFoundException) {
+            LOGGER.warn(
+                "Scaling policy for "
+                    + deleteScalingPolicyRequest.resourceId()
+                    + " not existed for deregister");
+          } else {
+            throw new ExecutionException(
+                "Unable to delete scaling policy request for "
+                    + deleteScalingPolicyRequest.resourceId());
+          }
+        }
+      }
     }
   }
 
@@ -354,6 +459,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
+  private DeregisterScalableTargetRequest buildDeregisterScalableTargetRequest(
+      String resourceID, String type) {
+    return DeregisterScalableTargetRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAPPING.get(type))
+        .build();
+  }
+
   private PutScalingPolicyRequest buildPutScalingPolicyRequest(String resourceID, String type) {
     return PutScalingPolicyRequest.builder()
         .serviceNamespace(ServiceNamespace.DYNAMODB)
@@ -365,11 +479,19 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
+  private DeleteScalingPolicyRequest buildDeleteScalingPolicyRequest(
+      String resourceID, String type) {
+    return DeleteScalingPolicyRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAPPING.get(type))
+        .policyName(getPolicyName(resourceID, type))
+        .build();
+  }
+
   private String getPolicyName(String resourceID, String type) {
     return resourceID + "-" + type;
   }
-
-  private void controlContinuousBackup(String namespace, String table, boolean noBackup) {}
 
   private String getTableResourceID(String namespace, String table) {
     return "table/" + Utility.getFullTableName(namespacePrefix, namespace, table);
