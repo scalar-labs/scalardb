@@ -30,14 +30,12 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommit;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
@@ -977,8 +975,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void getState_forFailedTransaction_ShouldReturnAbortedState()
-      throws TransactionException {
+  public void getState_forFailedTransaction_ShouldReturnAbortedState() throws TransactionException {
     // Arrange
     GrpcTransaction transaction1 = manager.start();
     transaction1.get(prepareGet(0, 0, TABLE_1));
