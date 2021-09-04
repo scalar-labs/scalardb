@@ -14,6 +14,68 @@ public final class DistributedStorageAdminGrpc {
   public static final String SERVICE_NAME = "rpc.DistributedStorageAdmin";
 
   // Static method descriptors that strictly reflect the proto.
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateNamespaceRequest,
+      com.google.protobuf.Empty> getCreateNamespaceMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateNamespace",
+      requestType = com.scalar.db.rpc.CreateNamespaceRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateNamespaceRequest,
+      com.google.protobuf.Empty> getCreateNamespaceMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateNamespaceRequest, com.google.protobuf.Empty> getCreateNamespaceMethod;
+    if ((getCreateNamespaceMethod = DistributedStorageAdminGrpc.getCreateNamespaceMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getCreateNamespaceMethod = DistributedStorageAdminGrpc.getCreateNamespaceMethod) == null) {
+          DistributedStorageAdminGrpc.getCreateNamespaceMethod = getCreateNamespaceMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.CreateNamespaceRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateNamespace"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.CreateNamespaceRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("CreateNamespace"))
+              .build();
+        }
+      }
+    }
+    return getCreateNamespaceMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.DropNamespaceRequest,
+      com.google.protobuf.Empty> getDropNamespaceMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DropNamespace",
+      requestType = com.scalar.db.rpc.DropNamespaceRequest.class,
+      responseType = com.google.protobuf.Empty.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.DropNamespaceRequest,
+      com.google.protobuf.Empty> getDropNamespaceMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.DropNamespaceRequest, com.google.protobuf.Empty> getDropNamespaceMethod;
+    if ((getDropNamespaceMethod = DistributedStorageAdminGrpc.getDropNamespaceMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getDropNamespaceMethod = DistributedStorageAdminGrpc.getDropNamespaceMethod) == null) {
+          DistributedStorageAdminGrpc.getDropNamespaceMethod = getDropNamespaceMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.DropNamespaceRequest, com.google.protobuf.Empty>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DropNamespace"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.DropNamespaceRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.google.protobuf.Empty.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("DropNamespace"))
+              .build();
+        }
+      }
+    }
+    return getDropNamespaceMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.CreateTableRequest,
       com.google.protobuf.Empty> getCreateTableMethod;
 
@@ -138,6 +200,68 @@ public final class DistributedStorageAdminGrpc {
     return getGetTableMetadataMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceTableNamesRequest,
+      com.scalar.db.rpc.GetNamespaceTableNamesResponse> getGetNamespaceTableNamesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetNamespaceTableNames",
+      requestType = com.scalar.db.rpc.GetNamespaceTableNamesRequest.class,
+      responseType = com.scalar.db.rpc.GetNamespaceTableNamesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceTableNamesRequest,
+      com.scalar.db.rpc.GetNamespaceTableNamesResponse> getGetNamespaceTableNamesMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.GetNamespaceTableNamesRequest, com.scalar.db.rpc.GetNamespaceTableNamesResponse> getGetNamespaceTableNamesMethod;
+    if ((getGetNamespaceTableNamesMethod = DistributedStorageAdminGrpc.getGetNamespaceTableNamesMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getGetNamespaceTableNamesMethod = DistributedStorageAdminGrpc.getGetNamespaceTableNamesMethod) == null) {
+          DistributedStorageAdminGrpc.getGetNamespaceTableNamesMethod = getGetNamespaceTableNamesMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.GetNamespaceTableNamesRequest, com.scalar.db.rpc.GetNamespaceTableNamesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetNamespaceTableNames"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.GetNamespaceTableNamesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.GetNamespaceTableNamesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("GetNamespaceTableNames"))
+              .build();
+        }
+      }
+    }
+    return getGetNamespaceTableNamesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.scalar.db.rpc.NamespaceExistsRequest,
+      com.scalar.db.rpc.NamespaceExistsResponse> getNamespaceExistsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "NamespaceExists",
+      requestType = com.scalar.db.rpc.NamespaceExistsRequest.class,
+      responseType = com.scalar.db.rpc.NamespaceExistsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.scalar.db.rpc.NamespaceExistsRequest,
+      com.scalar.db.rpc.NamespaceExistsResponse> getNamespaceExistsMethod() {
+    io.grpc.MethodDescriptor<com.scalar.db.rpc.NamespaceExistsRequest, com.scalar.db.rpc.NamespaceExistsResponse> getNamespaceExistsMethod;
+    if ((getNamespaceExistsMethod = DistributedStorageAdminGrpc.getNamespaceExistsMethod) == null) {
+      synchronized (DistributedStorageAdminGrpc.class) {
+        if ((getNamespaceExistsMethod = DistributedStorageAdminGrpc.getNamespaceExistsMethod) == null) {
+          DistributedStorageAdminGrpc.getNamespaceExistsMethod = getNamespaceExistsMethod =
+              io.grpc.MethodDescriptor.<com.scalar.db.rpc.NamespaceExistsRequest, com.scalar.db.rpc.NamespaceExistsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "NamespaceExists"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.NamespaceExistsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.scalar.db.rpc.NamespaceExistsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DistributedStorageAdminMethodDescriptorSupplier("NamespaceExists"))
+              .build();
+        }
+      }
+    }
+    return getNamespaceExistsMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -188,6 +312,20 @@ public final class DistributedStorageAdminGrpc {
 
     /**
      */
+    public void createNamespace(com.scalar.db.rpc.CreateNamespaceRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateNamespaceMethod(), responseObserver);
+    }
+
+    /**
+     */
+    public void dropNamespace(com.scalar.db.rpc.DropNamespaceRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDropNamespaceMethod(), responseObserver);
+    }
+
+    /**
+     */
     public void createTable(com.scalar.db.rpc.CreateTableRequest request,
         io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateTableMethod(), responseObserver);
@@ -214,8 +352,36 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTableMetadataMethod(), responseObserver);
     }
 
+    /**
+     */
+    public void getNamespaceTableNames(com.scalar.db.rpc.GetNamespaceTableNamesRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceTableNamesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetNamespaceTableNamesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    public void namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.NamespaceExistsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getNamespaceExistsMethod(), responseObserver);
+    }
+
     @java.lang.Override public final io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
+          .addMethod(
+            getCreateNamespaceMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.CreateNamespaceRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_CREATE_NAMESPACE)))
+          .addMethod(
+            getDropNamespaceMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.DropNamespaceRequest,
+                com.google.protobuf.Empty>(
+                  this, METHODID_DROP_NAMESPACE)))
           .addMethod(
             getCreateTableMethod(),
             io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -244,6 +410,20 @@ public final class DistributedStorageAdminGrpc {
                 com.scalar.db.rpc.GetTableMetadataRequest,
                 com.scalar.db.rpc.GetTableMetadataResponse>(
                   this, METHODID_GET_TABLE_METADATA)))
+          .addMethod(
+            getGetNamespaceTableNamesMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.GetNamespaceTableNamesRequest,
+                com.scalar.db.rpc.GetNamespaceTableNamesResponse>(
+                  this, METHODID_GET_NAMESPACE_TABLE_NAMES)))
+          .addMethod(
+            getNamespaceExistsMethod(),
+            io.grpc.stub.ServerCalls.asyncUnaryCall(
+              new MethodHandlers<
+                com.scalar.db.rpc.NamespaceExistsRequest,
+                com.scalar.db.rpc.NamespaceExistsResponse>(
+                  this, METHODID_NAMESPACE_EXISTS)))
           .build();
     }
   }
@@ -260,6 +440,22 @@ public final class DistributedStorageAdminGrpc {
     protected DistributedStorageAdminStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new DistributedStorageAdminStub(channel, callOptions);
+    }
+
+    /**
+     */
+    public void createNamespace(com.scalar.db.rpc.CreateNamespaceRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateNamespaceMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void dropNamespace(com.scalar.db.rpc.DropNamespaceRequest request,
+        io.grpc.stub.StreamObserver<com.google.protobuf.Empty> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDropNamespaceMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -293,6 +489,22 @@ public final class DistributedStorageAdminGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetTableMetadataMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void getNamespaceTableNames(com.scalar.db.rpc.GetNamespaceTableNamesRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceTableNamesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetNamespaceTableNamesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request,
+        io.grpc.stub.StreamObserver<com.scalar.db.rpc.NamespaceExistsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getNamespaceExistsMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -307,6 +519,20 @@ public final class DistributedStorageAdminGrpc {
     protected DistributedStorageAdminBlockingStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new DistributedStorageAdminBlockingStub(channel, callOptions);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty createNamespace(com.scalar.db.rpc.CreateNamespaceRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateNamespaceMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.google.protobuf.Empty dropNamespace(com.scalar.db.rpc.DropNamespaceRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDropNamespaceMethod(), getCallOptions(), request);
     }
 
     /**
@@ -336,6 +562,20 @@ public final class DistributedStorageAdminGrpc {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetTableMetadataMethod(), getCallOptions(), request);
     }
+
+    /**
+     */
+    public com.scalar.db.rpc.GetNamespaceTableNamesResponse getNamespaceTableNames(com.scalar.db.rpc.GetNamespaceTableNamesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetNamespaceTableNamesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.scalar.db.rpc.NamespaceExistsResponse namespaceExists(com.scalar.db.rpc.NamespaceExistsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getNamespaceExistsMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -350,6 +590,22 @@ public final class DistributedStorageAdminGrpc {
     protected DistributedStorageAdminFutureStub build(
         io.grpc.Channel channel, io.grpc.CallOptions callOptions) {
       return new DistributedStorageAdminFutureStub(channel, callOptions);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> createNamespace(
+        com.scalar.db.rpc.CreateNamespaceRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateNamespaceMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.google.protobuf.Empty> dropNamespace(
+        com.scalar.db.rpc.DropNamespaceRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDropNamespaceMethod(), getCallOptions()), request);
     }
 
     /**
@@ -383,12 +639,32 @@ public final class DistributedStorageAdminGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetTableMetadataMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.GetNamespaceTableNamesResponse> getNamespaceTableNames(
+        com.scalar.db.rpc.GetNamespaceTableNamesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetNamespaceTableNamesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.scalar.db.rpc.NamespaceExistsResponse> namespaceExists(
+        com.scalar.db.rpc.NamespaceExistsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getNamespaceExistsMethod(), getCallOptions()), request);
+    }
   }
 
-  private static final int METHODID_CREATE_TABLE = 0;
-  private static final int METHODID_DROP_TABLE = 1;
-  private static final int METHODID_TRUNCATE_TABLE = 2;
-  private static final int METHODID_GET_TABLE_METADATA = 3;
+  private static final int METHODID_CREATE_NAMESPACE = 0;
+  private static final int METHODID_DROP_NAMESPACE = 1;
+  private static final int METHODID_CREATE_TABLE = 2;
+  private static final int METHODID_DROP_TABLE = 3;
+  private static final int METHODID_TRUNCATE_TABLE = 4;
+  private static final int METHODID_GET_TABLE_METADATA = 5;
+  private static final int METHODID_GET_NAMESPACE_TABLE_NAMES = 6;
+  private static final int METHODID_NAMESPACE_EXISTS = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -407,6 +683,14 @@ public final class DistributedStorageAdminGrpc {
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
+        case METHODID_CREATE_NAMESPACE:
+          serviceImpl.createNamespace((com.scalar.db.rpc.CreateNamespaceRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
+        case METHODID_DROP_NAMESPACE:
+          serviceImpl.dropNamespace((com.scalar.db.rpc.DropNamespaceRequest) request,
+              (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
+          break;
         case METHODID_CREATE_TABLE:
           serviceImpl.createTable((com.scalar.db.rpc.CreateTableRequest) request,
               (io.grpc.stub.StreamObserver<com.google.protobuf.Empty>) responseObserver);
@@ -422,6 +706,14 @@ public final class DistributedStorageAdminGrpc {
         case METHODID_GET_TABLE_METADATA:
           serviceImpl.getTableMetadata((com.scalar.db.rpc.GetTableMetadataRequest) request,
               (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetTableMetadataResponse>) responseObserver);
+          break;
+        case METHODID_GET_NAMESPACE_TABLE_NAMES:
+          serviceImpl.getNamespaceTableNames((com.scalar.db.rpc.GetNamespaceTableNamesRequest) request,
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.GetNamespaceTableNamesResponse>) responseObserver);
+          break;
+        case METHODID_NAMESPACE_EXISTS:
+          serviceImpl.namespaceExists((com.scalar.db.rpc.NamespaceExistsRequest) request,
+              (io.grpc.stub.StreamObserver<com.scalar.db.rpc.NamespaceExistsResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -484,10 +776,14 @@ public final class DistributedStorageAdminGrpc {
         if (result == null) {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new DistributedStorageAdminFileDescriptorSupplier())
+              .addMethod(getCreateNamespaceMethod())
+              .addMethod(getDropNamespaceMethod())
               .addMethod(getCreateTableMethod())
               .addMethod(getDropTableMethod())
               .addMethod(getTruncateTableMethod())
               .addMethod(getGetTableMetadataMethod())
+              .addMethod(getGetNamespaceTableNamesMethod())
+              .addMethod(getNamespaceExistsMethod())
               .build();
         }
       }

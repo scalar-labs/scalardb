@@ -1,6 +1,7 @@
 package com.scalar.db.server;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -10,10 +11,16 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
+import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
+import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
+import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
+import com.scalar.db.rpc.NamespaceExistsRequest;
+import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtil;
 import io.grpc.stub.StreamObserver;
@@ -37,6 +44,42 @@ public class DistributedStorageAdminServiceTest {
   }
 
   @Test
+  public void createNamespace_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    CreateNamespaceRequest request =
+        CreateNamespaceRequest.newBuilder().setNamespace("namespace").setIfNotExists(true).build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.createNamespace(request, responseObserver);
+
+    // Assert
+    verify(admin).createNamespace(any(), anyBoolean(), anyMap());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void dropNamespace_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    DropNamespaceRequest request =
+        DropNamespaceRequest.newBuilder().setNamespace("namespace").build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.dropNamespace(request, responseObserver);
+
+    // Assert
+    verify(admin).dropNamespace(any());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
   public void createTable_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
@@ -51,6 +94,7 @@ public class DistributedStorageAdminServiceTest {
                         .addColumn("col2", DataType.INT)
                         .addPartitionKey("col1")
                         .build()))
+            .setIfNotExists(true)
             .build();
     @SuppressWarnings("unchecked")
     StreamObserver<Empty> responseObserver = mock(StreamObserver.class);
@@ -59,7 +103,7 @@ public class DistributedStorageAdminServiceTest {
     adminService.createTable(request, responseObserver);
 
     // Assert
-    verify(admin).createTable(any(), any(), any(), anyMap());
+    verify(admin).createTable(any(), any(), any(), anyBoolean(), anyMap());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
@@ -114,6 +158,42 @@ public class DistributedStorageAdminServiceTest {
 
     // Assert
     verify(admin).getTableMetadata(any(), any());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void getNamespaceTableNames_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    GetNamespaceTableNamesRequest request =
+        GetNamespaceTableNamesRequest.newBuilder().setNamespace("namespace").build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<GetNamespaceTableNamesResponse> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.getNamespaceTableNames(request, responseObserver);
+
+    // Assert
+    verify(admin).getNamespaceTableNames(any());
+    verify(responseObserver).onNext(any());
+    verify(responseObserver).onCompleted();
+  }
+
+  @Test
+  public void namespaceExists_IsCalledWithProperArguments_AdminShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    NamespaceExistsRequest request =
+        NamespaceExistsRequest.newBuilder().setNamespace("namespace").build();
+    @SuppressWarnings("unchecked")
+    StreamObserver<NamespaceExistsResponse> responseObserver = mock(StreamObserver.class);
+
+    // Act
+    adminService.namespaceExists(request, responseObserver);
+
+    // Assert
+    verify(admin).namespaceExists(any());
     verify(responseObserver).onNext(any());
     verify(responseObserver).onCompleted();
   }
