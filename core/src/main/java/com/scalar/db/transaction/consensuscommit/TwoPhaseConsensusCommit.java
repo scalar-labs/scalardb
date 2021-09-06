@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
@@ -28,9 +27,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@NotThreadSafe
 public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
   private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
@@ -43,7 +44,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
     VALIDATION_FAILED,
     COMMITTED,
     COMMIT_FAILED,
-    ROLLBACKED
+    ROLLED_BACK
   }
 
   private final CrudHandler crud;
@@ -227,7 +228,9 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
       status = Status.PREPARE_FAILED;
       throw new PrepareException("prepare failed", e);
     } catch (UnknownTransactionStatusException ignored) {
-      // UnknownTransactionStatusException must not be thrown here
+      // When the second argument of CommitHandler.prepare() (abortIfError) is false, the method
+      // doesn't abort the transaction even if any error happens, and
+      // UnknownTransactionStatusException cannot be thrown in that case.
     }
   }
 
@@ -246,14 +249,15 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
       status = Status.VALIDATION_FAILED;
       throw new ValidationException("validation failed", e);
     } catch (UnknownTransactionStatusException ignored) {
-      // UnknownTransactionStatusException must not be thrown here
+      // When the second argument of CommitHandler.preCommitValidation() (abortIfError) is false,
+      // the method doesn't abort the transaction even if any error happens, and
+      // UnknownTransactionStatusException cannot be thrown in that case.
     }
   }
 
   @Override
   public void commit() throws CommitException, UnknownTransactionStatusException {
-    if (crud.getSnapshot().getIsolation() == Isolation.SERIALIZABLE
-        && crud.getSnapshot().getSerializableStrategy() == SerializableStrategy.EXTRA_READ) {
+    if (crud.getSnapshot().isPreCommitValidationRequired()) {
       checkStatus(
           "The transaction is not validated."
               + " When using the EXTRA_READ serializable strategy, you need to call validate()"
@@ -283,14 +287,14 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
 
   @Override
   public void rollback() throws RollbackException {
-    if (status == Status.COMMITTED || status == Status.ROLLBACKED) {
-      throw new IllegalStateException("The transaction has already been committed or rollbacked");
+    if (status == Status.COMMITTED || status == Status.ROLLED_BACK) {
+      throw new IllegalStateException("The transaction has already been committed or rolled back");
     }
 
     try {
       if (status == Status.COMMIT_FAILED || status == Status.ACTIVE) {
         // If the status is COMMIT_FAILED, the transaction has already been aborted, so do nothing.
-        // And if the status is ACTIVE, it means that the transaction needs to be rollbacked
+        // And if the status is ACTIVE, it means that the transaction needs to be rolled back
         // before it's prepared. We do nothing in this case.
         return;
       }
@@ -308,7 +312,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
       if (!isCoordinator) {
         manager.removeTransaction(getId());
       }
-      status = Status.ROLLBACKED;
+      status = Status.ROLLED_BACK;
     }
   }
 

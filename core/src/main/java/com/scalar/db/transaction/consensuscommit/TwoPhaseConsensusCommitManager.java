@@ -12,7 +12,7 @@ import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
-import com.scalar.db.util.ObjectHolder;
+import com.scalar.db.util.ActiveExpiringMap;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
@@ -37,7 +37,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitManager {
   private Optional<String> namespace = Optional.empty();
   private Optional<String> tableName = Optional.empty();
 
-  private final ObjectHolder<TwoPhaseConsensusCommit> activeTransactions;
+  private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
 
   @Inject
   public TwoPhaseConsensusCommitManager(DistributedStorage storage, ConsensusCommitConfig config) {
@@ -48,7 +48,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitManager {
     recovery = new RecoveryHandler(storage, coordinator);
     commit = new CommitHandler(storage, coordinator, recovery);
     activeTransactions =
-        new ObjectHolder<>(
+        new ActiveExpiringMap<>(
             TRANSACTION_LIFETIME_MILLIS,
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
@@ -67,7 +67,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitManager {
     this.recovery = recovery;
     this.commit = commit;
     activeTransactions =
-        new ObjectHolder<>(
+        new ActiveExpiringMap<>(
             TRANSACTION_LIFETIME_MILLIS,
             TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
             t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
@@ -172,8 +172,8 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitManager {
       if (state.isPresent()) {
         return state.get().getState();
       }
-    } catch (CoordinatorException e) {
-      // ignore
+    } catch (CoordinatorException ignored) {
+      // ignored
     }
     // Either no state exists or the exception is thrown
     return TransactionState.UNKNOWN;

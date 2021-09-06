@@ -78,14 +78,10 @@ public class Snapshot {
     return id;
   }
 
+  @VisibleForTesting
   @Nonnull
-  public Isolation getIsolation() {
+  Isolation getIsolation() {
     return isolation;
-  }
-
-  @Nonnull
-  public SerializableStrategy getSerializableStrategy() {
-    return strategy;
   }
 
   public void put(Snapshot.Key key, Optional<TransactionResult> result) {
@@ -249,7 +245,7 @@ public class Snapshot {
 
   void toSerializableWithExtraRead(DistributedStorage storage)
       throws ExecutionException, CommitConflictException {
-    if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_READ) {
+    if (!isExtraReadEnabled()) {
       return;
     }
 
@@ -328,6 +324,14 @@ public class Snapshot {
   private void throwExceptionDueToAntiDependency() throws CommitConflictException {
     LOGGER.warn("Anti-dependency found. Aborting the transaction.");
     throw new CommitConflictException("Anti-dependency found. Aborting the transaction.");
+  }
+
+  private boolean isExtraReadEnabled() {
+    return isolation == Isolation.SERIALIZABLE && strategy == SerializableStrategy.EXTRA_READ;
+  }
+
+  public boolean isPreCommitValidationRequired() {
+    return isExtraReadEnabled();
   }
 
   @Immutable

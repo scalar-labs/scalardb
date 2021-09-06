@@ -190,7 +190,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rollforwarded value
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled forward value
   }
 
   @Test
@@ -238,7 +238,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
@@ -328,7 +328,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
     assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
     assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
@@ -350,7 +350,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           boolean isGet) throws ExecutionException, TransactionException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -397,27 +397,27 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rollforwarded value
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled forward value
   }
 
   @Test
   public void
-      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         true);
   }
 
   @Test
   public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         false);
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           boolean isGet) throws ExecutionException, TransactionException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -464,22 +464,22 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
   public void
-      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         true);
   }
 
   @Test
   public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         false);
   }
 
@@ -558,7 +558,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
@@ -648,7 +648,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
 
     assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
     assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
@@ -670,7 +670,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           boolean isGet) throws ExecutionException, TransactionException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -716,22 +716,22 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void
-      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         true);
   }
 
   @Test
   public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         false);
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           boolean isGet) throws ExecutionException, TransactionException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -778,22 +778,22 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
   public void
-      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         true);
   }
 
   @Test
   public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, TransactionException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         false);
   }
 
@@ -893,7 +893,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     assertThat(result).isPresent();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rollbacked value
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled back value
   }
 
   @Test

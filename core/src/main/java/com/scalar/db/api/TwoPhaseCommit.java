@@ -136,7 +136,7 @@ public interface TwoPhaseCommit {
   void prepare() throws PrepareException;
 
   /**
-   * Validates a transaction. Depending on the concurrent control algorithm, you need a validation
+   * Validates a transaction. Depending on the concurrency control algorithm, you need a validation
    * phase for a transaction.
    *
    * @throws ValidationException if the operation fails
@@ -152,7 +152,7 @@ public interface TwoPhaseCommit {
   void commit() throws CommitException, UnknownTransactionStatusException;
 
   /**
-   * Rollbacks a transaction.
+   * Rolls back a transaction.
    *
    * @throws RollbackException if the operation fails
    */

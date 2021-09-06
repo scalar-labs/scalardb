@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -267,8 +266,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.status = Status.VALIDATED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.getIsolation()).thenReturn(Isolation.SERIALIZABLE);
-    when(snapshot.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
+    when(snapshot.isPreCommitValidationRequired()).thenReturn(true);
 
     // Act
     transaction.commit();
@@ -287,8 +285,7 @@ public class TwoPhaseConsensusCommitTest {
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
-    when(snapshot.getIsolation()).thenReturn(Isolation.SERIALIZABLE);
-    when(snapshot.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
+    when(snapshot.isPreCommitValidationRequired()).thenReturn(true);
 
     // Act Assert
     assertThatThrownBy(transaction::commit).isInstanceOf(IllegalStateException.class);
