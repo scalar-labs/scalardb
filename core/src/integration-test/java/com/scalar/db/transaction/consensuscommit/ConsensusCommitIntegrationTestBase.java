@@ -2183,6 +2183,61 @@ public abstract class ConsensusCommitIntegrationTestBase {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    // Act
+    TransactionState state = manager.getState(transaction.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void getState_forFailedTransaction_ShouldReturnAbortedState()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction1 = manager.start();
+    transaction1.get(prepareGet(0, 0, TABLE_1));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    ConsensusCommit transaction2 = manager.start();
+    transaction2.get(prepareGet(0, 0, TABLE_1));
+    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction2.commit();
+
+    assertThatCode(transaction1::commit).isInstanceOf(CommitException.class);
+
+    // Act
+    TransactionState state = manager.getState(transaction1.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    // Act
+    manager.abort(transaction.getId());
+
+    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+
+    // Assert
+    TransactionState state = manager.getState(transaction.getId());
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
   private ConsensusCommit prepareTransfer(
       int fromId, String fromTable, int toId, String toTable, int amount) throws CrudException {
     boolean differentTables = !toTable.equals(fromTable);
