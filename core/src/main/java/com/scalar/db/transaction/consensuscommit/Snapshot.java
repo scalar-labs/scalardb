@@ -83,6 +83,11 @@ public class Snapshot {
     return isolation;
   }
 
+  @Nonnull
+  public SerializableStrategy getSerializableStrategy() {
+    return strategy;
+  }
+
   public void put(Snapshot.Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
