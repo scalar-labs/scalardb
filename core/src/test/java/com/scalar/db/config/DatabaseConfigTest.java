@@ -17,7 +17,6 @@ import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
-import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import java.util.Collections;
@@ -53,7 +52,6 @@ public class DatabaseConfigTest {
     assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -78,7 +76,6 @@ public class DatabaseConfigTest {
     assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -103,7 +100,6 @@ public class DatabaseConfigTest {
     assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -130,7 +126,6 @@ public class DatabaseConfigTest {
     assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
   }
 
   @Test
@@ -442,44 +437,6 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.ISOLATION_LEVEL, "READ_COMMITTED");
-
-    // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_PropertiesWithSerializableStrategyGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(
-        DatabaseConfig.SERIALIZABLE_STRATEGY, SerializableStrategy.EXTRA_WRITE.toString());
-
-    // Act
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_WRITE);
-  }
-
-  @Test
-  public void
-      constructor_UnsupportedSerializableStrategyGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
 
     // Act Assert
     assertThatThrownBy(() -> new DatabaseConfig(props))

@@ -189,7 +189,7 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
 
     ConsensusCommitManager manager =
         new ConsensusCommitManager(
-            storage, new DatabaseConfig(props), coordinator, recovery, commit);
+            storage, new ConsensusCommitConfig(props), coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
