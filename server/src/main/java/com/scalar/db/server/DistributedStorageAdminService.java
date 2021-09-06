@@ -4,16 +4,23 @@ import com.google.inject.Inject;
 import com.google.protobuf.Empty;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
+import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
+import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
+import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
 import com.scalar.db.rpc.GetTableMetadataRequest;
 import com.scalar.db.rpc.GetTableMetadataResponse;
+import com.scalar.db.rpc.NamespaceExistsRequest;
+import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +42,32 @@ public class DistributedStorageAdminService
   }
 
   @Override
+  public void createNamespace(
+      CreateNamespaceRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.createNamespace(
+              request.getNamespace(), request.getIfNotExists(), request.getOptionsMap());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "create_namespace");
+  }
+
+  @Override
+  public void dropNamespace(DropNamespaceRequest request, StreamObserver<Empty> responseObserver) {
+    execute(
+        () -> {
+          admin.dropNamespace(request.getNamespace());
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "drop_namespace");
+  }
+
+  @Override
   public void createTable(CreateTableRequest request, StreamObserver<Empty> responseObserver) {
     execute(
         () -> {
@@ -42,6 +75,7 @@ public class DistributedStorageAdminService
               request.getNamespace(),
               request.getTable(),
               ProtoUtil.toTableMetadata(request.getTableMetadata()),
+              request.getIfNotExists(),
               request.getOptionsMap());
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
@@ -90,6 +124,36 @@ public class DistributedStorageAdminService
         },
         responseObserver,
         "get_table_metadata");
+  }
+
+  @Override
+  public void getNamespaceTableNames(
+      GetNamespaceTableNamesRequest request,
+      StreamObserver<GetNamespaceTableNamesResponse> responseObserver) {
+    execute(
+        () -> {
+          Set<String> tableNames = admin.getNamespaceTableNames(request.getNamespace());
+          GetNamespaceTableNamesResponse.Builder builder =
+              GetNamespaceTableNamesResponse.newBuilder();
+          tableNames.forEach(builder::addTableName);
+          responseObserver.onNext(builder.build());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "get_namespace_table_names");
+  }
+
+  @Override
+  public void namespaceExists(
+      NamespaceExistsRequest request, StreamObserver<NamespaceExistsResponse> responseObserver) {
+    execute(
+        () -> {
+          boolean exists = admin.namespaceExists(request.getNamespace());
+          responseObserver.onNext(NamespaceExistsResponse.newBuilder().setExists(exists).build());
+          responseObserver.onCompleted();
+        },
+        responseObserver,
+        "namespace_exists");
   }
 
   private void execute(
