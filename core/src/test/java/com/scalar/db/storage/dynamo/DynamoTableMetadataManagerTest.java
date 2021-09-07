@@ -114,7 +114,7 @@ public class DynamoTableMetadataManagerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     Map<String, AttributeValue> expectedKey = new HashMap<>();
-    expectedKey.put("table", AttributeValue.builder().s(FULLNAME).build());
+    expectedKey.put("table", AttributeValue.builder().s("prefix_" + FULLNAME).build());
 
     // Act
     manager.getTableMetadata(get);
