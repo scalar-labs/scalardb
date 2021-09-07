@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -36,7 +34,6 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.DescribeBackupResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -268,11 +265,8 @@ public class DynamoTableMetadataManagerTest {
   public void getTableNames_WithExistingTables_ShouldReturnTableNames() {
     // Arrange
     String namespace = "ns";
-    List<String> tableFullNames = ImmutableList.<String>builder()
-        .add("ns.tb1")
-        .add("ns.tb2")
-        .add("ns.tb3")
-        .build();
+    List<String> tableFullNames =
+        ImmutableList.<String>builder().add("ns.tb1").add("ns.tb2").add("ns.tb3").build();
 
     Set<String> tableSetExpected = new HashSet<>(tableFullNames);
 

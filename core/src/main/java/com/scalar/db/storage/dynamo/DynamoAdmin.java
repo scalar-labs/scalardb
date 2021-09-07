@@ -1,6 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import com.azure.cosmos.CosmosClient;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -10,13 +9,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.cosmos.CosmosTableMetadataManager;
 import com.scalar.db.util.Utility;
 import java.net.URI;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,7 +42,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest.Builder;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -75,20 +70,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final double TARGET_USAGE_RATE = 70.0;
 
   private final DynamoDbClient client;
-  private ApplicationAutoScalingClient applicationAutoScalingClient;
   private final Optional<String> namespacePrefix;
   private final DynamoTableMetadataManager metadataManager;
-
   private final String NO_SCALING = "no-scaling";
   private final String NO_BACKUP = "no-backup";
   private final String REQUEST_UNIT = "ru";
-
   private final Boolean DEFAULT_NO_SCALING = false;
   private final Boolean DEFAULT_NO_BACKUP = false;
   private final long DEFAULT_RU = 10;
-
   private final int DELETE_BATCH_SIZE = 100;
-
   private final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAPPING =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
           .put(DataType.INT, ScalarAttributeType.N)
@@ -98,12 +88,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.TEXT, ScalarAttributeType.S)
           .put(DataType.BLOB, ScalarAttributeType.B)
           .build();
-
   private final ImmutableSet<String> TABLE_SCALING_TYPE =
       ImmutableSet.<String>builder().add("read").add("write").build();
   private final ImmutableSet<String> SECONDARY_INDEX_SCALING_TYPE =
       ImmutableSet.<String>builder().add("index-read").add("index-write").build();
-
   private final ImmutableMap<String, ScalableDimension> SCALABLE_DIMENSION_MAPPING =
       ImmutableMap.<String, ScalableDimension>builder()
           .put("read", ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS)
@@ -111,6 +99,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put("index-read", ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS)
           .put("index-write", ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS)
           .build();
+  private ApplicationAutoScalingClient applicationAutoScalingClient;
 
   @Inject
   public DynamoAdmin(DynamoConfig config) {
@@ -461,8 +450,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
 
     } else {
-      List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList =
-          new ArrayList<>();
+      List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
       List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
 
       // write, read scaling of table

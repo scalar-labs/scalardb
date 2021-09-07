@@ -11,7 +11,6 @@ import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +22,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest.Builder;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
@@ -321,7 +319,8 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
       ListTablesResponse listTablesResponse = client.listTables();
       List<String> tableNames = listTablesResponse.tableNames();
       for (String tableName : tableNames) {
-        if (tableName.equals(Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))) {
+        if (tableName.equals(
+            Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))) {
           tableExist = true;
           break;
         }
