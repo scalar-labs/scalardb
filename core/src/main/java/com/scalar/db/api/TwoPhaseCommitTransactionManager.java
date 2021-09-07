@@ -6,9 +6,9 @@ import java.util.Optional;
 /**
  * A transaction manager based on a two-phase commit protocol.
  *
- * <p>Just like a well-known two-phase commit protocol, there are 2 roles, a coordinator and a
+ * <p>Just like a well-known two-phase commit protocol, there are two roles, a coordinator and a
  * participant, that execute a single transaction collaboratively. A coordinator process first
- * starts a transaction with {@link #start()} or {@link #start(String)} and participant processes
+ * starts a transaction with {@link #start()} or {@link #start(String)}, and participant processes
  * join the transaction with {@link #join(String)} with the transaction ID. Also, participants can
  * resume the transaction with {@link #resume(String)} with the transaction ID.
  */
