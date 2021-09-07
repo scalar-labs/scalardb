@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.azure.cosmos.CosmosClient;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -9,8 +10,11 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.cosmos.CosmosTableMetadataManager;
 import com.scalar.db.util.Utility;
 import java.net.URI;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,18 +44,24 @@ import software.amazon.awssdk.services.applicationautoscaling.model.TargetTracki
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest.Builder;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
 import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.Projection;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 
 @ThreadSafe
@@ -71,11 +81,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private final String NO_SCALING = "no-scaling";
   private final String NO_BACKUP = "no-backup";
-  private final String RU = "ru";
+  private final String REQUEST_UNIT = "ru";
 
   private final Boolean DEFAULT_NO_SCALING = false;
   private final Boolean DEFAULT_NO_BACKUP = false;
-  private final int DEFAULT_RU = 10;
+  private final long DEFAULT_RU = 10;
+
+  private final int DELETE_BATCH_SIZE = 100;
 
   private final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAPPING =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
@@ -135,19 +147,31 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     this.namespacePrefix = namespacePrefix.map(n -> n + "_");
   }
 
+  @VisibleForTesting
+  DynamoAdmin(
+      DynamoDbClient dynamoDbClient,
+      ApplicationAutoScalingClient applicationAutoScalingClient,
+      DynamoTableMetadataManager metadataManager,
+      Optional<String> namespacePrefix) {
+    this.client = dynamoDbClient;
+    this.applicationAutoScalingClient = applicationAutoScalingClient;
+    this.metadataManager = metadataManager;
+    this.namespacePrefix = namespacePrefix;
+  }
+
   @Override
-  public void createNamespace(String namespace, Map<String, String> options)
-      throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+  public void createNamespace(String namespace, Map<String, String> options) {
+    LOGGER.info(
+        "In Dynamo DB storage, namespace will be added to table name as prefix along with dot separator.");
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    Builder requestBuilder = CreateTableRequest.builder();
+    CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
 
-    List<AttributeDefinition> columnsToAttributeDefinitions = new LinkedList<>();
+    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
     for (String column : metadata.getColumnNames()) {
       if (metadata.getColumnDataType(column) == DataType.BOOLEAN) {
         columnsToAttributeDefinitions.add(
@@ -200,22 +224,23 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                         .keyType(KeyType.HASH)
                         .build())
                 .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        if (options.containsKey(RU)) {
-          Long ru = Long.parseLong(options.get(RU));
-          globalSecondaryIndexBuilder.provisionedThroughput(
-              ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
+        Long ru = DEFAULT_RU;
+        if (options.containsKey(REQUEST_UNIT)) {
+          ru = Long.parseLong(options.get(REQUEST_UNIT));
         }
+        globalSecondaryIndexBuilder.provisionedThroughput(
+            ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
         requestBuilder.globalSecondaryIndexes(globalSecondaryIndexBuilder.build());
       }
     }
 
     // ru
-    Long ru = null;
-    if (options.containsKey(RU)) {
-      ru = Long.parseLong(options.get(RU));
-      requestBuilder.provisionedThroughput(
-          ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
+    Long ru = DEFAULT_RU;
+    if (options.containsKey(REQUEST_UNIT)) {
+      ru = Long.parseLong(options.get(REQUEST_UNIT));
     }
+    requestBuilder.provisionedThroughput(
+        ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
 
     // table name
     requestBuilder.tableName(Utility.getFullTableName(namespacePrefix, namespace, table));
@@ -239,30 +264,72 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         noBackup = true;
       }
     }
-    if (!noBackup) {
-      controlContinuousBackup(namespace, table, false);
-    }
+    controlContinuousBackup(namespace, table, noBackup);
 
     try {
       client.createTable(requestBuilder.build());
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("creating table failed");
+      metadataManager.addTableMetadata(namespace, table, metadata);
+    } catch (Exception e) {
+      throw new ExecutionException("creating table failed", e);
     }
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    DeleteTableRequest request =
+        DeleteTableRequest.builder()
+            .tableName(Utility.getFullTableName(namespacePrefix, namespace, table))
+            .build();
+    try {
+      client.deleteTable(request);
+      metadataManager.deleteTableMetadata(namespace, table);
+    } catch (Exception e) {
+      if (e instanceof ObjectNotFoundException) {
+        LOGGER.warn("table " + request.tableName() + " not existed for deleting");
+      } else {
+        throw new ExecutionException("deleting table " + request.tableName() + " failed", e);
+      }
+    }
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    Set<String> tables = getNamespaceTableNames(namespace);
+    for (String table : tables) {
+      dropTable(namespace, table);
+    }
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    Map<String, AttributeValue> lastKeyEvaluated = null;
+    do {
+      ScanRequest scanRequest =
+          ScanRequest.builder()
+              .tableName(Utility.getFullTableName(namespacePrefix, namespace, table))
+              .attributesToGet()
+              .limit(DELETE_BATCH_SIZE)
+              .exclusiveStartKey(lastKeyEvaluated)
+              .build();
+      ScanResponse scanResponse = client.scan(scanRequest);
+      for (Map<String, AttributeValue> item : scanResponse.items()) {
+        DeleteItemRequest deleteItemRequest =
+            DeleteItemRequest.builder()
+                .tableName(Utility.getFullTableName(namespacePrefix, namespace, table))
+                .key(item)
+                .build();
+
+        try {
+          client.deleteItem(deleteItemRequest);
+        } catch (DynamoDbException e) {
+          throw new ExecutionException(
+              "Delete item from table "
+                  + Utility.getFullTableName(namespacePrefix, namespace, table)
+                  + " failed.");
+        }
+      }
+      lastKeyEvaluated = scanResponse.lastEvaluatedKey();
+    } while (lastKeyEvaluated != null);
   }
 
   @Override
@@ -276,12 +343,29 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    try {
+      return metadataManager.getTableNames(namespace);
+    } catch (RuntimeException e) {
+      throw new ExecutionException("getting list of tables failed");
+    }
   }
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    throw new UnsupportedOperationException("implement later");
+    boolean nameSpaceExists = false;
+    try {
+      ListTablesResponse listTablesResponse = client.listTables();
+      List<String> tableNames = listTablesResponse.tableNames();
+      for (String tableName : tableNames) {
+        if (tableName.startsWith(Utility.getFullNamespaceName(namespacePrefix, namespace))) {
+          nameSpaceExists = true;
+          break;
+        }
+      }
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("getting list of namespaces failed");
+    }
+    return nameSpaceExists;
   }
 
   private String fullNamespace(String namespace) {
@@ -299,8 +383,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                 + Utility.getFullTableName(namespacePrefix, namespace, table));
       }
     } else {
-      LOGGER.info("Continuous backup for "
-          + Utility.getFullTableName(namespacePrefix, namespace, table) + " is disable by default from Dynamo DB");
+      LOGGER.info(
+          "Continuous backup for "
+              + Utility.getFullTableName(namespacePrefix, namespace, table)
+              + " is disable by default from Dynamo DB");
     }
   }
 
@@ -324,8 +410,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       Optional<Long> ru)
       throws ExecutionException {
     if (!noScaling) {
-      List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new LinkedList<>();
-      List<PutScalingPolicyRequest> putScalingPolicyRequestList = new LinkedList<>();
+      List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
+      List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
 
       // write, read scaling of table
       for (String scalingType : TABLE_SCALING_TYPE) {
@@ -376,8 +462,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     } else {
       List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList =
-          new LinkedList<>();
-      List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new LinkedList<>();
+          new ArrayList<>();
+      List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
 
       // write, read scaling of table
       for (String scalingType : TABLE_SCALING_TYPE) {
@@ -446,7 +532,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private RegisterScalableTargetRequest buildRegisterScalableTargetRequest(
       String resourceID, String type, Optional<Long> ru) {
-    int ruValue = DEFAULT_RU;
+    int ruValue = Math.toIntExact(DEFAULT_RU);
     if (ru.isPresent()) {
       ruValue = Math.toIntExact(ru.get());
     }
