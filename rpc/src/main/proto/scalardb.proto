@@ -120,11 +120,11 @@ message Result {
 // DistributedStorage
 
 service DistributedStorage {
-  rpc Get (GetRequest) returns (GetResponse) {
+  rpc Get(GetRequest) returns (GetResponse) {
   }
-  rpc Scan (stream ScanRequest) returns (stream ScanResponse) {
+  rpc Scan(stream ScanRequest) returns (stream ScanResponse) {
   }
-  rpc Mutate (MutateRequest) returns (google.protobuf.Empty) {
+  rpc Mutate(MutateRequest) returns (google.protobuf.Empty) {
   }
 }
 
@@ -153,13 +153,21 @@ message MutateRequest {
 // DistributedStorageAdmin
 
 service DistributedStorageAdmin {
-  rpc CreateTable (CreateTableRequest) returns (google.protobuf.Empty) {
+  rpc CreateNamespace(CreateNamespaceRequest) returns (google.protobuf.Empty) {
   }
-  rpc DropTable (DropTableRequest) returns (google.protobuf.Empty) {
+  rpc DropNamespace(DropNamespaceRequest) returns (google.protobuf.Empty) {
   }
-  rpc TruncateTable (TruncateTableRequest) returns (google.protobuf.Empty) {
+  rpc CreateTable(CreateTableRequest) returns (google.protobuf.Empty) {
   }
-  rpc GetTableMetadata (GetTableMetadataRequest) returns (GetTableMetadataResponse) {
+  rpc DropTable(DropTableRequest) returns (google.protobuf.Empty) {
+  }
+  rpc TruncateTable(TruncateTableRequest) returns (google.protobuf.Empty) {
+  }
+  rpc GetTableMetadata(GetTableMetadataRequest) returns (GetTableMetadataResponse) {
+  }
+  rpc GetNamespaceTableNames(GetNamespaceTableNamesRequest) returns (GetNamespaceTableNamesResponse) {
+  }
+  rpc NamespaceExists(NamespaceExistsRequest) returns (NamespaceExistsResponse) {
   }
 }
 
@@ -181,11 +189,22 @@ message TableMetadata {
   repeated string secondary_index_name = 5;
 }
 
+message CreateNamespaceRequest {
+  string namespace = 1;
+  map<string, string> options = 2;
+  bool if_not_exists = 3;
+}
+
+message DropNamespaceRequest {
+  string namespace = 1;
+}
+
 message CreateTableRequest {
   string namespace = 1;
   string table = 2;
   TableMetadata table_metadata = 3;
   map<string, string> options = 4;
+  bool if_not_exists = 5;
 }
 
 message DropTableRequest {
@@ -207,14 +226,30 @@ message GetTableMetadataResponse {
   TableMetadata table_metadata = 1;
 }
 
+message GetNamespaceTableNamesRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceTableNamesResponse {
+  repeated string table_name = 1;
+}
+
+message NamespaceExistsRequest {
+  string namespace = 1;
+}
+
+message NamespaceExistsResponse {
+  bool exists = 1;
+}
+
 // A service and messages for DistributedTransaction
 
 service DistributedTransaction {
-  rpc Transaction (stream TransactionRequest) returns (stream TransactionResponse) {
+  rpc Transaction(stream TransactionRequest) returns (stream TransactionResponse) {
   }
-  rpc GetState (GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
-  rpc Abort (AbortRequest) returns (AbortResponse) {
+  rpc Abort(AbortRequest) returns (AbortResponse) {
   }
 }
 

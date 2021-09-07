@@ -4,27 +4,26 @@
 package com.scalar.db.rpc;
 
 /**
- * Protobuf type {@code rpc.CreateTableRequest}
+ * Protobuf type {@code rpc.CreateNamespaceRequest}
  */
-public final class CreateTableRequest extends
+public final class CreateNamespaceRequest extends
     com.google.protobuf.GeneratedMessageV3 implements
-    // @@protoc_insertion_point(message_implements:rpc.CreateTableRequest)
-    CreateTableRequestOrBuilder {
+    // @@protoc_insertion_point(message_implements:rpc.CreateNamespaceRequest)
+    CreateNamespaceRequestOrBuilder {
 private static final long serialVersionUID = 0L;
-  // Use CreateTableRequest.newBuilder() to construct.
-  private CreateTableRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+  // Use CreateNamespaceRequest.newBuilder() to construct.
+  private CreateNamespaceRequest(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
     super(builder);
   }
-  private CreateTableRequest() {
+  private CreateNamespaceRequest() {
     namespace_ = "";
-    table_ = "";
   }
 
   @java.lang.Override
   @SuppressWarnings({"unused"})
   protected java.lang.Object newInstance(
       UnusedPrivateParameter unused) {
-    return new CreateTableRequest();
+    return new CreateNamespaceRequest();
   }
 
   @java.lang.Override
@@ -32,7 +31,7 @@ private static final long serialVersionUID = 0L;
   getUnknownFields() {
     return this.unknownFields;
   }
-  private CreateTableRequest(
+  private CreateNamespaceRequest(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -58,25 +57,6 @@ private static final long serialVersionUID = 0L;
             break;
           }
           case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            table_ = s;
-            break;
-          }
-          case 26: {
-            com.scalar.db.rpc.TableMetadata.Builder subBuilder = null;
-            if (tableMetadata_ != null) {
-              subBuilder = tableMetadata_.toBuilder();
-            }
-            tableMetadata_ = input.readMessage(com.scalar.db.rpc.TableMetadata.parser(), extensionRegistry);
-            if (subBuilder != null) {
-              subBuilder.mergeFrom(tableMetadata_);
-              tableMetadata_ = subBuilder.buildPartial();
-            }
-
-            break;
-          }
-          case 34: {
             if (!((mutable_bitField0_ & 0x00000001) != 0)) {
               options_ = com.google.protobuf.MapField.newMapField(
                   OptionsDefaultEntryHolder.defaultEntry);
@@ -89,7 +69,7 @@ private static final long serialVersionUID = 0L;
                 options__.getKey(), options__.getValue());
             break;
           }
-          case 40: {
+          case 24: {
 
             ifNotExists_ = input.readBool();
             break;
@@ -115,7 +95,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_descriptor;
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -123,7 +103,7 @@ private static final long serialVersionUID = 0L;
   protected com.google.protobuf.MapField internalGetMapField(
       int number) {
     switch (number) {
-      case 4:
+      case 2:
         return internalGetOptions();
       default:
         throw new RuntimeException(
@@ -133,9 +113,9 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_fieldAccessorTable
+    return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            com.scalar.db.rpc.CreateTableRequest.class, com.scalar.db.rpc.CreateTableRequest.Builder.class);
+            com.scalar.db.rpc.CreateNamespaceRequest.class, com.scalar.db.rpc.CreateNamespaceRequest.Builder.class);
   }
 
   public static final int NAMESPACE_FIELD_NUMBER = 1;
@@ -176,77 +156,13 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int TABLE_FIELD_NUMBER = 2;
-  private volatile java.lang.Object table_;
-  /**
-   * <code>string table = 2;</code>
-   * @return The table.
-   */
-  @java.lang.Override
-  public java.lang.String getTable() {
-    java.lang.Object ref = table_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      table_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string table = 2;</code>
-   * @return The bytes for table.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getTableBytes() {
-    java.lang.Object ref = table_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      table_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int TABLE_METADATA_FIELD_NUMBER = 3;
-  private com.scalar.db.rpc.TableMetadata tableMetadata_;
-  /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
-   * @return Whether the tableMetadata field is set.
-   */
-  @java.lang.Override
-  public boolean hasTableMetadata() {
-    return tableMetadata_ != null;
-  }
-  /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
-   * @return The tableMetadata.
-   */
-  @java.lang.Override
-  public com.scalar.db.rpc.TableMetadata getTableMetadata() {
-    return tableMetadata_ == null ? com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
-  }
-  /**
-   * <code>.rpc.TableMetadata table_metadata = 3;</code>
-   */
-  @java.lang.Override
-  public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
-    return getTableMetadata();
-  }
-
-  public static final int OPTIONS_FIELD_NUMBER = 4;
+  public static final int OPTIONS_FIELD_NUMBER = 2;
   private static final class OptionsDefaultEntryHolder {
     static final com.google.protobuf.MapEntry<
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_OptionsEntry_descriptor, 
+                com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_OptionsEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -267,7 +183,7 @@ private static final long serialVersionUID = 0L;
     return internalGetOptions().getMap().size();
   }
   /**
-   * <code>map&lt;string, string&gt; options = 4;</code>
+   * <code>map&lt;string, string&gt; options = 2;</code>
    */
 
   @java.lang.Override
@@ -285,7 +201,7 @@ private static final long serialVersionUID = 0L;
     return getOptionsMap();
   }
   /**
-   * <code>map&lt;string, string&gt; options = 4;</code>
+   * <code>map&lt;string, string&gt; options = 2;</code>
    */
   @java.lang.Override
 
@@ -293,7 +209,7 @@ private static final long serialVersionUID = 0L;
     return internalGetOptions().getMap();
   }
   /**
-   * <code>map&lt;string, string&gt; options = 4;</code>
+   * <code>map&lt;string, string&gt; options = 2;</code>
    */
   @java.lang.Override
 
@@ -306,7 +222,7 @@ private static final long serialVersionUID = 0L;
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, string&gt; options = 4;</code>
+   * <code>map&lt;string, string&gt; options = 2;</code>
    */
   @java.lang.Override
 
@@ -321,10 +237,10 @@ private static final long serialVersionUID = 0L;
     return map.get(key);
   }
 
-  public static final int IF_NOT_EXISTS_FIELD_NUMBER = 5;
+  public static final int IF_NOT_EXISTS_FIELD_NUMBER = 3;
   private boolean ifNotExists_;
   /**
-   * <code>bool if_not_exists = 5;</code>
+   * <code>bool if_not_exists = 3;</code>
    * @return The ifNotExists.
    */
   @java.lang.Override
@@ -349,20 +265,14 @@ private static final long serialVersionUID = 0L;
     if (!getNamespaceBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 1, namespace_);
     }
-    if (!getTableBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, table_);
-    }
-    if (tableMetadata_ != null) {
-      output.writeMessage(3, getTableMetadata());
-    }
     com.google.protobuf.GeneratedMessageV3
       .serializeStringMapTo(
         output,
         internalGetOptions(),
         OptionsDefaultEntryHolder.defaultEntry,
-        4);
+        2);
     if (ifNotExists_ != false) {
-      output.writeBool(5, ifNotExists_);
+      output.writeBool(3, ifNotExists_);
     }
     unknownFields.writeTo(output);
   }
@@ -376,13 +286,6 @@ private static final long serialVersionUID = 0L;
     if (!getNamespaceBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, namespace_);
     }
-    if (!getTableBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, table_);
-    }
-    if (tableMetadata_ != null) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(3, getTableMetadata());
-    }
     for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
          : internalGetOptions().getMap().entrySet()) {
       com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
@@ -391,11 +294,11 @@ private static final long serialVersionUID = 0L;
           .setValue(entry.getValue())
           .build();
       size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, options__);
+          .computeMessageSize(2, options__);
     }
     if (ifNotExists_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(5, ifNotExists_);
+        .computeBoolSize(3, ifNotExists_);
     }
     size += unknownFields.getSerializedSize();
     memoizedSize = size;
@@ -407,20 +310,13 @@ private static final long serialVersionUID = 0L;
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof com.scalar.db.rpc.CreateTableRequest)) {
+    if (!(obj instanceof com.scalar.db.rpc.CreateNamespaceRequest)) {
       return super.equals(obj);
     }
-    com.scalar.db.rpc.CreateTableRequest other = (com.scalar.db.rpc.CreateTableRequest) obj;
+    com.scalar.db.rpc.CreateNamespaceRequest other = (com.scalar.db.rpc.CreateNamespaceRequest) obj;
 
     if (!getNamespace()
         .equals(other.getNamespace())) return false;
-    if (!getTable()
-        .equals(other.getTable())) return false;
-    if (hasTableMetadata() != other.hasTableMetadata()) return false;
-    if (hasTableMetadata()) {
-      if (!getTableMetadata()
-          .equals(other.getTableMetadata())) return false;
-    }
     if (!internalGetOptions().equals(
         other.internalGetOptions())) return false;
     if (getIfNotExists()
@@ -438,12 +334,6 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
     hash = (53 * hash) + getNamespace().hashCode();
-    hash = (37 * hash) + TABLE_FIELD_NUMBER;
-    hash = (53 * hash) + getTable().hashCode();
-    if (hasTableMetadata()) {
-      hash = (37 * hash) + TABLE_METADATA_FIELD_NUMBER;
-      hash = (53 * hash) + getTableMetadata().hashCode();
-    }
     if (!internalGetOptions().getMap().isEmpty()) {
       hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
       hash = (53 * hash) + internalGetOptions().hashCode();
@@ -456,69 +346,69 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(byte[] data)
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(java.io.InputStream input)
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseDelimitedFrom(java.io.InputStream input)
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseDelimitedFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageV3
         .parseWithIOException(PARSER, input);
   }
-  public static com.scalar.db.rpc.CreateTableRequest parseFrom(
+  public static com.scalar.db.rpc.CreateNamespaceRequest parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -531,7 +421,7 @@ private static final long serialVersionUID = 0L;
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(com.scalar.db.rpc.CreateTableRequest prototype) {
+  public static Builder newBuilder(com.scalar.db.rpc.CreateNamespaceRequest prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
   @java.lang.Override
@@ -547,22 +437,22 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * Protobuf type {@code rpc.CreateTableRequest}
+   * Protobuf type {@code rpc.CreateNamespaceRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-      // @@protoc_insertion_point(builder_implements:rpc.CreateTableRequest)
-      com.scalar.db.rpc.CreateTableRequestOrBuilder {
+      // @@protoc_insertion_point(builder_implements:rpc.CreateNamespaceRequest)
+      com.scalar.db.rpc.CreateNamespaceRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
     protected com.google.protobuf.MapField internalGetMapField(
         int number) {
       switch (number) {
-        case 4:
+        case 2:
           return internalGetOptions();
         default:
           throw new RuntimeException(
@@ -573,7 +463,7 @@ private static final long serialVersionUID = 0L;
     protected com.google.protobuf.MapField internalGetMutableMapField(
         int number) {
       switch (number) {
-        case 4:
+        case 2:
           return internalGetMutableOptions();
         default:
           throw new RuntimeException(
@@ -583,12 +473,12 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_fieldAccessorTable
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              com.scalar.db.rpc.CreateTableRequest.class, com.scalar.db.rpc.CreateTableRequest.Builder.class);
+              com.scalar.db.rpc.CreateNamespaceRequest.class, com.scalar.db.rpc.CreateNamespaceRequest.Builder.class);
     }
 
-    // Construct using com.scalar.db.rpc.CreateTableRequest.newBuilder()
+    // Construct using com.scalar.db.rpc.CreateNamespaceRequest.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
@@ -608,14 +498,6 @@ private static final long serialVersionUID = 0L;
       super.clear();
       namespace_ = "";
 
-      table_ = "";
-
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-      } else {
-        tableMetadata_ = null;
-        tableMetadataBuilder_ = null;
-      }
       internalGetMutableOptions().clear();
       ifNotExists_ = false;
 
@@ -625,17 +507,17 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateTableRequest_descriptor;
+      return com.scalar.db.rpc.ScalarDbProto.internal_static_rpc_CreateNamespaceRequest_descriptor;
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.CreateTableRequest getDefaultInstanceForType() {
-      return com.scalar.db.rpc.CreateTableRequest.getDefaultInstance();
+    public com.scalar.db.rpc.CreateNamespaceRequest getDefaultInstanceForType() {
+      return com.scalar.db.rpc.CreateNamespaceRequest.getDefaultInstance();
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.CreateTableRequest build() {
-      com.scalar.db.rpc.CreateTableRequest result = buildPartial();
+    public com.scalar.db.rpc.CreateNamespaceRequest build() {
+      com.scalar.db.rpc.CreateNamespaceRequest result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
@@ -643,16 +525,10 @@ private static final long serialVersionUID = 0L;
     }
 
     @java.lang.Override
-    public com.scalar.db.rpc.CreateTableRequest buildPartial() {
-      com.scalar.db.rpc.CreateTableRequest result = new com.scalar.db.rpc.CreateTableRequest(this);
+    public com.scalar.db.rpc.CreateNamespaceRequest buildPartial() {
+      com.scalar.db.rpc.CreateNamespaceRequest result = new com.scalar.db.rpc.CreateNamespaceRequest(this);
       int from_bitField0_ = bitField0_;
       result.namespace_ = namespace_;
-      result.table_ = table_;
-      if (tableMetadataBuilder_ == null) {
-        result.tableMetadata_ = tableMetadata_;
-      } else {
-        result.tableMetadata_ = tableMetadataBuilder_.build();
-      }
       result.options_ = internalGetOptions();
       result.options_.makeImmutable();
       result.ifNotExists_ = ifNotExists_;
@@ -694,26 +570,19 @@ private static final long serialVersionUID = 0L;
     }
     @java.lang.Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof com.scalar.db.rpc.CreateTableRequest) {
-        return mergeFrom((com.scalar.db.rpc.CreateTableRequest)other);
+      if (other instanceof com.scalar.db.rpc.CreateNamespaceRequest) {
+        return mergeFrom((com.scalar.db.rpc.CreateNamespaceRequest)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(com.scalar.db.rpc.CreateTableRequest other) {
-      if (other == com.scalar.db.rpc.CreateTableRequest.getDefaultInstance()) return this;
+    public Builder mergeFrom(com.scalar.db.rpc.CreateNamespaceRequest other) {
+      if (other == com.scalar.db.rpc.CreateNamespaceRequest.getDefaultInstance()) return this;
       if (!other.getNamespace().isEmpty()) {
         namespace_ = other.namespace_;
         onChanged();
-      }
-      if (!other.getTable().isEmpty()) {
-        table_ = other.table_;
-        onChanged();
-      }
-      if (other.hasTableMetadata()) {
-        mergeTableMetadata(other.getTableMetadata());
       }
       internalGetMutableOptions().mergeFrom(
           other.internalGetOptions());
@@ -735,11 +604,11 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      com.scalar.db.rpc.CreateTableRequest parsedMessage = null;
+      com.scalar.db.rpc.CreateNamespaceRequest parsedMessage = null;
       try {
         parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        parsedMessage = (com.scalar.db.rpc.CreateTableRequest) e.getUnfinishedMessage();
+        parsedMessage = (com.scalar.db.rpc.CreateNamespaceRequest) e.getUnfinishedMessage();
         throw e.unwrapIOException();
       } finally {
         if (parsedMessage != null) {
@@ -826,201 +695,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object table_ = "";
-    /**
-     * <code>string table = 2;</code>
-     * @return The table.
-     */
-    public java.lang.String getTable() {
-      java.lang.Object ref = table_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        table_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string table = 2;</code>
-     * @return The bytes for table.
-     */
-    public com.google.protobuf.ByteString
-        getTableBytes() {
-      java.lang.Object ref = table_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        table_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string table = 2;</code>
-     * @param value The table to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTable(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      table_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string table = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTable() {
-      
-      table_ = getDefaultInstance().getTable();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string table = 2;</code>
-     * @param value The bytes for table to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTableBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      table_ = value;
-      onChanged();
-      return this;
-    }
-
-    private com.scalar.db.rpc.TableMetadata tableMetadata_;
-    private com.google.protobuf.SingleFieldBuilderV3<
-        com.scalar.db.rpc.TableMetadata, com.scalar.db.rpc.TableMetadata.Builder, com.scalar.db.rpc.TableMetadataOrBuilder> tableMetadataBuilder_;
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     * @return Whether the tableMetadata field is set.
-     */
-    public boolean hasTableMetadata() {
-      return tableMetadataBuilder_ != null || tableMetadata_ != null;
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     * @return The tableMetadata.
-     */
-    public com.scalar.db.rpc.TableMetadata getTableMetadata() {
-      if (tableMetadataBuilder_ == null) {
-        return tableMetadata_ == null ? com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
-      } else {
-        return tableMetadataBuilder_.getMessage();
-      }
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public Builder setTableMetadata(com.scalar.db.rpc.TableMetadata value) {
-      if (tableMetadataBuilder_ == null) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        tableMetadata_ = value;
-        onChanged();
-      } else {
-        tableMetadataBuilder_.setMessage(value);
-      }
-
-      return this;
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public Builder setTableMetadata(
-        com.scalar.db.rpc.TableMetadata.Builder builderForValue) {
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = builderForValue.build();
-        onChanged();
-      } else {
-        tableMetadataBuilder_.setMessage(builderForValue.build());
-      }
-
-      return this;
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public Builder mergeTableMetadata(com.scalar.db.rpc.TableMetadata value) {
-      if (tableMetadataBuilder_ == null) {
-        if (tableMetadata_ != null) {
-          tableMetadata_ =
-            com.scalar.db.rpc.TableMetadata.newBuilder(tableMetadata_).mergeFrom(value).buildPartial();
-        } else {
-          tableMetadata_ = value;
-        }
-        onChanged();
-      } else {
-        tableMetadataBuilder_.mergeFrom(value);
-      }
-
-      return this;
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public Builder clearTableMetadata() {
-      if (tableMetadataBuilder_ == null) {
-        tableMetadata_ = null;
-        onChanged();
-      } else {
-        tableMetadata_ = null;
-        tableMetadataBuilder_ = null;
-      }
-
-      return this;
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public com.scalar.db.rpc.TableMetadata.Builder getTableMetadataBuilder() {
-      
-      onChanged();
-      return getTableMetadataFieldBuilder().getBuilder();
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    public com.scalar.db.rpc.TableMetadataOrBuilder getTableMetadataOrBuilder() {
-      if (tableMetadataBuilder_ != null) {
-        return tableMetadataBuilder_.getMessageOrBuilder();
-      } else {
-        return tableMetadata_ == null ?
-            com.scalar.db.rpc.TableMetadata.getDefaultInstance() : tableMetadata_;
-      }
-    }
-    /**
-     * <code>.rpc.TableMetadata table_metadata = 3;</code>
-     */
-    private com.google.protobuf.SingleFieldBuilderV3<
-        com.scalar.db.rpc.TableMetadata, com.scalar.db.rpc.TableMetadata.Builder, com.scalar.db.rpc.TableMetadataOrBuilder> 
-        getTableMetadataFieldBuilder() {
-      if (tableMetadataBuilder_ == null) {
-        tableMetadataBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-            com.scalar.db.rpc.TableMetadata, com.scalar.db.rpc.TableMetadata.Builder, com.scalar.db.rpc.TableMetadataOrBuilder>(
-                getTableMetadata(),
-                getParentForChildren(),
-                isClean());
-        tableMetadata_ = null;
-      }
-      return tableMetadataBuilder_;
-    }
-
     private com.google.protobuf.MapField<
         java.lang.String, java.lang.String> options_;
     private com.google.protobuf.MapField<java.lang.String, java.lang.String>
@@ -1048,7 +722,7 @@ private static final long serialVersionUID = 0L;
       return internalGetOptions().getMap().size();
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
 
     @java.lang.Override
@@ -1066,7 +740,7 @@ private static final long serialVersionUID = 0L;
       return getOptionsMap();
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
     @java.lang.Override
 
@@ -1074,7 +748,7 @@ private static final long serialVersionUID = 0L;
       return internalGetOptions().getMap();
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
     @java.lang.Override
 
@@ -1087,7 +761,7 @@ private static final long serialVersionUID = 0L;
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
     @java.lang.Override
 
@@ -1108,7 +782,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
 
     public Builder removeOptions(
@@ -1127,7 +801,7 @@ private static final long serialVersionUID = 0L;
       return internalGetMutableOptions().getMutableMap();
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
     public Builder putOptions(
         java.lang.String key,
@@ -1139,7 +813,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>map&lt;string, string&gt; options = 4;</code>
+     * <code>map&lt;string, string&gt; options = 2;</code>
      */
 
     public Builder putAllOptions(
@@ -1151,7 +825,7 @@ private static final long serialVersionUID = 0L;
 
     private boolean ifNotExists_ ;
     /**
-     * <code>bool if_not_exists = 5;</code>
+     * <code>bool if_not_exists = 3;</code>
      * @return The ifNotExists.
      */
     @java.lang.Override
@@ -1159,7 +833,7 @@ private static final long serialVersionUID = 0L;
       return ifNotExists_;
     }
     /**
-     * <code>bool if_not_exists = 5;</code>
+     * <code>bool if_not_exists = 3;</code>
      * @param value The ifNotExists to set.
      * @return This builder for chaining.
      */
@@ -1170,7 +844,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool if_not_exists = 5;</code>
+     * <code>bool if_not_exists = 3;</code>
      * @return This builder for chaining.
      */
     public Builder clearIfNotExists() {
@@ -1192,41 +866,41 @@ private static final long serialVersionUID = 0L;
     }
 
 
-    // @@protoc_insertion_point(builder_scope:rpc.CreateTableRequest)
+    // @@protoc_insertion_point(builder_scope:rpc.CreateNamespaceRequest)
   }
 
-  // @@protoc_insertion_point(class_scope:rpc.CreateTableRequest)
-  private static final com.scalar.db.rpc.CreateTableRequest DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:rpc.CreateNamespaceRequest)
+  private static final com.scalar.db.rpc.CreateNamespaceRequest DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new com.scalar.db.rpc.CreateTableRequest();
+    DEFAULT_INSTANCE = new com.scalar.db.rpc.CreateNamespaceRequest();
   }
 
-  public static com.scalar.db.rpc.CreateTableRequest getDefaultInstance() {
+  public static com.scalar.db.rpc.CreateNamespaceRequest getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static final com.google.protobuf.Parser<CreateTableRequest>
-      PARSER = new com.google.protobuf.AbstractParser<CreateTableRequest>() {
+  private static final com.google.protobuf.Parser<CreateNamespaceRequest>
+      PARSER = new com.google.protobuf.AbstractParser<CreateNamespaceRequest>() {
     @java.lang.Override
-    public CreateTableRequest parsePartialFrom(
+    public CreateNamespaceRequest parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return new CreateTableRequest(input, extensionRegistry);
+      return new CreateNamespaceRequest(input, extensionRegistry);
     }
   };
 
-  public static com.google.protobuf.Parser<CreateTableRequest> parser() {
+  public static com.google.protobuf.Parser<CreateNamespaceRequest> parser() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.google.protobuf.Parser<CreateTableRequest> getParserForType() {
+  public com.google.protobuf.Parser<CreateNamespaceRequest> getParserForType() {
     return PARSER;
   }
 
   @java.lang.Override
-  public com.scalar.db.rpc.CreateTableRequest getDefaultInstanceForType() {
+  public com.scalar.db.rpc.CreateNamespaceRequest getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

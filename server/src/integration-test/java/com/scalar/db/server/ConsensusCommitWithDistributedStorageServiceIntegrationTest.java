@@ -23,6 +23,7 @@ import com.scalar.db.storage.jdbc.test.TestEnv;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.CommitHandler;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitIntegrationTestBase;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
@@ -53,7 +54,12 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(storage, testEnv.getJdbcConfig(), coordinator, recovery, commit);
+        new ConsensusCommitManager(
+            storage,
+            new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties()),
+            coordinator,
+            recovery,
+            commit);
     setUp(manager, storage, coordinator, recovery);
   }
 

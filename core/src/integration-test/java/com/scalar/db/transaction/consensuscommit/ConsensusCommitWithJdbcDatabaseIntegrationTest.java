@@ -38,7 +38,12 @@ public class ConsensusCommitWithJdbcDatabaseIntegrationTest
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(storage, testEnv.getJdbcConfig(), coordinator, recovery, commit);
+        new ConsensusCommitManager(
+            storage,
+            new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties()),
+            coordinator,
+            recovery,
+            commit);
     setUp(manager, storage, coordinator, recovery);
   }
 

@@ -10,6 +10,7 @@ import com.scalar.db.storage.dynamo.DynamoConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 
 public class TransactionModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -54,5 +55,11 @@ public class TransactionModule extends AbstractModule {
   @Provides
   GrpcConfig provideGrpcConfig() {
     return new GrpcConfig(config.getProperties());
+  }
+
+  @Singleton
+  @Provides
+  ConsensusCommitConfig provideConsensusCommitConfig() {
+    return new ConsensusCommitConfig(config.getProperties());
   }
 }
