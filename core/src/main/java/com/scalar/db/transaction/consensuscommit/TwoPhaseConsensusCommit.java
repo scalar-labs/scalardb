@@ -227,10 +227,9 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     } catch (CommitException e) {
       status = Status.PREPARE_FAILED;
       throw new PreparationException("prepare failed", e);
-    } catch (UnknownTransactionStatusException ignored) {
-      // When the second argument of CommitHandler.prepare() (abortIfError) is false, the method
-      // doesn't abort the transaction even if any error happens, and
-      // UnknownTransactionStatusException cannot be thrown in that case.
+    } catch (UnknownTransactionStatusException e) {
+      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
+      // throw UnknownTransactionStatusException
     }
   }
 
@@ -248,10 +247,9 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     } catch (CommitException e) {
       status = Status.VALIDATION_FAILED;
       throw new ValidationException("validation failed", e);
-    } catch (UnknownTransactionStatusException ignored) {
-      // When the second argument of CommitHandler.preCommitValidation() (abortIfError) is false,
-      // the method doesn't abort the transaction even if any error happens, and
-      // UnknownTransactionStatusException cannot be thrown in that case.
+    } catch (UnknownTransactionStatusException e) {
+      // Should not be reached here because CommitHandler.prepare() with abortIfError=false won't
+      // throw UnknownTransactionStatusException
     }
   }
 
