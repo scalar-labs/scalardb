@@ -2,18 +2,18 @@ package com.scalar.db.service;
 
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.api.TwoPhaseCommit;
-import com.scalar.db.api.TwoPhaseCommitManager;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class TwoPhaseCommitService implements TwoPhaseCommitManager {
-  private final TwoPhaseCommitManager manager;
+public class TwoPhaseCommitTransactionService implements TwoPhaseCommitTransactionManager {
+  private final TwoPhaseCommitTransactionManager manager;
 
   @Inject
-  public TwoPhaseCommitService(TwoPhaseCommitManager manager) {
+  public TwoPhaseCommitTransactionService(TwoPhaseCommitTransactionManager manager) {
     this.manager = manager;
   }
 
@@ -43,22 +43,22 @@ public class TwoPhaseCommitService implements TwoPhaseCommitManager {
   }
 
   @Override
-  public TwoPhaseCommit start() throws TransactionException {
+  public TwoPhaseCommitTransaction start() throws TransactionException {
     return manager.start();
   }
 
   @Override
-  public TwoPhaseCommit start(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction start(String txId) throws TransactionException {
     return manager.start(txId);
   }
 
   @Override
-  public TwoPhaseCommit join(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction join(String txId) throws TransactionException {
     return manager.join(txId);
   }
 
   @Override
-  public TwoPhaseCommit resume(String txId) throws TransactionException {
+  public TwoPhaseCommitTransaction resume(String txId) throws TransactionException {
     return manager.resume(txId);
   }
 

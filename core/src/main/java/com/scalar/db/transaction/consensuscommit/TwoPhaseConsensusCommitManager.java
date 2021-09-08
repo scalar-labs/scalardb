@@ -7,7 +7,7 @@ import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.api.TwoPhaseCommitManager;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitManager {
+public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransactionManager {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(TwoPhaseConsensusCommitManager.class);
 

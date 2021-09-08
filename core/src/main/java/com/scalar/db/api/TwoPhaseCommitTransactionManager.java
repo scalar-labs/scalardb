@@ -12,7 +12,7 @@ import java.util.Optional;
  * join the transaction with {@link #join(String)} with the transaction ID. Also, participants can
  * resume the transaction with {@link #resume(String)} with the transaction ID.
  */
-public interface TwoPhaseCommitManager {
+public interface TwoPhaseCommitTransactionManager {
 
   void with(String namespace, String tableName);
 
@@ -27,10 +27,10 @@ public interface TwoPhaseCommitManager {
   /**
    * Starts a new transaction. This method is assumed to be called by a coordinator process.
    *
-   * @return {@link TwoPhaseCommit}
+   * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionException if starting the transaction failed
    */
-  TwoPhaseCommit start() throws TransactionException;
+  TwoPhaseCommitTransaction start() throws TransactionException;
 
   /**
    * Starts a new transaction with the specified transaction ID. It is users' responsibility to
@@ -38,30 +38,30 @@ public interface TwoPhaseCommitManager {
    * exactly what you are doing. This method is assumed to be called by a coordinator process.
    *
    * @param txId an user-provided unique transaction ID
-   * @return {@link TwoPhaseCommit}
+   * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionException if starting the transaction failed
    */
-  TwoPhaseCommit start(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction start(String txId) throws TransactionException;
 
   /**
    * Join a transaction associated with the specified transaction ID. The transaction should be
    * started by a coordinator process. This method is assumed to be called by a participant process.
    *
    * @param txId the transaction ID
-   * @return {@link TwoPhaseCommit}
+   * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionException if participating the transaction failed
    */
-  TwoPhaseCommit join(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction join(String txId) throws TransactionException;
 
   /**
    * Resumes a transaction associated with the specified transaction ID that it has already joined.
    * This method is assumed to be called by a participant process.
    *
    * @param txId the transaction ID
-   * @return {@link TwoPhaseCommit}
+   * @return {@link TwoPhaseCommitTransaction}
    * @throws TransactionException if resuming the transaction failed
    */
-  TwoPhaseCommit resume(String txId) throws TransactionException;
+  TwoPhaseCommitTransaction resume(String txId) throws TransactionException;
 
   /**
    * Returns the state of a given transaction.

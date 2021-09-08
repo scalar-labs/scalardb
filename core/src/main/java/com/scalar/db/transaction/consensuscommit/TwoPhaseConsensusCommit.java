@@ -11,7 +11,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TwoPhaseCommit;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
-public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
+public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
   @VisibleForTesting
