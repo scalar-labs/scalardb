@@ -1817,9 +1817,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result2.isPresent()).isTrue();
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -1908,9 +1906,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -1950,9 +1946,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 3));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
