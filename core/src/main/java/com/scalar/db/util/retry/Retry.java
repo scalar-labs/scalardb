@@ -30,8 +30,9 @@ public final class Retry {
         return supplier.get();
       } catch (ServiceTemporaryUnavailableException e) {
         LOGGER.warn(
-            "received UNAVAILABLE state. retrying after {} milliseconds..."
+            "received UNAVAILABLE state (the message: \"{}\"). retrying after {} milliseconds..."
                 + " the current attempt count: {}",
+            e.getMessage(),
             interval,
             i + 1);
       } catch (RuntimeException e) {

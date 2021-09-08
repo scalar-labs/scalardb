@@ -15,6 +15,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -37,7 +38,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   private Optional<String> namespace = Optional.empty();
   private Optional<String> tableName = Optional.empty();
 
-  private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
+  @Nullable private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
 
   @Inject
   public TwoPhaseConsensusCommitManager(DistributedStorage storage, ConsensusCommitConfig config) {
@@ -47,11 +48,15 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     coordinator = new Coordinator(storage);
     recovery = new RecoveryHandler(storage, coordinator);
     commit = new CommitHandler(storage, coordinator, recovery);
-    activeTransactions =
-        new ActiveExpiringMap<>(
-            TRANSACTION_LIFETIME_MILLIS,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    if (config.isManageActiveTransactions()) {
+      activeTransactions =
+          new ActiveExpiringMap<>(
+              TRANSACTION_LIFETIME_MILLIS,
+              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    } else {
+      activeTransactions = null;
+    }
   }
 
   @VisibleForTesting
@@ -66,11 +71,15 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     this.coordinator = coordinator;
     this.recovery = recovery;
     this.commit = commit;
-    activeTransactions =
-        new ActiveExpiringMap<>(
-            TRANSACTION_LIFETIME_MILLIS,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    if (config.isManageActiveTransactions()) {
+      activeTransactions =
+          new ActiveExpiringMap<>(
+              TRANSACTION_LIFETIME_MILLIS,
+              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    } else {
+      activeTransactions = null;
+    }
   }
 
   @Override
@@ -132,10 +141,12 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   TwoPhaseConsensusCommit join(String txId, Isolation isolation, SerializableStrategy strategy)
       throws TransactionException {
     TwoPhaseConsensusCommit transaction = createNewTransaction(txId, false, isolation, strategy);
-    if (activeTransactions.putIfAbsent(txId, transaction) != null) {
-      transaction.rollback();
-      throw new TransactionException(
-          "The transaction associated with the specified transaction ID already exists");
+    if (activeTransactions != null) {
+      if (activeTransactions.putIfAbsent(txId, transaction) != null) {
+        transaction.rollback();
+        throw new TransactionException(
+            "The transaction associated with the specified transaction ID already exists");
+      }
     }
     return transaction;
   }
@@ -155,6 +166,13 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
 
   @Override
   public TwoPhaseConsensusCommit resume(String txId) throws TransactionException {
+    if (activeTransactions == null) {
+      throw new UnsupportedOperationException(
+          "unsupported when setting \""
+              + ConsensusCommitConfig.MANAGE_ACTIVE_TRANSACTIONS
+              + "\" to false");
+    }
+
     return activeTransactions
         .get(txId)
         .orElseThrow(
@@ -195,10 +213,16 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   }
 
   void removeTransaction(String txId) {
+    if (activeTransactions == null) {
+      return;
+    }
     activeTransactions.remove(txId);
   }
 
   void updateTransactionExpirationTime(String txId) {
+    if (activeTransactions == null) {
+      return;
+    }
     activeTransactions.updateExpirationTime(txId);
   }
 }

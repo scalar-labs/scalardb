@@ -1,5 +1,6 @@
 package com.scalar.db.server;
 
+import com.google.common.base.Strings;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.scalar.db.config.DatabaseConfig;
@@ -58,16 +59,23 @@ public class ScalarDbServer implements Callable<Integer> {
     ServerConfig config = new ServerConfig(properties);
     Injector injector =
         Guice.createInjector(new ServerModule(config, new DatabaseConfig(properties)));
-    server =
+
+    ServerBuilder<?> builder =
         ServerBuilder.forPort(config.getPort())
             .addService(injector.getInstance(DistributedStorageService.class))
             .addService(injector.getInstance(DistributedStorageAdminService.class))
             .addService(injector.getInstance(DistributedTransactionService.class))
             .addService(injector.getInstance(AdminService.class))
             .addService(new HealthService())
-            .addService(ProtoReflectionService.newInstance())
-            .build()
-            .start();
+            .addService(ProtoReflectionService.newInstance());
+
+    // Two-phase commit for JDBC is not supported for now
+    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER);
+    if (Strings.isNullOrEmpty(transactionManager) || !transactionManager.equals("jdbc")) {
+      builder.addService(injector.getInstance(TwoPhaseCommitTransactionService.class));
+    }
+
+    server = builder.build().start();
 
     LOGGER.info("Scalar DB server started, listening on " + config.getPort());
   }

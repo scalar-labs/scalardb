@@ -6,23 +6,31 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.rpc.DistributedTransactionGrpc.DistributedTransactionStub;
-import com.scalar.db.rpc.TransactionRequest;
-import com.scalar.db.rpc.TransactionRequest.AbortRequest;
-import com.scalar.db.rpc.TransactionRequest.CommitRequest;
-import com.scalar.db.rpc.TransactionRequest.GetRequest;
-import com.scalar.db.rpc.TransactionRequest.MutateRequest;
-import com.scalar.db.rpc.TransactionRequest.ScanRequest;
-import com.scalar.db.rpc.TransactionRequest.StartRequest;
-import com.scalar.db.rpc.TransactionResponse;
-import com.scalar.db.rpc.TransactionResponse.GetResponse;
+import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
@@ -40,35 +48,35 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
 
-@NotThreadSafe
-public class GrpcTransactionOnBidirectionalStream
-    implements ClientResponseObserver<TransactionRequest, TransactionResponse> {
+public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
+    implements ClientResponseObserver<
+        TwoPhaseCommitTransactionRequest, TwoPhaseCommitTransactionResponse> {
 
   private final GrpcConfig config;
   private final GrpcTableMetadataManager metadataManager;
   private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finished = new AtomicBoolean();
 
-  private ClientCallStreamObserver<TransactionRequest> requestStream;
+  private ClientCallStreamObserver<TwoPhaseCommitTransactionRequest> requestStream;
 
-  public GrpcTransactionOnBidirectionalStream(
+  public GrpcTwoPhaseCommitTransactionOnBidirectionalStream(
       GrpcConfig config,
-      DistributedTransactionStub stub,
+      TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub,
       GrpcTableMetadataManager metadataManager) {
     this.config = config;
     this.metadataManager = metadataManager;
-    stub.transaction(this);
+    stub.twoPhaseCommitTransaction(this);
   }
 
   @Override
-  public void beforeStart(ClientCallStreamObserver<TransactionRequest> requestStream) {
+  public void beforeStart(
+      ClientCallStreamObserver<TwoPhaseCommitTransactionRequest> requestStream) {
     this.requestStream = requestStream;
   }
 
   @Override
-  public void onNext(TransactionResponse response) {
+  public void onNext(TwoPhaseCommitTransactionResponse response) {
     Uninterruptibles.putUninterruptibly(queue, new ResponseOrError(response));
   }
 
@@ -82,7 +90,7 @@ public class GrpcTransactionOnBidirectionalStream
     requestStream.onCompleted();
   }
 
-  private ResponseOrError sendRequest(TransactionRequest request) {
+  private ResponseOrError sendRequest(TwoPhaseCommitTransactionRequest request) {
     requestStream.onNext(request);
 
     ResponseOrError responseOrError =
@@ -113,12 +121,24 @@ public class GrpcTransactionOnBidirectionalStream
       request = StartRequest.newBuilder().setTransactionId(transactionId).build();
     }
     ResponseOrError responseOrError =
-        sendRequest(TransactionRequest.newBuilder().setStartRequest(request).build());
-    throwIfErrorForStart(responseOrError);
+        sendRequest(TwoPhaseCommitTransactionRequest.newBuilder().setStartRequest(request).build());
+    throwIfErrorForStartOrJoin(responseOrError, true);
     return responseOrError.getResponse().getStartResponse().getTransactionId();
   }
 
-  private void throwIfErrorForStart(ResponseOrError responseOrError) throws TransactionException {
+  public void joinTransaction(String transactionId) throws TransactionException {
+    throwIfTransactionFinished();
+
+    ResponseOrError responseOrError =
+        sendRequest(
+            TwoPhaseCommitTransactionRequest.newBuilder()
+                .setJoinRequest(JoinRequest.newBuilder().setTransactionId(transactionId).build())
+                .build());
+    throwIfErrorForStartOrJoin(responseOrError, false);
+  }
+
+  private void throwIfErrorForStartOrJoin(ResponseOrError responseOrError, boolean start)
+      throws TransactionException {
     if (responseOrError.isError()) {
       finished.set(true);
       Throwable error = responseOrError.getError();
@@ -134,7 +154,7 @@ public class GrpcTransactionOnBidirectionalStream
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new TransactionException("failed to start", error);
+      throw new TransactionException("failed to " + (start ? "start" : "join"), error);
     }
   }
 
@@ -143,7 +163,7 @@ public class GrpcTransactionOnBidirectionalStream
 
     ResponseOrError responseOrError =
         sendRequest(
-            TransactionRequest.newBuilder()
+            TwoPhaseCommitTransactionRequest.newBuilder()
                 .setGetRequest(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
                 .build());
     throwIfErrorForCrud(responseOrError);
@@ -162,7 +182,7 @@ public class GrpcTransactionOnBidirectionalStream
 
     ResponseOrError responseOrError =
         sendRequest(
-            TransactionRequest.newBuilder()
+            TwoPhaseCommitTransactionRequest.newBuilder()
                 .setScanRequest(ScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
                 .build());
     throwIfErrorForCrud(responseOrError);
@@ -178,7 +198,7 @@ public class GrpcTransactionOnBidirectionalStream
 
     ResponseOrError responseOrError =
         sendRequest(
-            TransactionRequest.newBuilder()
+            TwoPhaseCommitTransactionRequest.newBuilder()
                 .setMutateRequest(
                     MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)))
                 .build());
@@ -191,7 +211,8 @@ public class GrpcTransactionOnBidirectionalStream
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
     ResponseOrError responseOrError =
-        sendRequest(TransactionRequest.newBuilder().setMutateRequest(builder).build());
+        sendRequest(
+            TwoPhaseCommitTransactionRequest.newBuilder().setMutateRequest(builder).build());
     throwIfErrorForCrud(responseOrError);
   }
 
@@ -205,9 +226,9 @@ public class GrpcTransactionOnBidirectionalStream
       throw new CrudException("failed to execute crud", error);
     }
 
-    TransactionResponse response = responseOrError.getResponse();
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      TransactionResponse.Error error = response.getError();
+      TwoPhaseCommitTransactionResponse.Error error = response.getError();
       switch (error.getErrorCode()) {
         case INVALID_ARGUMENT:
           throw new IllegalArgumentException(error.getMessage());
@@ -219,12 +240,76 @@ public class GrpcTransactionOnBidirectionalStream
     }
   }
 
+  public void prepare() throws PreparationException {
+    throwIfTransactionFinished();
+
+    ResponseOrError responseOrError =
+        sendRequest(
+            TwoPhaseCommitTransactionRequest.newBuilder()
+                .setPrepareRequest(PrepareRequest.getDefaultInstance())
+                .build());
+    throwIfErrorForPreparation(responseOrError);
+  }
+
+  private void throwIfErrorForPreparation(ResponseOrError responseOrError)
+      throws PreparationException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new PreparationException("failed to prepare", error);
+    }
+
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
+    if (response.hasError()) {
+      TwoPhaseCommitTransactionResponse.Error error = response.getError();
+      if (error.getErrorCode() == ErrorCode.CONFLICT) {
+        throw new PreparationConflictException(error.getMessage());
+      }
+      throw new PreparationException(error.getMessage());
+    }
+  }
+
+  public void validate() throws ValidationException {
+    throwIfTransactionFinished();
+
+    ResponseOrError responseOrError =
+        sendRequest(
+            TwoPhaseCommitTransactionRequest.newBuilder()
+                .setValidateRequest(ValidateRequest.getDefaultInstance())
+                .build());
+    throwIfErrorForValidation(responseOrError);
+  }
+
+  private void throwIfErrorForValidation(ResponseOrError responseOrError)
+      throws ValidationException {
+    if (responseOrError.isError()) {
+      finished.set(true);
+      Throwable error = responseOrError.getError();
+      if (error instanceof Error) {
+        throw (Error) error;
+      }
+      throw new ValidationException("failed to validate", error);
+    }
+
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
+    if (response.hasError()) {
+      TwoPhaseCommitTransactionResponse.Error error = response.getError();
+      if (error.getErrorCode() == ErrorCode.CONFLICT) {
+        throw new ValidationConflictException(error.getMessage());
+      }
+      throw new ValidationException(error.getMessage());
+    }
+  }
+
   public void commit() throws CommitException, UnknownTransactionStatusException {
     throwIfTransactionFinished();
 
     ResponseOrError responseOrError =
         sendRequest(
-            TransactionRequest.newBuilder()
+            TwoPhaseCommitTransactionRequest.newBuilder()
                 .setCommitRequest(CommitRequest.getDefaultInstance())
                 .build());
     finished.set(true);
@@ -241,9 +326,9 @@ public class GrpcTransactionOnBidirectionalStream
       throw new CommitException("failed to commit", error);
     }
 
-    TransactionResponse response = responseOrError.getResponse();
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      TransactionResponse.Error error = response.getError();
+      TwoPhaseCommitTransactionResponse.Error error = response.getError();
       switch (error.getErrorCode()) {
         case CONFLICT:
           throw new CommitConflictException(error.getMessage());
@@ -255,40 +340,39 @@ public class GrpcTransactionOnBidirectionalStream
     }
   }
 
-  public void abort() throws AbortException {
+  public void rollback() throws RollbackException {
     if (finished.get()) {
       return;
     }
 
     ResponseOrError responseOrError =
         sendRequest(
-            TransactionRequest.newBuilder()
-                .setAbortRequest(AbortRequest.getDefaultInstance())
+            TwoPhaseCommitTransactionRequest.newBuilder()
+                .setRollbackRequest(RollbackRequest.getDefaultInstance())
                 .build());
     finished.set(true);
-    throwIfErrorForAbort(responseOrError);
+    throwIfErrorForRollback(responseOrError);
   }
 
-  private void throwIfErrorForAbort(ResponseOrError responseOrError) throws AbortException {
+  private void throwIfErrorForRollback(ResponseOrError responseOrError) throws RollbackException {
     if (responseOrError.isError()) {
       Throwable error = responseOrError.getError();
       if (error instanceof Error) {
         throw (Error) error;
       }
-      throw new AbortException("failed to abort", error);
+      throw new RollbackException("failed to rollback", error);
     }
-
-    TransactionResponse response = responseOrError.getResponse();
+    TwoPhaseCommitTransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      throw new AbortException(response.getError().getMessage());
+      throw new RollbackException(response.getError().getMessage());
     }
   }
 
   private static class ResponseOrError {
-    private final TransactionResponse response;
+    private final TwoPhaseCommitTransactionResponse response;
     private final Throwable error;
 
-    public ResponseOrError(TransactionResponse response) {
+    public ResponseOrError(TwoPhaseCommitTransactionResponse response) {
       this.response = response;
       this.error = null;
     }
@@ -302,7 +386,7 @@ public class GrpcTransactionOnBidirectionalStream
       return error != null;
     }
 
-    public TransactionResponse getResponse() {
+    public TwoPhaseCommitTransactionResponse getResponse() {
       return response;
     }
 

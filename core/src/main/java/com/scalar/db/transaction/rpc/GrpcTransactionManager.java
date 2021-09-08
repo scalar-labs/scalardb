@@ -36,9 +36,9 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class GrpcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
-  private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
+  static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
-  private static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
+  static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
       (message, cause) -> {
         if (cause == null) {
           return new TransactionException(message);
@@ -208,7 +208,7 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         });
   }
 
-  private static <T> T execute(ThrowableSupplier<T, TransactionException> supplier)
+  static <T> T execute(ThrowableSupplier<T, TransactionException> supplier)
       throws TransactionException {
     return executeWithRetries(
         () -> {
