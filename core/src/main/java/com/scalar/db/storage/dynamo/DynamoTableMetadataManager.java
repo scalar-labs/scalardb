@@ -1,5 +1,8 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.scalar.db.util.Utility.getFullNamespaceName;
+import static com.scalar.db.util.Utility.getFullTableName;
+
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -7,7 +10,6 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,6 +37,7 @@ import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
 /**
  * A manager to read and cache {@link TableMetadata} to know the type of each column
@@ -51,6 +54,8 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   private static final String COLUMNS = "columns";
   private static final String TABLE = "table";
   private static final long METADATA_TABLE_RU = 1;
+
+  private static final int CREATING_WAITING_TIME = 3000;
 
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
@@ -72,7 +77,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) {
-    String fullName = Utility.getFullTableName(namespacePrefix, namespace, table);
+    String fullName = getFullTableName(namespacePrefix, namespace, table);
     if (!tableMetadataMap.containsKey(fullName)) {
       TableMetadata tableMetadata = readMetadata(fullName);
       if (tableMetadata == null) {
@@ -87,8 +92,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   private TableMetadata readMetadata(String fullName) {
     Map<String, AttributeValue> key = new HashMap<>();
     key.put(TABLE, AttributeValue.builder().s(fullName).build());
-    String metadataTable =
-        Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE);
+    String metadataTable = getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE);
 
     GetItemRequest request =
         GetItemRequest.builder().tableName(metadataTable).key(key).consistentRead(true).build();
@@ -153,13 +157,10 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     HashMap<String, AttributeValue> keyToGet = new HashMap<>();
     keyToGet.put(
         TABLE,
-        AttributeValue.builder()
-            .s(Utility.getFullTableName(namespacePrefix, namespace, table))
-            .build());
+        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
     DeleteItemRequest deleteReq =
         DeleteItemRequest.builder()
-            .tableName(
-                Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
+            .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
             .key(keyToGet)
             .build();
     try {
@@ -172,16 +173,14 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
       DescribeTableResponse describeTableResponse =
           client.describeTable(
               DescribeTableRequest.builder()
-                  .tableName(
-                      Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
+                  .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
                   .build());
       TableDescription tableDescription = describeTableResponse.table();
       if (tableDescription.itemCount() == 0) {
         try {
           client.deleteTable(
               DeleteTableRequest.builder()
-                  .tableName(
-                      Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
+                  .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
                   .build());
         } catch (DynamoDbException e) {
           throw new StorageRuntimeException("deleting empty metadata table failed");
@@ -200,9 +199,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     // Add metadata
     itemValues.put(
         TABLE,
-        AttributeValue.builder()
-            .s(Utility.getFullTableName(namespacePrefix, namespace, table))
-            .build());
+        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     for (String columnName : metadata.getColumnNames()) {
       columns.put(
@@ -233,8 +230,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
 
     PutItemRequest request =
         PutItemRequest.builder()
-            .tableName(
-                Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
+            .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
             .item(itemValues)
             .build();
 
@@ -243,8 +239,9 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     } catch (DynamoDbException e) {
       throw new StorageRuntimeException(
           "adding meta data for table "
-              + Utility.getFullTableName(namespacePrefix, namespace, table)
-              + " failed");
+              + getFullTableName(namespacePrefix, namespace, table)
+              + " failed",
+          e);
     }
   }
 
@@ -255,7 +252,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
       ListTablesResponse listTablesResponse = client.listTables();
       List<String> tableNames = listTablesResponse.tableNames();
       for (String tableName : tableNames) {
-        if (tableName.startsWith(Utility.getFullNamespaceName(namespacePrefix, namespace))) {
+        if (tableName.startsWith(getFullNamespaceName(namespacePrefix, namespace))) {
           tableSet.add(tableName);
         }
       }
@@ -274,26 +271,6 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
               .attributeName(TABLE)
               .attributeType(ScalarAttributeType.S)
               .build());
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder()
-              .attributeName(COLUMNS)
-              .attributeType(ScalarAttributeType.S)
-              .build());
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder()
-              .attributeName(PARTITION_KEY)
-              .attributeType(ScalarAttributeType.S)
-              .build());
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder()
-              .attributeName(CLUSTERING_KEY)
-              .attributeType(ScalarAttributeType.S)
-              .build());
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder()
-              .attributeName(COLUMNS)
-              .attributeType(ScalarAttributeType.S)
-              .build());
       requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
       requestBuilder.keySchema(
           KeySchemaElement.builder().attributeName(TABLE).keyType(KeyType.HASH).build());
@@ -303,12 +280,28 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
               .writeCapacityUnits(METADATA_TABLE_RU)
               .build());
       requestBuilder.tableName(
-          Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
+          getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
 
       try {
         client.createTable(requestBuilder.build());
       } catch (DynamoDbException e) {
         throw new StorageRuntimeException("creating meta data table failed");
+      }
+
+      while (true) {
+        try {
+          Thread.sleep(CREATING_WAITING_TIME);
+          DescribeTableRequest describeTableRequest =
+              DescribeTableRequest.builder()
+                  .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
+                  .build();
+          DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
+          if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
+            break;
+          }
+        } catch (DynamoDbException | InterruptedException e) {
+          throw new StorageRuntimeException("getting table description failed", e);
+        }
       }
     }
   }
@@ -320,7 +313,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
       List<String> tableNames = listTablesResponse.tableNames();
       for (String tableName : tableNames) {
         if (tableName.equals(
-            Utility.getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))) {
+            getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))) {
           tableExist = true;
           break;
         }

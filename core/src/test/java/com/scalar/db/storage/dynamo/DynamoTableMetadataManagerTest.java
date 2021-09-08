@@ -42,6 +42,7 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
 public class DynamoTableMetadataManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -65,6 +66,12 @@ public class DynamoTableMetadataManagerTest {
 
     manager = new DynamoTableMetadataManager(client, Optional.empty());
     setMetadataMap();
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
   }
 
   private void setMetadataMap() {

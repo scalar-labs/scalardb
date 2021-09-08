@@ -32,8 +32,12 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
 public class DynamoAdminTest {
   private static final String NAMESPACE_PREFIX = "ns_pfx";
@@ -114,6 +118,12 @@ public class DynamoAdminTest {
         .thenReturn(RegisterScalableTargetResponse.builder().build());
     when(applicationAutoScalingClient.putScalingPolicy(any(PutScalingPolicyRequest.class)))
         .thenReturn(PutScalingPolicyResponse.builder().build());
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
     // Act
     admin.createTable(namespace, table, metadata, Collections.emptyMap());
