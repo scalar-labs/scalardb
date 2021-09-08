@@ -2,7 +2,7 @@ package com.scalar.db.api;
 
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PrepareException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -131,9 +131,9 @@ public interface TwoPhaseCommit {
   /**
    * Prepares a transaction.
    *
-   * @throws PrepareException if the operation fails
+   * @throws PreparationException if the operation fails
    */
-  void prepare() throws PrepareException;
+  void prepare() throws PreparationException;
 
   /**
    * Validates a transaction. Depending on the concurrency control algorithm, you need a validation

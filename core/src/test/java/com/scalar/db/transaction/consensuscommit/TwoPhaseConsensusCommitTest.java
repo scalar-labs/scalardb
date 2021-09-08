@@ -16,7 +16,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PrepareException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -189,7 +189,7 @@ public class TwoPhaseConsensusCommitTest {
 
   @Test
   public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot()
-      throws PrepareException, CommitException, UnknownTransactionStatusException {
+      throws PreparationException, CommitException, UnknownTransactionStatusException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
@@ -320,7 +320,7 @@ public class TwoPhaseConsensusCommitTest {
     doThrow(CommitException.class).when(commit).prepare(snapshot, false);
 
     // Act
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert
@@ -379,7 +379,7 @@ public class TwoPhaseConsensusCommitTest {
     doThrow(CommitException.class).when(commit).prepare(snapshot, false);
 
     // Act
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert

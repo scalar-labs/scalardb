@@ -31,7 +31,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudRuntimeException;
-import com.scalar.db.exception.transaction.PrepareException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -874,7 +874,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowPrepareException()
+  public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowPreparationException()
       throws TransactionException {
     // Arrange
     populate(TABLE_1);
@@ -883,7 +883,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1100));
 
     // Act Assert
-    assertThatThrownBy(transaction::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction::prepare).isInstanceOf(PreparationException.class);
     transaction.rollback();
 
     // Assert
@@ -979,7 +979,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               fromTx.prepare();
               toTx.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     fromTx.rollback();
     toTx.rollback();
 
@@ -1051,7 +1051,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               fromTx.prepare();
               toTx.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     fromTx.rollback();
     toTx.rollback();
 
@@ -1122,7 +1122,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               fromTx.prepare();
               toTx.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     fromTx.rollback();
     toTx.rollback();
 
@@ -1294,7 +1294,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Throwable throwable = catchThrowable(transaction::prepare);
 
     // Assert
-    assertThat(throwable).isInstanceOf(PrepareException.class);
+    assertThat(throwable).isInstanceOf(PreparationException.class);
     assertThat(throwable.getCause()).isInstanceOf(CommitException.class);
     assertThat(throwable.getCause().getCause()).isInstanceOf(IllegalArgumentException.class);
   }
@@ -1311,7 +1311,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Throwable throwable = catchThrowable(transaction::prepare);
 
     // Assert
-    assertThat(throwable).isInstanceOf(PrepareException.class);
+    assertThat(throwable).isInstanceOf(PreparationException.class);
     assertThat(throwable.getCause()).isInstanceOf(CommitException.class);
     assertThat(throwable.getCause().getCause()).isInstanceOf(IllegalArgumentException.class);
   }
@@ -1384,7 +1384,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               tx1.prepare();
               tx2.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     tx1.rollback();
     tx2.rollback();
 
@@ -1518,7 +1518,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void
-      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPrepareException()
+      commit_WriteSkewOnExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPreparationException()
           throws TransactionException {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
@@ -1557,7 +1557,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               tx2Sub1.prepare();
               tx2Sub2.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     tx2Sub1.rollback();
     tx2Sub2.rollback();
 
@@ -1632,7 +1632,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void
-      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPrepareException()
+      commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWrite_OneShouldCommitTheOtherShouldThrowPreparationException()
           throws TransactionException {
     // Arrange
     Isolation isolation = Isolation.SERIALIZABLE;
@@ -1665,7 +1665,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
               tx2Sub1.prepare();
               tx2Sub2.prepare();
             })
-        .isInstanceOf(PrepareException.class);
+        .isInstanceOf(PreparationException.class);
     tx2Sub1.rollback();
     tx2Sub2.rollback();
 
@@ -1773,7 +1773,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void
-      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowPrepareException()
+      commit_WriteSkewWithScanOnNonExistingRecordsWithSerializableWithExtraWrite_ShouldThrowPreparationException()
           throws TransactionException {
     // Arrange
     Isolation isolation = Isolation.SERIALIZABLE;
@@ -1792,10 +1792,10 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     int count2 = 0;
     transaction2.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, count2 + 1));
 
-    assertThatThrownBy(transaction1::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction1::prepare).isInstanceOf(PreparationException.class);
     transaction1.rollback();
 
-    assertThatThrownBy(transaction2::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction2::prepare).isInstanceOf(PreparationException.class);
     transaction2.rollback();
 
     // Assert
@@ -1928,7 +1928,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     transaction3.prepare();
     transaction3.commit();
 
-    assertThatThrownBy(transaction1::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction1::prepare).isInstanceOf(PreparationException.class);
     transaction1.rollback();
 
     // Assert
@@ -1966,7 +1966,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     transaction3.prepare();
     transaction3.commit();
 
-    assertThatThrownBy(transaction1::prepare).isInstanceOf(PrepareException.class);
+    assertThatThrownBy(transaction1::prepare).isInstanceOf(PreparationException.class);
     transaction1.rollback();
 
     // Assert
@@ -2164,7 +2164,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     transaction2.prepare();
     transaction2.commit();
 
-    assertThatCode(transaction1::prepare).isInstanceOf(PrepareException.class);
+    assertThatCode(transaction1::prepare).isInstanceOf(PreparationException.class);
     transaction1.rollback();
 
     // Act

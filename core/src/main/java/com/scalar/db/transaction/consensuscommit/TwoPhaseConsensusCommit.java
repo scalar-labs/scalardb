@@ -15,8 +15,8 @@ import com.scalar.db.api.TwoPhaseCommit;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.PrepareConflictException;
-import com.scalar.db.exception.transaction.PrepareException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -213,7 +213,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
   }
 
   @Override
-  public void prepare() throws PrepareException {
+  public void prepare() throws PreparationException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     beforePrepareHook.run();
     updateTransactionExpirationTime();
@@ -223,10 +223,10 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommit {
       status = Status.PREPARED;
     } catch (CommitConflictException e) {
       status = Status.PREPARE_FAILED;
-      throw new PrepareConflictException("prepare failed", e);
+      throw new PreparationConflictException("prepare failed", e);
     } catch (CommitException e) {
       status = Status.PREPARE_FAILED;
-      throw new PrepareException("prepare failed", e);
+      throw new PreparationException("prepare failed", e);
     } catch (UnknownTransactionStatusException ignored) {
       // When the second argument of CommitHandler.prepare() (abortIfError) is false, the method
       // doesn't abort the transaction even if any error happens, and
