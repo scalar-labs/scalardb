@@ -99,4 +99,4 @@ scalar.db.transaction_manager=grpc
 
 ## Further documentation
 
-[scalardb-samples](https://github.com/scalar-labs/scalardb-samples)
+[Scalar DB Server Sample](https://github.com/scalar-labs/scalardb-samples/scalardb-server-sample/)
