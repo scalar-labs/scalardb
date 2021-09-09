@@ -25,9 +25,11 @@ import io.grpc.netty.NettyChannelBuilder;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ThreadSafe
 public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTransactionManager {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
@@ -80,11 +82,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    activeTransactions =
-        new ActiveExpiringMap<>(
-            TRANSACTION_LIFETIME_MILLIS,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

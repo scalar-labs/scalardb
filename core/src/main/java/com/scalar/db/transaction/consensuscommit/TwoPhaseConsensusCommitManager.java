@@ -48,7 +48,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     coordinator = new Coordinator(storage);
     recovery = new RecoveryHandler(storage, coordinator);
     commit = new CommitHandler(storage, coordinator, recovery);
-    if (config.isManageActiveTransactions()) {
+    if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(
               TRANSACTION_LIFETIME_MILLIS,
@@ -71,12 +71,8 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     this.coordinator = coordinator;
     this.recovery = recovery;
     this.commit = commit;
-    if (config.isManageActiveTransactions()) {
-      activeTransactions =
-          new ActiveExpiringMap<>(
-              TRANSACTION_LIFETIME_MILLIS,
-              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    if (config.isActiveTransactionsManagementEnabled()) {
+      activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
     } else {
       activeTransactions = null;
     }
@@ -169,7 +165,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     if (activeTransactions == null) {
       throw new UnsupportedOperationException(
           "unsupported when setting \""
-              + ConsensusCommitConfig.MANAGE_ACTIVE_TRANSACTIONS
+              + ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED
               + "\" to false");
     }
 

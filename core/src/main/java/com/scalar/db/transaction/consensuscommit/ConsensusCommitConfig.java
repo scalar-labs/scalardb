@@ -19,10 +19,10 @@ public class ConsensusCommitConfig extends DatabaseConfig {
 
   // for two-phase consensus commit
   public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
-  public static final String MANAGE_ACTIVE_TRANSACTIONS =
-      TWO_PHASE_CONSENSUS_COMMIT_PREFIX + "manage_active_transactions";
+  public static final String ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED =
+      TWO_PHASE_CONSENSUS_COMMIT_PREFIX + "active_transactions_management_enabled";
 
-  private boolean manageActiveTransactions;
+  private boolean activeTransactionsManagementEnabled;
 
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -54,11 +54,12 @@ public class ConsensusCommitConfig extends DatabaseConfig {
       strategy = SerializableStrategy.EXTRA_READ;
     }
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(MANAGE_ACTIVE_TRANSACTIONS))) {
-      manageActiveTransactions =
-          Boolean.parseBoolean(getProperties().getProperty(MANAGE_ACTIVE_TRANSACTIONS));
+    if (!Strings.isNullOrEmpty(
+        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED))) {
+      activeTransactionsManagementEnabled =
+          Boolean.parseBoolean(getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED));
     } else {
-      manageActiveTransactions = true;
+      activeTransactionsManagementEnabled = true;
     }
   }
 
@@ -66,7 +67,7 @@ public class ConsensusCommitConfig extends DatabaseConfig {
     return strategy;
   }
 
-  public boolean isManageActiveTransactions() {
-    return manageActiveTransactions;
+  public boolean isActiveTransactionsManagementEnabled() {
+    return activeTransactionsManagementEnabled;
   }
 }

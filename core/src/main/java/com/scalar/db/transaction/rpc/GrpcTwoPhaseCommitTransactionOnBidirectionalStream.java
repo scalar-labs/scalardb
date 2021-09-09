@@ -48,7 +48,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
     implements ClientResponseObserver<
         TwoPhaseCommitTransactionRequest, TwoPhaseCommitTransactionResponse> {

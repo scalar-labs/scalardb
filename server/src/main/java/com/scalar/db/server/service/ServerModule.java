@@ -26,9 +26,12 @@ public class ServerModule extends AbstractModule {
     this.config = config;
     storageFactory = new StorageFactory(databaseConfig);
 
-    // For two-phase consensus commit in Scalar DB server, set MANAGE_ACTIVE_TRANSACTIONS to false
+    // For two-phase consensus commit transactions in Scalar DB server, set
+    // ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED to false because Scalar DB server takes care of active
+    // transactions management
     Properties transactionProperties = new Properties(databaseConfig.getProperties());
-    transactionProperties.put(ConsensusCommitConfig.MANAGE_ACTIVE_TRANSACTIONS, "false");
+    transactionProperties.put(
+        ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
     transactionFactory = new TransactionFactory(new DatabaseConfig(transactionProperties));
   }
 

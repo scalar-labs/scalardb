@@ -36,7 +36,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
-    when(config.isManageActiveTransactions()).thenReturn(true);
+    when(config.isActiveTransactionsManagementEnabled()).thenReturn(true);
 
     manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
   }
@@ -132,9 +132,9 @@ public class TwoPhaseConsensusCommitManagerTest {
 
   @Test
   public void
-      resume_WhenManageActiveTransactionsIsFalse_ShouldThrowUnsupportedOperationException() {
+      resume_WhenActiveTransactionsManagementEnabledIsFalse_ShouldThrowUnsupportedOperationException() {
     // Arrange
-    when(config.isManageActiveTransactions()).thenReturn(false);
+    when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
     manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
 
     // Act Assert

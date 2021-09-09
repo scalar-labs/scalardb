@@ -16,7 +16,9 @@ import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.util.Utility;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
 
   private final String txId;

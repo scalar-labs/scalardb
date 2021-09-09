@@ -24,7 +24,7 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
-    assertThat(config.isManageActiveTransactions()).isEqualTo(true);
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
@@ -57,32 +57,34 @@ public class ConsensusCommitConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithValidManageActiveTransactionsGiven_ShouldLoadProperly() {
+  public void
+      constructor_PropertiesWithValidActiveTransactionsManagementEnabledGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(ConsensusCommitConfig.MANAGE_ACTIVE_TRANSACTIONS, "true");
+    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "true");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.isManageActiveTransactions()).isEqualTo(true);
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
-  public void constructor_PropertiesWithInvalidManageActiveTransactionsGiven_ShouldLoadAsFalse() {
+  public void
+      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldLoadAsFalse() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(ConsensusCommitConfig.MANAGE_ACTIVE_TRANSACTIONS, "aaa");
+    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act
     ConsensusCommitConfig config = new ConsensusCommitConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.isManageActiveTransactions()).isEqualTo(false);
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
   }
 }
