@@ -3,6 +3,7 @@ package com.scalar.db.service;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 
 /** A factory class to instantiate {@link DistributedTransactionManager} */
@@ -20,5 +21,14 @@ public class TransactionFactory {
    */
   public DistributedTransactionManager getTransactionManager() {
     return injector.getInstance(TransactionService.class);
+  }
+
+  /**
+   * Returns a {@link TwoPhaseCommitTransactionManager} instance
+   *
+   * @return a {@link TwoPhaseCommitTransactionManager} instance
+   */
+  public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
+    return injector.getInstance(TwoPhaseCommitTransactionService.class);
   }
 }

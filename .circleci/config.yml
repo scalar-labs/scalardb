@@ -13,6 +13,7 @@ workflows:
       - integration-test-for-jdbc-sqlserver
       - integration-test-for-multi-storage
       - integration-test-for-scalardb-server
+      - integration-test-for-two-phase-consensus-commit
 jobs:
   check:
     docker:
@@ -477,6 +478,47 @@ jobs:
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/
+          when: always
+
+      - store_artifacts:
+          path: /tmp/gradle_integration_test_reports
+          destination: gradle_integration_test_reports
+
+  integration-test-for-two-phase-consensus-commit:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: circleci/mysql:8.0.23
+        environment:
+          MYSQL_ROOT_PASSWORD: mysql
+
+    working_directory: ~/repo
+
+    environment:
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run: gradle integrationTestTwoPhaseConsesnsusCommit
+
+      - run:
+          name: Save Gradle integration test reports
+          command: |
+            mkdir -p /tmp/gradle_integration_test_reports
+            cp -a core/build/reports/tests/integrationTestTwoPhaseConsesnsusCommit /tmp/gradle_integration_test_reports/
           when: always
 
       - store_artifacts:

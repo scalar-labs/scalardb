@@ -154,8 +154,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
       if (state.isPresent()) {
         return state.get().getState();
       }
-    } catch (CoordinatorException e) {
-      // ignore
+    } catch (CoordinatorException ignored) {
+      // ignored
     }
     // Either no state exists or the exception is thrown
     return TransactionState.UNKNOWN;
