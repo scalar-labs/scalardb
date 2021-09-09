@@ -17,7 +17,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.Utility;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +40,7 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
@@ -167,7 +167,7 @@ public class DynamoTableMetadataManagerTest {
   }
 
   @Test
-  public void getTableMetadata_CosmosExceptionThrown_ShouldThrowStorageRuntimeException() {
+  public void getTableMetadata_DynamoExceptionThrown_ShouldThrowStorageRuntimeException() {
     // Arrange
     DynamoDbException toThrow = mock(DynamoDbException.class);
     doThrow(toThrow).when(client).getItem(any(GetItemRequest.class));
@@ -188,10 +188,15 @@ public class DynamoTableMetadataManagerTest {
     String namespace = "ns";
     String table = "tb";
 
-    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
     TableMetadata tableMetadata = mock(TableMetadata.class);
-    when(listTablesResponse.tableNames()).thenReturn(Collections.emptyList());
-    when(client.listTables()).thenReturn(listTablesResponse);
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(describeTableResponse);
 
     // Act
     manager.addTableMetadata(namespace, table, tableMetadata);

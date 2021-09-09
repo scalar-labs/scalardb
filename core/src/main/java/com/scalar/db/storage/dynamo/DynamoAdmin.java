@@ -6,6 +6,7 @@ import static com.scalar.db.util.Utility.getFullTableName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,21 +65,23 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsReq
 
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
-  static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
-  static final String PARTITION_KEY = "concatenatedPartitionKey";
-  static final String CLUSTERING_KEY = "concatenatedClusteringKey";
-  static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
+  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
+  private static final String PARTITION_KEY = "concatenatedPartitionKey";
+  private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
+  private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
   private static final int CREATING_WAITING_TIME = 3000;
-  private final int COOL_TIME_SEC = 60;
-  private final double TARGET_USAGE_RATE = 70.0;
-  private final String NO_SCALING = "no-scaling";
-  private final String NO_BACKUP = "no-backup";
-  private final String REQUEST_UNIT = "ru";
-  private final Boolean DEFAULT_NO_SCALING = false;
-  private final Boolean DEFAULT_NO_BACKUP = false;
-  private final long DEFAULT_RU = 10;
-  private final int DELETE_BATCH_SIZE = 100;
-  private final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAPPING =
+  private static final int COOL_TIME_SEC = 60;
+  private static final double TARGET_USAGE_RATE = 70.0;
+  private static final int DELETE_BATCH_SIZE = 100;
+
+  private static final String NO_SCALING = "no-scaling";
+  private static final String NO_BACKUP = "no-backup";
+  private static final String REQUEST_UNIT = "ru";
+  private static final Boolean DEFAULT_NO_SCALING = false;
+  private static final Boolean DEFAULT_NO_BACKUP = false;
+  private static final long DEFAULT_RU = 10;
+
+  private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAPPING =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
           .put(DataType.INT, ScalarAttributeType.N)
           .put(DataType.BIGINT, ScalarAttributeType.N)
@@ -86,11 +90,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.TEXT, ScalarAttributeType.S)
           .put(DataType.BLOB, ScalarAttributeType.B)
           .build();
-  private final ImmutableSet<String> TABLE_SCALING_TYPE =
+  private static final ImmutableSet<String> TABLE_SCALING_TYPE =
       ImmutableSet.<String>builder().add("read").add("write").build();
-  private final ImmutableSet<String> SECONDARY_INDEX_SCALING_TYPE =
+  private static final ImmutableSet<String> SECONDARY_INDEX_SCALING_TYPE =
       ImmutableSet.<String>builder().add("index-read").add("index-write").build();
-  private final ImmutableMap<String, ScalableDimension> SCALABLE_DIMENSION_MAPPING =
+  private static final ImmutableMap<String, ScalableDimension> SCALABLE_DIMENSION_MAPPING =
       ImmutableMap.<String, ScalableDimension>builder()
           .put("read", ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS)
           .put("write", ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS)
@@ -101,7 +105,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
   private final DynamoTableMetadataManager metadataManager;
-  private ApplicationAutoScalingClient applicationAutoScalingClient;
+  private final ApplicationAutoScalingClient applicationAutoScalingClient;
 
   @Inject
   public DynamoAdmin(DynamoConfig config) {
@@ -134,6 +138,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @VisibleForTesting
   DynamoAdmin(DynamoTableMetadataManager metadataManager, Optional<String> namespacePrefix) {
     client = null;
+    applicationAutoScalingClient = null;
     this.metadataManager = metadataManager;
     this.namespacePrefix = namespacePrefix.map(n -> n + "_");
   }
@@ -238,6 +243,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     // build secondary indexes
+    long ru = DEFAULT_RU;
+    if (options.containsKey(REQUEST_UNIT)) {
+      ru = Long.parseLong(options.get(REQUEST_UNIT));
+    }
     if (!metadata.getSecondaryIndexNames().isEmpty()) {
       List<GlobalSecondaryIndex> globalSecondaryIndexList = new ArrayList<>();
       for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
@@ -250,10 +259,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                         .keyType(KeyType.HASH)
                         .build())
                 .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        long ru = DEFAULT_RU;
-        if (options.containsKey(REQUEST_UNIT)) {
-          ru = Long.parseLong(options.get(REQUEST_UNIT));
-        }
         globalSecondaryIndexBuilder.provisionedThroughput(
             ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
         globalSecondaryIndexList.add(globalSecondaryIndexBuilder.build());
@@ -262,10 +267,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     // ru
-    long ru = DEFAULT_RU;
-    if (options.containsKey(REQUEST_UNIT)) {
-      ru = Long.parseLong(options.get(REQUEST_UNIT));
-    }
     requestBuilder.provisionedThroughput(
         ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
 
@@ -282,7 +283,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     while (true) {
       try {
-        Thread.sleep(CREATING_WAITING_TIME);
+        Uninterruptibles.sleepUninterruptibly(CREATING_WAITING_TIME, TimeUnit.MILLISECONDS);
         DescribeTableRequest describeTableRequest =
             DescribeTableRequest.builder()
                 .tableName(getFullTableName(namespacePrefix, namespace, table))
@@ -291,7 +292,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
           break;
         }
-      } catch (DynamoDbException | InterruptedException e) {
+      } catch (DynamoDbException e) {
         throw new ExecutionException("getting table description failed", e);
       }
     }
@@ -397,20 +398,20 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public boolean namespaceExists(String namespace) throws ExecutionException {
-    boolean nameSpaceExists = false;
+    boolean namespaceExists = false;
     try {
       ListTablesResponse listTablesResponse = client.listTables();
       List<String> tableNames = listTablesResponse.tableNames();
       for (String tableName : tableNames) {
         if (tableName.startsWith(getFullNamespaceName(namespacePrefix, namespace))) {
-          nameSpaceExists = true;
+          namespaceExists = true;
           break;
         }
       }
     } catch (DynamoDbException e) {
       throw new ExecutionException("getting list of namespaces failed");
     }
-    return nameSpaceExists;
+    return namespaceExists;
   }
 
   private String fullNamespace(String namespace) {
