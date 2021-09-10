@@ -82,7 +82,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final Boolean DEFAULT_NO_BACKUP = false;
   private static final long DEFAULT_RU = 10;
 
-  private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAPPING =
+  private static final String SCALING_TYPE_READ = "read";
+  private static final String SCALING_TYPE_WRITE = "write";
+  private static final String SCALING_TYPE_INDEX_READ = "index-read";
+  private static final String SCALING_TYPE_INDEX_WRITE = "index-write";
+
+  private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAP =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
           .put(DataType.INT, ScalarAttributeType.N)
           .put(DataType.BIGINT, ScalarAttributeType.N)
@@ -91,16 +96,26 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .put(DataType.TEXT, ScalarAttributeType.S)
           .put(DataType.BLOB, ScalarAttributeType.B)
           .build();
-  private static final ImmutableSet<String> TABLE_SCALING_TYPE =
-      ImmutableSet.<String>builder().add("read").add("write").build();
-  private static final ImmutableSet<String> SECONDARY_INDEX_SCALING_TYPE =
-      ImmutableSet.<String>builder().add("index-read").add("index-write").build();
-  private static final ImmutableMap<String, ScalableDimension> SCALABLE_DIMENSION_MAPPING =
+  private static final ImmutableSet<String> TABLE_SCALING_TYPE_SET =
+      ImmutableSet.<String>builder().add(SCALING_TYPE_READ).add(SCALING_TYPE_WRITE).build();
+  private static final ImmutableSet<String> SECONDARY_INDEX_SCALING_TYPE_SET =
+      ImmutableSet.<String>builder()
+          .add(SCALING_TYPE_INDEX_READ)
+          .add(SCALING_TYPE_INDEX_WRITE)
+          .build();
+  private static final ImmutableMap<String, ScalableDimension> SCALABLE_DIMENSION_MAP =
       ImmutableMap.<String, ScalableDimension>builder()
-          .put("read", ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS)
-          .put("write", ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS)
-          .put("index-read", ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS)
-          .put("index-write", ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS)
+          .put(SCALING_TYPE_READ, ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS)
+          .put(SCALING_TYPE_WRITE, ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS)
+          .put(SCALING_TYPE_INDEX_READ, ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS)
+          .put(SCALING_TYPE_INDEX_WRITE, ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS)
+          .build();
+  private static final ImmutableMap<String, MetricType> SCALING_POLICY_METRIC_TYPE_MAP =
+      ImmutableMap.<String, MetricType>builder()
+          .put(SCALING_TYPE_READ, MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION)
+          .put(SCALING_TYPE_WRITE, MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
+          .put(SCALING_TYPE_INDEX_READ, MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION)
+          .put(SCALING_TYPE_INDEX_WRITE, MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
           .build();
 
   private final DynamoDbClient client;
@@ -169,103 +184,32 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
 
     List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
-    columnsToAttributeDefinitions.add(
-        AttributeDefinition.builder()
-            .attributeName(PARTITION_KEY)
-            .attributeType(ScalarAttributeType.S)
-            .build());
+    makeAttribute(PARTITION_KEY, metadata, columnsToAttributeDefinitions);
     if (!metadata.getClusteringKeyNames().isEmpty()) {
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder()
-              .attributeName(CLUSTERING_KEY)
-              .attributeType(ScalarAttributeType.S)
-              .build());
-      for (String column : metadata.getClusteringKeyNames()) {
-        if (metadata.getColumnDataType(column) == DataType.BOOLEAN) {
-          throw new ExecutionException(
-              "BOOLEAN type is not supported for a clustering key or a secondary index in DynamoDB");
-        } else {
-          ScalarAttributeType columnType = DATATYPE_MAPPING.get(metadata.getColumnDataType(column));
-          columnsToAttributeDefinitions.add(
-              AttributeDefinition.builder()
-                  .attributeName(column)
-                  .attributeType(columnType)
-                  .build());
-        }
+      makeAttribute(CLUSTERING_KEY, metadata, columnsToAttributeDefinitions);
+      for (String clusteringKey : metadata.getClusteringKeyNames()) {
+        makeAttribute(clusteringKey, metadata, columnsToAttributeDefinitions);
       }
     }
     if (!metadata.getSecondaryIndexNames().isEmpty()) {
-      for (String column : metadata.getSecondaryIndexNames()) {
-        if (metadata.getColumnDataType(column) == DataType.BOOLEAN) {
-          throw new ExecutionException(
-              "BOOLEAN type is not supported for a clustering key or a secondary index in DynamoDB");
-        } else {
-          ScalarAttributeType columnType = DATATYPE_MAPPING.get(metadata.getColumnDataType(column));
-          columnsToAttributeDefinitions.add(
-              AttributeDefinition.builder()
-                  .attributeName(column)
-                  .attributeType(columnType)
-                  .build());
-        }
+      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
+        makeAttribute(secondaryIndex, metadata, columnsToAttributeDefinitions);
       }
     }
     requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
 
     // build keys
-    List<KeySchemaElement> keySchemaElementList = new ArrayList<>();
-    keySchemaElementList.add(
-        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      keySchemaElementList.add(
-          KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
-    }
-    requestBuilder.keySchema(keySchemaElementList);
+    buildPrimaryKey(requestBuilder, metadata);
 
     // build local indexes that corresponding to clustering keys
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      List<LocalSecondaryIndex> localSecondaryIndexList = new ArrayList<>();
-      for (String clusteringKey : metadata.getClusteringKeyNames()) {
-        LocalSecondaryIndex.Builder localSecondaryIndexBuilder =
-            LocalSecondaryIndex.builder()
-                .indexName(getLocalIndexName(namespace, table, clusteringKey))
-                .keySchema(
-                    KeySchemaElement.builder()
-                        .attributeName(PARTITION_KEY)
-                        .keyType(KeyType.HASH)
-                        .build(),
-                    KeySchemaElement.builder()
-                        .attributeName(clusteringKey)
-                        .keyType(KeyType.RANGE)
-                        .build())
-                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        localSecondaryIndexList.add(localSecondaryIndexBuilder.build());
-      }
-      requestBuilder.localSecondaryIndexes(localSecondaryIndexList);
-    }
+    buildLocalIndexes(namespace, table, requestBuilder, metadata);
 
     // build secondary indexes
     long ru = DEFAULT_RU;
     if (options.containsKey(REQUEST_UNIT)) {
       ru = Long.parseLong(options.get(REQUEST_UNIT));
     }
-    if (!metadata.getSecondaryIndexNames().isEmpty()) {
-      List<GlobalSecondaryIndex> globalSecondaryIndexList = new ArrayList<>();
-      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
-        GlobalSecondaryIndex.Builder globalSecondaryIndexBuilder =
-            GlobalSecondaryIndex.builder()
-                .indexName(getGlobalIndexName(namespace, table, secondaryIndex))
-                .keySchema(
-                    KeySchemaElement.builder()
-                        .attributeName(secondaryIndex)
-                        .keyType(KeyType.HASH)
-                        .build())
-                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        globalSecondaryIndexBuilder.provisionedThroughput(
-            ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
-        globalSecondaryIndexList.add(globalSecondaryIndexBuilder.build());
-      }
-      requestBuilder.globalSecondaryIndexes(globalSecondaryIndexList);
-    }
+    buildGlobalIndexes(namespace, table, requestBuilder, metadata, ru);
 
     // ru
     requestBuilder.provisionedThroughput(
@@ -423,6 +367,90 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return namespacePrefix.map(s -> s + namespace).orElse(namespace);
   }
 
+  private void makeAttribute(
+      String column,
+      TableMetadata metadata,
+      List<AttributeDefinition> columnsToAttributeDefinitions)
+      throws ExecutionException {
+    if (metadata.getColumnDataType(column) == DataType.BOOLEAN) {
+      throw new ExecutionException(
+          "BOOLEAN type is not supported for a clustering key or a secondary index in DynamoDB");
+    } else {
+      ScalarAttributeType columnType;
+      if (column.equals(PARTITION_KEY) || column.equals(CLUSTERING_KEY)) {
+        columnType = ScalarAttributeType.S;
+      } else {
+        columnType = DATATYPE_MAP.get(metadata.getColumnDataType(column));
+      }
+      columnsToAttributeDefinitions.add(
+          AttributeDefinition.builder().attributeName(column).attributeType(columnType).build());
+    }
+  }
+
+  private void buildPrimaryKey(CreateTableRequest.Builder requestBuilder, TableMetadata metadata) {
+    List<KeySchemaElement> keySchemaElementList = new ArrayList<>();
+    keySchemaElementList.add(
+        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      keySchemaElementList.add(
+          KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
+    }
+    requestBuilder.keySchema(keySchemaElementList);
+  }
+
+  private void buildLocalIndexes(
+      String namespace,
+      String table,
+      CreateTableRequest.Builder requestBuilder,
+      TableMetadata metadata) {
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      List<LocalSecondaryIndex> localSecondaryIndexList = new ArrayList<>();
+      for (String clusteringKey : metadata.getClusteringKeyNames()) {
+        LocalSecondaryIndex.Builder localSecondaryIndexBuilder =
+            LocalSecondaryIndex.builder()
+                .indexName(getLocalIndexName(namespace, table, clusteringKey))
+                .keySchema(
+                    KeySchemaElement.builder()
+                        .attributeName(PARTITION_KEY)
+                        .keyType(KeyType.HASH)
+                        .build(),
+                    KeySchemaElement.builder()
+                        .attributeName(clusteringKey)
+                        .keyType(KeyType.RANGE)
+                        .build())
+                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
+        localSecondaryIndexList.add(localSecondaryIndexBuilder.build());
+      }
+      requestBuilder.localSecondaryIndexes(localSecondaryIndexList);
+    }
+  }
+
+  private void buildGlobalIndexes(
+      String namespace,
+      String table,
+      CreateTableRequest.Builder requestBuilder,
+      TableMetadata metadata,
+      long ru) {
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      List<GlobalSecondaryIndex> globalSecondaryIndexList = new ArrayList<>();
+      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
+        GlobalSecondaryIndex.Builder globalSecondaryIndexBuilder =
+            GlobalSecondaryIndex.builder()
+                .indexName(getGlobalIndexName(namespace, table, secondaryIndex))
+                .keySchema(
+                    KeySchemaElement.builder()
+                        .attributeName(secondaryIndex)
+                        .keyType(KeyType.HASH)
+                        .build())
+                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
+        globalSecondaryIndexBuilder.provisionedThroughput(
+            ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
+        globalSecondaryIndexList.add(globalSecondaryIndexBuilder.build());
+      }
+      requestBuilder.globalSecondaryIndexes(globalSecondaryIndexList);
+    }
+  }
+
   private void enableContinuousBackup(String namespace, String table) throws ExecutionException {
     try {
       client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
@@ -453,7 +481,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
 
     // write, read scaling of table
-    for (String scalingType : TABLE_SCALING_TYPE) {
+    for (String scalingType : TABLE_SCALING_TYPE_SET) {
       registerScalableTargetRequestList.add(
           buildRegisterScalableTargetRequest(
               getTableResourceID(namespace, table), scalingType, (int) ru));
@@ -463,7 +491,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     // write, read scaling of global indexes (secondary indexes)
     for (String secondaryIndex : secondaryIndexes) {
-      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE) {
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
         registerScalableTargetRequestList.add(
             buildRegisterScalableTargetRequest(
                 getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType, (int) ru));
@@ -500,7 +528,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return RegisterScalableTargetRequest.builder()
         .serviceNamespace(ServiceNamespace.DYNAMODB)
         .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAPPING.get(type))
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
         .minCapacity(ruValue > 10 ? ruValue / 10 : ruValue)
         .maxCapacity(ruValue)
         .build();
@@ -510,7 +538,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return PutScalingPolicyRequest.builder()
         .serviceNamespace(ServiceNamespace.DYNAMODB)
         .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAPPING.get(type))
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
         .policyName(getPolicyName(resourceID, type))
         .policyType(PolicyType.TARGET_TRACKING_SCALING)
         .targetTrackingScalingPolicyConfiguration(getScalingPolicyConfiguration(type))
@@ -536,10 +564,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return TargetTrackingScalingPolicyConfiguration.builder()
         .predefinedMetricSpecification(
             PredefinedMetricSpecification.builder()
-                .predefinedMetricType(
-                    type.contains("read")
-                        ? MetricType.DYNAMO_DB_READ_CAPACITY_UTILIZATION
-                        : MetricType.DYNAMO_DB_WRITE_CAPACITY_UTILIZATION)
+                .predefinedMetricType(SCALING_POLICY_METRIC_TYPE_MAP.get(type))
                 .build())
         .scaleInCooldown(COOL_TIME_SEC)
         .scaleOutCooldown(COOL_TIME_SEC)
