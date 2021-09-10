@@ -15,6 +15,7 @@ import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -353,29 +354,33 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       ScanRequest scanRequest =
           ScanRequest.builder()
               .tableName(getFullTableName(namespacePrefix, namespace, table))
-              .attributesToGet()
               .limit(DELETE_BATCH_SIZE)
               .exclusiveStartKey(lastKeyEvaluated)
               .build();
       ScanResponse scanResponse = client.scan(scanRequest);
       for (Map<String, AttributeValue> item : scanResponse.items()) {
+        Map<String, AttributeValue> keyToDelete = new HashMap<>();
+        keyToDelete.put(PARTITION_KEY, item.get(PARTITION_KEY));
+        if (item.containsKey(CLUSTERING_KEY)) {
+          keyToDelete.put(CLUSTERING_KEY, item.get(CLUSTERING_KEY));
+        }
         DeleteItemRequest deleteItemRequest =
             DeleteItemRequest.builder()
                 .tableName(getFullTableName(namespacePrefix, namespace, table))
-                .key(item)
+                .key(keyToDelete)
                 .build();
-
         try {
           client.deleteItem(deleteItemRequest);
         } catch (DynamoDbException e) {
           throw new ExecutionException(
               "Delete item from table "
                   + getFullTableName(namespacePrefix, namespace, table)
-                  + " failed.");
+                  + " failed.",
+              e);
         }
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
-    } while (lastKeyEvaluated != null);
+    } while (!lastKeyEvaluated.isEmpty());
   }
 
   @Override
