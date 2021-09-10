@@ -73,6 +73,11 @@ public class ScalarDbServer implements Callable<Integer> {
     String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER);
     if (Strings.isNullOrEmpty(transactionManager) || !transactionManager.equals("jdbc")) {
       builder.addService(injector.getInstance(TwoPhaseCommitTransactionService.class));
+    } else {
+      LOGGER.warn(
+          "TwoPhaseCommitTransactionService doesn't start when setting \""
+              + DatabaseConfig.TRANSACTION_MANAGER
+              + "\" to 'jdbc'");
     }
 
     server = builder.build().start();
