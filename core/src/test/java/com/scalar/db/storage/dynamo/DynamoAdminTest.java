@@ -169,7 +169,7 @@ public class DynamoAdminTest {
                         .put("pKey3", AttributeValue.builder().s("pKey3Val").build())
                         .build())
                 .build());
-    when(scanResponse.lastEvaluatedKey()).thenReturn(null);
+    when(scanResponse.lastEvaluatedKey()).thenReturn(Collections.emptyMap());
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
