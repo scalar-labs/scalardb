@@ -12,7 +12,6 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 
 public class TransactionModule extends AbstractModule {
   private final DatabaseConfig config;
@@ -27,9 +26,11 @@ public class TransactionModule extends AbstractModule {
     bind(DistributedTransactionManager.class)
         .to(config.getTransactionManagerClass())
         .in(Singleton.class);
-    bind(TwoPhaseCommitTransactionManager.class)
-        .to(TwoPhaseConsensusCommitManager.class)
-        .in(Singleton.class);
+    if (config.getTwoPhaseCommitTransactionManagerClass() != null) {
+      bind(TwoPhaseCommitTransactionManager.class)
+          .to(config.getTwoPhaseCommitTransactionManagerClass())
+          .in(Singleton.class);
+    }
   }
 
   @Singleton
