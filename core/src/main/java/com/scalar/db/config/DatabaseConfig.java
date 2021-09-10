@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cosmos.Cosmos;
@@ -21,8 +22,10 @@ import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -46,6 +49,7 @@ public class DatabaseConfig {
   private Class<? extends DistributedStorageAdmin> adminClass;
   private Optional<String> namespacePrefix;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
+  private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -136,10 +140,12 @@ public class DatabaseConfig {
     }
 
     transactionManagerClass = ConsensusCommitManager.class;
+    twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
     if (!Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
       switch (props.getProperty(TRANSACTION_MANAGER).toLowerCase()) {
         case "consensus-commit":
           transactionManagerClass = ConsensusCommitManager.class;
+          twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
           break;
         case "jdbc":
           if (storageClass != JdbcDatabase.class) {
@@ -151,6 +157,7 @@ public class DatabaseConfig {
                     + ")");
           }
           transactionManagerClass = JdbcTransactionManager.class;
+          twoPhaseCommitTransactionManagerClass = null;
           break;
         case "grpc":
           if (storageClass != GrpcStorage.class) {
@@ -162,6 +169,7 @@ public class DatabaseConfig {
                     + ")");
           }
           transactionManagerClass = GrpcTransactionManager.class;
+          twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
           break;
         default:
           throw new IllegalArgumentException(
@@ -198,6 +206,11 @@ public class DatabaseConfig {
 
   public Class<? extends DistributedStorageAdmin> getAdminClass() {
     return adminClass;
+  }
+
+  public Class<? extends TwoPhaseCommitTransactionManager>
+      getTwoPhaseCommitTransactionManagerClass() {
+    return twoPhaseCommitTransactionManagerClass;
   }
 
   public Optional<String> getNamespacePrefix() {

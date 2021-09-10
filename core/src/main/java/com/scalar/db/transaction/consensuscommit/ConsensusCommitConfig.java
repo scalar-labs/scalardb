@@ -17,6 +17,13 @@ public class ConsensusCommitConfig extends DatabaseConfig {
 
   private SerializableStrategy strategy;
 
+  // for two-phase consensus commit
+  public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
+  public static final String ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED =
+      TWO_PHASE_CONSENSUS_COMMIT_PREFIX + "active_transactions_management.enabled";
+
+  private boolean activeTransactionsManagementEnabled;
+
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
   }
@@ -46,9 +53,21 @@ public class ConsensusCommitConfig extends DatabaseConfig {
     } else {
       strategy = SerializableStrategy.EXTRA_READ;
     }
+
+    if (!Strings.isNullOrEmpty(
+        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED))) {
+      activeTransactionsManagementEnabled =
+          Boolean.parseBoolean(getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED));
+    } else {
+      activeTransactionsManagementEnabled = true;
+    }
   }
 
   public SerializableStrategy getSerializableStrategy() {
     return strategy;
+  }
+
+  public boolean isActiveTransactionsManagementEnabled() {
+    return activeTransactionsManagementEnabled;
   }
 }
