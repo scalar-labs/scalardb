@@ -112,6 +112,7 @@ configurations {
 
 dependencies {
     implementation project(':rpc')
+    implementation group: 'org.apache.hbase', name: 'hbase-common', version: '3.0.0-alpha-1'
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
     implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
     implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
