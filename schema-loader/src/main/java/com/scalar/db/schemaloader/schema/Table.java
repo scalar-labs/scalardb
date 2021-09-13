@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ public class Table {
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
   private static final String TRANSACTION_COL_PREFIX = "before_";
+
   private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)
@@ -47,6 +49,7 @@ public class Table {
           .build();
   private static final ImmutableMap<String, Order> ORDER_MAP =
       ImmutableMap.<String, Order>builder().put("ASC", Order.ASC).put("DESC", Order.DESC).build();
+
   private String namespace;
   private String tableName;
   private TableMetadata tableMetadata;
@@ -138,6 +141,12 @@ public class Table {
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
+    Set<String> columnNameSet =
+        columns.entrySet().stream().map(Entry::getKey).collect(Collectors.toSet());
+    Set<String> transactionMetaExtraColumnSet =
+        TRANSACTION_META_COLUMNS.keySet().stream()
+            .map(col -> TRANSACTION_COL_PREFIX + col)
+            .collect(Collectors.toSet());
     for (Entry<String, JsonElement> column : columns.entrySet()) {
       String columnName = column.getKey();
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
@@ -148,7 +157,21 @@ public class Table {
       if (transaction
           && !partitionKeySet.contains(columnName)
           && !clusteringKeySet.contains(columnName)) {
-        tableBuilder.addColumn(TRANSACTION_COL_PREFIX + columnName, columnDataType);
+
+        String transactionExtraColumn = TRANSACTION_COL_PREFIX + columnName;
+        if (TRANSACTION_META_COLUMNS.keySet().contains(columnName)
+            || transactionMetaExtraColumnSet.contains(columnName)
+            || columnNameSet.contains(transactionExtraColumn)) {
+          throw new RuntimeException(
+              "Column name \""
+                  + (columnNameSet.contains(transactionExtraColumn)
+                      ? transactionExtraColumn
+                      : columnName)
+                  + "\" in table \""
+                  + tableName
+                  + "\" has been already reserved as transaction metadata!");
+        }
+        tableBuilder.addColumn(transactionExtraColumn, columnDataType);
       }
     }
 
