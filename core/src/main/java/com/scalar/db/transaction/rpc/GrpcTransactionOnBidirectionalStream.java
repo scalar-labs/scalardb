@@ -103,10 +103,6 @@ public class GrpcTransactionOnBidirectionalStream
     }
   }
 
-  public String startTransaction() throws TransactionException {
-    return startTransaction(null);
-  }
-
   public String startTransaction(@Nullable String transactionId) throws TransactionException {
     throwIfTransactionFinished();
 
@@ -211,13 +207,14 @@ public class GrpcTransactionOnBidirectionalStream
 
     TransactionResponse response = responseOrError.getResponse();
     if (response.hasError()) {
-      switch (response.getError().getErrorCode()) {
+      TransactionResponse.Error error = response.getError();
+      switch (error.getErrorCode()) {
         case INVALID_ARGUMENT:
-          throw new IllegalArgumentException(response.getError().getMessage());
+          throw new IllegalArgumentException(error.getMessage());
         case CONFLICT:
-          throw new CrudConflictException(response.getError().getMessage());
+          throw new CrudConflictException(error.getMessage());
         default:
-          throw new CrudException(response.getError().getMessage());
+          throw new CrudException(error.getMessage());
       }
     }
   }
@@ -244,15 +241,16 @@ public class GrpcTransactionOnBidirectionalStream
       throw new CommitException("failed to commit", error);
     }
 
-    if (responseOrError.getResponse().hasError()) {
-      switch (responseOrError.getResponse().getError().getErrorCode()) {
+    TransactionResponse response = responseOrError.getResponse();
+    if (response.hasError()) {
+      TransactionResponse.Error error = response.getError();
+      switch (error.getErrorCode()) {
         case CONFLICT:
-          throw new CommitConflictException(responseOrError.getResponse().getError().getMessage());
+          throw new CommitConflictException(error.getMessage());
         case UNKNOWN_TRANSACTION:
-          throw new UnknownTransactionStatusException(
-              responseOrError.getResponse().getError().getMessage());
+          throw new UnknownTransactionStatusException(error.getMessage());
         default:
-          throw new CommitException(responseOrError.getResponse().getError().getMessage());
+          throw new CommitException(error.getMessage());
       }
     }
   }

@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cosmos.Cosmos;
@@ -21,9 +22,10 @@ import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcStorage;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
-import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import com.scalar.db.transaction.jdbc.JdbcTransactionManager;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -47,8 +49,8 @@ public class DatabaseConfig {
   private Class<? extends DistributedStorageAdmin> adminClass;
   private Optional<String> namespacePrefix;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
+  private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
-  private SerializableStrategy strategy = SerializableStrategy.EXTRA_READ;
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
@@ -58,9 +60,6 @@ public class DatabaseConfig {
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
-  public static final String CONSENSUS_COMMIT_PREFIX = PREFIX + "consensus_commit.";
-  public static final String SERIALIZABLE_STRATEGY =
-      CONSENSUS_COMMIT_PREFIX + "serializable_strategy";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -141,10 +140,12 @@ public class DatabaseConfig {
     }
 
     transactionManagerClass = ConsensusCommitManager.class;
+    twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
     if (!Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
       switch (props.getProperty(TRANSACTION_MANAGER).toLowerCase()) {
         case "consensus-commit":
           transactionManagerClass = ConsensusCommitManager.class;
+          twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
           break;
         case "jdbc":
           if (storageClass != JdbcDatabase.class) {
@@ -156,6 +157,7 @@ public class DatabaseConfig {
                     + ")");
           }
           transactionManagerClass = JdbcTransactionManager.class;
+          twoPhaseCommitTransactionManagerClass = null;
           break;
         case "grpc":
           if (storageClass != GrpcStorage.class) {
@@ -167,6 +169,7 @@ public class DatabaseConfig {
                     + ")");
           }
           transactionManagerClass = GrpcTransactionManager.class;
+          twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
           break;
         default:
           throw new IllegalArgumentException(
@@ -178,11 +181,6 @@ public class DatabaseConfig {
 
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
       isolation = Isolation.valueOf(props.getProperty(ISOLATION_LEVEL).toUpperCase());
-    }
-
-    if (!Strings.isNullOrEmpty(props.getProperty(SERIALIZABLE_STRATEGY))) {
-      strategy =
-          SerializableStrategy.valueOf(props.getProperty(SERIALIZABLE_STRATEGY).toUpperCase());
     }
   }
 
@@ -210,6 +208,11 @@ public class DatabaseConfig {
     return adminClass;
   }
 
+  public Class<? extends TwoPhaseCommitTransactionManager>
+      getTwoPhaseCommitTransactionManagerClass() {
+    return twoPhaseCommitTransactionManagerClass;
+  }
+
   public Optional<String> getNamespacePrefix() {
     return namespacePrefix;
   }
@@ -220,9 +223,5 @@ public class DatabaseConfig {
 
   public Isolation getIsolation() {
     return isolation;
-  }
-
-  public com.scalar.db.api.SerializableStrategy getSerializableStrategy() {
-    return strategy;
   }
 }

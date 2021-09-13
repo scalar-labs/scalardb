@@ -1817,9 +1817,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result2.isPresent()).isTrue();
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -1908,9 +1906,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -1950,9 +1946,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 3));
     assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
     assertThat(thrown1).doesNotThrowAnyException();
-    assertThat(thrown2)
-        .isInstanceOf(CommitConflictException.class)
-        .hasCauseInstanceOf(CommitConflictException.class);
+    assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
 
   @Test
@@ -2181,6 +2175,61 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act Assert
     assertThatThrownBy(() -> manager.start(transactionId))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getState_forSuccessfulTransaction_ShouldReturnCommittedState()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.commit();
+
+    // Act
+    TransactionState state = manager.getState(transaction.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.COMMITTED);
+  }
+
+  @Test
+  public void getState_forFailedTransaction_ShouldReturnAbortedState()
+      throws CommitException, UnknownTransactionStatusException, CrudException {
+    // Arrange
+    ConsensusCommit transaction1 = manager.start();
+    transaction1.get(prepareGet(0, 0, TABLE_1));
+    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    ConsensusCommit transaction2 = manager.start();
+    transaction2.get(prepareGet(0, 0, TABLE_1));
+    transaction2.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction2.commit();
+
+    assertThatCode(transaction1::commit).isInstanceOf(CommitException.class);
+
+    // Act
+    TransactionState state = manager.getState(transaction1.getId());
+
+    // Assert
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
+  }
+
+  @Test
+  public void abort_forOngoingTransaction_ShouldAbortCorrectly() throws CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+    transaction.get(prepareGet(0, 0, TABLE_1));
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+
+    // Act
+    manager.abort(transaction.getId());
+
+    assertThatCode(transaction::commit).isInstanceOf(CommitException.class);
+
+    // Assert
+    TransactionState state = manager.getState(transaction.getId());
+    assertThat(state).isEqualTo(TransactionState.ABORTED);
   }
 
   private ConsensusCommit prepareTransfer(

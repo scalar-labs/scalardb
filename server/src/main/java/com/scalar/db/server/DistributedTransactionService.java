@@ -357,14 +357,14 @@ public class DistributedTransactionService
                 .build());
       } catch (Throwable t) {
         LOGGER.error("an internal error happened during the execution", t);
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
         responseBuilder.setError(
             TransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.OTHER)
                 .setMessage(t.getMessage())
                 .build());
-        if (t instanceof Error) {
-          throw (Error) t;
-        }
       }
     }
   }

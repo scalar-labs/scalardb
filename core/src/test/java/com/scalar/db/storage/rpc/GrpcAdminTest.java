@@ -2,13 +2,17 @@ package com.scalar.db.storage.rpc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.protobuf.LazyStringArrayList;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
+import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
+import com.scalar.db.rpc.NamespaceExistsResponse;
 import java.util.Collections;
 import java.util.Map;
 import org.junit.Before;
@@ -35,6 +39,34 @@ public class GrpcAdminTest {
   }
 
   @Test
+  public void createNamespace_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    boolean ifNotExists = false;
+    Map<String, String> options = Collections.emptyMap();
+
+    // Act
+    admin.createNamespace(namespace, ifNotExists, options);
+
+    // Assert
+    verify(stub).createNamespace(any());
+  }
+
+  @Test
+  public void dropNamespace_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+
+    // Act
+    admin.dropNamespace(namespace);
+
+    // Assert
+    verify(stub).dropNamespace(any());
+  }
+
+  @Test
   public void createTable_IsCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
@@ -46,10 +78,11 @@ public class GrpcAdminTest {
             .addColumn("col2", DataType.INT)
             .addPartitionKey("col1")
             .build();
+    boolean ifNotExists = false;
     Map<String, String> options = Collections.emptyMap();
 
     // Act
-    admin.createTable(namespace, table, metadata, options);
+    admin.createTable(namespace, table, metadata, ifNotExists, options);
 
     // Assert
     verify(stub).createTable(any());
@@ -94,5 +127,37 @@ public class GrpcAdminTest {
 
     // Assert
     verify(metadataManager).getTableMetadata(namespace, table);
+  }
+
+  @Test
+  public void getNamespaceTableNames_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    GetNamespaceTableNamesResponse response = mock(GetNamespaceTableNamesResponse.class);
+    when(stub.getNamespaceTableNames(any())).thenReturn(response);
+    when(response.getTableNameList()).thenReturn(new LazyStringArrayList());
+
+    // Act
+    admin.getNamespaceTableNames(namespace);
+
+    // Assert
+    verify(stub).getNamespaceTableNames(any());
+  }
+
+  @Test
+  public void namespaceExists_IsCalledWithProperArguments_StubShouldBeCalledProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "namespace";
+    NamespaceExistsResponse response = mock(NamespaceExistsResponse.class);
+    when(stub.namespaceExists(any())).thenReturn(response);
+    when(response.getExists()).thenReturn(false);
+
+    // Act
+    admin.namespaceExists(namespace);
+
+    // Assert
+    verify(stub).namespaceExists(any());
   }
 }

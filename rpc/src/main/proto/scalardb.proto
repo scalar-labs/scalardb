@@ -120,11 +120,11 @@ message Result {
 // DistributedStorage
 
 service DistributedStorage {
-  rpc Get (GetRequest) returns (GetResponse) {
+  rpc Get(GetRequest) returns (GetResponse) {
   }
-  rpc Scan (stream ScanRequest) returns (stream ScanResponse) {
+  rpc Scan(stream ScanRequest) returns (stream ScanResponse) {
   }
-  rpc Mutate (MutateRequest) returns (google.protobuf.Empty) {
+  rpc Mutate(MutateRequest) returns (google.protobuf.Empty) {
   }
 }
 
@@ -153,13 +153,21 @@ message MutateRequest {
 // DistributedStorageAdmin
 
 service DistributedStorageAdmin {
-  rpc CreateTable (CreateTableRequest) returns (google.protobuf.Empty) {
+  rpc CreateNamespace(CreateNamespaceRequest) returns (google.protobuf.Empty) {
   }
-  rpc DropTable (DropTableRequest) returns (google.protobuf.Empty) {
+  rpc DropNamespace(DropNamespaceRequest) returns (google.protobuf.Empty) {
   }
-  rpc TruncateTable (TruncateTableRequest) returns (google.protobuf.Empty) {
+  rpc CreateTable(CreateTableRequest) returns (google.protobuf.Empty) {
   }
-  rpc GetTableMetadata (GetTableMetadataRequest) returns (GetTableMetadataResponse) {
+  rpc DropTable(DropTableRequest) returns (google.protobuf.Empty) {
+  }
+  rpc TruncateTable(TruncateTableRequest) returns (google.protobuf.Empty) {
+  }
+  rpc GetTableMetadata(GetTableMetadataRequest) returns (GetTableMetadataResponse) {
+  }
+  rpc GetNamespaceTableNames(GetNamespaceTableNamesRequest) returns (GetNamespaceTableNamesResponse) {
+  }
+  rpc NamespaceExists(NamespaceExistsRequest) returns (NamespaceExistsResponse) {
   }
 }
 
@@ -181,11 +189,22 @@ message TableMetadata {
   repeated string secondary_index_name = 5;
 }
 
+message CreateNamespaceRequest {
+  string namespace = 1;
+  map<string, string> options = 2;
+  bool if_not_exists = 3;
+}
+
+message DropNamespaceRequest {
+  string namespace = 1;
+}
+
 message CreateTableRequest {
   string namespace = 1;
   string table = 2;
   TableMetadata table_metadata = 3;
   map<string, string> options = 4;
+  bool if_not_exists = 5;
 }
 
 message DropTableRequest {
@@ -207,14 +226,30 @@ message GetTableMetadataResponse {
   TableMetadata table_metadata = 1;
 }
 
-// A service and messages for DistributedTransaction
+message GetNamespaceTableNamesRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceTableNamesResponse {
+  repeated string table_name = 1;
+}
+
+message NamespaceExistsRequest {
+  string namespace = 1;
+}
+
+message NamespaceExistsResponse {
+  bool exists = 1;
+}
+
+// DistributedTransaction
 
 service DistributedTransaction {
-  rpc Transaction (stream TransactionRequest) returns (stream TransactionResponse) {
+  rpc Transaction(stream TransactionRequest) returns (stream TransactionResponse) {
   }
-  rpc GetState (GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
   }
-  rpc Abort (AbortRequest) returns (AbortResponse) {
+  rpc Abort(AbortRequest) returns (AbortResponse) {
   }
 }
 
@@ -303,4 +338,93 @@ message AbortRequest {
 
 message AbortResponse {
   TransactionState state = 1;
+}
+
+// TwoPhaseCommitTransaction
+
+service TwoPhaseCommitTransaction {
+  rpc TwoPhaseCommitTransaction(stream TwoPhaseCommitTransactionRequest) returns (stream TwoPhaseCommitTransactionResponse) {
+  }
+  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  }
+  rpc Abort(AbortRequest) returns (AbortResponse) {
+  }
+}
+
+message TwoPhaseCommitTransactionRequest {
+  message StartRequest {
+    optional string transaction_id = 1;
+  }
+
+  message JoinRequest {
+    string transaction_id = 1;
+  }
+
+  message GetRequest {
+    Get get = 2;
+  }
+
+  message ScanRequest {
+    Scan scan = 2;
+  }
+
+  message MutateRequest {
+    repeated Mutation mutation = 2;
+  }
+
+  message PrepareRequest {
+  }
+
+  message ValidateRequest {
+  }
+
+  message CommitRequest {
+  }
+
+  message RollbackRequest {
+  }
+
+  oneof request {
+    StartRequest start_request = 1;
+    JoinRequest join_request = 2;
+    GetRequest get_request = 3;
+    ScanRequest scan_request = 4;
+    MutateRequest mutate_request = 5;
+    PrepareRequest prepare_request = 6;
+    ValidateRequest validate_request = 7;
+    CommitRequest commit_request = 8;
+    RollbackRequest rollback_request = 9;
+  }
+}
+
+message TwoPhaseCommitTransactionResponse {
+  message StartResponse {
+    string transaction_id = 1;
+  }
+
+  message GetResponse {
+    Result result = 1;
+  }
+
+  message ScanResponse {
+    repeated Result result = 1;
+  }
+
+  message Error {
+    enum ErrorCode {
+      INVALID_ARGUMENT = 0;
+      CONFLICT = 1;
+      UNKNOWN_TRANSACTION = 2;
+      OTHER = 3;
+    }
+    ErrorCode error_code = 1;
+    string message = 2;
+  }
+
+  oneof response {
+    StartResponse start_response = 1;
+    GetResponse get_response = 2;
+    ScanResponse scan_response = 3;
+    Error error = 4;
+  }
 }
