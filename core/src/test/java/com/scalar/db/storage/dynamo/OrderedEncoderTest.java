@@ -39,7 +39,8 @@ public class OrderedEncoderTest {
         // Act
         byte[] encoded1 = OrderedEncoder.orderedEncode(intValue1, order);
         byte[] encoded2 = OrderedEncoder.orderedEncode(intValue2, order);
-        int bytesComparision = UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
+        int bytesComparision =
+            UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
 
         // Assert
         if (order == Order.ASC) {
@@ -50,7 +51,6 @@ public class OrderedEncoderTest {
         Assertions.assertThat(bytesComparision == 0).isEqualTo(expectedComparision == 0);
       }
     }
-
   }
 
   @Test
@@ -70,7 +70,8 @@ public class OrderedEncoderTest {
         // Act
         byte[] encoded1 = OrderedEncoder.orderedEncode(doubleValue1, order);
         byte[] encoded2 = OrderedEncoder.orderedEncode(doubleValue2, order);
-        int bytesComparision = UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
+        int bytesComparision =
+            UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
 
         // Assert
         if (order == Order.ASC) {
@@ -81,7 +82,6 @@ public class OrderedEncoderTest {
         Assertions.assertThat(bytesComparision == 0).isEqualTo(expectedComparision == 0);
       }
     }
-
   }
 
   @Test
@@ -100,7 +100,8 @@ public class OrderedEncoderTest {
         // Act
         byte[] encoded1 = OrderedEncoder.orderedEncode(textValue1, order);
         byte[] encoded2 = OrderedEncoder.orderedEncode(textValue2, order);
-        int bytesComparision = UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
+        int bytesComparision =
+            UnsignedBytes.lexicographicalComparator().compare(encoded1, encoded2);
 
         // Assert
         if (order == Order.ASC) {
@@ -109,9 +110,7 @@ public class OrderedEncoderTest {
           Assertions.assertThat(bytesComparision > 0).isEqualTo(expectedComparision < 0);
         }
         Assertions.assertThat(bytesComparision == 0).isEqualTo(expectedComparision == 0);
-
       }
     }
-
   }
 }
