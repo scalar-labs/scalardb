@@ -139,6 +139,8 @@ try {
 }
 ```
 
+You need to call `rollback()` in all the coordinator/participant processes when an error happens.
+
 You can call `prepare()` parallelly in the coordinator/participant processes.
 Note that you need to call `commit()` in the coordinator process first.
 After that, you can call `commit()` parallelly in the participant processes.
@@ -164,6 +166,7 @@ tx.commit()
 Similar to `prepare()`, you can call `validate()` parallelly in the coordinator/participant processes.
 
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager and the `SERIALIZABLE` isolation level with the `EXTRA_READ` serializable strategy.
+In other cases, `validate()` does nothing.
 
 ## Further documentation
 
