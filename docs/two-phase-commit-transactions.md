@@ -115,9 +115,9 @@ tx.put(toPut);
 
 ### Prepare/Commit/Rollback the transaction
 
-After finishing CRUD operations, you need to commit the transactions.
+After finishing CRUD operations, you need to commit the transaction.
 Like a well-known two-phase commit protocol, there are two phases: the prepare and commit phases.
-you need to prepare the transactions in all the coordinator/participant processes first and then commit them as follows:
+you need to prepare the transaction in all the coordinator/participant processes first and then commit them as follows:
 ```Java
 TwoPhaseCommitTransaction tx = ...
 
@@ -125,11 +125,11 @@ try {
   // Execute CRUD operations in the coordinator/participant processes
   ...
 
-  // Prepare phase: Prepare the transactions in all the coordinator/participant processes
+  // Prepare phase: Prepare the transaction in all the coordinator/participant processes
   tx.prepare();
   ...
 
-  // Commit phase: Commit the transactions in all the coordinator/participant processes
+  // Commit phase: Commit the transaction in all the coordinator/participant processes
   tx.commit()
   ...
 } catch (TransactionException e) {
@@ -150,15 +150,15 @@ Similarly, you need to call `rollback()` in the coordinator process first, and t
 
 Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator/participant processes between calling `prepare()` calling `commit()`:
 ```java
-// Prepare phase 1: Prepare the transactions in all the coordinator/participant processes
+// Prepare phase 1: Prepare the transaction in all the coordinator/participant processes
 tx.prepare();
 ...
 
-// Prepare phase 2: Validate the transactions in all the coordinator/participant processes
+// Prepare phase 2: Validate the transaction in all the coordinator/participant processes
 tx.validate()
 ...
 
-// Commit phase: Commit the transactions in all the coordinator/participant processes
+// Commit phase: Commit the transaction in all the coordinator/participant processes
 tx.commit()
 ...
 ```
