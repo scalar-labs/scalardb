@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 /** A utility class for an operation */
@@ -76,7 +77,10 @@ public class DynamoOperation {
     keyMap.put(PARTITION_KEY, AttributeValue.builder().s(partitionKey).build());
 
     getConcatenatedClusteringKey()
-        .ifPresent(k -> keyMap.put(CLUSTERING_KEY, AttributeValue.builder().s(k).build()));
+        .ifPresent(
+            k ->
+                keyMap.put(
+                    CLUSTERING_KEY, AttributeValue.builder().b(SdkBytes.fromByteArray(k)).build()));
 
     return keyMap;
   }
@@ -91,7 +95,7 @@ public class DynamoOperation {
     return visitor.build();
   }
 
-  Optional<String> getConcatenatedClusteringKey() {
+  Optional<byte[]> getConcatenatedClusteringKey() {
     if (!operation.getClusteringKey().isPresent()) {
       return Optional.empty();
     }
@@ -99,7 +103,7 @@ public class DynamoOperation {
     Map<String, Value<?>> keyMap = new HashMap<>();
     operation.getClusteringKey().ifPresent(k -> k.get().forEach(v -> keyMap.put(v.getName(), v)));
 
-    ConcatenationVisitor visitor = new ConcatenationVisitor();
+    OrderedConcatenationVisitor visitor = new OrderedConcatenationVisitor();
     metadata.getClusteringKeyNames().forEach(name -> keyMap.get(name).accept(visitor));
 
     return Optional.of(visitor.build());

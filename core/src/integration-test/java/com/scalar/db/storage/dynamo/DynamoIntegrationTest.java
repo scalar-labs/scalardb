@@ -164,7 +164,7 @@ public class DynamoIntegrationTest extends IntegrationTestBase {
     attributeDefinitions.add(
         AttributeDefinition.builder()
             .attributeName(CLUSTERING_KEY)
-            .attributeType(ScalarAttributeType.S)
+            .attributeType(ScalarAttributeType.B)
             .build());
     attributeDefinitions.add(
         AttributeDefinition.builder()
