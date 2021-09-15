@@ -156,7 +156,6 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-
     HashMap<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(
         TABLE,

@@ -671,5 +671,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public void close() {
     client.close();
+    applicationAutoScalingClient.close();
   }
 }
