@@ -311,14 +311,13 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   }
 
   private boolean metadataTableExists() throws StorageRuntimeException {
-    boolean tableExist = false;
     try {
       DescribeTableRequest describeTableRequest =
           DescribeTableRequest.builder()
               .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
               .build();
       client.describeTable(describeTableRequest);
-      tableExist = true;
+      return true;
     } catch (DynamoDbException e) {
       if (e instanceof ResourceNotFoundException) {
         return false;
@@ -326,6 +325,5 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
         throw new StorageRuntimeException("checking metadata table exist failed");
       }
     }
-    return tableExist;
   }
 }

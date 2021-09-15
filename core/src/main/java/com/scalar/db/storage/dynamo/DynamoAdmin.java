@@ -30,7 +30,11 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClient;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClientBuilder;
+import software.amazon.awssdk.services.applicationautoscaling.model.ApplicationAutoScalingException;
+import software.amazon.awssdk.services.applicationautoscaling.model.DeleteScalingPolicyRequest;
+import software.amazon.awssdk.services.applicationautoscaling.model.DeregisterScalableTargetRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.MetricType;
+import software.amazon.awssdk.services.applicationautoscaling.model.ObjectNotFoundException;
 import software.amazon.awssdk.services.applicationautoscaling.model.PolicyType;
 import software.amazon.awssdk.services.applicationautoscaling.model.PredefinedMetricSpecification;
 import software.amazon.awssdk.services.applicationautoscaling.model.PutScalingPolicyRequest;
@@ -267,6 +271,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
+    disableAutoScaling(namespace, table);
     DeleteTableRequest request =
         DeleteTableRequest.builder()
             .tableName(getFullTableName(namespacePrefix, namespace, table))
@@ -506,7 +511,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         registerScalableTargetRequestList) {
       try {
         applicationAutoScalingClient.registerScalableTarget(registerScalableTargetRequest);
-      } catch (Exception e) {
+      } catch (ApplicationAutoScalingException e) {
         throw new ExecutionException(
             "Unable to register scalable target for " + registerScalableTargetRequest.resourceId(),
             e);
@@ -516,9 +521,65 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     for (PutScalingPolicyRequest putScalingPolicyRequest : putScalingPolicyRequestList) {
       try {
         applicationAutoScalingClient.putScalingPolicy(putScalingPolicyRequest);
-      } catch (Exception e) {
+      } catch (ApplicationAutoScalingException e) {
         throw new ExecutionException(
             "Unable to put scaling policy request for " + putScalingPolicyRequest.resourceId(), e);
+      }
+    }
+  }
+
+  public void disableAutoScaling(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      return;
+    }
+    Set<String> secondaryIndexes = tableMetadata.getSecondaryIndexNames();
+    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
+    List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
+
+    // write, read scaling of table
+    for (String scalingType : TABLE_SCALING_TYPE_SET) {
+      deregisterScalableTargetRequestList.add(
+          buildDeregisterScalableTargetRequest(getTableResourceID(namespace, table), scalingType));
+      deleteScalingPolicyRequestList.add(
+          buildDeleteScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
+    }
+
+    // write, read scaling of global indexes (secondary indexes)
+    for (String secondaryIndex : secondaryIndexes) {
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+        deregisterScalableTargetRequestList.add(
+            buildDeregisterScalableTargetRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+        deleteScalingPolicyRequestList.add(
+            buildDeleteScalingPolicyRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+      }
+    }
+
+    // request
+    for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
+      try {
+        applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
+      } catch (ApplicationAutoScalingException e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "Delete scaling policy " + deleteScalingPolicyRequest.policyName() + " failed. " + e);
+        }
+      }
+    }
+    for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
+        deregisterScalableTargetRequestList) {
+      try {
+        applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
+      } catch (ApplicationAutoScalingException e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "Deregister scalable target "
+                  + deregisterScalableTargetRequest.resourceId()
+                  + " failed. "
+                  + e);
+        }
       }
     }
   }
@@ -534,6 +595,15 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
+  private DeregisterScalableTargetRequest buildDeregisterScalableTargetRequest(
+      String resourceID, String type) {
+    return DeregisterScalableTargetRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .build();
+  }
+
   private PutScalingPolicyRequest buildPutScalingPolicyRequest(String resourceID, String type) {
     return PutScalingPolicyRequest.builder()
         .serviceNamespace(ServiceNamespace.DYNAMODB)
@@ -542,6 +612,16 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .policyName(getPolicyName(resourceID, type))
         .policyType(PolicyType.TARGET_TRACKING_SCALING)
         .targetTrackingScalingPolicyConfiguration(getScalingPolicyConfiguration(type))
+        .build();
+  }
+
+  private DeleteScalingPolicyRequest buildDeleteScalingPolicyRequest(
+      String resourceID, String type) {
+    return DeleteScalingPolicyRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .policyName(getPolicyName(resourceID, type))
         .build();
   }
 
