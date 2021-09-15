@@ -69,7 +69,7 @@ public class CommitMutationComposer extends AbstractMutationComposer {
     } else {
       LOGGER.info(
           "the record was committed by the originated one "
-              + "or rollforwarded by another transaction");
+              + "or rolled forward by another transaction");
     }
   }
 
