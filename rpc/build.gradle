@@ -9,6 +9,10 @@ dependencies {
     api group: 'io.grpc', name: 'grpc-services', version: "${grpcVersion}"
 }
 
+javadoc {
+    title = "Scalar DB RPC"
+}
+
 protobuf {
     protoc { artifact = "com.google.protobuf:protoc:${protocVersion}" }
     plugins {
