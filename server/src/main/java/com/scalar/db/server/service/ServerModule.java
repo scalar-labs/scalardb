@@ -6,12 +6,15 @@ import com.google.inject.Singleton;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.GateKeeper;
 import com.scalar.db.server.Metrics;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import java.util.Properties;
 
 public class ServerModule extends AbstractModule {
 
@@ -22,7 +25,14 @@ public class ServerModule extends AbstractModule {
   public ServerModule(ServerConfig config, DatabaseConfig databaseConfig) {
     this.config = config;
     storageFactory = new StorageFactory(databaseConfig);
-    transactionFactory = new TransactionFactory(databaseConfig);
+
+    // For two-phase consensus commit transactions in Scalar DB server, set
+    // ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED to false because Scalar DB server takes care of active
+    // transactions management
+    Properties transactionProperties = new Properties(databaseConfig.getProperties());
+    transactionProperties.put(
+        ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
+    transactionFactory = new TransactionFactory(new DatabaseConfig(transactionProperties));
   }
 
   @Override
@@ -46,6 +56,12 @@ public class ServerModule extends AbstractModule {
   @Singleton
   DistributedTransactionManager provideDistributedTransactionManager() {
     return transactionFactory.getTransactionManager();
+  }
+
+  @Provides
+  @Singleton
+  TwoPhaseCommitTransactionManager provideTwoPhaseCommitTransactionManager() {
+    return transactionFactory.getTwoPhaseCommitTransactionManager();
   }
 
   @Provides

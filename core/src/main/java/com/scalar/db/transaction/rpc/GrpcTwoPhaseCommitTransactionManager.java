@@ -1,31 +1,27 @@
 package com.scalar.db.transaction.rpc;
 
+import static com.scalar.db.transaction.rpc.GrpcTransactionManager.DEFAULT_SCALAR_DB_SERVER_PORT;
+import static com.scalar.db.transaction.rpc.GrpcTransactionManager.EXCEPTION_FACTORY;
+import static com.scalar.db.transaction.rpc.GrpcTransactionManager.execute;
 import static com.scalar.db.util.retry.Retry.executeWithRetries;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.Isolation;
-import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
-import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
+import com.scalar.db.util.ActiveExpiringMap;
 import com.scalar.db.util.ProtoUtil;
-import com.scalar.db.util.ThrowableSupplier;
-import com.scalar.db.util.retry.Retry;
-import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
-import io.grpc.Status.Code;
-import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
@@ -34,32 +30,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTransactionManager implements DistributedTransactionManager {
-  private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
-  static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
+public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTransactionManager {
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
 
-  static final Retry.ExceptionFactory<TransactionException> EXCEPTION_FACTORY =
-      (message, cause) -> {
-        if (cause == null) {
-          return new TransactionException(message);
-        }
-        if (cause instanceof TransactionException) {
-          return (TransactionException) cause;
-        }
-        return new TransactionException(message, cause);
-      };
+  private static final long TRANSACTION_LIFETIME_MILLIS = 60000;
+  private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
   private final GrpcConfig config;
   private final ManagedChannel channel;
-  private final DistributedTransactionGrpc.DistributedTransactionStub stub;
-  private final DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
+  private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
+  private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   private final GrpcTableMetadataManager metadataManager;
+  private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
 
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   @Inject
-  public GrpcTransactionManager(GrpcConfig config) {
+  public GrpcTwoPhaseCommitTransactionManager(GrpcConfig config) {
     this.config = config;
     channel =
         NettyChannelBuilder.forAddress(
@@ -69,25 +58,31 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
                     : config.getContactPort())
             .usePlaintext()
             .build();
-    stub = DistributedTransactionGrpc.newStub(channel);
-    blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
+    stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
+    blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
+    activeTransactions =
+        new ActiveExpiringMap<>(
+            TRANSACTION_LIFETIME_MILLIS,
+            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+            t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
 
   @VisibleForTesting
-  GrpcTransactionManager(
+  GrpcTwoPhaseCommitTransactionManager(
       GrpcConfig config,
-      DistributedTransactionGrpc.DistributedTransactionStub stub,
-      DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub,
+      TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub,
+      TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub,
       GrpcTableMetadataManager metadataManager) {
     this.config = config;
     channel = null;
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
+    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
@@ -119,69 +114,56 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
   }
 
   @Override
-  public GrpcTransaction start() throws TransactionException {
+  public GrpcTwoPhaseCommitTransaction start() throws TransactionException {
     return startInternal(null);
   }
 
   @Override
-  public GrpcTransaction start(String txId) throws TransactionException {
-    return startInternal(Objects.requireNonNull(txId));
+  public GrpcTwoPhaseCommitTransaction start(String txId) throws TransactionException {
+    return startInternal(txId);
   }
 
-  private GrpcTransaction startInternal(@Nullable String txId) throws TransactionException {
+  private GrpcTwoPhaseCommitTransaction startInternal(@Nullable String txId)
+      throws TransactionException {
     return executeWithRetries(
         () -> {
-          GrpcTransactionOnBidirectionalStream stream =
-              new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
+              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
           String transactionId = stream.startTransaction(txId);
-          return new GrpcTransaction(transactionId, stream, namespace, tableName);
+          return new GrpcTwoPhaseCommitTransaction(
+              transactionId, stream, true, this, namespace, tableName);
         },
         EXCEPTION_FACTORY);
   }
 
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
   @Override
-  public GrpcTransaction start(Isolation isolation) throws TransactionException {
-    return start();
+  public GrpcTwoPhaseCommitTransaction join(String txId) throws TransactionException {
+    return executeWithRetries(
+        () -> {
+          GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
+              new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
+          stream.joinTransaction(txId);
+          GrpcTwoPhaseCommitTransaction transaction =
+              new GrpcTwoPhaseCommitTransaction(txId, stream, false, this, namespace, tableName);
+          if (activeTransactions.putIfAbsent(txId, transaction) != null) {
+            transaction.rollback();
+            throw new TransactionException(
+                "The transaction associated with the specified transaction ID already exists");
+          }
+          return transaction;
+        },
+        EXCEPTION_FACTORY);
   }
 
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
   @Override
-  public GrpcTransaction start(String txId, Isolation isolation) throws TransactionException {
-    return start(txId);
-  }
-
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
-    return start();
-  }
-
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(SerializableStrategy strategy) throws TransactionException {
-    return start();
-  }
-
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(String txId, SerializableStrategy strategy)
-      throws TransactionException {
-    return start(txId);
-  }
-
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
-  @Override
-  public GrpcTransaction start(String txId, Isolation isolation, SerializableStrategy strategy)
-      throws TransactionException {
-    return start(txId);
+  public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
+    return activeTransactions
+        .get(txId)
+        .orElseThrow(
+            () ->
+                new TransactionException(
+                    "A transaction associated with the specified transaction ID is not found. "
+                        + "It might have been expired"));
   }
 
   @Override
@@ -208,25 +190,6 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
         });
   }
 
-  static <T> T execute(ThrowableSupplier<T, TransactionException> supplier)
-      throws TransactionException {
-    return executeWithRetries(
-        () -> {
-          try {
-            return supplier.get();
-          } catch (StatusRuntimeException e) {
-            if (e.getStatus().getCode() == Code.INVALID_ARGUMENT) {
-              throw new IllegalArgumentException(e.getMessage(), e);
-            }
-            if (e.getStatus().getCode() == Code.UNAVAILABLE) {
-              throw new ServiceTemporaryUnavailableException(e.getMessage(), e);
-            }
-            throw new TransactionException(e.getMessage(), e);
-          }
-        },
-        EXCEPTION_FACTORY);
-  }
-
   @Override
   public void close() {
     try {
@@ -234,5 +197,13 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     } catch (InterruptedException e) {
       LOGGER.warn("failed to shutdown the channel", e);
     }
+  }
+
+  void removeTransaction(String txId) {
+    activeTransactions.remove(txId);
+  }
+
+  void updateTransactionExpirationTime(String txId) {
+    activeTransactions.updateExpirationTime(txId);
   }
 }

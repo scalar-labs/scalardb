@@ -24,6 +24,7 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
@@ -53,5 +54,37 @@ public class ConsensusCommitConfigTest {
     // Act Assert
     assertThatThrownBy(() -> new ConsensusCommitConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithValidActiveTransactionsManagementEnabledGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldLoadAsFalse() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(false);
   }
 }

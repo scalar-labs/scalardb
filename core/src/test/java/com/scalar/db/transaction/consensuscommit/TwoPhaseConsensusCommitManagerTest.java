@@ -15,30 +15,30 @@ import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class TwoPhaseConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
 
-  @Mock
-  @SuppressWarnings("unused")
-  private DistributedStorage storage;
-
+  @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
 
-  @InjectMocks private TwoPhaseConsensusCommitManager manager;
+  private TwoPhaseConsensusCommitManager manager;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
 
+    // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
+    when(config.isActiveTransactionsManagementEnabled()).thenReturn(true);
+
+    manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
   }
 
   @Test
@@ -128,6 +128,18 @@ public class TwoPhaseConsensusCommitManagerTest {
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID)).isInstanceOf(TransactionException.class);
+  }
+
+  @Test
+  public void
+      resume_WhenActiveTransactionsManagementEnabledIsFalse_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
+    manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
+
+    // Act Assert
+    assertThatThrownBy(() -> manager.resume(ANY_TX_ID))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
