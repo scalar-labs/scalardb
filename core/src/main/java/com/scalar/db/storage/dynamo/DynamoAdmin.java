@@ -528,7 +528,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  public void disableAutoScaling(String namespace, String table) throws ExecutionException {
+  public void disableAutoScaling(String namespace, String table) {
     TableMetadata tableMetadata = metadataManager.getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       return;
