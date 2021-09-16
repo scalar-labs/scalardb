@@ -138,6 +138,10 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
+javadoc {
+    title = "Scalar DB"
+}
+
 task integrationTestCassandra(type: Test) {
     description = 'Runs the integration tests for Cassandra.'
     group = 'verification'

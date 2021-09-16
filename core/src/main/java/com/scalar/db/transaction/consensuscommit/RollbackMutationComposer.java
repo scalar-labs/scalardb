@@ -69,7 +69,7 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
 
       if (!latest.getId().equals(id)) {
         LOGGER.info(
-            "the record is not prepared (yet) by this transaction " + "or has already rollbacked");
+            "the record is not prepared (yet) by this transaction " + "or has already rolled back");
         return;
       }
     } else {
