@@ -159,7 +159,7 @@ public class Table {
           && !clusteringKeySet.contains(columnName)) {
 
         String transactionExtraColumn = TRANSACTION_COL_PREFIX + columnName;
-        if (TRANSACTION_META_COLUMNS.keySet().contains(columnName)
+        if (TRANSACTION_META_COLUMNS.containsKey(columnName)
             || transactionMetaExtraColumnSet.contains(columnName)
             || columnNameSet.contains(transactionExtraColumn)) {
           throw new RuntimeException(

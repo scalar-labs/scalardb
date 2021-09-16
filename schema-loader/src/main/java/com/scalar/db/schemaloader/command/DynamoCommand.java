@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.nio.file.Path;
