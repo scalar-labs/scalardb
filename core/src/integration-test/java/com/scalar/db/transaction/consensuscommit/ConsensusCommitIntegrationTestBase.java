@@ -438,7 +438,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           Selection s) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -489,24 +489,24 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void
-      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         get);
   }
 
   @Test
   public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scan);
   }
 
   private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           Selection s) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -558,19 +558,19 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void
-      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         get);
   }
 
   @Test
   public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scan);
   }
 
@@ -768,7 +768,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
           Selection s) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -813,24 +813,24 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void
-      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         get);
   }
 
   @Test
   public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly()
+      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRollforwardedByAnother_ShouldRollforwardProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         scan);
   }
 
   private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
           Selection s) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long current = System.currentTimeMillis();
@@ -882,19 +882,19 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void
-      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Get get = prepareGet(0, 0, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         get);
   }
 
   @Test
   public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly()
+      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
           throws ExecutionException, CoordinatorException, CrudException {
     Scan scan = prepareScan(0, 0, 0, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRollbackedByAnother_ShouldRollbackProperly(
+    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         scan);
   }
 

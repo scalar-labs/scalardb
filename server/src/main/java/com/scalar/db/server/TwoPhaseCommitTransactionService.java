@@ -1,33 +1,39 @@
 package com.scalar.db.server;
 
 import com.google.inject.Inject;
-import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.AbortException;
+import com.scalar.db.api.TwoPhaseCommitTransaction;
+import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CrudConflictException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
+import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
-import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
-import com.scalar.db.rpc.TransactionRequest;
-import com.scalar.db.rpc.TransactionRequest.AbortRequest;
-import com.scalar.db.rpc.TransactionRequest.CommitRequest;
-import com.scalar.db.rpc.TransactionRequest.GetRequest;
-import com.scalar.db.rpc.TransactionRequest.MutateRequest;
-import com.scalar.db.rpc.TransactionRequest.RequestCase;
-import com.scalar.db.rpc.TransactionRequest.ScanRequest;
-import com.scalar.db.rpc.TransactionRequest.StartRequest;
-import com.scalar.db.rpc.TransactionResponse;
-import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
-import com.scalar.db.rpc.TransactionResponse.GetResponse;
-import com.scalar.db.rpc.TransactionResponse.ScanResponse;
-import com.scalar.db.rpc.TransactionResponse.StartResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.CommitRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.GetRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.JoinRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.MutateRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.PrepareRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RequestCase;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.RollbackRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ScanRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.StartRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse;
+import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
@@ -42,27 +48,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class DistributedTransactionService
-    extends DistributedTransactionGrpc.DistributedTransactionImplBase {
-  private static final Logger LOGGER = LoggerFactory.getLogger(DistributedTransactionService.class);
-  private static final String SERVICE_NAME = "distributed_transaction";
+public class TwoPhaseCommitTransactionService
+    extends TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionImplBase {
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(TwoPhaseCommitTransactionService.class);
+  private static final String SERVICE_NAME = "two_phase_commit_transaction";
 
-  private final DistributedTransactionManager manager;
+  private final TwoPhaseCommitTransactionManager manager;
   private final GateKeeper gateKeeper;
   private final Metrics metrics;
 
   @Inject
-  public DistributedTransactionService(
-      DistributedTransactionManager manager, GateKeeper gateKeeper, Metrics metrics) {
+  public TwoPhaseCommitTransactionService(
+      TwoPhaseCommitTransactionManager manager, GateKeeper gateKeeper, Metrics metrics) {
     this.manager = manager;
     this.gateKeeper = gateKeeper;
     this.metrics = metrics;
   }
 
   @Override
-  public StreamObserver<TransactionRequest> transaction(
-      StreamObserver<TransactionResponse> responseObserver) {
-    return new TransactionStreamObserver(
+  public StreamObserver<TwoPhaseCommitTransactionRequest> twoPhaseCommitTransaction(
+      StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver) {
+    return new TwoPhaseCommitTransactionStreamObserver(
         manager, responseObserver, metrics, this::preProcess, this::postProcess);
   }
 
@@ -84,8 +91,7 @@ public class DistributedTransactionService
   }
 
   @Override
-  public void abort(
-      com.scalar.db.rpc.AbortRequest request, StreamObserver<AbortResponse> responseObserver) {
+  public void abort(AbortRequest request, StreamObserver<AbortResponse> responseObserver) {
     execute(
         () -> {
           TransactionState state = manager.abort(request.getTransactionId());
@@ -138,20 +144,21 @@ public class DistributedTransactionService
     gateKeeper.letOut();
   }
 
-  private static class TransactionStreamObserver implements StreamObserver<TransactionRequest> {
+  private static class TwoPhaseCommitTransactionStreamObserver
+      implements StreamObserver<TwoPhaseCommitTransactionRequest> {
 
-    private final DistributedTransactionManager manager;
-    private final StreamObserver<TransactionResponse> responseObserver;
+    private final TwoPhaseCommitTransactionManager manager;
+    private final StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver;
     private final Metrics metrics;
     private final Function<StreamObserver<?>, Boolean> preProcessor;
     private final Runnable postProcessor;
     private final AtomicBoolean preProcessed = new AtomicBoolean();
 
-    private DistributedTransaction transaction;
+    private TwoPhaseCommitTransaction transaction;
 
-    public TransactionStreamObserver(
-        DistributedTransactionManager manager,
-        StreamObserver<TransactionResponse> responseObserver,
+    public TwoPhaseCommitTransactionStreamObserver(
+        TwoPhaseCommitTransactionManager manager,
+        StreamObserver<TwoPhaseCommitTransactionResponse> responseObserver,
         Metrics metrics,
         Function<StreamObserver<?>, Boolean> preProcessor,
         Runnable postProcessor) {
@@ -163,7 +170,7 @@ public class DistributedTransactionService
     }
 
     @Override
-    public void onNext(TransactionRequest request) {
+    public void onNext(TwoPhaseCommitTransactionRequest request) {
       if (preProcessed.compareAndSet(false, true)) {
         if (!preProcessor.apply(responseObserver)) {
           return;
@@ -172,12 +179,14 @@ public class DistributedTransactionService
 
       if (request.getRequestCase() == RequestCase.START_REQUEST) {
         startTransaction(request);
+      } else if (request.getRequestCase() == RequestCase.JOIN_REQUEST) {
+        joinTransaction(request);
       } else {
         executeTransaction(request);
       }
     }
 
-    private void startTransaction(TransactionRequest transactionRequest) {
+    private void startTransaction(TwoPhaseCommitTransactionRequest transactionRequest) {
       if (transactionStarted()) {
         respondInvalidArgumentError("transaction is already started");
         return;
@@ -196,7 +205,7 @@ public class DistributedTransactionService
               }
             });
         responseObserver.onNext(
-            TransactionResponse.newBuilder()
+            TwoPhaseCommitTransactionResponse.newBuilder()
                 .setStartResponse(
                     StartResponse.newBuilder().setTransactionId(transaction.getId()).build())
                 .build());
@@ -211,13 +220,40 @@ public class DistributedTransactionService
       }
     }
 
-    private void executeTransaction(TransactionRequest request) {
+    private void joinTransaction(TwoPhaseCommitTransactionRequest transactionRequest) {
+      if (transactionStarted()) {
+        respondInvalidArgumentError("transaction is already started");
+        return;
+      }
+
+      try {
+        metrics.measure(
+            SERVICE_NAME,
+            "transaction.join",
+            () -> {
+              JoinRequest request = transactionRequest.getJoinRequest();
+              transaction = manager.join(request.getTransactionId());
+            });
+        responseObserver.onNext(TwoPhaseCommitTransactionResponse.getDefaultInstance());
+      } catch (IllegalArgumentException e) {
+        respondInvalidArgumentError(e.getMessage());
+      } catch (Throwable t) {
+        LOGGER.error("an internal error happened when joining a transaction", t);
+        respondInternalError(t.getMessage());
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+      }
+    }
+
+    private void executeTransaction(TwoPhaseCommitTransactionRequest request) {
       if (!transactionStarted()) {
         respondInvalidArgumentError("transaction is not started");
         return;
       }
 
-      TransactionResponse.Builder responseBuilder = TransactionResponse.newBuilder();
+      TwoPhaseCommitTransactionResponse.Builder responseBuilder =
+          TwoPhaseCommitTransactionResponse.newBuilder();
 
       boolean completed = false;
       switch (request.getRequestCase()) {
@@ -230,12 +266,18 @@ public class DistributedTransactionService
         case MUTATE_REQUEST:
           mutate(request.getMutateRequest(), responseBuilder);
           break;
+        case PREPARE_REQUEST:
+          prepare(request.getPrepareRequest(), responseBuilder);
+          break;
+        case VALIDATE_REQUEST:
+          validate(request.getValidateRequest(), responseBuilder);
+          break;
         case COMMIT_REQUEST:
           commit(request.getCommitRequest(), responseBuilder);
           completed = true;
           break;
-        case ABORT_REQUEST:
-          abort(request.getAbortRequest(), responseBuilder);
+        case ROLLBACK_REQUEST:
+          rollback(request.getRollbackRequest(), responseBuilder);
           completed = true;
           break;
         default:
@@ -263,7 +305,8 @@ public class DistributedTransactionService
     @Override
     public void onCompleted() {}
 
-    private void get(GetRequest request, TransactionResponse.Builder responseBuilder) {
+    private void get(
+        GetRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
             Get get = ProtoUtil.toGet(request.getGet());
@@ -276,7 +319,8 @@ public class DistributedTransactionService
           "transaction.get");
     }
 
-    private void scan(ScanRequest request, TransactionResponse.Builder responseBuilder) {
+    private void scan(
+        ScanRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
             Scan scan = ProtoUtil.toScan(request.getScan());
@@ -289,7 +333,8 @@ public class DistributedTransactionService
           "transaction.scan");
     }
 
-    private void mutate(MutateRequest request, TransactionResponse.Builder responseBuilder) {
+    private void mutate(
+        MutateRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () ->
               transaction.mutate(
@@ -300,20 +345,32 @@ public class DistributedTransactionService
           "transaction.mutate");
     }
 
-    private void commit(CommitRequest unused, TransactionResponse.Builder responseBuilder) {
+    private void prepare(
+        PrepareRequest unused, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
+      execute(() -> transaction.prepare(), responseBuilder, "transaction.prepare");
+    }
+
+    private void validate(
+        ValidateRequest unused, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
+      execute(() -> transaction.validate(), responseBuilder, "transaction.validate");
+    }
+
+    private void commit(
+        CommitRequest unused, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(() -> transaction.commit(), responseBuilder, "transaction.commit");
     }
 
-    private void abort(AbortRequest unused, TransactionResponse.Builder responseBuilder) {
-      execute(() -> transaction.abort(), responseBuilder, "transaction.abort");
+    private void rollback(
+        RollbackRequest unused, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
+      execute(() -> transaction.rollback(), responseBuilder, "transaction.rollback");
     }
 
     private void cleanUp() {
       if (transaction != null) {
         try {
-          transaction.abort();
-        } catch (AbortException e) {
-          LOGGER.warn("abort failed", e);
+          transaction.rollback();
+        } catch (RollbackException e) {
+          LOGGER.warn("rollback failed", e);
         }
       }
 
@@ -333,25 +390,28 @@ public class DistributedTransactionService
 
     private void execute(
         ThrowableRunnable<Throwable> runnable,
-        TransactionResponse.Builder responseBuilder,
+        TwoPhaseCommitTransactionResponse.Builder responseBuilder,
         String method) {
       try {
         metrics.measure(SERVICE_NAME, method, runnable);
       } catch (IllegalArgumentException | IllegalStateException e) {
         responseBuilder.setError(
-            TransactionResponse.Error.newBuilder()
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.INVALID_ARGUMENT)
                 .setMessage(e.getMessage())
                 .build());
-      } catch (CrudConflictException | CommitConflictException e) {
+      } catch (CrudConflictException
+          | CommitConflictException
+          | PreparationConflictException
+          | ValidationConflictException e) {
         responseBuilder.setError(
-            TransactionResponse.Error.newBuilder()
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.CONFLICT)
                 .setMessage(e.getMessage())
                 .build());
       } catch (UnknownTransactionStatusException e) {
         responseBuilder.setError(
-            TransactionResponse.Error.newBuilder()
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.UNKNOWN_TRANSACTION)
                 .setMessage(e.getMessage())
                 .build());
@@ -361,7 +421,7 @@ public class DistributedTransactionService
           throw (Error) t;
         }
         responseBuilder.setError(
-            TransactionResponse.Error.newBuilder()
+            TwoPhaseCommitTransactionResponse.Error.newBuilder()
                 .setErrorCode(ErrorCode.OTHER)
                 .setMessage(t.getMessage())
                 .build());
