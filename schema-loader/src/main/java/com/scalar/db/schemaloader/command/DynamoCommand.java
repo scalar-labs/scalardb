@@ -3,6 +3,8 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
+import com.scalar.db.storage.dynamo.Dynamo;
+import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -75,13 +77,13 @@ public class DynamoCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {
-      metaOptions.put("ru", ru);
+      metaOptions.put(DynamoAdmin.REQUEST_UNIT, ru);
     }
     if (noScaling != null) {
-      metaOptions.put("no-scaling", noScaling.toString());
+      metaOptions.put(DynamoAdmin.NO_SCALING, noScaling.toString());
     }
     if (noBackup != null) {
-      metaOptions.put("no-backup", noBackup.toString());
+      metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
     if (endpointOverride != null) {
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);

@@ -6,6 +6,7 @@ import com.scalar.db.schemaloader.command.CassandraCommand.ReplicationStrategy;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
+import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -89,7 +90,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       metaOptions.put("no-scaling", noScaling.toString());
     }
     if (dynamoNoBackup != null) {
-      metaOptions.put("no-backup", dynamoNoBackup.toString());
+      metaOptions.put(DynamoAdmin.NO_BACKUP, dynamoNoBackup.toString());
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));

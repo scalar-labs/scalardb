@@ -3,6 +3,7 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
+import com.scalar.db.storage.cosmos.CosmosAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,10 +64,10 @@ public class CosmosCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {
-      metaOptions.put("ru", ru);
+      metaOptions.put(CosmosAdmin.RU, ru);
     }
     if (noScaling != null) {
-      metaOptions.put("no-scaling", noScaling.toString());
+      metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);

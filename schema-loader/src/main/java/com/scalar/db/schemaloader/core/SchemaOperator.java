@@ -6,8 +6,11 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.schema.CoordinatorSchema;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.util.Utility;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +75,11 @@ public class SchemaOperator {
 
   public void deleteTables(List<Table> tableList) {
     Set<String> namespaces = new HashSet<>();
+    boolean hasTransactionTable = false;
     for (Table table : tableList) {
+      if (table.isTransactionTable()) {
+        hasTransactionTable = true;
+      }
       try {
         admin.dropTable(table.getNamespace(), table.getTable());
         LOGGER.info(
@@ -86,6 +93,19 @@ public class SchemaOperator {
         LOGGER.warn("Delete table " + table.getTable() + " failed. " + e.getCause());
       }
     }
+    if (hasTransactionTable) {
+      try {
+        admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+      } catch (ExecutionException e) {
+        LOGGER.warn(
+            "Delete table "
+                + Utility.getFullTableName(
+                    Optional.empty(), Coordinator.NAMESPACE, Coordinator.TABLE)
+                + " failed. "
+                + e.getCause());
+      }
+    }
+
     for (String namespace : namespaces) {
       try {
         if (admin.getNamespaceTableNames(namespace).isEmpty()) {
