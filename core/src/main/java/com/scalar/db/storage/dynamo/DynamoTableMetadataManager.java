@@ -289,7 +289,8 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     }
 
     try {
-      waitForTableCreation(client, getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
+      waitForTableCreation(
+          client, getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
     } catch (DynamoDbException e) {
       throw new StorageRuntimeException("getting table description failed", e);
     }
