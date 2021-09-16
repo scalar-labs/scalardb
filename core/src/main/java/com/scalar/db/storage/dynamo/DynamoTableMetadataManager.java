@@ -1,6 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.storage.dynamo.DynamoAdmin.waitForTableCreation;
 import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
@@ -43,7 +42,7 @@ import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 /**
  * A manager to read and cache {@link TableMetadata} to know the type of each column
  *
- * @author Yuji Ito
+ * @author Yuji Ito, Pham Ba Thong
  */
 @ThreadSafe
 public class DynamoTableMetadataManager implements TableMetadataManager {
@@ -289,7 +288,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
     }
 
     try {
-      waitForTableCreation(
+      DynamoAdmin.waitForTableCreation(
           client, getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
     } catch (DynamoDbException e) {
       throw new StorageRuntimeException("getting table description failed", e);

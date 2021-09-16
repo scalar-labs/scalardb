@@ -68,6 +68,11 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 
+/**
+ * Manages table creating, dropping and truncating in Dynamo DB
+ *
+ * @author Pham Ba Thong
+ */
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
@@ -603,7 +608,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  protected static void waitForTableCreation(DynamoDbClient client, String tableFullName) {
+  static void waitForTableCreation(DynamoDbClient client, String tableFullName) {
     while (true) {
       Uninterruptibles.sleepUninterruptibly(CREATE_WAIT_DURATION_SECS, TimeUnit.SECONDS);
       DescribeTableRequest describeTableRequest =
