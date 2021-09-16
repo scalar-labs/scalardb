@@ -76,7 +76,6 @@ TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
 
 You need to specify the transaction ID associated with the transaction that the coordinator has started.
 
-
 #### Resume the transaction (participant only)
 
 You can get the transaction object (the `TwoPhaseCommitTransaction` instance) that you have already joined with `TwoPhaseCommitTransactionManager.resume()`:
