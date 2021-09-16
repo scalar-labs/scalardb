@@ -74,8 +74,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final String PARTITION_KEY = "concatenatedPartitionKey";
   private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
-  private static final int CREATING_WAITING_TIME = 3000;
-  private static final int COOL_TIME_SEC = 60;
+  private static final int CREATE_WAIT_DURATION_SECS = 3;
+  private static final int COOL_DOWN_DURATION_SECS = 60;
   private static final double TARGET_USAGE_RATE = 70.0;
   private static final int DELETE_BATCH_SIZE = 100;
 
@@ -230,20 +230,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throw new ExecutionException("creating table failed", e);
     }
 
-    while (true) {
-      try {
-        Uninterruptibles.sleepUninterruptibly(CREATING_WAITING_TIME, TimeUnit.MILLISECONDS);
-        DescribeTableRequest describeTableRequest =
-            DescribeTableRequest.builder()
-                .tableName(getFullTableName(namespacePrefix, namespace, table))
-                .build();
-        DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
-        if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
-          break;
-        }
-      } catch (DynamoDbException e) {
-        throw new ExecutionException("getting table description failed", e);
-      }
+    try {
+      waitForTableCreation(client, getFullTableName(namespacePrefix, namespace, table));
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("getting table description failed", e);
     }
 
     // scaling control
@@ -568,6 +558,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     }
+
     for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
         deregisterScalableTargetRequestList) {
       try {
@@ -625,6 +616,18 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
+  protected static void waitForTableCreation(DynamoDbClient client, String tableFullName) {
+    while (true) {
+      Uninterruptibles.sleepUninterruptibly(CREATE_WAIT_DURATION_SECS, TimeUnit.SECONDS);
+      DescribeTableRequest describeTableRequest =
+          DescribeTableRequest.builder().tableName(tableFullName).build();
+      DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
+      if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
+        break;
+      }
+    }
+  }
+
   private String getPolicyName(String resourceID, String type) {
     return resourceID + "-" + type;
   }
@@ -646,8 +649,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             PredefinedMetricSpecification.builder()
                 .predefinedMetricType(SCALING_POLICY_METRIC_TYPE_MAP.get(type))
                 .build())
-        .scaleInCooldown(COOL_TIME_SEC)
-        .scaleOutCooldown(COOL_TIME_SEC)
+        .scaleInCooldown(COOL_DOWN_DURATION_SECS)
+        .scaleOutCooldown(COOL_DOWN_DURATION_SECS)
         .targetValue(TARGET_USAGE_RATE)
         .build();
   }

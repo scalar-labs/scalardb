@@ -1,9 +1,9 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.scalar.db.storage.dynamo.DynamoAdmin.waitForTableCreation;
 import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -40,7 +39,6 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
-import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
 /**
  * A manager to read and cache {@link TableMetadata} to know the type of each column
@@ -57,8 +55,6 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   private static final String COLUMNS = "columns";
   private static final String TABLE = "table";
   private static final long METADATA_TABLE_RU = 1;
-
-  private static final int CREATING_WAITING_TIME = 3000;
 
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
@@ -156,7 +152,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
 
   @Override
   public void deleteTableMetadata(String namespace, String table) {
-    HashMap<String, AttributeValue> keyToDelete = new HashMap<>();
+    Map<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(
         TABLE,
         AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
@@ -292,20 +288,10 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
       throw new StorageRuntimeException("creating meta data table failed");
     }
 
-    while (true) {
-      try {
-        Uninterruptibles.sleepUninterruptibly(CREATING_WAITING_TIME, TimeUnit.MILLISECONDS);
-        DescribeTableRequest describeTableRequest =
-            DescribeTableRequest.builder()
-                .tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE))
-                .build();
-        DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
-        if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
-          break;
-        }
-      } catch (DynamoDbException e) {
-        throw new StorageRuntimeException("getting table description failed", e);
-      }
+    try {
+      waitForTableCreation(client, getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
+    } catch (DynamoDbException e) {
+      throw new StorageRuntimeException("getting table description failed", e);
     }
   }
 
