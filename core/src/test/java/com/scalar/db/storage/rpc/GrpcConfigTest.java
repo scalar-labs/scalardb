@@ -1,14 +1,13 @@
-package com.scalar.db.transaction.consensuscommit;
+package com.scalar.db.storage.rpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.config.DatabaseConfig;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.Test;
 
-public class ConsensusCommitConfigTest {
+public class GrpcConfigTest {
 
   private static final String ANY_HOST = "localhost";
 
@@ -17,43 +16,50 @@ public class ConsensusCommitConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    GrpcConfig config = new GrpcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
+    assertThat(config.getDeadlineDurationMillis())
+        .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
   }
 
   @Test
-  public void constructor_PropertiesWithSerializableStrategyGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithValidDeadlineDurationMillisGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(
-        ConsensusCommitConfig.SERIALIZABLE_STRATEGY, SerializableStrategy.EXTRA_WRITE.toString());
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+    props.setProperty(GrpcConfig.DEADLINE_DURATION_MILLIS, "5000");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    GrpcConfig config = new GrpcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_WRITE);
+    assertThat(config.getDeadlineDurationMillis()).isEqualTo(5000);
   }
 
   @Test
   public void
-      constructor_UnsupportedSerializableStrategyGiven_ShouldThrowIllegalArgumentException() {
+      constructor_PropertiesWithInvalidDeadlineDurationMillisGiven_ShouldLoadAsDefaultValue() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(ConsensusCommitConfig.SERIALIZABLE_STRATEGY, "NO_STRATEGY");
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
-    // Act Assert
-    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
-        .isInstanceOf(IllegalArgumentException.class);
+    // Act
+    GrpcConfig config = new GrpcConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getDeadlineDurationMillis())
+        .isEqualTo(GrpcConfig.DEFAULT_DEADLINE_DURATION_MILLIS);
   }
 
   @Test
@@ -62,10 +68,11 @@ public class ConsensusCommitConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "false");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    GrpcConfig config = new GrpcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
@@ -78,10 +85,11 @@ public class ConsensusCommitConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
+    props.setProperty(DatabaseConfig.STORAGE, "grpc");
+    props.setProperty(GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
     // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+    GrpcConfig config = new GrpcConfig(props);
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));

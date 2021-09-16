@@ -44,7 +44,7 @@ subprojects {
         assertjVersion = '3.9.1'
         mockitoVersion = '2.16.0'
         spotbugsVersion = '4.3.0'
-        errorproneVersion = '2.8.0'
+        errorproneVersion = '2.9.0'
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.8.7'
     }
@@ -69,7 +69,6 @@ subprojects {
     }
 
     javadoc {
-        options.addStringOption("notimestamp", "com.scalar.db")
         if (JavaVersion.current().isJava9Compatible()) {
             options.addBooleanOption('html5', true)
         }

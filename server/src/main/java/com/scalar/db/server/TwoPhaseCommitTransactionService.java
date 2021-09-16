@@ -52,7 +52,7 @@ public class TwoPhaseCommitTransactionService
     extends TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionImplBase {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(TwoPhaseCommitTransactionService.class);
-  private static final String SERVICE_NAME = "two_phase_commit";
+  private static final String SERVICE_NAME = "two_phase_commit_transaction";
 
   private final TwoPhaseCommitTransactionManager manager;
   private final GateKeeper gateKeeper;

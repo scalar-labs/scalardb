@@ -9,13 +9,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,9 +30,19 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 
 public class DynamoTableMetadataManagerTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
@@ -49,6 +66,12 @@ public class DynamoTableMetadataManagerTest {
 
     manager = new DynamoTableMetadataManager(client, Optional.empty());
     setMetadataMap();
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
   }
 
   private void setMetadataMap() {
@@ -98,7 +121,7 @@ public class DynamoTableMetadataManagerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     Map<String, AttributeValue> expectedKey = new HashMap<>();
-    expectedKey.put("table", AttributeValue.builder().s(FULLNAME).build());
+    expectedKey.put("table", AttributeValue.builder().s("prefix_" + FULLNAME).build());
 
     // Act
     manager.getTableMetadata(get);
@@ -144,7 +167,7 @@ public class DynamoTableMetadataManagerTest {
   }
 
   @Test
-  public void getTableMetadata_CosmosExceptionThrown_ShouldThrowStorageRuntimeException() {
+  public void getTableMetadata_DynamoExceptionThrown_ShouldThrowStorageRuntimeException() {
     // Arrange
     DynamoDbException toThrow = mock(DynamoDbException.class);
     doThrow(toThrow).when(client).getItem(any(GetItemRequest.class));
@@ -156,5 +179,117 @@ public class DynamoTableMetadataManagerTest {
     assertThatThrownBy(() -> manager.getTableMetadata(get))
         .isInstanceOf(StorageRuntimeException.class)
         .hasCause(toThrow);
+  }
+
+  @Test
+  public void addTableMetadata_WithMetaTableNotExist_ShouldExecuteCreateTable()
+      throws StorageRuntimeException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tb";
+
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    when(client.describeTable(any(DescribeTableRequest.class)))
+        .thenThrow(ResourceNotFoundException.class)
+        .thenReturn(describeTableResponse);
+
+    // Act
+    manager.addTableMetadata(namespace, table, tableMetadata);
+
+    // Assert
+    verify(client).createTable(any(CreateTableRequest.class));
+  }
+
+  @Test
+  public void addTableMetadata_WithCorrectParams_ShouldExecutePutItem()
+      throws StorageRuntimeException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tb";
+
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.BLOB)
+            .addPartitionKey("c1")
+            .addClusteringKey("c2")
+            .build();
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(listTablesResponse.tableNames())
+        .thenReturn(
+            ImmutableList.<String>builder()
+                .add(Utility.getFullTableName(Optional.empty(), namespace, table))
+                .build());
+    when(client.listTables()).thenReturn(listTablesResponse);
+
+    // Act
+    manager.addTableMetadata(namespace, table, tableMetadata);
+
+    // Assert
+    verify(client).putItem(any(PutItemRequest.class));
+  }
+
+  @Test
+  public void deleteTableMetadata_WithCorrectParams_ShouldExecuteDeleteItem()
+      throws StorageRuntimeException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tb";
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.itemCount()).thenReturn((long) 1);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+
+    // Act
+    manager.deleteTableMetadata(namespace, table);
+
+    // Assert
+    verify(client).deleteItem(any(DeleteItemRequest.class));
+  }
+
+  @Test
+  public void deleteTableMetadata_WithEmptyTableAfterDeletion_ShouldExecuteDeleteTable()
+      throws StorageRuntimeException {
+    // Arrange
+    String namespace = "ns";
+    String table = "tb";
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(tableDescription.itemCount()).thenReturn((long) 0);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+
+    // Act
+    manager.deleteTableMetadata(namespace, table);
+
+    // Assert
+    verify(client).deleteTable(any(DeleteTableRequest.class));
+  }
+
+  @Test
+  public void getTableNames_WithExistingTables_ShouldReturnTableNames() {
+    // Arrange
+    String namespace = "ns";
+    List<String> tableFullNames =
+        ImmutableList.<String>builder().add("ns.tb1").add("ns.tb2").add("ns.tb3").build();
+
+    Set<String> tableSetExpected = new HashSet<>(tableFullNames);
+
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(listTablesResponse.tableNames()).thenReturn(tableFullNames);
+    when(client.listTables()).thenReturn(listTablesResponse);
+
+    // Act
+    Set<String> tableSet = manager.getTableNames(namespace);
+
+    // Assert
+    assertThat(tableSet).isEqualTo(tableSetExpected);
   }
 }
