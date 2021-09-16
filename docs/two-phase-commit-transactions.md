@@ -69,14 +69,13 @@ tx.getId();
 
 ### Join the transaction
 
-You can join the transaction that has been started by the coordinator as follows:
+If you are a participant, you can join the transaction that has been started by the coordinator as follows:
 ```Java
 TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
 ```
 
 You need to specify the transaction ID associated with the transaction that the coordinator has started.
 
-The process/application that joins the transaction acts as a participant, as mentioned.
 
 #### Resume the transaction
 
@@ -116,7 +115,7 @@ tx.put(toPut);
 ### Prepare/Commit/Rollback the transaction
 
 After finishing CRUD operations, you need to commit the transaction.
-Like a well-known two-phase commit protocol, there are two phases: the prepare and commit phases.
+Like a well-known two-phase commit protocol, there are two phases: prepare and commit phases.
 you need to prepare the transaction in all the coordinator/participant processes first and then commit them as follows:
 ```Java
 TwoPhaseCommitTransaction tx = ...
@@ -148,7 +147,7 @@ Similarly, you need to call `rollback()` in the coordinator process first, and t
 
 #### Validate the transaction
 
-Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator/participant processes between calling `prepare()` calling `commit()`:
+Depending on the concurrency control protocol, you need to call `validate()` in all the coordinator/participant processes after `prepare()` and before `commit()`:
 ```java
 // Prepare phase 1: Prepare the transaction in all the coordinator/participant processes
 tx.prepare();
@@ -165,7 +164,7 @@ tx.commit()
 
 Similar to `prepare()`, you can call `validate()` parallelly in the coordinator/participant processes.
 
-Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager and the `SERIALIZABLE` isolation level with the `EXTRA_READ` serializable strategy.
+Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with  `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
 
 ## Further documentation
