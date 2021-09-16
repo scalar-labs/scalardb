@@ -164,7 +164,7 @@ tx.commit()
 
 Similar to `prepare()`, you can call `validate()` parallelly in the coordinator/participant processes.
 
-Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with  `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
+Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
 
 ## Further documentation
