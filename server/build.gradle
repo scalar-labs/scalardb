@@ -52,6 +52,10 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
+javadoc {
+    title = "Scalar DB Server"
+}
+
 application {
     mainClassName = 'com.scalar.db.server.ScalarDbServer'
     startScripts.applicationName = 'scalardb-server'
