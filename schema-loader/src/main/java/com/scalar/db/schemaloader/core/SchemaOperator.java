@@ -96,6 +96,7 @@ public class SchemaOperator {
     if (hasTransactionTable) {
       try {
         admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+        namespaces.add(Coordinator.NAMESPACE);
       } catch (ExecutionException e) {
         LOGGER.warn(
             "Delete table "
