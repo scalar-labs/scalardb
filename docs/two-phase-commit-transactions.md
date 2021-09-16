@@ -48,7 +48,7 @@ TransactionFactory factory = new TransactionFactory(new DatabaseConfig(new File(
 TwoPhaseCommitTransactionManager manager = factory.getTwoPhaseCommitTransactionManager();
 ```
 
-### Start a transaction
+### Start a transaction (coordinator only)
 
 You can start a transaction as follows:
 ```Java
@@ -67,7 +67,7 @@ And, you can get the transaction ID with `getId()` as follows:
 tx.getId();
 ```
 
-### Join the transaction
+### Join the transaction (participant only)
 
 If you are a participant, you can join the transaction that has been started by the coordinator as follows:
 ```Java
@@ -77,7 +77,7 @@ TwoPhaseCommitTransaction tx = manager.join("<transaction ID>")
 You need to specify the transaction ID associated with the transaction that the coordinator has started.
 
 
-#### Resume the transaction
+#### Resume the transaction (participant only)
 
 You can get the transaction object (the `TwoPhaseCommitTransaction` instance) that you have already joined with `TwoPhaseCommitTransactionManager.resume()`:
 ```Java
@@ -116,7 +116,7 @@ tx.put(toPut);
 
 After finishing CRUD operations, you need to commit the transaction.
 Like a well-known two-phase commit protocol, there are two phases: prepare and commit phases.
-you need to prepare the transaction in all the coordinator/participant processes first and then commit them as follows:
+You first need to prepare the transaction in all the coordinator/participant processes, then you need to call in the order of coordinator's `commit()` and the participants' `commit()` as follows:
 ```Java
 TwoPhaseCommitTransaction tx = ...
 
@@ -138,12 +138,11 @@ try {
 }
 ```
 
-You need to call `rollback()` in all the coordinator/participant processes when an error happens.
+If an error happens, you need to call `rollback()` in all the coordinator/participant processes.
+Note that you need to call it in the coordinator process first, and then call it in the participant processes in parallel.
 
-You can call `prepare()` parallelly in the coordinator/participant processes.
-Note that you need to call `commit()` in the coordinator process first.
-After that, you can call `commit()` parallelly in the participant processes.
-Similarly, you need to call `rollback()` in the coordinator process first, and then you can call it parallelly in the participant processes.
+You can call `prepare()` in the coordinator/participant processes in parallel.
+Similarly, you can also call `commit()` in the participant processes in parallel.
 
 #### Validate the transaction
 
@@ -162,7 +161,7 @@ tx.commit()
 ...
 ```
 
-Similar to `prepare()`, you can call `validate()` parallelly in the coordinator/participant processes.
+Similar to `prepare()`, you can call `validate()` in the coordinator/participant processes in parallel.
 
 Currently, you need to call `validate()` when you use the `Consensus Commit` transaction manager with `EXTRA_READ` serializable strategy in `SERIALIZABLE` isolation level.
 In other cases, `validate()` does nothing.
