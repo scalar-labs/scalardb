@@ -82,9 +82,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String NO_SCALING = "no-scaling";
   public static final String NO_BACKUP = "no-backup";
   public static final String REQUEST_UNIT = "ru";
-  public static final Boolean DEFAULT_NO_SCALING = false;
-  public static final Boolean DEFAULT_NO_BACKUP = false;
-  public static final long DEFAULT_RU = 10;
+  public static final String DEFAULT_NO_SCALING = "false";
+  public static final String DEFAULT_NO_BACKUP = "false";
+  public static final String DEFAULT_RU = "10";
 
   private static final String SCALING_TYPE_READ = "read";
   private static final String SCALING_TYPE_WRITE = "write";
@@ -209,10 +209,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     buildLocalIndexes(namespace, table, requestBuilder, metadata);
 
     // build secondary indexes
-    long ru = DEFAULT_RU;
-    if (options.containsKey(REQUEST_UNIT)) {
-      ru = Long.parseLong(options.get(REQUEST_UNIT));
-    }
+    long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_RU));
     buildGlobalIndexes(namespace, table, requestBuilder, metadata, ru);
 
     // ru
@@ -237,23 +234,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     // scaling control
-    boolean noScaling = DEFAULT_NO_SCALING;
-    if (options.containsKey(NO_SCALING)) {
-      if (Boolean.parseBoolean(options.get(NO_SCALING))) {
-        noScaling = true;
-      }
-    }
+    boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
       enableAutoScaling(namespace, table, metadata.getSecondaryIndexNames(), ru);
     }
 
     // backup control
-    boolean noBackup = DEFAULT_NO_BACKUP;
-    if (options.containsKey(NO_BACKUP)) {
-      if (Boolean.parseBoolean(options.get(NO_BACKUP))) {
-        noBackup = true;
-      }
-    }
+    boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
     if (!noBackup) {
       enableContinuousBackup(namespace, table);
     }
