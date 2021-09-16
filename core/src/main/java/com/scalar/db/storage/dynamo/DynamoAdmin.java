@@ -79,12 +79,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final double TARGET_USAGE_RATE = 70.0;
   private static final int DELETE_BATCH_SIZE = 100;
 
-  private static final String NO_SCALING = "no-scaling";
-  private static final String NO_BACKUP = "no-backup";
-  private static final String REQUEST_UNIT = "ru";
-  private static final Boolean DEFAULT_NO_SCALING = false;
-  private static final Boolean DEFAULT_NO_BACKUP = false;
-  private static final long DEFAULT_RU = 10;
+  public static final String NO_SCALING = "no-scaling";
+  public static final String NO_BACKUP = "no-backup";
+  public static final String REQUEST_UNIT = "ru";
+  public static final Boolean DEFAULT_NO_SCALING = false;
+  public static final Boolean DEFAULT_NO_BACKUP = false;
+  public static final long DEFAULT_RU = 10;
 
   private static final String SCALING_TYPE_READ = "read";
   private static final String SCALING_TYPE_WRITE = "write";
