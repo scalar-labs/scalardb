@@ -42,6 +42,8 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
   private final GrpcTableMetadataManager metadataManager;
+
+  @Nullable
   private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
 
   private Optional<String> namespace;
@@ -62,11 +64,15 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
     metadataManager =
         new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
-    activeTransactions =
-        new ActiveExpiringMap<>(
-            TRANSACTION_LIFETIME_MILLIS,
-            TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-            t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    if (config.isActiveTransactionsManagementEnabled()) {
+      activeTransactions =
+          new ActiveExpiringMap<>(
+              TRANSACTION_LIFETIME_MILLIS,
+              TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
+              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+    } else {
+      activeTransactions = null;
+    }
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
@@ -82,7 +88,11 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
+    if (config.isActiveTransactionsManagementEnabled()) {
+      activeTransactions = new ActiveExpiringMap<>(Long.MAX_VALUE, Long.MAX_VALUE, t -> {});
+    } else {
+      activeTransactions = null;
+    }
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
@@ -145,10 +155,12 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
               new GrpcTwoPhaseCommitTransaction(txId, stream, false, this, namespace, tableName);
-          if (activeTransactions.putIfAbsent(txId, transaction) != null) {
-            transaction.rollback();
-            throw new TransactionException(
-                "The transaction associated with the specified transaction ID already exists");
+          if (activeTransactions != null) {
+            if (activeTransactions.putIfAbsent(txId, transaction) != null) {
+              transaction.rollback();
+              throw new TransactionException(
+                  "The transaction associated with the specified transaction ID already exists");
+            }
           }
           return transaction;
         },
@@ -157,6 +169,13 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
 
   @Override
   public GrpcTwoPhaseCommitTransaction resume(String txId) throws TransactionException {
+    if (activeTransactions == null) {
+      throw new UnsupportedOperationException(
+          "unsupported when setting \""
+              + GrpcConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED
+              + "\" to false");
+    }
+
     return activeTransactions
         .get(txId)
         .orElseThrow(
@@ -200,10 +219,16 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
   }
 
   void removeTransaction(String txId) {
+    if (activeTransactions == null) {
+      return;
+    }
     activeTransactions.remove(txId);
   }
 
   void updateTransactionExpirationTime(String txId) {
+    if (activeTransactions == null) {
+      return;
+    }
     activeTransactions.updateExpirationTime(txId);
   }
 }

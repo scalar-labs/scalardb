@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
@@ -54,10 +55,11 @@ public class ConsensusCommitConfig extends DatabaseConfig {
       strategy = SerializableStrategy.EXTRA_READ;
     }
 
-    if (!Strings.isNullOrEmpty(
-        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED))) {
+    String activeTransactionsManagementEnabledValue =
+        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED);
+    if (Utility.isBooleanString(activeTransactionsManagementEnabledValue)) {
       activeTransactionsManagementEnabled =
-          Boolean.parseBoolean(getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED));
+          Boolean.parseBoolean(activeTransactionsManagementEnabledValue);
     } else {
       activeTransactionsManagementEnabled = true;
     }
