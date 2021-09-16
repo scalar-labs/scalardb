@@ -54,7 +54,7 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
   private static final String SECONDARY_INDEX = "secondaryIndex";
   private static final String COLUMNS = "columns";
   private static final String TABLE = "table";
-  private static final long METADATA_TABLE_RU = 1;
+  private static final long METADATA_TABLE_REQUEST_UNIT = 1;
 
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
@@ -277,8 +277,8 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
         KeySchemaElement.builder().attributeName(TABLE).keyType(KeyType.HASH).build());
     requestBuilder.provisionedThroughput(
         ProvisionedThroughput.builder()
-            .readCapacityUnits(METADATA_TABLE_RU)
-            .writeCapacityUnits(METADATA_TABLE_RU)
+            .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+            .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
             .build());
     requestBuilder.tableName(getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE));
 

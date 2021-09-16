@@ -84,7 +84,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String REQUEST_UNIT = "ru";
   public static final String DEFAULT_NO_SCALING = "false";
   public static final String DEFAULT_NO_BACKUP = "false";
-  public static final String DEFAULT_RU = "10";
+  public static final String DEFAULT_REQUEST_UNIT = "10";
 
   private static final String SCALING_TYPE_READ = "read";
   private static final String SCALING_TYPE_WRITE = "write";
@@ -209,7 +209,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     buildLocalIndexes(namespace, table, requestBuilder, metadata);
 
     // build secondary indexes
-    long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_RU));
+    long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
     buildGlobalIndexes(namespace, table, requestBuilder, metadata, ru);
 
     // ru
