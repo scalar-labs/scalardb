@@ -40,8 +40,8 @@ import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class CosmosAdmin implements DistributedStorageAdmin {
-  public static final String RU = "ru";
-  public static final String DEFAULT_RU = "400";
+  public static final String REQUEST_UNIT = "ru";
+  public static final String DEFAULT_REQUEST_UNIT = "400";
   public static final String NO_SCALING = "no-scaling";
   public static final String DEFAULT_NO_SCALING = "false";
   private static final String ID = "id";
@@ -229,7 +229,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   private ThroughputProperties calculateThroughput(Map<String, String> options) {
-    int ru = Integer.parseInt(options.getOrDefault(RU, DEFAULT_RU));
+    int ru = Integer.parseInt(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (ru < 4000 || noScaling) {
       return ThroughputProperties.createManualThroughput(ru);

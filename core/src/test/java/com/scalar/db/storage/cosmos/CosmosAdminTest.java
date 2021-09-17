@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosAdmin.DEFAULT_RU;
+import static com.scalar.db.storage.cosmos.CosmosAdmin.DEFAULT_REQUEST_UNIT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -81,7 +81,9 @@ public class CosmosAdminTest {
     verify(client)
         .createDatabase(
             eq(DATABASE_PREFIX + namespace),
-            refEq(ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_RU))));
+            refEq(
+                ThroughputProperties.createManualThroughput(
+                    Integer.parseInt(DEFAULT_REQUEST_UNIT))));
   }
 
   @Test
@@ -92,7 +94,8 @@ public class CosmosAdminTest {
     String throughput = "2000";
 
     // Act
-    admin.createNamespace(namespace, Collections.singletonMap(CosmosAdmin.RU, throughput));
+    admin.createNamespace(
+        namespace, Collections.singletonMap(CosmosAdmin.REQUEST_UNIT, throughput));
 
     // Assert
     verify(client)
@@ -109,7 +112,8 @@ public class CosmosAdminTest {
     String throughput = "4000";
 
     // Act
-    admin.createNamespace(namespace, Collections.singletonMap(CosmosAdmin.RU, throughput));
+    admin.createNamespace(
+        namespace, Collections.singletonMap(CosmosAdmin.REQUEST_UNIT, throughput));
 
     // Assert
     verify(client)
@@ -129,7 +133,8 @@ public class CosmosAdminTest {
 
     // Act
     admin.createNamespace(
-        namespace, ImmutableMap.of(CosmosAdmin.RU, throughput, CosmosAdmin.NO_SCALING, noScaling));
+        namespace,
+        ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, throughput, CosmosAdmin.NO_SCALING, noScaling));
 
     // Assert
     verify(client)

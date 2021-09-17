@@ -274,13 +274,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
-  enum CompactionStrategy {
+  public enum CompactionStrategy {
     STCS,
     LCS,
     TWCS
   }
 
-  enum ReplicationStrategy {
+  public enum ReplicationStrategy {
     SIMPLE_STRATEGY("SimpleStrategy"),
     NETWORK_TOPOLOGY_STRATEGY("NetworkTopologyStrategy");
     private final String strategyName;
