@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -201,11 +202,11 @@ public class CosmosAdminTest {
     when(record2.getId()).thenReturn("id2");
     when(record2.getConcatenatedPartitionKey()).thenReturn("p2");
     @SuppressWarnings("unchecked")
-    CosmosPagedIterable<Record> queryResults =
-        (CosmosPagedIterable<Record>) mock(CosmosPagedIterable.class);
+    CosmosPagedIterable<Record> queryResults = mock(CosmosPagedIterable.class);
     when(container.queryItems(anyString(), any(), eq(Record.class))).thenReturn(queryResults);
+    @SuppressWarnings("unchecked")
     Iterator<Record> mockIterator = mock(Iterator.class);
-    doCallRealMethod().when(queryResults).forEach(any(Consumer.class));
+    doCallRealMethod().when(queryResults).forEach(ArgumentMatchers.<Consumer<Record>>any());
     when(queryResults.iterator()).thenReturn(mockIterator);
     when(mockIterator.hasNext()).thenReturn(true, true, false);
     when(mockIterator.next()).thenReturn(record1, record2);

@@ -242,7 +242,7 @@ message NamespaceExistsResponse {
   bool exists = 1;
 }
 
-// A service and messages for DistributedTransaction
+// DistributedTransaction
 
 service DistributedTransaction {
   rpc Transaction(stream TransactionRequest) returns (stream TransactionResponse) {
@@ -338,4 +338,93 @@ message AbortRequest {
 
 message AbortResponse {
   TransactionState state = 1;
+}
+
+// TwoPhaseCommitTransaction
+
+service TwoPhaseCommitTransaction {
+  rpc TwoPhaseCommitTransaction(stream TwoPhaseCommitTransactionRequest) returns (stream TwoPhaseCommitTransactionResponse) {
+  }
+  rpc GetState(GetTransactionStateRequest) returns (GetTransactionStateResponse) {
+  }
+  rpc Abort(AbortRequest) returns (AbortResponse) {
+  }
+}
+
+message TwoPhaseCommitTransactionRequest {
+  message StartRequest {
+    optional string transaction_id = 1;
+  }
+
+  message JoinRequest {
+    string transaction_id = 1;
+  }
+
+  message GetRequest {
+    Get get = 2;
+  }
+
+  message ScanRequest {
+    Scan scan = 2;
+  }
+
+  message MutateRequest {
+    repeated Mutation mutation = 2;
+  }
+
+  message PrepareRequest {
+  }
+
+  message ValidateRequest {
+  }
+
+  message CommitRequest {
+  }
+
+  message RollbackRequest {
+  }
+
+  oneof request {
+    StartRequest start_request = 1;
+    JoinRequest join_request = 2;
+    GetRequest get_request = 3;
+    ScanRequest scan_request = 4;
+    MutateRequest mutate_request = 5;
+    PrepareRequest prepare_request = 6;
+    ValidateRequest validate_request = 7;
+    CommitRequest commit_request = 8;
+    RollbackRequest rollback_request = 9;
+  }
+}
+
+message TwoPhaseCommitTransactionResponse {
+  message StartResponse {
+    string transaction_id = 1;
+  }
+
+  message GetResponse {
+    Result result = 1;
+  }
+
+  message ScanResponse {
+    repeated Result result = 1;
+  }
+
+  message Error {
+    enum ErrorCode {
+      INVALID_ARGUMENT = 0;
+      CONFLICT = 1;
+      UNKNOWN_TRANSACTION = 2;
+      OTHER = 3;
+    }
+    ErrorCode error_code = 1;
+    string message = 2;
+  }
+
+  oneof response {
+    StartResponse start_response = 1;
+    GetResponse get_response = 2;
+    ScanResponse scan_response = 3;
+    Error error = 4;
+  }
 }

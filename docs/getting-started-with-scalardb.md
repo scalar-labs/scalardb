@@ -72,10 +72,10 @@ For JDBC databases
 $ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
 ```
 
-## Store & retrieve data with storage service
+## Store & retrieve data with storage API
 
 [`ElectronicMoneyWithStorage.java`](./getting-started/src/main/java/sample/ElectronicMoneyWithStorage.java)
-is a simple electronic money application with storage service.
+is a simple electronic money application with storage API.
 (Be careful: it is simplified for ease of reading and far from practical and is certainly not production-ready.)
 
 ```java
@@ -194,7 +194,7 @@ $ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USER
 $ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-transaction.json
 ```
 
-## Store & retrieve data with transaction service
+## Store & retrieve data with transaction API
 
 The previous application seems fine under ideal conditions, but it is problematic when some failure happens during its operation or when multiple operations occur at the same time because it is not transactional.
 For example, money transfer (pay) from `A's balance` to `B's balance` is not done atomically in the application, and there might be a case where only `A's balance` is decreased (and `B's balance` is not increased) if a failure happens right after the first `put` and some money will be lost.

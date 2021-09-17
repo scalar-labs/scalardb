@@ -119,6 +119,7 @@ dependencies {
     implementation group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: "${cassandraDriverVersion}"
     implementation group: 'com.azure', name: 'azure-cosmos', version: "${azureCosmosVersion}"
     implementation group: 'org.jooq', name: 'jooq', version: "${jooqVersion}"
+    implementation group: 'software.amazon.awssdk', name: 'applicationautoscaling', version: "${awssdkVersion}"
     implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: "${awssdkVersion}"
     implementation group: 'software.amazon.awssdk', name: 'core', version: "${awssdkVersion}"
     implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: "${commonsDbcp2Version}"
@@ -136,6 +137,10 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+javadoc {
+    title = "Scalar DB"
 }
 
 task integrationTestCassandra(type: Test) {

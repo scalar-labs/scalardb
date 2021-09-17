@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.base.Strings;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +17,13 @@ public class ConsensusCommitConfig extends DatabaseConfig {
   public static final String SERIALIZABLE_STRATEGY = PREFIX + "serializable_strategy";
 
   private SerializableStrategy strategy;
+
+  // for two-phase consensus commit
+  public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
+  public static final String ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED =
+      TWO_PHASE_CONSENSUS_COMMIT_PREFIX + "active_transactions_management.enabled";
+
+  private boolean activeTransactionsManagementEnabled;
 
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -46,9 +54,22 @@ public class ConsensusCommitConfig extends DatabaseConfig {
     } else {
       strategy = SerializableStrategy.EXTRA_READ;
     }
+
+    String activeTransactionsManagementEnabledValue =
+        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED);
+    if (Utility.isBooleanString(activeTransactionsManagementEnabledValue)) {
+      activeTransactionsManagementEnabled =
+          Boolean.parseBoolean(activeTransactionsManagementEnabledValue);
+    } else {
+      activeTransactionsManagementEnabled = true;
+    }
   }
 
   public SerializableStrategy getSerializableStrategy() {
     return strategy;
+  }
+
+  public boolean isActiveTransactionsManagementEnabled() {
+    return activeTransactionsManagementEnabled;
   }
 }

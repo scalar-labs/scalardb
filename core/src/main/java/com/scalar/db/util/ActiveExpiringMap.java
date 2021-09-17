@@ -93,7 +93,7 @@ public class ActiveExpiringMap<K, V> {
   private static class ValueHolder<V> {
     private final V value;
     private final long lifetimeMillis;
-    private final AtomicLong expirationTime = new AtomicLong();
+    private final AtomicLong lastUpdateTime = new AtomicLong();
 
     public ValueHolder(V value, long lifetimeMillis) {
       this.value = value;
@@ -102,11 +102,11 @@ public class ActiveExpiringMap<K, V> {
     }
 
     public void updateExpirationTime() {
-      expirationTime.set(System.currentTimeMillis() + lifetimeMillis);
+      lastUpdateTime.set(System.currentTimeMillis());
     }
 
     public boolean isExpired() {
-      return System.currentTimeMillis() >= expirationTime.get();
+      return System.currentTimeMillis() - lastUpdateTime.get() >= lifetimeMillis;
     }
 
     public V get() {
