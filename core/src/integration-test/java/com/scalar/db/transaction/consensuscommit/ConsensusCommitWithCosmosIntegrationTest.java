@@ -37,7 +37,7 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
     config = new DatabaseConfig(props);
     originalStorage = new Cosmos(config);
     admin = new CosmosAdmin(config);
-    createTables(ImmutableMap.of(CosmosAdmin.RU, "4000"));
+    createTables(ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));
   }
 
   @AfterClass

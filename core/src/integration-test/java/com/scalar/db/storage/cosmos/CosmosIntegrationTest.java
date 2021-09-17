@@ -39,7 +39,7 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     DatabaseConfig config = new DatabaseConfig(props);
     admin = new CosmosAdmin(config);
     storage = new Cosmos(config);
-    createTable(ImmutableMap.of(CosmosAdmin.RU, "4000"));
+    createTable(ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));
   }
 
   @AfterClass
