@@ -16,6 +16,7 @@ dependencies {
 ## Docs
 * [Getting started](docs/getting-started.md)
 * [Scalar DB supported databases](docs/scalar-db-supported-databases.md)
+* [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)
 * [Design document](docs/design.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://www.slideshare.net/scalar-inc/making-cassandra-more-capable-faster-and-more-reliable-at-apacheconhome-2020) at ApacheCon@Home 2020
