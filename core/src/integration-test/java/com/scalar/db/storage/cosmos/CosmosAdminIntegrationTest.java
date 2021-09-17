@@ -34,7 +34,7 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
     admin = new CosmosAdmin(new DatabaseConfig(props));
-    admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.RU, "4000"));
+    admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));
     admin.createTable(
         NAMESPACE,
         TABLE,
