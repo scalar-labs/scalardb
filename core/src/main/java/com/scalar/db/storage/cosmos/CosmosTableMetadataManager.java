@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosAdmin.DEFAULT_RU;
+import static com.scalar.db.storage.cosmos.CosmosAdmin.DEFAULT_REQUEST_UNIT;
 import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
@@ -181,7 +181,7 @@ public class CosmosTableMetadataManager implements TableMetadataManager {
   private void createMetadataDatabaseAndContainerIfNotExists() {
     String metadataDatabase = getFullNamespaceName(databasePrefix, METADATA_DATABASE);
     ThroughputProperties manualThroughput =
-        ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_RU));
+        ThroughputProperties.createManualThroughput(Integer.parseInt(DEFAULT_REQUEST_UNIT));
     client.createDatabaseIfNotExists(metadataDatabase, manualThroughput);
     CosmosContainerProperties containerProperties =
         new CosmosContainerProperties(METADATA_CONTAINER, "/id");
