@@ -10,11 +10,13 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.RequiredValueMissingException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,6 +30,15 @@ import org.slf4j.LoggerFactory;
 public class Coordinator {
   public static final String NAMESPACE = "coordinator";
   public static final String TABLE = "state";
+  public static final TableMetadata TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn(Attribute.ID, DataType.TEXT)
+          .addColumn(Attribute.STATE, DataType.INT)
+          .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
+          .addColumn(Attribute.METADATA, DataType.TEXT)
+          .addPartitionKey(Attribute.ID)
+          .build();
+
   private static final int MAX_RETRY_COUNT = 5;
   private static final long SLEEP_BASE_MILLIS = 50;
   private static final Logger LOGGER = LoggerFactory.getLogger(Coordinator.class);
