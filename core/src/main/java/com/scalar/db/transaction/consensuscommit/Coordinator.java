@@ -35,7 +35,6 @@ public class Coordinator {
           .addColumn(Attribute.ID, DataType.TEXT)
           .addColumn(Attribute.STATE, DataType.INT)
           .addColumn(Attribute.CREATED_AT, DataType.BIGINT)
-          .addColumn(Attribute.METADATA, DataType.TEXT)
           .addPartitionKey(Attribute.ID)
           .build();
 
