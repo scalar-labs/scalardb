@@ -1,6 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
@@ -48,5 +49,44 @@ public class TransactionalTableTest {
 
     // Assert
     assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void
+      convertToTransactionalTable_tableMetadataThatHasTransactionMetaColumnGiven_shouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                TransactionalTable.convertToTransactionalTable(
+                    TableMetadata.newBuilder()
+                        .addColumn("col1", DataType.INT)
+                        .addColumn("col2", DataType.INT)
+                        .addColumn(Attribute.ID, DataType.TEXT) // transaction meta column
+                        .addPartitionKey("col1")
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      convertToTransactionalTable_tableMetadataThatHasNonPrimaryKeyColumnWithBeforePrefixGiven_shouldThrowIllegalArgumentException() {
+    // Arrange
+
+    // Act Assert
+    assertThatThrownBy(
+            () ->
+                TransactionalTable.convertToTransactionalTable(
+                    TableMetadata.newBuilder()
+                        .addColumn("col1", DataType.INT)
+                        .addColumn("col2", DataType.INT)
+                        .addColumn(
+                            Attribute.BEFORE_PREFIX + "col2",
+                            DataType.INT) // non-primary key column with the "before_" prefix
+                        .addPartitionKey("col1")
+                        .build()))
+        .isInstanceOf(IllegalArgumentException.class);
+    ;
   }
 }

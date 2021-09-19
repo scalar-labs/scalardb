@@ -29,6 +29,30 @@ public final class TransactionalTable {
    * @return a transactional table metadata
    */
   public static TableMetadata convertToTransactionalTable(TableMetadata tableMetadata) {
+    // Check if the table metadata already has the transactional columns
+    TRANSACTION_META_COLUMNS.forEach(
+        (c, t) -> {
+          if (tableMetadata.getColumnNames().contains(c)) {
+            throw new IllegalArgumentException(
+                "column \"" + c + "\" is reserved as transaction metadata");
+          }
+        });
+    tableMetadata.getColumnNames().stream()
+        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
+        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
+        .forEach(
+            c -> {
+              if (tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + c)) {
+                throw new IllegalArgumentException(
+                    "non-primary key column with the \""
+                        + Attribute.BEFORE_PREFIX
+                        + "\" prefix, \""
+                        + (Attribute.BEFORE_PREFIX + c)
+                        + "\", is reserved as transaction metadata");
+              }
+            });
+
+    // Build a transactional table metadata
     TableMetadata.Builder builder = TableMetadata.newBuilder(tableMetadata);
     TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
     tableMetadata.getColumnNames().stream()
