@@ -3,6 +3,8 @@ package com.scalar.db.transaction.consensuscommit;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public final class TransactionalTable {
 
@@ -29,6 +31,12 @@ public final class TransactionalTable {
    * @return a transactional table metadata
    */
   public static TableMetadata convertToTransactionalTable(TableMetadata tableMetadata) {
+    List<String> nonPrimaryKeyColumns =
+        tableMetadata.getColumnNames().stream()
+            .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
+            .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
+            .collect(Collectors.toList());
+
     // Check if the table metadata already has the transactional columns
     TRANSACTION_META_COLUMNS.forEach(
         (c, t) -> {
@@ -37,30 +45,24 @@ public final class TransactionalTable {
                 "column \"" + c + "\" is reserved as transaction metadata");
           }
         });
-    tableMetadata.getColumnNames().stream()
-        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
-        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
-        .forEach(
-            c -> {
-              if (tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + c)) {
-                throw new IllegalArgumentException(
-                    "non-primary key column with the \""
-                        + Attribute.BEFORE_PREFIX
-                        + "\" prefix, \""
-                        + (Attribute.BEFORE_PREFIX + c)
-                        + "\", is reserved as transaction metadata");
-              }
-            });
+    nonPrimaryKeyColumns.forEach(
+        c -> {
+          String beforePrefixed = Attribute.BEFORE_PREFIX + c;
+          if (tableMetadata.getColumnNames().contains(beforePrefixed)) {
+            throw new IllegalArgumentException(
+                "non-primary key column with the \""
+                    + Attribute.BEFORE_PREFIX
+                    + "\" prefix, \""
+                    + beforePrefixed
+                    + "\", is reserved as transaction metadata");
+          }
+        });
 
     // Build a transactional table metadata
     TableMetadata.Builder builder = TableMetadata.newBuilder(tableMetadata);
     TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
-    tableMetadata.getColumnNames().stream()
-        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
-        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
-        .forEach(
-            c ->
-                builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
+    nonPrimaryKeyColumns.forEach(
+        c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
     return builder.build();
   }
 }
