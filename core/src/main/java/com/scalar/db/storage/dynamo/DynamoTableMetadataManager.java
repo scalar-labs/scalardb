@@ -3,8 +3,9 @@ package com.scalar.db.storage.dynamo;
 import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Operation;
-import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,10 +118,13 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
         .map(AttributeValue::s)
         .forEach(builder::addPartitionKey);
     if (metadata.containsKey(CLUSTERING_KEY)) {
-      // The clustering order is always ASC for now
       metadata.get(CLUSTERING_KEY).l().stream()
-          .map(AttributeValue::s)
-          .forEach(n -> builder.addClusteringKey(n, Scan.Ordering.Order.ASC));
+          .map(AttributeValue::m)
+          .forEach(
+              n -> {
+                for (Entry<String, AttributeValue> cKey : n.entrySet())
+                  builder.addClusteringKey(cKey.getKey(), Order.valueOf(cKey.getValue().s()));
+              });
     }
     if (metadata.containsKey(SECONDARY_INDEX)) {
       metadata.get(SECONDARY_INDEX).ss().forEach(builder::addSecondaryIndex);
@@ -214,16 +219,29 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
                     .map(pKey -> AttributeValue.builder().s(pKey).build())
                     .collect(Collectors.toList()))
             .build());
-    itemValues.put(
-        CLUSTERING_KEY,
-        AttributeValue.builder()
-            .l(
-                metadata.getClusteringKeyNames().stream()
-                    .map(pKey -> AttributeValue.builder().s(pKey).build())
-                    .collect(Collectors.toList()))
-            .build());
-    itemValues.put(
-        SECONDARY_INDEX, AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      itemValues.put(
+          CLUSTERING_KEY,
+          AttributeValue.builder()
+              .l(
+                  metadata.getClusteringKeyNames().stream()
+                      .map(
+                          pKey ->
+                              AttributeValue.builder()
+                                  .m(
+                                      ImmutableMap.of(
+                                          pKey,
+                                          AttributeValue.builder()
+                                              .s(metadata.getClusteringOrder(pKey).name())
+                                              .build()))
+                                  .build())
+                      .collect(Collectors.toList()))
+              .build());
+    }
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      itemValues.put(
+          SECONDARY_INDEX, AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
+    }
 
     PutItemRequest request =
         PutItemRequest.builder()

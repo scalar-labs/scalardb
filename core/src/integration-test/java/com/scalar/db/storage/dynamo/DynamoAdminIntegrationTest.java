@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -40,7 +41,6 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
     props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
-
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
     admin = new DynamoAdmin(new DynamoConfig(props));
     admin.createNamespace(NAMESPACE, Collections.emptyMap());
@@ -90,8 +90,8 @@ public class DynamoAdminIntegrationTest extends AdminIntegrationTestBase {
     // Fow now, the clustering order is always ASC in the DynamoDB adapter
     assertThat(tableMetadata.getClusteringOrder(COL_NAME1)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME2)).isNull();
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Scan.Ordering.Order.ASC);
-    assertThat(tableMetadata.getClusteringOrder(COL_NAME4)).isEqualTo(Scan.Ordering.Order.ASC);
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME3)).isEqualTo(Order.DESC);
+    assertThat(tableMetadata.getClusteringOrder(COL_NAME4)).isEqualTo(Order.ASC);
     assertThat(tableMetadata.getClusteringOrder(COL_NAME5)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME6)).isNull();
     assertThat(tableMetadata.getClusteringOrder(COL_NAME7)).isNull();
