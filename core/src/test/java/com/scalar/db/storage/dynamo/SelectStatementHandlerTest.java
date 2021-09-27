@@ -257,9 +257,7 @@ public class SelectStatementHandlerTest {
     visitor1.visit(new TextValue(ANY_TEXT_3));
     expectedBindMap.put(
         DynamoOperation.RANGE_KEY_ALIAS + "1",
-        AttributeValue.builder()
-            .b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive()))
-            .build());
+        AttributeValue.builder().b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive())).build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -316,9 +314,7 @@ public class SelectStatementHandlerTest {
     visitor1.visit(new TextValue(ANY_TEXT_4));
     expectedBindMap.put(
         DynamoOperation.RANGE_KEY_ALIAS + "1",
-        AttributeValue.builder()
-            .b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive()))
-            .build());
+        AttributeValue.builder().b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive())).build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
