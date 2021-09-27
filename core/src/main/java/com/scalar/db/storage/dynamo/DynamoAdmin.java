@@ -56,7 +56,6 @@ import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
-import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.Projection;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
@@ -196,9 +195,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     makeAttribute(PARTITION_KEY, metadata, columnsToAttributeDefinitions);
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       makeAttribute(CLUSTERING_KEY, metadata, columnsToAttributeDefinitions);
-      for (String clusteringKey : metadata.getClusteringKeyNames()) {
-        makeAttribute(clusteringKey, metadata, columnsToAttributeDefinitions);
-      }
     }
     if (!metadata.getSecondaryIndexNames().isEmpty()) {
       for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
@@ -209,9 +205,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     // build keys
     buildPrimaryKey(requestBuilder, metadata);
-
-    // build local indexes that corresponding to clustering keys
-    buildLocalIndexes(namespace, table, requestBuilder, metadata);
 
     // build secondary indexes
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
@@ -364,8 +357,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           "BOOLEAN type is not supported for a clustering key or a secondary index in DynamoDB");
     } else {
       ScalarAttributeType columnType;
-      if (column.equals(PARTITION_KEY) || column.equals(CLUSTERING_KEY)) {
+      if (column.equals(PARTITION_KEY)) {
         columnType = ScalarAttributeType.S;
+      } else if (column.equals(CLUSTERING_KEY)) {
+        columnType = ScalarAttributeType.B;
       } else {
         columnType = DATATYPE_MAP.get(metadata.getColumnDataType(column));
       }
@@ -383,33 +378,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
     }
     requestBuilder.keySchema(keySchemaElementList);
-  }
-
-  private void buildLocalIndexes(
-      String namespace,
-      String table,
-      CreateTableRequest.Builder requestBuilder,
-      TableMetadata metadata) {
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      List<LocalSecondaryIndex> localSecondaryIndexList = new ArrayList<>();
-      for (String clusteringKey : metadata.getClusteringKeyNames()) {
-        LocalSecondaryIndex.Builder localSecondaryIndexBuilder =
-            LocalSecondaryIndex.builder()
-                .indexName(getLocalIndexName(namespace, table, clusteringKey))
-                .keySchema(
-                    KeySchemaElement.builder()
-                        .attributeName(PARTITION_KEY)
-                        .keyType(KeyType.HASH)
-                        .build(),
-                    KeySchemaElement.builder()
-                        .attributeName(clusteringKey)
-                        .keyType(KeyType.RANGE)
-                        .build())
-                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        localSecondaryIndexList.add(localSecondaryIndexBuilder.build());
-      }
-      requestBuilder.localSecondaryIndexes(localSecondaryIndexList);
-    }
   }
 
   private void buildGlobalIndexes(
@@ -645,14 +613,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .scaleOutCooldown(COOL_DOWN_DURATION_SECS)
         .targetValue(TARGET_USAGE_RATE)
         .build();
-  }
-
-  private String getLocalIndexName(String namespace, String tableName, String keyName) {
-    return getFullTableName(namespacePrefix, namespace, tableName)
-        + "."
-        + INDEX_NAME_PREFIX
-        + "."
-        + keyName;
   }
 
   private String getGlobalIndexName(String namespace, String tableName, String keyName) {
