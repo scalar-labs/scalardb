@@ -18,9 +18,9 @@ public class CosmosOperation {
   private final Operation operation;
   private final TableMetadata metadata;
 
-  public CosmosOperation(Operation operation, CosmosTableMetadataManager metadataManager) {
+  public CosmosOperation(Operation operation, TableMetadata metadata) {
     this.operation = operation;
-    this.metadata = metadataManager.getTableMetadata(operation);
+    this.metadata = metadata;
   }
 
   public boolean isPrimaryKeySpecified() {

@@ -17,6 +17,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -46,12 +47,12 @@ public class PutStatementHandlerTest {
 
   private PutStatementHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private DynamoTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private UpdateItemResponse updateResponse;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new PutStatementHandler(client, metadataManager);
@@ -76,7 +77,7 @@ public class PutStatementHandlerTest {
     // Arrange
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut();
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
@@ -105,7 +106,7 @@ public class PutStatementHandlerTest {
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_INT_1)
             .withValue(ANY_NAME_4, ANY_INT_2);
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
     Map<String, AttributeValue> expectedBindMap = dynamoMutation.getValueBindMapWithKey();
@@ -143,7 +144,7 @@ public class PutStatementHandlerTest {
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut().withCondition(new PutIfNotExists());
 
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpressionWithKey();
     String expectedCondition = dynamoMutation.getIfNotExistsCondition();
@@ -167,7 +168,7 @@ public class PutStatementHandlerTest {
     // Arrange
     when(client.updateItem(any(UpdateItemRequest.class))).thenReturn(updateResponse);
     Put put = preparePut().withCondition(new PutIfExists());
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoMutation.getKeyMap();
     String updateExpression = dynamoMutation.getUpdateExpression();
     String expectedCondition = dynamoMutation.getIfExistsCondition();

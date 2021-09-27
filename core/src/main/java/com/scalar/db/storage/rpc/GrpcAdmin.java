@@ -12,6 +12,8 @@ import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
+import com.scalar.db.rpc.GetTableMetadataRequest;
+import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
@@ -37,7 +39,6 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   private final GrpcConfig config;
   private final ManagedChannel channel;
   private final DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub;
-  private final GrpcTableMetadataManager metadataManager;
 
   @Inject
   public GrpcAdmin(GrpcConfig config) {
@@ -47,18 +48,20 @@ public class GrpcAdmin implements DistributedStorageAdmin {
             .usePlaintext()
             .build();
     stub = DistributedStorageAdminGrpc.newBlockingStub(channel);
-    metadataManager = new GrpcTableMetadataManager(config, stub);
+  }
+
+  public GrpcAdmin(ManagedChannel channel, GrpcConfig config) {
+    this.channel = channel;
+    this.config = config;
+    stub = DistributedStorageAdminGrpc.newBlockingStub(channel);
   }
 
   @VisibleForTesting
   GrpcAdmin(
-      GrpcConfig config,
-      DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub,
-      GrpcTableMetadataManager metadataManager) {
-    this.config = config;
+      DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub, GrpcConfig config) {
     channel = null;
     this.stub = stub;
-    this.metadataManager = metadataManager;
+    this.config = config;
   }
 
   @Override
@@ -162,8 +165,21 @@ public class GrpcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  public TableMetadata getTableMetadata(String namespace, String table) {
-    return metadataManager.getTableMetadata(namespace, table);
+  public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
+    return execute(
+        () -> {
+          GetTableMetadataResponse response =
+              stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                  .getTableMetadata(
+                      GetTableMetadataRequest.newBuilder()
+                          .setNamespace(namespace)
+                          .setTable(table)
+                          .build());
+          if (!response.hasTableMetadata()) {
+            return null;
+          }
+          return ProtoUtil.toTableMetadata(response.getTableMetadata());
+        });
   }
 
   @Override

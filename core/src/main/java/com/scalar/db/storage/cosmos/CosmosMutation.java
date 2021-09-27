@@ -9,6 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.Collection;
 import java.util.Map;
@@ -22,8 +23,8 @@ import org.jooq.impl.DSL;
 /** A class to treating utilities for a mutation */
 @Immutable
 public class CosmosMutation extends CosmosOperation {
-  CosmosMutation(Mutation mutation, CosmosTableMetadataManager metadataManager) {
-    super(mutation, metadataManager);
+  CosmosMutation(Mutation mutation, TableMetadata metadata) {
+    super(mutation, metadata);
   }
 
   @Nonnull

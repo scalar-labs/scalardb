@@ -9,6 +9,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -94,7 +95,7 @@ public class JdbcTransaction implements DistributedTransaction {
   public Optional<Result> get(Get get) throws CrudException {
     try {
       return jdbcService.get(get, connection, namespace, tableName);
-    } catch (SQLException e) {
+    } catch (SQLException | ExecutionException e) {
       throw new CrudException("get operation failed", e);
     }
   }
@@ -103,7 +104,7 @@ public class JdbcTransaction implements DistributedTransaction {
   public List<Result> scan(Scan scan) throws CrudException {
     try {
       return jdbcService.scan(scan, connection, namespace, tableName);
-    } catch (SQLException e) {
+    } catch (SQLException | ExecutionException e) {
       throw new CrudException("scan operation failed", e);
     }
   }
@@ -120,6 +121,8 @@ public class JdbcTransaction implements DistributedTransaction {
       jdbcService.put(put, connection, namespace, tableName);
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
+    } catch (ExecutionException e) {
+      throw new CrudException("put operation failed", e);
     }
   }
 
@@ -143,6 +146,8 @@ public class JdbcTransaction implements DistributedTransaction {
       jdbcService.delete(delete, connection, namespace, tableName);
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
+    } catch (ExecutionException e) {
+      throw new CrudException("delete operation failed", e);
     }
   }
 

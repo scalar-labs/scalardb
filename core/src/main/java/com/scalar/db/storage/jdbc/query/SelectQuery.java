@@ -4,7 +4,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.Optional;
 public interface SelectQuery extends Query {
 
   class Builder {
-    private final JdbcTableMetadataManager tableMetadataManager;
     final RdbEngine rdbEngine;
     final List<String> projections;
     String schema;
@@ -31,21 +29,15 @@ public interface SelectQuery extends Query {
     boolean isRangeQuery;
     Optional<String> indexedColumn = Optional.empty();
 
-    Builder(
-        JdbcTableMetadataManager tableMetadataManager,
-        RdbEngine rdbEngine,
-        List<String> projections) {
-      this.tableMetadataManager = tableMetadataManager;
+    Builder(RdbEngine rdbEngine, List<String> projections) {
       this.rdbEngine = rdbEngine;
       this.projections = projections;
     }
 
-    public Builder from(String schema, String table) {
+    public Builder from(String schema, String table, TableMetadata tableMetadata) {
       this.schema = schema;
       this.table = table;
-
-      String fullTableName = schema + "." + table;
-      tableMetadata = tableMetadataManager.getTableMetadata(fullTableName);
+      this.tableMetadata = tableMetadata;
       return this;
     }
 

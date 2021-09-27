@@ -17,6 +17,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
@@ -52,7 +53,7 @@ public class OperationCheckerTest {
   private OperationChecker operationChecker;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     // Dummy metadata
@@ -77,7 +78,8 @@ public class OperationCheckerTest {
   }
 
   @Test
-  public void whenCheckingOperationWithWrongTable_shouldThrowIllegalArgumentException() {
+  public void whenCheckingOperationWithWrongTable_shouldThrowIllegalArgumentException()
+      throws ExecutionException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();

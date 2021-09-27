@@ -15,11 +15,11 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.Utility;
@@ -56,7 +56,7 @@ public class GrpcStorage implements DistributedStorage {
   private final ManagedChannel channel;
   private final DistributedStorageGrpc.DistributedStorageStub stub;
   private final DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
-  private final GrpcTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
 
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -74,8 +74,7 @@ public class GrpcStorage implements DistributedStorage {
             .build();
     stub = DistributedStorageGrpc.newStub(channel);
     blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
-    metadataManager =
-        new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
+    metadataManager = new TableMetadataManager(new GrpcAdmin(channel, config), config);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }
@@ -85,7 +84,7 @@ public class GrpcStorage implements DistributedStorage {
       GrpcConfig config,
       DistributedStorageGrpc.DistributedStorageStub stub,
       DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub,
-      GrpcTableMetadataManager metadataManager) {
+      TableMetadataManager metadataManager) {
     this.config = config;
     channel = null;
     this.stub = stub;
