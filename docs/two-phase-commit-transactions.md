@@ -169,4 +169,4 @@ In other cases, `validate()` does nothing.
 
 One of the use cases for Two-phase Commit Transactions is Microservice Transaction.
 Please see the following sample to learn Two-phase Commit Transactions further:
-- [Microservice Transaction Sample](https://github.com/scalar-labs/scalardb-samples/microservice-transaction-sample/)
+- [Microservice Transaction Sample](https://github.com/scalar-labs/scalardb-samples/tree/main/microservice-transaction-sample)
