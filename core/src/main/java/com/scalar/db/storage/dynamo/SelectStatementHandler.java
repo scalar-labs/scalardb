@@ -4,9 +4,11 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.Utility;
 import java.util.ArrayList;
@@ -14,8 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -30,7 +30,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 /**
  * A handler class for select statement
  *
- * @author Yuji Ito
+ * @author Yuji Ito, Pham Ba Thong
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
@@ -124,28 +124,17 @@ public class SelectStatementHandler extends StatementHandler {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
-    getIndexName(scan)
-        .ifPresent(
-            name -> {
-              String indexTableName = dynamoOperation.getIndexName(name);
-              builder.indexName(indexTableName);
-            });
-
     setConditions(builder, scan);
 
-    // When multiple clustering keys exist, the ordering and the limitation will be applied later
-    if (dynamoOperation.isSingleClusteringKey() && !scan.getOrderings().isEmpty()) {
-      scan.getOrderings()
-          .forEach(
-              o -> {
-                if (dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
-                    && o.getOrder() == Scan.Ordering.Order.DESC) {
-                  builder.scanIndexForward(false);
-                }
-              });
+    if (!scan.getOrderings().isEmpty()) {
+      for (Ordering o : scan.getOrderings()) {
+        builder.scanIndexForward(
+            !dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
+                || o.getOrder() != Order.DESC);
+      }
     }
 
-    if (dynamoOperation.isSingleClusteringKey() && scan.getLimit() > 0) {
+    if (scan.getLimit() > 0) {
       builder.limit(scan.getLimit());
     }
 
@@ -158,12 +147,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     QueryResponse queryResponse = client.query(builder.build());
-    List<Map<String, AttributeValue>> ret = new ArrayList<>(queryResponse.items());
-    if (!dynamoOperation.isSingleClusteringKey()) {
-      TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
-      ret = new ItemSorter(scan, tableMetadata).sort(ret);
-    }
-    return ret;
+    return new ArrayList<>(queryResponse.items());
   }
 
   private void projectionExpression(DynamoDbRequest.Builder builder, Selection selection) {
@@ -187,42 +171,22 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private Optional<String> getIndexName(Scan scan) {
-    if (scan.getStartClusteringKey().isPresent()) {
-      List<Value<?>> start = scan.getStartClusteringKey().get().get();
-      return Optional.of(start.get(start.size() - 1).getName());
-    }
-
-    if (scan.getEndClusteringKey().isPresent()) {
-      List<Value<?>> end = scan.getEndClusteringKey().get().get();
-      return Optional.of(end.get(end.size() - 1).getName());
-    }
-
-    return Optional.empty();
-  }
-
   private void setConditions(QueryRequest.Builder builder, Scan scan) {
     List<String> conditions = new ArrayList<>();
-    List<String> filters = new ArrayList<>();
 
     conditions.add(getPartitionKeyCondition());
 
-    boolean isRangeEnabled = setRangeCondition(scan, conditions);
-    setStartCondition(scan, conditions, filters, isRangeEnabled);
-    setEndCondition(scan, conditions, filters, isRangeEnabled);
+    boolean isRangeEnabled = setRangeConditionOnConcatenatedClusteringKey(scan, conditions);
+    setStartConditionOnConcatenatedClusteringKey(scan, conditions, isRangeEnabled);
+    setEndConditionOnConcatenatedClusteringKey(scan, conditions, isRangeEnabled);
     String keyConditions = String.join(" AND ", conditions);
 
     Map<String, AttributeValue> bindMap = getPartitionKeyBindMap(scan);
     if (isRangeEnabled) {
-      bindMap.putAll(getRangeBindMap(scan));
+      bindMap.putAll(getRangeBindMapForConcatenatedClusteringKey(scan));
     }
-    bindMap.putAll(getStartBindMap(scan, isRangeEnabled));
-    bindMap.putAll(getEndBindMap(scan, isRangeEnabled));
-
-    if (!filters.isEmpty()) {
-      String filterExpression = String.join(" AND ", filters);
-      builder.filterExpression(filterExpression);
-    }
+    bindMap.putAll(getStartBindMapOnConcatenatedClusteringKey(scan, isRangeEnabled));
+    bindMap.putAll(getEndBindMapOnConcatenatedClusteringKey(scan, isRangeEnabled));
 
     builder.keyConditionExpression(keyConditions).expressionAttributeValues(bindMap);
   }
@@ -242,7 +206,7 @@ public class SelectStatementHandler extends StatementHandler {
     return bindMap;
   }
 
-  private boolean setRangeCondition(Scan scan, List<String> conditions) {
+  private boolean setRangeConditionOnConcatenatedClusteringKey(Scan scan, List<String> conditions) {
     if (!scan.getStartClusteringKey().isPresent() || !scan.getEndClusteringKey().isPresent()) {
       return false;
     }
@@ -256,100 +220,114 @@ public class SelectStatementHandler extends StatementHandler {
       if (!scan.getStartInclusive() || !scan.getEndInclusive()) {
         throw new IllegalArgumentException("DynamoDB does NOT support scan with exclusive range.");
       }
-      conditions.add(startKeyName + DynamoOperation.RANGE_CONDITION);
+      conditions.add(DynamoOperation.CLUSTERING_KEY + DynamoOperation.RANGE_CONDITION);
       return true;
     } else {
       return false;
     }
   }
 
-  private void setStartCondition(
-      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
+  private void setStartConditionOnConcatenatedClusteringKey(
+      Scan scan, List<String> conditions, boolean isRangeEnabled) {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> start = k.get();
-              for (int i = 0; i < start.size(); i++) {
-                Value<?> value = start.get(i);
-                List<String> elements = new ArrayList<>();
-                elements.add(value.getName());
-                if (i < start.size() - 1) {
-                  elements.add("=");
-                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
-                  filters.add(String.join(" ", elements));
-                } else if (!isRangeEnabled) {
-                  if (scan.getStartInclusive()) {
-                    elements.add(">=");
-                  } else {
-                    elements.add(">");
-                  }
-                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
-                  conditions.add(String.join(" ", elements));
+              List<String> elements = new ArrayList<>();
+              elements.add(DynamoOperation.CLUSTERING_KEY);
+              if (!isRangeEnabled) {
+                if (scan.getStartInclusive()) {
+                  elements.add(">=");
+                } else {
+                  elements.add(">");
                 }
+                elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0");
+                conditions.add(String.join(" ", elements));
               }
             });
   }
 
-  private void setEndCondition(
-      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
+  private void setEndConditionOnConcatenatedClusteringKey(
+      Scan scan, List<String> conditions, boolean isRangeEnabled) {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
-              List<Value<?>> end = k.get();
-              for (int i = 0; i < end.size(); i++) {
-                Value<?> value = end.get(i);
-                List<String> elements = new ArrayList<>();
-                elements.add(value.getName());
-                if (i < end.size() - 1) {
-                  elements.add("=");
-                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
-                  filters.add(String.join(" ", elements));
-                } else if (!isRangeEnabled) {
-                  if (scan.getEndInclusive()) {
-                    elements.add("<=");
-                  } else {
-                    elements.add("<");
-                  }
-                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
-                  conditions.add(String.join(" ", elements));
+              List<String> elements = new ArrayList<>();
+              elements.add(DynamoOperation.CLUSTERING_KEY);
+              if (!isRangeEnabled) {
+                if (scan.getEndInclusive()) {
+                  elements.add("<=");
+                } else {
+                  elements.add("<");
                 }
+                elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + "0");
+                conditions.add(String.join(" ", elements));
               }
             });
   }
 
-  private Map<String, AttributeValue> getRangeBindMap(Scan scan) {
+  private Map<String, AttributeValue> getRangeBindMapForConcatenatedClusteringKey(Scan scan) {
     ValueBinder binder = new ValueBinder(DynamoOperation.RANGE_KEY_ALIAS);
+
+    OrderedConcatenationVisitor startConcatenatedClusteringKeyValueVisitor =
+        new OrderedConcatenationVisitor();
     List<Value<?>> start = scan.getStartClusteringKey().get().get();
+    for (Value<?> s : start) {
+      s.accept(startConcatenatedClusteringKeyValueVisitor);
+    }
+    OrderedConcatenationVisitor endConcatenatedClusteringKeyValueVisitor =
+        new OrderedConcatenationVisitor();
     List<Value<?>> end = scan.getEndClusteringKey().get().get();
-    start.get(start.size() - 1).accept(binder);
-    end.get(end.size() - 1).accept(binder);
+    for (Value<?> e : end) {
+      e.accept(endConcatenatedClusteringKeyValueVisitor);
+    }
+
+    binder.visit(new BlobValue(startConcatenatedClusteringKeyValueVisitor.buildAsStartInclusive()));
+    binder.visit(new BlobValue(endConcatenatedClusteringKeyValueVisitor.buildAsEndInclusive()));
 
     return binder.build();
   }
 
-  private Map<String, AttributeValue> getStartBindMap(Scan scan, boolean isRangeEnabled) {
-    ValueBinder binder = new ValueBinder(DynamoOperation.START_CLUSTERING_KEY_ALIAS);
-    scan.getStartClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> start = k.get();
-              int size = isRangeEnabled ? start.size() - 1 : start.size();
-              IntStream.range(0, size).forEach(i -> start.get(i).accept(binder));
-            });
-
-    return binder.build();
+  private Map<String, AttributeValue> getStartBindMapOnConcatenatedClusteringKey(
+      Scan scan, boolean isRangeEnabled) {
+    if (isRangeEnabled || !scan.getStartClusteringKey().isPresent()) {
+      return Collections.emptyMap();
+    } else {
+      ValueBinder binder = new ValueBinder(DynamoOperation.START_CLUSTERING_KEY_ALIAS);
+      OrderedConcatenationVisitor startValueVisitor = new OrderedConcatenationVisitor();
+      List<Value<?>> start = scan.getStartClusteringKey().get().get();
+      for (Value<?> s : start) {
+        s.accept(startValueVisitor);
+      }
+      byte[] value;
+      if (scan.getStartInclusive()) {
+        value = startValueVisitor.buildAsStartInclusive();
+      } else {
+        value = startValueVisitor.buildAsStartExclusive();
+      }
+      binder.visit(new BlobValue(value));
+      return binder.build();
+    }
   }
 
-  private Map<String, AttributeValue> getEndBindMap(Scan scan, boolean isRangeEnabled) {
-    ValueBinder binder = new ValueBinder(DynamoOperation.END_CLUSTERING_KEY_ALIAS);
-    scan.getEndClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> end = k.get();
-              int size = isRangeEnabled ? end.size() - 1 : end.size();
-              IntStream.range(0, size).forEach(i -> end.get(i).accept(binder));
-            });
-
-    return binder.build();
+  private Map<String, AttributeValue> getEndBindMapOnConcatenatedClusteringKey(
+      Scan scan, boolean isRangeEnabled) {
+    if (isRangeEnabled || !scan.getEndClusteringKey().isPresent()) {
+      return Collections.emptyMap();
+    } else {
+      ValueBinder binder = new ValueBinder(DynamoOperation.END_CLUSTERING_KEY_ALIAS);
+      OrderedConcatenationVisitor endValueVisitor = new OrderedConcatenationVisitor();
+      List<Value<?>> end = scan.getEndClusteringKey().get().get();
+      for (Value<?> e : end) {
+        e.accept(endValueVisitor);
+      }
+      byte[] value;
+      if (scan.getEndInclusive()) {
+        value = endValueVisitor.buildAsEndInclusive();
+      } else {
+        value = endValueVisitor.buildAsEndExclusive();
+      }
+      binder.visit(new BlobValue(value));
+      return binder.build();
+    }
   }
 }

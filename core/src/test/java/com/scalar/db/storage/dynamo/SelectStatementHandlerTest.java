@@ -15,6 +15,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +27,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -237,17 +239,27 @@ public class SelectStatementHandlerTest {
             + " = "
             + DynamoOperation.PARTITION_KEY_ALIAS
             + " AND "
-            + ANY_NAME_2
+            + DynamoOperation.CLUSTERING_KEY
             + DynamoOperation.RANGE_CONDITION;
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+    OrderedConcatenationVisitor visitor0 = new OrderedConcatenationVisitor();
+    visitor0.visit(new TextValue(ANY_TEXT_2));
     expectedBindMap.put(
-        DynamoOperation.RANGE_KEY_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_2).build());
+        DynamoOperation.RANGE_KEY_ALIAS + "0",
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor0.buildAsStartInclusive()))
+            .build());
+    OrderedConcatenationVisitor visitor1 = new OrderedConcatenationVisitor();
+    visitor1.visit(new TextValue(ANY_TEXT_3));
     expectedBindMap.put(
-        DynamoOperation.RANGE_KEY_ALIAS + "1", AttributeValue.builder().s(ANY_TEXT_3).build());
+        DynamoOperation.RANGE_KEY_ALIAS + "1",
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive()))
+            .build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -284,32 +296,29 @@ public class SelectStatementHandlerTest {
             + " = "
             + DynamoOperation.PARTITION_KEY_ALIAS
             + " AND "
-            + ANY_NAME_3
+            + DynamoOperation.CLUSTERING_KEY
             + DynamoOperation.RANGE_CONDITION;
-    String expectedFilter =
-        ANY_NAME_2
-            + " = "
-            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
-            + "0 AND "
-            + ANY_NAME_2
-            + " = "
-            + DynamoOperation.END_CLUSTERING_KEY_ALIAS
-            + "0";
     DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+    OrderedConcatenationVisitor visitor0 = new OrderedConcatenationVisitor();
+    visitor0.visit(new TextValue(ANY_TEXT_2));
+    visitor0.visit(new TextValue(ANY_TEXT_3));
     expectedBindMap.put(
-        DynamoOperation.RANGE_KEY_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
+        DynamoOperation.RANGE_KEY_ALIAS + "0",
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor0.buildAsStartInclusive()))
+            .build());
+    OrderedConcatenationVisitor visitor1 = new OrderedConcatenationVisitor();
+    visitor1.visit(new TextValue(ANY_TEXT_2));
+    visitor1.visit(new TextValue(ANY_TEXT_4));
     expectedBindMap.put(
-        DynamoOperation.RANGE_KEY_ALIAS + "1", AttributeValue.builder().s(ANY_TEXT_4).build());
-    expectedBindMap.put(
-        DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0",
-        AttributeValue.builder().s(ANY_TEXT_2).build());
-    expectedBindMap.put(
-        DynamoOperation.END_CLUSTERING_KEY_ALIAS + "0",
-        AttributeValue.builder().s(ANY_TEXT_2).build());
+        DynamoOperation.RANGE_KEY_ALIAS + "1",
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor1.buildAsEndInclusive()))
+            .build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -319,7 +328,6 @@ public class SelectStatementHandlerTest {
     verify(client).query(captor.capture());
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
-    assertThat(actualRequest.filterExpression()).isEqualTo(expectedFilter);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
   }
 
@@ -340,7 +348,7 @@ public class SelectStatementHandlerTest {
             + " = "
             + DynamoOperation.PARTITION_KEY_ALIAS
             + " AND "
-            + ANY_NAME_2
+            + DynamoOperation.CLUSTERING_KEY
             + " >= "
             + DynamoOperation.START_CLUSTERING_KEY_ALIAS
             + "0";
@@ -349,9 +357,13 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+    OrderedConcatenationVisitor visitor = new OrderedConcatenationVisitor();
+    visitor.visit(new TextValue(ANY_TEXT_2));
     expectedBindMap.put(
         DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0",
-        AttributeValue.builder().s(ANY_TEXT_2).build());
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor.buildAsStartInclusive()))
+            .build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -362,7 +374,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
-    assertThat(actualRequest.scanIndexForward()).isNull();
+    assertThat(actualRequest.scanIndexForward()).isTrue();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
   }
 
@@ -384,7 +396,7 @@ public class SelectStatementHandlerTest {
             + " = "
             + DynamoOperation.PARTITION_KEY_ALIAS
             + " AND "
-            + ANY_NAME_2
+            + DynamoOperation.CLUSTERING_KEY
             + " >= "
             + DynamoOperation.START_CLUSTERING_KEY_ALIAS
             + "0";
@@ -393,9 +405,13 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+    OrderedConcatenationVisitor visitor = new OrderedConcatenationVisitor();
+    visitor.visit(new TextValue(ANY_TEXT_2));
     expectedBindMap.put(
         DynamoOperation.START_CLUSTERING_KEY_ALIAS + "0",
-        AttributeValue.builder().s(ANY_TEXT_2).build());
+        AttributeValue.builder()
+            .b(SdkBytes.fromByteArray(visitor.buildAsStartInclusive()))
+            .build());
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -406,7 +422,7 @@ public class SelectStatementHandlerTest {
     QueryRequest actualRequest = captor.getValue();
     assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
     assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
-    assertThat(actualRequest.scanIndexForward()).isNull();
+    assertThat(actualRequest.scanIndexForward()).isTrue();
     assertThat(actualRequest.limit()).isEqualTo(ANY_LIMIT);
   }
 }
