@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':core')
+    implementation group: 'com.graphql-java', name: 'graphql-java', version: "${graphqlJavaVersion}"
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+}
