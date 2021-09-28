@@ -214,16 +214,20 @@ public class DynamoTableMetadataManager implements TableMetadataManager {
                     .map(pKey -> AttributeValue.builder().s(pKey).build())
                     .collect(Collectors.toList()))
             .build());
-    itemValues.put(
-        CLUSTERING_KEY,
-        AttributeValue.builder()
-            .l(
-                metadata.getClusteringKeyNames().stream()
-                    .map(pKey -> AttributeValue.builder().s(pKey).build())
-                    .collect(Collectors.toList()))
-            .build());
-    itemValues.put(
-        SECONDARY_INDEX, AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      itemValues.put(
+          CLUSTERING_KEY,
+          AttributeValue.builder()
+              .l(
+                  metadata.getClusteringKeyNames().stream()
+                      .map(pKey -> AttributeValue.builder().s(pKey).build())
+                      .collect(Collectors.toList()))
+              .build());
+    }
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      itemValues.put(
+          SECONDARY_INDEX, AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
+    }
 
     PutItemRequest request =
         PutItemRequest.builder()
