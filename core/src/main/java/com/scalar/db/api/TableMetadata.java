@@ -31,8 +31,8 @@ public class TableMetadata {
       LinkedHashSet<String> clusteringKeyNames,
       Map<String, Order> clusteringOrders,
       Set<String> secondaryIndexNames) {
-    this.columnNames = new ImmutableLinkedHashSet<>(Objects.requireNonNull(columns.keySet()));
-    this.columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columns));
+    columnNames = new ImmutableLinkedHashSet<>(Objects.requireNonNull(columns.keySet()));
+    columnDataTypes = ImmutableMap.copyOf(Objects.requireNonNull(columns));
     this.partitionKeyNames =
         new ImmutableLinkedHashSet<>(Objects.requireNonNull(partitionKeyNames));
     this.clusteringKeyNames =
@@ -48,6 +48,16 @@ public class TableMetadata {
    */
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  /**
+   * Creates a new builder instance based on a prototype
+   *
+   * @param prototype a prototype for a new builder
+   * @return a new builder instance
+   */
+  public static Builder newBuilder(TableMetadata prototype) {
+    return new Builder(prototype);
   }
 
   /**
@@ -144,6 +154,14 @@ public class TableMetadata {
     private final Set<String> secondaryIndexNames = new HashSet<>();
 
     private Builder() {}
+
+    private Builder(TableMetadata prototype) {
+      columns.putAll(prototype.columnDataTypes);
+      partitionKeyNames.addAll(prototype.partitionKeyNames);
+      clusteringKeyNames.addAll(prototype.clusteringKeyNames);
+      clusteringOrders.putAll(prototype.clusteringOrders);
+      secondaryIndexNames.addAll(prototype.secondaryIndexNames);
+    }
 
     public Builder addColumn(String name, DataType type) {
       columns.put(name, type);
