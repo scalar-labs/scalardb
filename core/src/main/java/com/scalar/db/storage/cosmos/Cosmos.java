@@ -17,6 +17,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.Utility;
 import java.util.List;
@@ -36,7 +37,7 @@ public class Cosmos implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
 
   private final CosmosClient client;
-  private final CosmosTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
@@ -60,7 +61,7 @@ public class Cosmos implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    metadataManager = new CosmosTableMetadataManager(client, namespacePrefix);
+    metadataManager = new TableMetadataManager(new CosmosAdmin(client, config), config);
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
@@ -168,7 +169,9 @@ public class Cosmos implements DistributedStorage {
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
     operationChecker.check(mutations);
-    mutations.forEach(operationChecker::check);
+    for (Mutation mutation : mutations) {
+      operationChecker.check(mutation);
+    }
     batchHandler.handle(mutations);
   }
 

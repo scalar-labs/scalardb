@@ -10,16 +10,20 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.StorageRuntimeException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
+import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -27,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
@@ -105,9 +110,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
                       .build())
               .put(RdbEngine.SQL_SERVER, ImmutableMap.<DataType, String>builder().build())
               .build();
+
+  public static final String METADATA_SCHEMA = "scalardb";
+  public static final String METADATA_TABLE = "metadata";
+  @VisibleForTesting static final String METADATA_COL_FULL_TABLE_NAME = "full_table_name";
+  @VisibleForTesting static final String METADATA_COL_COLUMN_NAME = "column_name";
+  @VisibleForTesting static final String METADATA_COL_DATA_TYPE = "data_type";
+  @VisibleForTesting static final String METADATA_COL_KEY_TYPE = "key_type";
+  @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
+  @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
+  @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
+
   private final BasicDataSource dataSource;
   private final Optional<String> schemaPrefix;
-  private final JdbcTableMetadataManager metadataManager;
   private final RdbEngine rdbEngine;
 
   @Inject
@@ -115,18 +130,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     dataSource = JdbcUtils.initDataSource(config);
     schemaPrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    metadataManager = new JdbcTableMetadataManager(dataSource, schemaPrefix, rdbEngine);
+  }
+
+  public JdbcDatabaseAdmin(BasicDataSource dataSource, JdbcConfig config) {
+    this.dataSource = dataSource;
+    schemaPrefix = config.getNamespacePrefix();
+    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
   }
 
   @VisibleForTesting
-  public JdbcDatabaseAdmin(
-      BasicDataSource dataSource,
-      JdbcTableMetadataManager metadataManager,
-      Optional<String> namespacePrefix,
-      RdbEngine rdbEngine) {
+  JdbcDatabaseAdmin(
+      BasicDataSource dataSource, Optional<String> schemaPrefix, RdbEngine rdbEngine) {
     this.dataSource = dataSource;
-    this.metadataManager = metadataManager;
-    this.schemaPrefix = namespacePrefix;
+    this.schemaPrefix = schemaPrefix;
     this.rdbEngine = rdbEngine;
   }
 
@@ -165,13 +181,325 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       throw new ExecutionException("creating the table failed", e);
     }
-    metadataManager.addTableMetadata(namespace, table, metadata);
+    addTableMetadata(namespace, table, metadata);
+  }
+
+  private void addTableMetadata(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    createMetadataSchemaAndTableIfNotExist();
+    try (Connection connection = dataSource.getConnection()) {
+      // Start transaction to commit all the insert statements at once
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+      LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
+      orderedColumns.addAll(metadata.getClusteringKeyNames());
+      orderedColumns.addAll(metadata.getColumnNames());
+
+      int ordinalPosition = 1;
+      try {
+        for (String column : orderedColumns) {
+          insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
+        }
+        connection.commit();
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("adding the table metadata failed", e);
+    }
+  }
+
+  private void createMetadataSchemaAndTableIfNotExist() throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      try {
+        createMetadataSchemaIfNotExists(connection);
+        createMetadataTableIfNotExists(connection);
+        connection.commit();
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+
+    } catch (SQLException e) {
+      throw new ExecutionException("creating the metadata table failed", e);
+    }
+  }
+
+  private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(getMetadataSchema()));
+        break;
+      case SQL_SERVER:
+        try {
+          execute(connection, "CREATE SCHEMA " + enclose(getMetadataSchema()));
+        } catch (SQLException e) {
+          // Suppress the exception thrown when the schema already exists
+          if (e.getErrorCode() != 2714) {
+            throw e;
+          }
+        }
+
+        break;
+      case ORACLE:
+        try {
+          execute(
+              connection,
+              "CREATE USER " + enclose(getMetadataSchema()) + " IDENTIFIED BY \"oracle\"");
+        } catch (SQLException e) {
+          // Suppress the exception thrown when the user already exists
+          if (e.getErrorCode() != 1920) {
+            throw e;
+          }
+        }
+        execute(
+            connection, "ALTER USER " + enclose(getMetadataSchema()) + " quota unlimited on USERS");
+        break;
+    }
+  }
+
+  @SuppressFBWarnings("SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE")
+  private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
+    String createTableStatement =
+        "CREATE TABLE "
+            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+            + "("
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " "
+            + getTextType(128)
+            + ","
+            + enclose(METADATA_COL_COLUMN_NAME)
+            + " "
+            + getTextType(128)
+            + ","
+            + enclose(METADATA_COL_DATA_TYPE)
+            + " "
+            + getTextType(20)
+            + " NOT NULL,"
+            + enclose(METADATA_COL_KEY_TYPE)
+            + " "
+            + getTextType(20)
+            + ","
+            + enclose(METADATA_COL_CLUSTERING_ORDER)
+            + " "
+            + getTextType(10)
+            + ","
+            + enclose(METADATA_COL_INDEXED)
+            + " "
+            + getBooleanType()
+            + " NOT NULL,"
+            + enclose(METADATA_COL_ORDINAL_POSITION)
+            + " INTEGER NOT NULL,"
+            + "PRIMARY KEY ("
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + ", "
+            + enclose(METADATA_COL_COLUMN_NAME)
+            + "))";
+
+    String createTableIfNotExistsStatement;
+    switch (rdbEngine) {
+      case POSTGRESQL:
+      case MYSQL:
+        createTableIfNotExistsStatement =
+            createTableStatement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+        execute(connection, createTableIfNotExistsStatement);
+        break;
+      case SQL_SERVER:
+        try {
+          execute(connection, createTableStatement);
+        } catch (SQLException e) {
+          // Suppress the exception thrown when the table already exists
+          if (e.getErrorCode() != 2714) {
+            throw e;
+          }
+        }
+        break;
+      case ORACLE:
+        try {
+          execute(connection, createTableStatement);
+        } catch (SQLException e) {
+          // Suppress the exception thrown when the table already exists
+          if (e.getErrorCode() != 955) {
+            throw e;
+          }
+        }
+        break;
+      default:
+        throw new UnsupportedOperationException("rdb engine not supported");
+    }
+  }
+
+  private String getTextType(int charLength) {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      return String.format("VARCHAR2(%s)", charLength);
+    }
+    return String.format("VARCHAR(%s)", charLength);
+  }
+
+  private String getBooleanType() {
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        return "BOOLEAN";
+      case SQL_SERVER:
+        return "BIT";
+      case ORACLE:
+        return "NUMBER(1)";
+      default:
+        throw new UnsupportedOperationException(
+            String.format("The rdb engine %s is not supported", rdbEngine));
+    }
+  }
+
+  private String getMetadataSchema() {
+    return getFullNamespaceName(schemaPrefix, METADATA_SCHEMA);
+  }
+
+  private void insertMetadataColumn(
+      String schema,
+      String table,
+      TableMetadata metadata,
+      Connection connection,
+      int ordinalPosition,
+      String column)
+      throws SQLException {
+    KeyType keyType = null;
+    if (metadata.getPartitionKeyNames().contains(column)) {
+      keyType = KeyType.PARTITION;
+    }
+    if (metadata.getClusteringKeyNames().contains(column)) {
+      keyType = KeyType.CLUSTERING;
+    }
+
+    String insertStatement =
+        getInsertStatement(
+            schema,
+            table,
+            column,
+            metadata.getColumnDataType(column),
+            keyType,
+            metadata.getClusteringOrder(column),
+            metadata.getSecondaryIndexNames().contains(column),
+            ordinalPosition);
+    execute(connection, insertStatement);
+  }
+
+  private String getInsertStatement(
+      String schema,
+      String table,
+      String columnName,
+      DataType dataType,
+      @Nullable KeyType keyType,
+      @Nullable Ordering.Order ckOrder,
+      boolean indexed,
+      int ordinalPosition) {
+
+    return String.format(
+        "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
+        encloseFullTableName(getMetadataSchema(), METADATA_TABLE),
+        getFullTableName(schemaPrefix, schema, table),
+        columnName,
+        dataType.toString(),
+        keyType != null ? "'" + keyType + "'" : "NULL",
+        ckOrder != null ? "'" + ckOrder + "'" : "NULL",
+        computeBooleanValue(indexed),
+        ordinalPosition);
+  }
+
+  private String computeBooleanValue(boolean value) {
+    switch (rdbEngine) {
+      case ORACLE:
+      case SQL_SERVER:
+        return value ? "1" : "0";
+      default:
+        return value ? "true" : "false";
+    }
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     dropTableInternal(namespace, table);
-    metadataManager.deleteTableMetadata(namespace, table);
+    deleteTableMetadata(namespace, table);
+  }
+
+  private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
+    try (Connection connection = dataSource.getConnection()) {
+      connection.setAutoCommit(false);
+      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      try {
+        execute(connection, getDeleteTableMetadataStatement(namespace, table));
+        deleteMetadataSchemaAndTableIfEmpty(connection);
+        connection.commit();
+      } catch (SQLException e) {
+        connection.rollback();
+        throw e;
+      }
+
+    } catch (SQLException e) {
+      if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
+        return;
+      }
+      throw new ExecutionException(
+          String.format(
+              "deleting the %s table metadata failed ",
+              getFullTableName(schemaPrefix, namespace, table)),
+          e);
+    }
+  }
+
+  private String getDeleteTableMetadataStatement(String schema, String table) {
+    return "DELETE FROM "
+        + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+        + " WHERE "
+        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + " = '"
+        + getFullTableName(schemaPrefix, schema, table)
+        + "'";
+  }
+
+  private void deleteMetadataSchemaAndTableIfEmpty(Connection connection) throws SQLException {
+    if (isMetadataTableEmpty(connection)) {
+      deleteMetadataTable(connection);
+      deleteMetadataSchema(connection);
+    }
+  }
+
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
+  private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
+    String selectAllTables =
+        "SELECT DISTINCT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE);
+    try (Statement statement = connection.createStatement();
+        ResultSet results = statement.executeQuery(selectAllTables)) {
+      return !results.next();
+    }
+  }
+
+  private void deleteMetadataTable(Connection connection) throws SQLException {
+    String dropTableStatement =
+        "DROP TABLE "
+            + encloseFullTableName(
+                getFullNamespaceName(schemaPrefix, METADATA_SCHEMA), METADATA_TABLE);
+
+    execute(connection, dropTableStatement);
+  }
+
+  private void deleteMetadataSchema(Connection connection) throws SQLException {
+    String dropStatement;
+    if (rdbEngine == RdbEngine.ORACLE) {
+      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, METADATA_SCHEMA));
+    } else {
+      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, METADATA_SCHEMA));
+    }
+
+    execute(connection, dropStatement);
   }
 
   @Override
@@ -209,19 +537,113 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   @Override
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
-    try {
-      return metadataManager.getTableMetadata(namespace, table);
-    } catch (StorageRuntimeException e) {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    boolean tableExists = false;
+
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(getSelectColumnsStatement())) {
+      preparedStatement.setString(1, getFullTableName(schemaPrefix, namespace, table));
+
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        while (resultSet.next()) {
+          tableExists = true;
+
+          String columnName = resultSet.getString(METADATA_COL_COLUMN_NAME);
+          DataType dataType = DataType.valueOf(resultSet.getString(METADATA_COL_DATA_TYPE));
+          builder.addColumn(columnName, dataType);
+
+          boolean indexed = resultSet.getBoolean(METADATA_COL_INDEXED);
+          if (indexed) {
+            builder.addSecondaryIndex(columnName);
+          }
+
+          String keyType = resultSet.getString(METADATA_COL_KEY_TYPE);
+          if (keyType == null) {
+            continue;
+          }
+
+          switch (KeyType.valueOf(keyType)) {
+            case PARTITION:
+              builder.addPartitionKey(columnName);
+              break;
+            case CLUSTERING:
+              Scan.Ordering.Order clusteringOrder =
+                  Scan.Ordering.Order.valueOf(resultSet.getString(METADATA_COL_CLUSTERING_ORDER));
+              builder.addClusteringKey(columnName, clusteringOrder);
+              break;
+            default:
+              throw new AssertionError("invalid key type: " + keyType);
+          }
+        }
+      }
+    } catch (SQLException e) {
       throw new ExecutionException("getting a table metadata failed", e);
     }
+
+    if (!tableExists) {
+      return null;
+    }
+
+    return builder.build();
+  }
+
+  private String getSelectColumnsStatement() {
+    return "SELECT "
+        + enclose(METADATA_COL_COLUMN_NAME)
+        + ", "
+        + enclose(METADATA_COL_DATA_TYPE)
+        + ", "
+        + enclose(METADATA_COL_KEY_TYPE)
+        + ", "
+        + enclose(METADATA_COL_CLUSTERING_ORDER)
+        + ", "
+        + enclose(METADATA_COL_INDEXED)
+        + " FROM "
+        + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+        + " WHERE "
+        + enclose(METADATA_COL_FULL_TABLE_NAME)
+        + " = ? ORDER BY "
+        + enclose(METADATA_COL_ORDINAL_POSITION)
+        + " ASC";
   }
 
   @Override
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
-    try {
-      return metadataManager.getTableNames(namespace);
-    } catch (StorageRuntimeException e) {
+    String selectTablesOfNamespaceStatement =
+        "SELECT DISTINCT "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " FROM "
+            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+            + " WHERE "
+            + enclose(METADATA_COL_FULL_TABLE_NAME)
+            + " LIKE ?";
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement =
+            connection.prepareStatement(selectTablesOfNamespaceStatement)) {
+      String fullSchemaName = Utility.getFullNamespaceName(schemaPrefix, namespace) + ".";
+      preparedStatement.setString(1, fullSchemaName + "%");
+      try (ResultSet results = preparedStatement.executeQuery()) {
+        Set<String> tableNames = new HashSet<>();
+        while (results.next()) {
+          String tableName =
+              results.getString(METADATA_COL_FULL_TABLE_NAME).substring(fullSchemaName.length());
+          tableNames.add(tableName);
+        }
+        return tableNames;
+      }
+    } catch (SQLException e) {
+      // An exception will be thrown if the metadata table does not exist when executing the select
+      // query
+      if ((rdbEngine == RdbEngine.MYSQL && e.getErrorCode() == 1049)
+          || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
+          || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
+          || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
+        return Collections.emptySet();
+      }
       throw new ExecutionException("retrieving the namespace table names failed", e);
     }
   }

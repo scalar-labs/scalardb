@@ -10,7 +10,9 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.util.Utility;
 import java.util.Collections;
 import java.util.List;
@@ -32,18 +34,19 @@ import org.jooq.impl.DSL;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
-  public SelectStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
+  public SelectStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 
   @Override
   @Nonnull
-  protected List<Record> execute(Operation operation) throws CosmosException {
+  protected List<Record> execute(Operation operation) throws CosmosException, ExecutionException {
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
     try {
       if (operation instanceof Get) {
-        return executeRead(operation);
+        return executeRead(operation, tableMetadata);
       } else {
-        return executeQuery(operation);
+        return executeQuery(operation, tableMetadata);
       }
     } catch (CosmosException e) {
       if (e.getStatusCode() == CosmosErrorCode.NOT_FOUND.get()) {
@@ -53,12 +56,13 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private List<Record> executeRead(Operation operation) throws CosmosException {
-    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
+  private List<Record> executeRead(Operation operation, TableMetadata tableMetadata)
+      throws CosmosException {
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, tableMetadata);
     cosmosOperation.checkArgument(Get.class);
 
-    if (Utility.isSecondaryIndexSpecified(operation, metadataManager.getTableMetadata(operation))) {
-      return executeReadWithIndex(operation);
+    if (Utility.isSecondaryIndexSpecified(operation, tableMetadata)) {
+      return executeReadWithIndex(operation, tableMetadata);
     }
 
     String id = cosmosOperation.getId();
@@ -69,8 +73,9 @@ public class SelectStatementHandler extends StatementHandler {
     return Collections.singletonList(record);
   }
 
-  private List<Record> executeReadWithIndex(Operation operation) throws CosmosException {
-    String query = makeQueryWithIndex(operation);
+  private List<Record> executeReadWithIndex(Operation operation, TableMetadata tableMetadata)
+      throws CosmosException {
+    String query = makeQueryWithIndex(operation, tableMetadata);
     CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
     CosmosPagedIterable<Record> iterable =
         getContainer(operation).queryItems(query, options, Record.class);
@@ -78,15 +83,16 @@ public class SelectStatementHandler extends StatementHandler {
     return Lists.newArrayList(iterable);
   }
 
-  private List<Record> executeQuery(Operation operation) throws CosmosException {
-    CosmosOperation cosmosOperation = new CosmosOperation(operation, metadataManager);
+  private List<Record> executeQuery(Operation operation, TableMetadata tableMetadata)
+      throws CosmosException {
+    CosmosOperation cosmosOperation = new CosmosOperation(operation, tableMetadata);
     cosmosOperation.checkArgument(Scan.class);
     Scan scan = (Scan) operation;
 
     String query;
     CosmosQueryRequestOptions options;
-    if (Utility.isSecondaryIndexSpecified(scan, metadataManager.getTableMetadata(operation))) {
-      query = makeQueryWithIndex(scan);
+    if (Utility.isSecondaryIndexSpecified(scan, tableMetadata)) {
+      query = makeQueryWithIndex(scan, tableMetadata);
       options = new CosmosQueryRequestOptions();
     } else {
       String concatenatedPartitionKey = cosmosOperation.getConcatenatedPartitionKey();
@@ -186,12 +192,11 @@ public class SelectStatementHandler extends StatementHandler {
         });
   }
 
-  private String makeQueryWithIndex(Operation operation) {
+  private String makeQueryWithIndex(Operation operation, TableMetadata tableMetadata) {
     SelectWhereStep<org.jooq.Record> select = DSL.using(SQLDialect.DEFAULT).selectFrom("Record r");
     Value<?> keyValue = operation.getPartitionKey().get().get(0);
-    TableMetadata metadata = metadataManager.getTableMetadata(operation);
     String fieldName;
-    if (metadata.getClusteringKeyNames().contains(keyValue.getName())) {
+    if (tableMetadata.getClusteringKeyNames().contains(keyValue.getName())) {
       fieldName = "r.clusteringKey.";
     } else {
       fieldName = "r.values.";

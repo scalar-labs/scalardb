@@ -16,17 +16,19 @@ import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction;
 import com.datastax.driver.core.schemabuilder.SchemaStatement;
 import com.datastax.driver.core.schemabuilder.TableOptions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -39,53 +41,35 @@ import org.mockito.MockitoAnnotations;
 
 public class CassandraAdminTest {
 
-  private static final String SAMPLE_PREFIX = "sample_prefix_";
   private CassandraAdmin cassandraAdmin;
-  @Mock private CassandraTableMetadataManager metadataManager;
   @Mock private ClusterManager clusterManager;
+  @Mock private DatabaseConfig config;
   @Mock private Session cassandraSession;
+  @Mock private Cluster cluster;
+  @Mock private Metadata metadata;
+  @Mock private KeyspaceMetadata keyspaceMetadata;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     when(clusterManager.getSession()).thenReturn(cassandraSession);
-    cassandraAdmin =
-        new CassandraAdmin(metadataManager, clusterManager, Optional.of(SAMPLE_PREFIX));
+    when(config.getNamespacePrefix()).thenReturn(Optional.empty());
+    cassandraAdmin = new CassandraAdmin(clusterManager, config);
   }
 
   @Test
-  public void
-      getTableMetadata_ConstructedWithoutNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix()
-          throws ExecutionException {
+  public void getTableMetadata_ClusterManagerShouldBeCalledProperly() throws ExecutionException {
     // Arrange
-    Optional<String> namespacePrefix = Optional.empty();
     String namespace = "ns";
     String table = "table";
 
-    CassandraAdmin admin = new CassandraAdmin(metadataManager, clusterManager, namespacePrefix);
+    CassandraAdmin admin = new CassandraAdmin(clusterManager, config);
 
     // Act
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(metadataManager).getTableMetadata(namespace, table);
-  }
-
-  @Test
-  public void getTableMetadata_ConstructedWithNamespacePrefix_ShouldBeCalledWithoutNamespacePrefix()
-      throws ExecutionException {
-    // Arrange
-    Optional<String> namespacePrefix = Optional.of("prefix");
-    String namespace = "ns";
-    String table = "table";
-
-    CassandraAdmin admin = new CassandraAdmin(metadataManager, clusterManager, namespacePrefix);
-
-    // Act
-    admin.getTableMetadata(namespace, table);
-
-    // Assert
-    verify(metadataManager).getTableMetadata(namespace, table);
+    verify(clusterManager).getMetadata(namespace, table);
   }
 
   @Test
@@ -119,9 +103,7 @@ public class CassandraAdminTest {
     replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
     replicationOptions.put("replication_factor", "3");
     KeyspaceOptions query =
-        SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .with()
-            .replication(replicationOptions);
+        SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
   }
 
@@ -144,9 +126,7 @@ public class CassandraAdminTest {
     replicationOptions.put("class", ReplicationStrategy.NETWORK_TOPOLOGY_STRATEGY.toString());
     replicationOptions.put("dc1", "5");
     KeyspaceOptions query =
-        SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .with()
-            .replication(replicationOptions);
+        SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
     verify(cassandraSession).execute(query.getQueryString());
   }
 
@@ -166,9 +146,7 @@ public class CassandraAdminTest {
     replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
     replicationOptions.put("replication_factor", "1");
     KeyspaceOptions query =
-        SchemaBuilder.createKeyspace(SAMPLE_PREFIX + namespace)
-            .with()
-            .replication(replicationOptions);
+        SchemaBuilder.createKeyspace(namespace).with().replication(replicationOptions);
 
     verify(cassandraSession).execute(query.getQueryString());
   }
@@ -193,12 +171,11 @@ public class CassandraAdminTest {
             .addSecondaryIndex("c4")
             .build();
     // Act
-    cassandraAdmin.createTableInternal(
-        SAMPLE_PREFIX + namespace, table, tableMetadata, new HashMap<>());
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, new HashMap<>());
 
     // Assert
     TableOptions<Options> createTableStatement =
-        SchemaBuilder.createTable(SAMPLE_PREFIX + namespace, table)
+        SchemaBuilder.createTable(namespace, table)
             .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
             .addClusteringColumn("c4", com.datastax.driver.core.DataType.cint())
             .addColumn("c2", com.datastax.driver.core.DataType.text())
@@ -237,11 +214,11 @@ public class CassandraAdminTest {
     options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
 
     // Act
-    cassandraAdmin.createTableInternal(SAMPLE_PREFIX + namespace, table, tableMetadata, options);
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, options);
 
     // Assert
     TableOptions<Options> createTableStatement =
-        SchemaBuilder.createTable(SAMPLE_PREFIX + namespace, table)
+        SchemaBuilder.createTable(namespace, table)
             .addPartitionKey("c1", com.datastax.driver.core.DataType.cint())
             .addPartitionKey("c7", com.datastax.driver.core.DataType.text())
             .addClusteringColumn("c4", com.datastax.driver.core.DataType.cdouble())
@@ -267,16 +244,16 @@ public class CassandraAdminTest {
     indexes.add("c5");
 
     // Act
-    cassandraAdmin.createSecondaryIndex(SAMPLE_PREFIX + namespace, table, indexes);
+    cassandraAdmin.createSecondaryIndex(namespace, table, indexes);
 
     // Assert
     SchemaStatement c1IndexStatement =
         SchemaBuilder.createIndex(table + "_" + CassandraAdmin.INDEX_NAME_PREFIX + "_c1")
-            .onTable(SAMPLE_PREFIX + namespace, table)
+            .onTable(namespace, table)
             .andColumn("c1");
     SchemaStatement c5IndexStatement =
         SchemaBuilder.createIndex(table + "_" + CassandraAdmin.INDEX_NAME_PREFIX + "_c5")
-            .onTable(SAMPLE_PREFIX + namespace, table)
+            .onTable(namespace, table)
             .andColumn("c5");
     verify(cassandraSession).execute(c1IndexStatement.getQueryString());
     verify(cassandraSession).execute(c5IndexStatement.getQueryString());
@@ -287,14 +264,12 @@ public class CassandraAdminTest {
     // Arrange
     String namespace = "sample_ns";
     String table = "sample_table";
-    when(metadataManager.getTableNames(any())).thenReturn(Collections.emptySet());
 
     // Act
     cassandraAdmin.dropTable(namespace, table);
 
     // Assert
-    String dropTableStatement =
-        SchemaBuilder.dropTable(SAMPLE_PREFIX + namespace, table).getQueryString();
+    String dropTableStatement = SchemaBuilder.dropTable(namespace, table).getQueryString();
     verify(cassandraSession).execute(dropTableStatement);
   }
 
@@ -307,8 +282,7 @@ public class CassandraAdminTest {
     cassandraAdmin.dropNamespace(namespace);
 
     // Assert
-    String dropKeyspaceStaement =
-        SchemaBuilder.dropKeyspace(SAMPLE_PREFIX + namespace).getQueryString();
+    String dropKeyspaceStaement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
     verify(cassandraSession).execute(dropKeyspaceStaement);
   }
 
@@ -316,15 +290,26 @@ public class CassandraAdminTest {
   public void getNamespaceTableNames_ShouldReturnTableNames() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
-    Set<String> expectedTableNames = ImmutableSet.of("t1", "t2");
-    when(metadataManager.getTableNames(any())).thenReturn(expectedTableNames);
+    List<String> expectedTableNames = ImmutableList.of("t1", "t2");
+    com.datastax.driver.core.TableMetadata tableMetadata1 =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    when(tableMetadata1.getName()).thenReturn("t1");
+    com.datastax.driver.core.TableMetadata tableMetadata2 =
+        mock(com.datastax.driver.core.TableMetadata.class);
+    when(tableMetadata2.getName()).thenReturn("t2");
+    List<com.datastax.driver.core.TableMetadata> tableMetadataList =
+        ImmutableList.of(tableMetadata1, tableMetadata2);
+
+    when(cassandraSession.getCluster()).thenReturn(cluster);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTables()).thenReturn(tableMetadataList);
 
     // Act
     Set<String> actualTableNames = cassandraAdmin.getNamespaceTableNames(namespace);
 
     // Assert
-    verify(metadataManager).getTableNames(namespace);
-    Assertions.assertThat(actualTableNames).isEqualTo(expectedTableNames);
+    Assertions.assertThat(actualTableNames).isEqualTo(ImmutableSet.copyOf(expectedTableNames));
   }
 
   @Test
@@ -337,8 +322,7 @@ public class CassandraAdminTest {
     cassandraAdmin.truncateTable(namespace, table);
 
     // Assert
-    String truncateTableStatement =
-        QueryBuilder.truncate(SAMPLE_PREFIX + namespace, table).getQueryString();
+    String truncateTableStatement = QueryBuilder.truncate(namespace, table).getQueryString();
     verify(cassandraSession).execute(truncateTableStatement);
   }
 
@@ -358,6 +342,6 @@ public class CassandraAdminTest {
     // Assert
     Assert.assertTrue(cassandraAdmin.namespaceExists(namespace));
 
-    verify(metadata).getKeyspace(SAMPLE_PREFIX + namespace);
+    verify(metadata).getKeyspace(namespace);
   }
 }

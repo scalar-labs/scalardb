@@ -17,6 +17,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.Utility;
 import java.util.List;
@@ -37,7 +38,7 @@ public class Cassandra implements DistributedStorage {
   private final StatementHandlerManager handlers;
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
-  private final CassandraTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
   private final OperationChecker operationChecker;
   private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
@@ -59,8 +60,7 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
-    metadataManager =
-        new CassandraTableMetadataManager(clusterManager, config.getNamespacePrefix());
+    metadataManager = new TableMetadataManager(new CassandraAdmin(clusterManager, config), config);
     operationChecker = new OperationChecker(metadataManager);
 
     namespacePrefix = config.getNamespacePrefix();
@@ -173,7 +173,9 @@ public class Cassandra implements DistributedStorage {
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
     operationChecker.check(mutations);
-    mutations.forEach(operationChecker::check);
+    for (Mutation mutation : mutations) {
+      operationChecker.check(mutation);
+    }
     batch.handle(mutations);
   }
 

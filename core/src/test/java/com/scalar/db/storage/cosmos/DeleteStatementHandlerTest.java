@@ -30,6 +30,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -54,7 +55,7 @@ public class DeleteStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private CosmosTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse<Object> response;
   @Mock private CosmosScripts cosmosScripts;
@@ -64,7 +65,7 @@ public class DeleteStatementHandlerTest {
   @Captor ArgumentCaptor<List<Object>> captor;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new DeleteStatementHandler(client, metadataManager);
@@ -135,7 +136,7 @@ public class DeleteStatementHandlerTest {
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
-    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert
@@ -160,7 +161,7 @@ public class DeleteStatementHandlerTest {
         .thenReturn(spResponse);
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String query = cosmosMutation.makeConditionalQuery();
 
     // Act Assert

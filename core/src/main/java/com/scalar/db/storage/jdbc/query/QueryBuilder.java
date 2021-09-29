@@ -1,6 +1,5 @@
 package com.scalar.db.storage.jdbc.query;
 
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.List;
 import java.util.Objects;
@@ -12,16 +11,14 @@ import java.util.Objects;
  */
 public final class QueryBuilder {
 
-  private final JdbcTableMetadataManager tableMetadataManager;
   private final RdbEngine rdbEngine;
 
-  public QueryBuilder(JdbcTableMetadataManager tableMetadataManager, RdbEngine rdbEngine) {
-    this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
+  public QueryBuilder(RdbEngine rdbEngine) {
     this.rdbEngine = Objects.requireNonNull(rdbEngine);
   }
 
   public SelectQuery.Builder select(List<String> projections) {
-    return new SelectQuery.Builder(tableMetadataManager, rdbEngine, projections);
+    return new SelectQuery.Builder(rdbEngine, projections);
   }
 
   public InsertQuery.Builder insertInto(String schema, String table) {

@@ -9,18 +9,21 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.StorageRuntimeException;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +55,7 @@ import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
@@ -61,10 +65,12 @@ import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecifi
 import software.amazon.awssdk.services.dynamodb.model.Projection;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 
@@ -76,13 +82,6 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsReq
 @ThreadSafe
 public class DynamoAdmin implements DistributedStorageAdmin {
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoAdmin.class);
-  private static final String PARTITION_KEY = "concatenatedPartitionKey";
-  private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
-  private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
-  private static final int CREATE_WAIT_DURATION_SECS = 3;
-  private static final int COOL_DOWN_DURATION_SECS = 60;
-  private static final double TARGET_USAGE_RATE = 70.0;
-  private static final int DELETE_BATCH_SIZE = 100;
 
   public static final String NO_SCALING = "no-scaling";
   public static final String NO_BACKUP = "no-backup";
@@ -91,10 +90,26 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
 
+  private static final String PARTITION_KEY = "concatenatedPartitionKey";
+  private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
+  private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
+  private static final int CREATE_WAIT_DURATION_SECS = 3;
+  private static final int COOL_DOWN_DURATION_SECS = 60;
+  private static final double TARGET_USAGE_RATE = 70.0;
+  private static final int DELETE_BATCH_SIZE = 100;
   private static final String SCALING_TYPE_READ = "read";
   private static final String SCALING_TYPE_WRITE = "write";
   private static final String SCALING_TYPE_INDEX_READ = "index-read";
   private static final String SCALING_TYPE_INDEX_WRITE = "index-write";
+
+  public static final String METADATA_NAMESPACE = "scalardb";
+  public static final String METADATA_TABLE = "metadata";
+  private static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
+  private static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
+  private static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
+  private static final String METADATA_ATTR_COLUMNS = "columns";
+  private static final String METADATA_ATTR_TABLE = "table";
+  private static final long METADATA_TABLE_REQUEST_UNIT = 1;
 
   private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAP =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
@@ -129,54 +144,52 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
-  private final DynamoTableMetadataManager metadataManager;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
 
   @Inject
   public DynamoAdmin(DynamoConfig config) {
-    AwsCredentialsProvider awsCredentialsProvider =
-        StaticCredentialsProvider.create(
-            AwsBasicCredentials.create(
-                config.getUsername().orElse(null), config.getPassword().orElse(null)));
+    AwsCredentialsProvider credentialsProvider = createCredentialsProvider(config);
 
     DynamoDbClientBuilder builder = DynamoDbClient.builder();
     config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
     client =
         builder
-            .credentialsProvider(awsCredentialsProvider)
+            .credentialsProvider(credentialsProvider)
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
 
-    ApplicationAutoScalingClientBuilder applicationAutoScalingClientBuilder =
-        ApplicationAutoScalingClient.builder();
-    config
-        .getEndpointOverride()
-        .ifPresent(e -> applicationAutoScalingClientBuilder.endpointOverride(URI.create(e)));
-    applicationAutoScalingClientBuilder.credentialsProvider(awsCredentialsProvider);
-    applicationAutoScalingClientBuilder.region(Region.of(config.getContactPoints().get(0)));
-    applicationAutoScalingClient = applicationAutoScalingClientBuilder.build();
-
+    applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     namespacePrefix = config.getNamespacePrefix();
-    metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
   }
 
-  @VisibleForTesting
-  DynamoAdmin(DynamoTableMetadataManager metadataManager, Optional<String> namespacePrefix) {
-    client = null;
-    applicationAutoScalingClient = null;
-    this.metadataManager = metadataManager;
-    this.namespacePrefix = namespacePrefix.map(n -> n + "_");
+  public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
+    this.client = client;
+    applicationAutoScalingClient = createApplicationAutoScalingClient(config);
+    namespacePrefix = config.getNamespacePrefix();
+  }
+
+  private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
+    return StaticCredentialsProvider.create(
+        AwsBasicCredentials.create(
+            config.getUsername().orElse(null), config.getPassword().orElse(null)));
+  }
+
+  private ApplicationAutoScalingClient createApplicationAutoScalingClient(DynamoConfig config) {
+    ApplicationAutoScalingClientBuilder builder = ApplicationAutoScalingClient.builder();
+    config.getEndpointOverride().ifPresent(e -> builder.endpointOverride(URI.create(e)));
+    return builder
+        .credentialsProvider(createCredentialsProvider(config))
+        .region(Region.of(config.getContactPoints().get(0)))
+        .build();
   }
 
   @VisibleForTesting
   DynamoAdmin(
-      DynamoDbClient dynamoDbClient,
+      DynamoDbClient client,
       ApplicationAutoScalingClient applicationAutoScalingClient,
-      DynamoTableMetadataManager metadataManager,
       Optional<String> namespacePrefix) {
-    this.client = dynamoDbClient;
+    this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    this.metadataManager = metadataManager;
     this.namespacePrefix = namespacePrefix;
   }
 
@@ -227,13 +240,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     // create table
     try {
       client.createTable(requestBuilder.build());
-      metadataManager.addTableMetadata(namespace, table, metadata);
+      addTableMetadata(namespace, table, metadata);
     } catch (Exception e) {
       throw new ExecutionException("creating table failed", e);
     }
 
     try {
-      waitForTableCreation(client, getFullTableName(namespacePrefix, namespace, table));
+      waitForTableCreation(getFullTableName(namespacePrefix, namespace, table));
     } catch (DynamoDbException e) {
       throw new ExecutionException("getting table description failed", e);
     }
@@ -251,6 +264,114 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
+  private void addTableMetadata(String namespace, String table, TableMetadata metadata)
+      throws ExecutionException {
+    createMetadataTableIfNotExist();
+    Map<String, AttributeValue> itemValues = new HashMap<>();
+
+    // Add metadata
+    itemValues.put(
+        METADATA_ATTR_TABLE,
+        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
+    Map<String, AttributeValue> columns = new HashMap<>();
+    for (String columnName : metadata.getColumnNames()) {
+      columns.put(
+          columnName,
+          AttributeValue.builder()
+              .s(metadata.getColumnDataType(columnName).name().toLowerCase())
+              .build());
+    }
+    itemValues.put(METADATA_ATTR_COLUMNS, AttributeValue.builder().m(columns).build());
+    itemValues.put(
+        METADATA_ATTR_PARTITION_KEY,
+        AttributeValue.builder()
+            .l(
+                metadata.getPartitionKeyNames().stream()
+                    .map(pKey -> AttributeValue.builder().s(pKey).build())
+                    .collect(Collectors.toList()))
+            .build());
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      itemValues.put(
+          METADATA_ATTR_CLUSTERING_KEY,
+          AttributeValue.builder()
+              .l(
+                  metadata.getClusteringKeyNames().stream()
+                      .map(pKey -> AttributeValue.builder().s(pKey).build())
+                      .collect(Collectors.toList()))
+              .build());
+    }
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      itemValues.put(
+          METADATA_ATTR_SECONDARY_INDEX,
+          AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
+    }
+    PutItemRequest request =
+        PutItemRequest.builder().tableName(getMetadataTable()).item(itemValues).build();
+
+    try {
+      client.putItem(request);
+    } catch (DynamoDbException e) {
+      throw new ExecutionException(
+          "adding meta data for table "
+              + getFullTableName(namespacePrefix, namespace, table)
+              + " failed",
+          e);
+    }
+  }
+
+  private void createMetadataTableIfNotExist() throws ExecutionException {
+    if (metadataTableExists()) {
+      return;
+    }
+
+    CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
+    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
+    columnsToAttributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(METADATA_ATTR_TABLE)
+            .attributeType(ScalarAttributeType.S)
+            .build());
+    requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
+    requestBuilder.keySchema(
+        KeySchemaElement.builder()
+            .attributeName(METADATA_ATTR_TABLE)
+            .keyType(KeyType.HASH)
+            .build());
+    requestBuilder.provisionedThroughput(
+        ProvisionedThroughput.builder()
+            .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+            .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+            .build());
+    requestBuilder.tableName(getMetadataTable());
+
+    try {
+      client.createTable(requestBuilder.build());
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("creating meta data table failed");
+    }
+
+    try {
+      waitForTableCreation(getMetadataTable());
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("getting table description failed", e);
+    }
+  }
+
+  private boolean metadataTableExists() throws ExecutionException {
+    try {
+      DescribeTableRequest describeTableRequest =
+          DescribeTableRequest.builder().tableName(getMetadataTable()).build();
+      client.describeTable(describeTableRequest);
+      return true;
+    } catch (DynamoDbException e) {
+      if (e instanceof ResourceNotFoundException) {
+        return false;
+      } else {
+        throw new ExecutionException("checking metadata table exist failed");
+      }
+    }
+  }
+
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     disableAutoScaling(namespace, table);
@@ -260,13 +381,43 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
     try {
       client.deleteTable(request);
-      metadataManager.deleteTableMetadata(namespace, table);
+      deleteTableMetadata(namespace, table);
     } catch (Exception e) {
       if (e instanceof ResourceNotFoundException) {
         LOGGER.warn("table " + request.tableName() + " not existed for deleting");
       } else {
         throw new ExecutionException("deleting table " + request.tableName() + " failed", e);
       }
+    }
+  }
+
+  private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
+    Map<String, AttributeValue> keyToDelete = new HashMap<>();
+    keyToDelete.put(
+        METADATA_ATTR_TABLE,
+        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
+    DeleteItemRequest deleteReq =
+        DeleteItemRequest.builder().tableName(getMetadataTable()).key(keyToDelete).build();
+    try {
+      client.deleteItem(deleteReq);
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("deleting metadata failed");
+    }
+
+    try {
+      DescribeTableResponse describeTableResponse =
+          client.describeTable(
+              DescribeTableRequest.builder().tableName(getMetadataTable()).build());
+      TableDescription tableDescription = describeTableResponse.table();
+      if (tableDescription.itemCount() == 0) {
+        try {
+          client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
+        } catch (DynamoDbException e) {
+          throw new ExecutionException("deleting empty metadata table failed");
+        }
+      }
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("getting metadata table description failed");
     }
   }
 
@@ -317,17 +468,96 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      return metadataManager.getTableMetadata(fullNamespace(namespace), table);
-    } catch (StorageRuntimeException e) {
+      String fullName = getFullTableName(namespacePrefix, namespace, table);
+      return readMetadata(fullName);
+    } catch (RuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
+    }
+  }
+
+  private TableMetadata readMetadata(String fullName) throws ExecutionException {
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put(METADATA_ATTR_TABLE, AttributeValue.builder().s(fullName).build());
+
+    GetItemRequest request =
+        GetItemRequest.builder()
+            .tableName(getMetadataTable())
+            .key(key)
+            .consistentRead(true)
+            .build();
+    try {
+      Map<String, AttributeValue> metadata = client.getItem(request).item();
+      if (metadata.isEmpty()) {
+        // The specified table is not found
+        return null;
+      }
+      return createTableMetadata(metadata);
+    } catch (DynamoDbException e) {
+      throw new ExecutionException("Failed to read the table metadata", e);
+    }
+  }
+
+  private String getMetadataTable() {
+    return getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE);
+  }
+
+  private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata) {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    metadata
+        .get(METADATA_ATTR_COLUMNS)
+        .m()
+        .forEach((name, type) -> builder.addColumn(name, convertDataType(type.s())));
+    metadata.get(METADATA_ATTR_PARTITION_KEY).l().stream()
+        .map(AttributeValue::s)
+        .forEach(builder::addPartitionKey);
+    if (metadata.containsKey(METADATA_ATTR_CLUSTERING_KEY)) {
+      // The clustering order is always ASC for now
+      metadata.get(METADATA_ATTR_CLUSTERING_KEY).l().stream()
+          .map(AttributeValue::s)
+          .forEach(n -> builder.addClusteringKey(n, Scan.Ordering.Order.ASC));
+    }
+    if (metadata.containsKey(METADATA_ATTR_SECONDARY_INDEX)) {
+      metadata.get(METADATA_ATTR_SECONDARY_INDEX).ss().forEach(builder::addSecondaryIndex);
+    }
+    return builder.build();
+  }
+
+  private DataType convertDataType(String columnType) {
+    switch (columnType) {
+      case "int":
+        return DataType.INT;
+      case "bigint":
+        return DataType.BIGINT;
+      case "float":
+        return DataType.FLOAT;
+      case "double":
+        return DataType.DOUBLE;
+      case "text": // for backwards compatibility
+      case "varchar":
+        return DataType.TEXT;
+      case "boolean":
+        return DataType.BOOLEAN;
+      case "blob":
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(columnType);
     }
   }
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
-      return metadataManager.getTableNames(namespace);
-    } catch (RuntimeException e) {
+      Set<String> tableSet = new HashSet<>();
+      ListTablesResponse listTablesResponse = client.listTables();
+      List<String> tableNames = listTablesResponse.tableNames();
+      String fullNamespaceName = getFullNamespaceName(namespacePrefix, namespace) + ".";
+      for (String tableName : tableNames) {
+        if (tableName.startsWith(fullNamespaceName)) {
+          tableSet.add(tableName.substring(fullNamespaceName.length()));
+        }
+      }
+      return tableSet;
+    } catch (DynamoDbException e) {
       throw new ExecutionException("getting list of tables failed");
     }
   }
@@ -348,10 +578,6 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       throw new ExecutionException("getting list of namespaces failed");
     }
     return namespaceExists;
-  }
-
-  private String fullNamespace(String namespace) {
-    return namespacePrefix.map(s -> s + namespace).orElse(namespace);
   }
 
   private void makeAttribute(
@@ -510,8 +736,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
   }
 
-  public void disableAutoScaling(String namespace, String table) {
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(namespace, table);
+  private void disableAutoScaling(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
     if (tableMetadata == null) {
       return;
     }
@@ -608,7 +834,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .build();
   }
 
-  static void waitForTableCreation(DynamoDbClient client, String tableFullName) {
+  private void waitForTableCreation(String tableFullName) {
     while (true) {
       Uninterruptibles.sleepUninterruptibly(CREATE_WAIT_DURATION_SECS, TimeUnit.SECONDS);
       DescribeTableRequest describeTableRequest =

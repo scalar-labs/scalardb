@@ -15,6 +15,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetResponse;
+import com.scalar.db.storage.common.TableMetadataManager;
 import io.grpc.Status;
 import java.util.Arrays;
 import java.util.List;
@@ -28,7 +29,7 @@ public class GrpcStorageTest {
   @Mock private GrpcConfig config;
   @Mock private DistributedStorageGrpc.DistributedStorageStub stub;
   @Mock private DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
-  @Mock private GrpcTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
 
   private GrpcStorage storage;
 
