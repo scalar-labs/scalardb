@@ -8,6 +8,8 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
@@ -75,6 +77,8 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                 .withStart(
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), true)
                 .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
+                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(NAMESPACE)
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -108,6 +112,8 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withStart(
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), true)
+                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(NAMESPACE)
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -141,6 +147,8 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withStart(
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), false)
+                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(NAMESPACE)
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -173,6 +181,8 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
+                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(NAMESPACE)
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -206,6 +216,8 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withEnd(
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), false)
+                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(NAMESPACE)
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -268,6 +280,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         admin.dropTable(NAMESPACE, getTableName(cKeyTypeBefore, cKeyTypeAfter));
       }
     }
+    admin.dropNamespace(NAMESPACE);
   }
 
   protected static void createTable(
