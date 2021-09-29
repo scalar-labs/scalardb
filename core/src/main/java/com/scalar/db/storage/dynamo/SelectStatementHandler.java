@@ -10,6 +10,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.dynamo.ordered.OrderedConcatenationVisitor;
 import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.Collections;

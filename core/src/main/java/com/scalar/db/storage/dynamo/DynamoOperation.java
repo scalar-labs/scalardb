@@ -4,6 +4,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.cosmos.ConcatenationVisitor;
+import com.scalar.db.storage.dynamo.ordered.OrderedConcatenationVisitor;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.scalar.db.storage.dynamo;
+package com.scalar.db.storage.dynamo.ordered;
 
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import com.scalar.db.api.Scan.Ordering.Order;
@@ -10,6 +10,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
+import com.scalar.db.storage.dynamo.ordered.OrderedEncoder;
 import java.util.ArrayList;
 import java.util.List;
 

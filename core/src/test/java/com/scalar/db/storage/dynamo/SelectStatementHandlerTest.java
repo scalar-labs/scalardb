@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.storage.dynamo.ordered.OrderedConcatenationVisitor;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;

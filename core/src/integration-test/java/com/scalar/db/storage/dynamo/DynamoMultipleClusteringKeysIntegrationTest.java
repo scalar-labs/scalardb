@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -114,9 +114,6 @@ public class DynamoMultipleClusteringKeysIntegrationTest {
 
   @Before
   public void setUp() {}
-
-  @Test
-  public void scan_MultipleClusteringKeysGiven_ShouldScanOnConcatenatedClusteringKey() {}
 
   @Test
   public void scan_WithClusteringKeyRangeOfDoubleValues_ShouldReturnProperlyResult()

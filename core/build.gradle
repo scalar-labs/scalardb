@@ -112,7 +112,9 @@ configurations {
 
 dependencies {
     implementation project(':rpc')
-    implementation group: 'org.apache.hbase', name: 'hbase-common', version: '3.0.0-alpha-1'
+    implementation group: 'org.apache.yetus', name: 'audience-annotations', version: "${audienceAnnotationsVesrion}"
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: "${commonsLangVersion}"
+    implementation group: 'org.apache.commons', name: 'commons-collections4', version: "${commonsCollectionsVersion}"
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
     implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
     implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"

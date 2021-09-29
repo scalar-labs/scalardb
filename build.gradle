@@ -20,6 +20,9 @@ subprojects {
     project.version = '4.0.0-SNAPSHOT'
 
     ext {
+        audienceAnnotationsVesrion = '0.13.0'
+        commonsLangVersion = '3.12.0'
+        commonsCollectionsVersion = '4.4'
         guiceVersion = '5.0.1'
         guavaVersion = '30.1-jre'
         slf4jVersion = '1.7.30'
