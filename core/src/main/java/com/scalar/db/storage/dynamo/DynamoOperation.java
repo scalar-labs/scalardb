@@ -31,9 +31,9 @@ public class DynamoOperation {
   private final Operation operation;
   private final TableMetadata metadata;
 
-  public DynamoOperation(Operation operation, DynamoTableMetadataManager metadataManager) {
+  public DynamoOperation(Operation operation, TableMetadata metadata) {
     this.operation = operation;
-    this.metadata = metadataManager.getTableMetadata(operation);
+    this.metadata = metadata;
   }
 
   @Nonnull

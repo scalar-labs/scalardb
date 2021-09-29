@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.Utility;
 import java.net.URI;
@@ -39,7 +40,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 public class Dynamo implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
   private final DynamoDbClient client;
-  private final DynamoTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
@@ -66,7 +67,7 @@ public class Dynamo implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    metadataManager = new DynamoTableMetadataManager(client, namespacePrefix);
+    metadataManager = new TableMetadataManager(new DynamoAdmin(client, config), config);
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
@@ -176,7 +177,9 @@ public class Dynamo implements DistributedStorage {
 
     Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
     operationChecker.check(mutations);
-    mutations.forEach(operationChecker::check);
+    for (Mutation mutation : mutations) {
+      operationChecker.check(mutation);
+    }
     batchHandler.handle(mutations);
   }
 

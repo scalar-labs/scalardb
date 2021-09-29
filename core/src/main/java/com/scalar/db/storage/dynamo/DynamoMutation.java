@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,8 +16,8 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @Immutable
 public class DynamoMutation extends DynamoOperation {
 
-  DynamoMutation(Mutation mutation, DynamoTableMetadataManager metadataManager) {
-    super(mutation, metadataManager);
+  DynamoMutation(Mutation mutation, TableMetadata metadata) {
+    super(mutation, metadata);
   }
 
   @Nonnull

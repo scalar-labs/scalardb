@@ -12,7 +12,6 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.scalar.db.exception.storage.ConnectionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -58,15 +57,13 @@ public class ClusterManagerTest {
   }
 
   @Test
-  public void getMetadata_NoHostAvailable_ShouldThrowConnectionException() {
+  public void getMetadata_NoHostAvailable_ShouldThrowNoHostAvailableException() {
     // Arrange
-    NoHostAvailableException toThrow = mock(NoHostAvailableException.class);
-    when(cluster.getMetadata()).thenThrow(toThrow);
+    when(cluster.getMetadata()).thenThrow(NoHostAvailableException.class);
 
     // Act Assert
     assertThatThrownBy(() -> manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME))
-        .isInstanceOf(ConnectionException.class)
-        .hasCause(toThrow);
+        .isInstanceOf(NoHostAvailableException.class);
   }
 
   @Test

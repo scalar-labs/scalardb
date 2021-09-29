@@ -12,12 +12,12 @@ import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
-import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
+import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ActiveExpiringMap;
 import com.scalar.db.util.ProtoUtil;
 import io.grpc.ManagedChannel;
@@ -41,7 +41,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
   private final ManagedChannel channel;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   private final TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
-  private final GrpcTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
 
   @Nullable
   private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
@@ -62,8 +62,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
             .build();
     stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
-    metadataManager =
-        new GrpcTableMetadataManager(config, DistributedStorageAdminGrpc.newBlockingStub(channel));
+    metadataManager = new TableMetadataManager(new GrpcAdmin(channel, config), config);
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(
@@ -82,7 +81,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
       GrpcConfig config,
       TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub,
       TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub,
-      GrpcTableMetadataManager metadataManager) {
+      TableMetadataManager metadataManager) {
     this.config = config;
     channel = null;
     this.stub = stub;

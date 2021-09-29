@@ -2,8 +2,6 @@ package com.scalar.db.storage.jdbc.query;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -13,7 +11,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,7 +22,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(Parameterized.class)
@@ -33,8 +29,25 @@ public class QueryBuilderTest {
 
   private static final String NAMESPACE = "n1";
   private static final String TABLE = "t1";
+  private static final TableMetadata TABLE_METADATA =
+      TableMetadata.newBuilder()
+          .addColumn("p1", DataType.TEXT)
+          .addColumn("p2", DataType.INT)
+          .addColumn("c1", DataType.TEXT)
+          .addColumn("c2", DataType.TEXT)
+          .addColumn("v1", DataType.TEXT)
+          .addColumn("v2", DataType.TEXT)
+          .addColumn("v3", DataType.TEXT)
+          .addColumn("v4", DataType.TEXT)
+          .addPartitionKey("p1")
+          .addPartitionKey("p2")
+          .addClusteringKey("c1", Scan.Ordering.Order.ASC)
+          .addClusteringKey("c2", Scan.Ordering.Order.DESC)
+          .addSecondaryIndex("v1")
+          .addSecondaryIndex("v2")
+          .build();
+
   @Parameterized.Parameter public RdbEngine rdbEngine;
-  @Mock private JdbcTableMetadataManager tableMetadataManager;
   private QueryBuilder queryBuilder;
 
   @Parameterized.Parameters(name = "RDB={0}")
@@ -46,28 +59,7 @@ public class QueryBuilderTest {
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
-
-    // Dummy metadata
-    when(tableMetadataManager.getTableMetadata(any(String.class)))
-        .thenReturn(
-            TableMetadata.newBuilder()
-                .addColumn("p1", DataType.TEXT)
-                .addColumn("p2", DataType.INT)
-                .addColumn("c1", DataType.TEXT)
-                .addColumn("c2", DataType.TEXT)
-                .addColumn("v1", DataType.TEXT)
-                .addColumn("v2", DataType.TEXT)
-                .addColumn("v3", DataType.TEXT)
-                .addColumn("v4", DataType.TEXT)
-                .addPartitionKey("p1")
-                .addPartitionKey("p2")
-                .addClusteringKey("c1", Scan.Ordering.Order.ASC)
-                .addClusteringKey("c2", Scan.Ordering.Order.DESC)
-                .addSecondaryIndex("v1")
-                .addSecondaryIndex("v2")
-                .build());
-
-    queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
+    queryBuilder = new QueryBuilder(rdbEngine);
   }
 
   private String encloseSql(String sql) {
@@ -87,7 +79,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("p1", "aaa"), Optional.empty())
                 .build()
                 .toString())
@@ -96,7 +88,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     Key.newBuilder().addText("p1", "aaa").addText("p2", "bbb").build(),
                     Optional.empty())
@@ -107,7 +99,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "aaa")))
                 .build()
                 .toString())
@@ -116,7 +108,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "bbb").build()))
@@ -127,7 +119,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -143,7 +135,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Collections.emptyList())
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -158,7 +150,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "aaa").build()),
@@ -175,7 +167,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -193,7 +185,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -213,7 +205,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -231,7 +223,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -271,7 +263,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
                     Optional.of(new Key("c1", "aaa")),
@@ -289,7 +281,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("v1", "aaa"), Optional.empty())
                 .build()
                 .toString())
@@ -298,7 +290,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("v1", "aaa"), Optional.empty(), false, Optional.empty(), false)
                 .build()
                 .toString())
@@ -307,7 +299,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("v2", "aaa"), Optional.empty())
                 .build()
                 .toString())
@@ -316,7 +308,7 @@ public class QueryBuilderTest {
     assertThat(
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE)
+                .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(new Key("v2", "aaa"), Optional.empty(), false, Optional.empty(), false)
                 .build()
                 .toString())

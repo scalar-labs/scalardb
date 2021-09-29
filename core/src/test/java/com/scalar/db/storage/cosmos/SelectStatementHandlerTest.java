@@ -25,6 +25,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,13 +54,13 @@ public class SelectStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private CosmosTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosItemResponse<Record> response;
   @Mock private CosmosPagedIterable<Record> responseIterable;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new SelectStatementHandler(client, metadataManager);

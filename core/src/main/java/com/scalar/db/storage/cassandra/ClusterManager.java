@@ -9,7 +9,6 @@ import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.exception.storage.ConnectionException;
 import java.util.Objects;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -59,12 +58,7 @@ public class ClusterManager {
    * @return {@code TableMetadata}
    */
   public TableMetadata getMetadata(String keyspace, String table) {
-    KeyspaceMetadata metadata;
-    try {
-      metadata = cluster.getMetadata().getKeyspace(keyspace);
-    } catch (RuntimeException e) {
-      throw new ConnectionException("can't get metadata from the cluster", e);
-    }
+    KeyspaceMetadata metadata = cluster.getMetadata().getKeyspace(keyspace);
     if (metadata == null || metadata.getTable(table) == null) {
       return null;
     }
@@ -77,14 +71,9 @@ public class ClusterManager {
   }
 
   private void initialize(DatabaseConfig config) {
-    try {
-      cluster = getCluster(config);
-      session = cluster.connect();
-      LOGGER.info("session to the cluster is created.");
-    } catch (RuntimeException e) {
-      LOGGER.error("connecting the cluster failed.", e);
-      throw new ConnectionException("connecting the cluster failed.", e);
-    }
+    cluster = getCluster(config);
+    session = cluster.connect();
+    LOGGER.info("session to the cluster is created.");
   }
 
   private Cluster getCluster(DatabaseConfig config) {

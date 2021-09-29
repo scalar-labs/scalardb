@@ -20,9 +20,11 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
@@ -50,7 +52,7 @@ public class JdbcServiceTest {
 
   @Mock private QueryBuilder queryBuilder;
   @Mock private OperationChecker operationChecker;
-  @Mock private JdbcTableMetadataManager tableMetadataManager;
+  @Mock private TableMetadataManager tableMetadataManager;
 
   @Mock private SelectQuery.Builder selectQueryBuilder;
   @Mock private SelectQuery selectQuery;
@@ -71,7 +73,7 @@ public class JdbcServiceTest {
   private JdbcService jdbcService;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
     jdbcService =
         new JdbcService(tableMetadataManager, operationChecker, queryBuilder, Optional.empty());
@@ -91,7 +93,7 @@ public class JdbcServiceTest {
   public void whenGetOperationExecuted_shouldCallQueryBuilder() throws Exception {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
-    when(selectQueryBuilder.from(any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.where(any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
     when(selectQuery.prepareAndBind(any())).thenReturn(preparedStatement);
@@ -113,7 +115,7 @@ public class JdbcServiceTest {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
-    when(selectQueryBuilder.from(any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean()))
         .thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);
@@ -139,7 +141,7 @@ public class JdbcServiceTest {
     // Arrange
     when(queryBuilder.select(any())).thenReturn(selectQueryBuilder);
 
-    when(selectQueryBuilder.from(any(), any())).thenReturn(selectQueryBuilder);
+    when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.where(any(), any(), anyBoolean(), any(), anyBoolean()))
         .thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.orderBy(any())).thenReturn(selectQueryBuilder);

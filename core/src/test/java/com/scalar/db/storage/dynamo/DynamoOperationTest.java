@@ -1,11 +1,9 @@
 package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import java.util.Collections;
@@ -26,14 +24,12 @@ public class DynamoOperationTest {
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
 
-  @Mock private DynamoTableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
 
-    when(metadataManager.getTableMetadata(any(Operation.class))).thenReturn(metadata);
     when(metadata.getPartitionKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
     when(metadata.getClusteringKeyNames())
@@ -52,7 +48,7 @@ public class DynamoOperationTest {
   public void getTableName_GetGiven_ShouldReturnTableName() {
     // Arrange
     Get get = prepareGet();
-    DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(get, metadata);
 
     // Act
     String actual = dynamoOperation.getTableName();
@@ -65,7 +61,7 @@ public class DynamoOperationTest {
   public void getKeyMap_GetGiven_ShouldReturnMap() {
     // Arrange
     Get get = prepareGet();
-    DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(get, metadata);
     Map<String, AttributeValue> expected = new HashMap<>();
     expected.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
     expected.put(DynamoOperation.CLUSTERING_KEY, AttributeValue.builder().s(ANY_TEXT_2).build());

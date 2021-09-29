@@ -18,6 +18,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -53,12 +54,12 @@ public class BatchHandlerTest {
 
   private BatchHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private DynamoTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private TransactWriteItemsResponse transactWriteResponse;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new BatchHandler(client, metadataManager);
@@ -107,10 +108,10 @@ public class BatchHandlerTest {
     Put put2 = preparePut().withCondition(new PutIfNotExists());
     Delete delete1 = prepareDelete();
     Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
-    DynamoMutation dynamoMutation1 = new DynamoMutation(put1, metadataManager);
-    DynamoMutation dynamoMutation2 = new DynamoMutation(put2, metadataManager);
-    DynamoMutation dynamoMutation3 = new DynamoMutation(delete1, metadataManager);
-    DynamoMutation dynamoMutation4 = new DynamoMutation(delete2, metadataManager);
+    DynamoMutation dynamoMutation1 = new DynamoMutation(put1, metadata);
+    DynamoMutation dynamoMutation2 = new DynamoMutation(put2, metadata);
+    DynamoMutation dynamoMutation3 = new DynamoMutation(delete1, metadata);
+    DynamoMutation dynamoMutation4 = new DynamoMutation(delete2, metadata);
 
     // Act Assert
     assertThatCode(() -> handler.handle(Arrays.asList(put1, put2, delete1, delete2)))
