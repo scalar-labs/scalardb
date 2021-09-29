@@ -27,10 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /** Utility methods for working with {@link ByteRange}. */
 @InterfaceAudience.Public
 public class ByteRangeUtils {
-  public static int numEqualPrefixBytes(
-      ByteRange left,
-      ByteRange right,
-      int rightInnerOffset) {
+  public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
     int maxCompares = Math.min(left.getLength(), right.getLength() - rightInnerOffset);
     final byte[] lbytes = left.getBytes();
     final byte[] rbytes = right.getBytes();
@@ -44,8 +41,7 @@ public class ByteRangeUtils {
     return maxCompares;
   }
 
-  public static ArrayList<byte[]> copyToNewArrays(
-      Collection<ByteRange> ranges) {
+  public static ArrayList<byte[]> copyToNewArrays(Collection<ByteRange> ranges) {
     if (ranges == null) {
       return new ArrayList<>(0);
     }
@@ -56,21 +52,18 @@ public class ByteRangeUtils {
     return arrays;
   }
 
-  public static ArrayList<ByteRange> fromArrays(
-      Collection<byte[]> arrays) {
+  public static ArrayList<ByteRange> fromArrays(Collection<byte[]> arrays) {
     if (arrays == null) {
       return new ArrayList<>(0);
     }
-    ArrayList<ByteRange> ranges =
-        Lists.newArrayListWithCapacity(arrays.size());
+    ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {
       ranges.add(new SimpleMutableByteRange(array));
     }
     return ranges;
   }
 
-  public static void write(OutputStream os, ByteRange byteRange)
-      throws IOException {
+  public static void write(OutputStream os, ByteRange byteRange) throws IOException {
     os.write(byteRange.getBytes(), byteRange.getOffset(), byteRange.getLength());
   }
 

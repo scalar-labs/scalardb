@@ -10,7 +10,6 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
-import com.scalar.db.storage.dynamo.ordered.OrderedEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
