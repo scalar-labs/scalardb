@@ -34,7 +34,7 @@ import org.junit.Test;
 @SuppressFBWarnings("MS_CANNOT_BE_FINAL")
 public abstract class MultipleClusteringKeysIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
+  protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
   protected static final String TABLE_BASE_NAME = "test_table_mul_key_";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
@@ -44,10 +44,10 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
       ImmutableList.of(
-          DataType.DOUBLE,
+          DataType.FLOAT,
           DataType.BIGINT,
           DataType.BLOB,
-          DataType.FLOAT,
+          DataType.DOUBLE,
           DataType.INT,
           DataType.TEXT);
 
@@ -79,18 +79,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                 .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(NAMESPACE)
+                .forNamespace(getNamespaceName(cKeyTypeBefore))
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Act
         List<Result> scanRet = distributedStorage.scan(scan).all();
+        admin.truncateTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Assert
         assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
       }
     }
-
-    truncateTestTables();
   }
 
   @Test
@@ -114,18 +114,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(NAMESPACE)
+                .forNamespace(getNamespaceName(cKeyTypeBefore))
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Act
         List<Result> scanRet = distributedStorage.scan(scan).all();
+        admin.truncateTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Assert
         assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
       }
     }
-
-    truncateTestTables();
   }
 
   @Test
@@ -149,18 +149,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), false)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(NAMESPACE)
+                .forNamespace(getNamespaceName(cKeyTypeBefore))
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Act
         List<Result> scanRet = distributedStorage.scan(scan).all();
+        admin.truncateTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Assert
         assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
       }
     }
-
-    truncateTestTables();
   }
 
   @Test
@@ -183,18 +183,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                 .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(NAMESPACE)
+                .forNamespace(getNamespaceName(cKeyTypeBefore))
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Act
         List<Result> scanRet = distributedStorage.scan(scan).all();
+        admin.truncateTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Assert
         assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
       }
     }
-
-    truncateTestTables();
   }
 
   @Test
@@ -218,18 +218,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                     new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), false)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(NAMESPACE)
+                .forNamespace(getNamespaceName(cKeyTypeBefore))
                 .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Act
         List<Result> scanRet = distributedStorage.scan(scan).all();
+        admin.truncateTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
         // Assert
         assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
       }
     }
-
-    truncateTestTables();
   }
 
   protected void prepareRecords(
@@ -246,7 +246,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
                   new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), cKeyValueAfter))
               .withValue(getRandomValue(COL_NAME4, DataType.INT))
               .withValue(getRandomValue(COL_NAME5, DataType.TEXT))
-              .forNamespace(NAMESPACE)
+              .forNamespace(getNamespaceName(cKeyTypeBefore))
               .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
       try {
         distributedStorage.put(put);
@@ -260,16 +260,9 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   protected static void createTestTables(Map<String, String> options) throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      admin.createNamespace(getNamespaceName(cKeyTypeBefore), true, options);
       for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
         createTable(cKeyTypeBefore, cKeyTypeAfter, options);
-      }
-    }
-  }
-
-  protected static void truncateTestTables() throws ExecutionException {
-    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        admin.truncateTable(NAMESPACE, getTableName(cKeyTypeBefore, cKeyTypeAfter));
       }
     }
   }
@@ -277,18 +270,18 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   protected static void deleteTestTables() throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        admin.dropTable(NAMESPACE, getTableName(cKeyTypeBefore, cKeyTypeAfter));
+        admin.dropTable(
+            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
       }
+      admin.dropNamespace(getNamespaceName(cKeyTypeBefore));
     }
-    admin.dropNamespace(NAMESPACE);
   }
 
   protected static void createTable(
       DataType cKeyTypeBefore, DataType cKeyTypeAfter, Map<String, String> options)
       throws ExecutionException {
-    admin.createNamespace(NAMESPACE, true, options);
     admin.createTable(
-        NAMESPACE,
+        getNamespaceName(cKeyTypeBefore),
         getTableName(cKeyTypeBefore, cKeyTypeAfter),
         TableMetadata.newBuilder()
             .addColumn(COL_NAME1, DataType.INT)
@@ -305,6 +298,10 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   protected static String getTableName(DataType cKeyTypeBefore, DataType cKeyTypeAfter) {
     return TABLE_BASE_NAME + cKeyTypeBefore + "_" + cKeyTypeAfter;
+  }
+
+  protected static String getNamespaceName(DataType cKeyTypeBefore) {
+    return NAMESPACE_BASE_NAME + cKeyTypeBefore;
   }
 
   protected Value<?> getRandomValue(String columnName, DataType dataType) {
