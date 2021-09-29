@@ -122,28 +122,31 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
 
   private final BasicDataSource dataSource;
-  private final Optional<String> schemaPrefix;
   private final RdbEngine rdbEngine;
+  private final Optional<String> schemaPrefix;
+  private final String metadataSchema;
 
   @Inject
   public JdbcDatabaseAdmin(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
-    schemaPrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    schemaPrefix = config.getNamespacePrefix();
+    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   public JdbcDatabaseAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
-    schemaPrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    schemaPrefix = config.getNamespacePrefix();
+    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @VisibleForTesting
-  JdbcDatabaseAdmin(
-      BasicDataSource dataSource, Optional<String> schemaPrefix, RdbEngine rdbEngine) {
+  JdbcDatabaseAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
     this.dataSource = dataSource;
-    this.schemaPrefix = schemaPrefix;
     this.rdbEngine = rdbEngine;
+    schemaPrefix = config.getNamespacePrefix();
+    metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @Override
@@ -357,7 +360,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   private String getMetadataSchema() {
-    return getFullNamespaceName(schemaPrefix, METADATA_SCHEMA);
+    return getFullNamespaceName(schemaPrefix, metadataSchema);
   }
 
   private void insertMetadataColumn(
@@ -484,9 +487,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private void deleteMetadataTable(Connection connection) throws SQLException {
     String dropTableStatement =
-        "DROP TABLE "
-            + encloseFullTableName(
-                getFullNamespaceName(schemaPrefix, METADATA_SCHEMA), METADATA_TABLE);
+        "DROP TABLE " + encloseFullTableName(getMetadataSchema(), METADATA_TABLE);
 
     execute(connection, dropTableStatement);
   }
@@ -494,9 +495,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private void deleteMetadataSchema(Connection connection) throws SQLException {
     String dropStatement;
     if (rdbEngine == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, METADATA_SCHEMA));
+      dropStatement = "DROP USER " + enclose(getMetadataSchema());
     } else {
-      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, METADATA_SCHEMA));
+      dropStatement = "DROP SCHEMA " + enclose(getMetadataSchema());
     }
 
     execute(connection, dropStatement);
@@ -593,19 +594,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private String getSelectColumnsStatement() {
     return "SELECT "
         + enclose(METADATA_COL_COLUMN_NAME)
-        + ", "
+        + ","
         + enclose(METADATA_COL_DATA_TYPE)
-        + ", "
+        + ","
         + enclose(METADATA_COL_KEY_TYPE)
-        + ", "
+        + ","
         + enclose(METADATA_COL_CLUSTERING_ORDER)
-        + ", "
+        + ","
         + enclose(METADATA_COL_INDEXED)
         + " FROM "
         + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
         + " WHERE "
         + enclose(METADATA_COL_FULL_TABLE_NAME)
-        + " = ? ORDER BY "
+        + "=? ORDER BY "
         + enclose(METADATA_COL_ORDINAL_POSITION)
         + " ASC";
   }
