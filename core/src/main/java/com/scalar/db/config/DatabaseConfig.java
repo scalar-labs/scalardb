@@ -51,6 +51,8 @@ public class DatabaseConfig {
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
+  private long tableMetadataCacheExpirationTimeSecs = -1;
+
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
@@ -60,6 +62,8 @@ public class DatabaseConfig {
   public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+  public static final String TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS =
+      PREFIX + "table_metadata.cache_expiration_time_secs";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -182,6 +186,11 @@ public class DatabaseConfig {
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
       isolation = Isolation.valueOf(props.getProperty(ISOLATION_LEVEL).toUpperCase());
     }
+
+    if (!Strings.isNullOrEmpty(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS))) {
+      tableMetadataCacheExpirationTimeSecs =
+          Long.parseLong(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS));
+    }
   }
 
   public List<String> getContactPoints() {
@@ -223,5 +232,9 @@ public class DatabaseConfig {
 
   public Isolation getIsolation() {
     return isolation;
+  }
+
+  public long getTableMetadataCacheExpirationTimeSecs() {
+    return tableMetadataCacheExpirationTimeSecs;
   }
 }
