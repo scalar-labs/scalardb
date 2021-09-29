@@ -68,15 +68,15 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
         List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 25; i < 50; i++) {
+        for (int i = 5; i < 15; i++) {
           expectedValues.add(valueList.get(i));
         }
 
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), true)
-                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
+                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
+                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(14)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(getNamespaceName(cKeyTypeBefore))
@@ -104,14 +104,14 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
         List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 25; i < 100; i++) {
+        for (int i = 5; i < 20; i++) {
           expectedValues.add(valueList.get(i));
         }
 
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), true)
+                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(getNamespaceName(cKeyTypeBefore))
@@ -139,14 +139,14 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
         List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 26; i < 100; i++) {
+        for (int i = 6; i < 20; i++) {
           expectedValues.add(valueList.get(i));
         }
 
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
                 .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(25)), false)
+                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), false)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(getNamespaceName(cKeyTypeBefore))
@@ -174,13 +174,13 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
         List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 10; i++) {
           expectedValues.add(valueList.get(i));
         }
 
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), true)
+                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), true)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(getNamespaceName(cKeyTypeBefore))
@@ -208,14 +208,13 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
         List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 0; i < 49; i++) {
+        for (int i = 0; i < 9; i++) {
           expectedValues.add(valueList.get(i));
         }
 
         Scan scan =
             new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withEnd(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(49)), false)
+                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), false)
                 .withOrdering(new Ordering(COL_NAME2, Order.ASC))
                 .withOrdering(new Ordering(COL_NAME3, Order.ASC))
                 .forNamespace(getNamespaceName(cKeyTypeBefore))
@@ -235,7 +234,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   protected void prepareRecords(
       List<Value> valueList, DataType cKeyTypeBefore, DataType cKeyTypeAfter)
       throws ExecutionException {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 20; i++) {
 
       Value cKeyValueAfter = getRandomValue(COL_NAME3, cKeyTypeAfter);
 
