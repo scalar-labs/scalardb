@@ -7,7 +7,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -15,8 +17,10 @@ import javax.annotation.concurrent.Immutable;
 public class ConsensusCommitConfig extends DatabaseConfig {
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
   public static final String SERIALIZABLE_STRATEGY = PREFIX + "serializable_strategy";
+  public static final String COORDINATOR_NAMESPACE = PREFIX + "coordinator.namespace";
 
   private SerializableStrategy strategy;
+  @Nullable private String coordinatorNamespace;
 
   // for two-phase consensus commit
   public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
@@ -63,6 +67,10 @@ public class ConsensusCommitConfig extends DatabaseConfig {
     } else {
       activeTransactionsManagementEnabled = true;
     }
+
+    if (!Strings.isNullOrEmpty(getProperties().getProperty(COORDINATOR_NAMESPACE))) {
+      coordinatorNamespace = getProperties().getProperty(COORDINATOR_NAMESPACE);
+    }
   }
 
   public SerializableStrategy getSerializableStrategy() {
@@ -71,5 +79,9 @@ public class ConsensusCommitConfig extends DatabaseConfig {
 
   public boolean isActiveTransactionsManagementEnabled() {
     return activeTransactionsManagementEnabled;
+  }
+
+  public Optional<String> getCoordinatorNamespace() {
+    return Optional.ofNullable(coordinatorNamespace);
   }
 }

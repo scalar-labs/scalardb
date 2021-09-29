@@ -177,19 +177,20 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
 
   @Before
   public void setUp() {
-    DistributedStorage storage = spy(originalStorage);
-    Coordinator coordinator = spy(new Coordinator(storage));
-    RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
-    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, "dummy");
     props.setProperty(DatabaseConfig.USERNAME, "dummy");
     props.setProperty(DatabaseConfig.PASSWORD, "dummy");
 
+    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(props);
+
+    DistributedStorage storage = spy(originalStorage);
+    Coordinator coordinator = spy(new Coordinator(storage, consensusCommitConfig));
+    RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
+
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage, new ConsensusCommitConfig(props), coordinator, recovery, commit);
+        new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
