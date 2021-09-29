@@ -1,49 +1,78 @@
 package com.scalar.db.storage.common;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
-import java.util.Set;
+import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 
-public interface TableMetadataManager {
+/** A class that manages and caches table metadata */
+public class TableMetadataManager {
+
+  private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;
+
+  public TableMetadataManager(DistributedStorageAdmin admin, DatabaseConfig config) {
+    tableMetadataCache =
+        CacheBuilder.newBuilder()
+            .build(
+                new CacheLoader<TableKey, Optional<TableMetadata>>() {
+                  @Override
+                  public Optional<TableMetadata> load(@Nonnull TableKey key)
+                      throws ExecutionException {
+                    return Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table));
+                  }
+                });
+  }
+
   /**
    * Returns a table metadata corresponding to the specified operation.
    *
    * @param operation an operation
    * @return a table metadata. null if the table is not found.
+   * @throws ExecutionException if the operation failed
    */
-  TableMetadata getTableMetadata(Operation operation);
+  public TableMetadata getTableMetadata(Operation operation) throws ExecutionException {
+    if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
+      throw new IllegalArgumentException("operation has no target namespace and table name");
+    }
+    try {
+      TableKey key = new TableKey(operation.forNamespace().get(), operation.forTable().get());
+      return tableMetadataCache.get(key).orElse(null);
+    } catch (java.util.concurrent.ExecutionException e) {
+      throw new ExecutionException("getting a table metadata failed", e);
+    }
+  }
 
-  /**
-   * Returns a table metadata corresponding to the specified namespace and table.
-   *
-   * @param namespace a namespace
-   * @param table a table
-   * @return a table metadata. null if the table is not found.
-   */
-  TableMetadata getTableMetadata(String namespace, String table);
+  private static class TableKey {
+    public final String namespace;
+    public final String table;
 
-  /**
-   * Deletes the given table metadata
-   *
-   * @param namespace a namespace
-   * @param table a table metadata
-   */
-  void deleteTableMetadata(String namespace, String table);
+    public TableKey(String namespace, String table) {
+      this.namespace = namespace;
+      this.table = table;
+    }
 
-  /**
-   * Adds the given table metadata
-   *
-   * @param namespace a namespace
-   * @param table a table
-   * @param metadata a table metadata
-   */
-  void addTableMetadata(String namespace, String table, TableMetadata metadata);
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof TableKey)) {
+        return false;
+      }
+      TableKey tableKey = (TableKey) o;
+      return namespace.equals(tableKey.namespace) && table.equals(tableKey.table);
+    }
 
-  /**
-   * Returns the names of the table belonging to the given namespace
-   *
-   * @param namespace a namespace
-   * @return a set of table names
-   */
-  Set<String> getTableNames(String namespace);
+    @Override
+    public int hashCode() {
+      return Objects.hash(namespace, table);
+    }
+  }
 }

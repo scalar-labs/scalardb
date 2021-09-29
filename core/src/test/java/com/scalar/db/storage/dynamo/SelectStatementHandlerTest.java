@@ -15,6 +15,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,13 +51,13 @@ public class SelectStatementHandlerTest {
 
   private SelectStatementHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private DynamoTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private GetItemResponse getResponse;
   @Mock private QueryResponse queryResponse;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new SelectStatementHandler(client, metadataManager);
@@ -91,7 +92,7 @@ public class SelectStatementHandlerTest {
     Map<String, AttributeValue> expected = new HashMap<>();
     when(getResponse.item()).thenReturn(expected);
     Get get = prepareGet();
-    DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(get, metadata);
     Map<String, AttributeValue> expectedKeys = dynamoOperation.getKeyMap();
 
     // Act Assert
@@ -166,7 +167,7 @@ public class SelectStatementHandlerTest {
     Scan scan = prepareScan();
     String expectedKeyCondition =
         DynamoOperation.PARTITION_KEY + " = " + DynamoOperation.PARTITION_KEY_ALIAS;
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
@@ -239,7 +240,7 @@ public class SelectStatementHandlerTest {
             + " AND "
             + ANY_NAME_2
             + DynamoOperation.RANGE_CONDITION;
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
@@ -295,7 +296,7 @@ public class SelectStatementHandlerTest {
             + " = "
             + DynamoOperation.END_CLUSTERING_KEY_ALIAS
             + "0";
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
@@ -344,7 +345,7 @@ public class SelectStatementHandlerTest {
             + " >= "
             + DynamoOperation.START_CLUSTERING_KEY_ALIAS
             + "0";
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
@@ -388,7 +389,7 @@ public class SelectStatementHandlerTest {
             + " >= "
             + DynamoOperation.START_CLUSTERING_KEY_ALIAS
             + "0";
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
