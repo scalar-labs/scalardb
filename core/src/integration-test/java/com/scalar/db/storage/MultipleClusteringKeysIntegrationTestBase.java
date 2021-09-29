@@ -19,6 +19,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
+@SuppressFBWarnings("MS_CANNOT_BE_FINAL")
 public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   protected static final String NAMESPACE = "integration_testing";
