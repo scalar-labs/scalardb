@@ -95,8 +95,7 @@ public class SimpleByteRange extends AbstractByteRange {
   }
 
   @Override
-  public ByteRange put(
-      int index, byte[] val, int offset, int length) {
+  public ByteRange put(int index, byte[] val, int offset, int length) {
     throw new ReadOnlyByteRangeException();
   }
 
@@ -114,8 +113,7 @@ public class SimpleByteRange extends AbstractByteRange {
   }
 
   @Override
-  public ByteRange shallowCopySubRange(
-      int innerOffset, int copyLength) {
+  public ByteRange shallowCopySubRange(int innerOffset, int copyLength) {
     SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset, copyLength);
     if (isHashCached()) {
       clone.hash = hash;

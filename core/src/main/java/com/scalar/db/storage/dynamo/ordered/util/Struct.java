@@ -18,8 +18,8 @@ import java.util.Iterator;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * {@code Struct} is a simple {@link DataType} for implementing
- * "compound rowkey" and "compound qualifier" schema design strategies.
+ * {@code Struct} is a simple {@link DataType} for implementing "compound rowkey" and "compound
+ * qualifier" schema design strategies.
  *
  * <h3>Encoding</h3>
  *
@@ -60,9 +60,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * concatenated members.
  *
  * <p>{@link StructIterator} is provided as a convenience for consuming the sequence of values.
- * Users may find it more appropriate to provide their own custom {@link
- * DataType} for encoding application objects rather than using
- * this {@code Object[]} implementation. Examples are provided in test.
+ * Users may find it more appropriate to provide their own custom {@link DataType} for encoding
+ * application objects rather than using this {@code Object[]} implementation. Examples are provided
+ * in test.
  *
  * @see StructIterator
  * @see DataType#isNullable()

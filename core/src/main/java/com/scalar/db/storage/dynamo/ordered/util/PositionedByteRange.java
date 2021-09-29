@@ -21,10 +21,10 @@ package com.scalar.db.storage.dynamo.ordered.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Extends {@link ByteRange} with additional methods to support
- * tracking a consumers position within the viewport. The API is extended with methods {@link
- * #get()} and {@link #put(byte)} for interacting with the backing array from the current position
- * forward. This frees the caller from managing their own index into the array.
+ * Extends {@link ByteRange} with additional methods to support tracking a consumers position within
+ * the viewport. The API is extended with methods {@link #get()} and {@link #put(byte)} for
+ * interacting with the backing array from the current position forward. This frees the caller from
+ * managing their own index into the array.
  *
  * <p>Designed to be a slimmed-down, mutable alternative to {@link java.nio.ByteBuffer}.
  */

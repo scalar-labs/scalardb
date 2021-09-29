@@ -17,9 +17,8 @@ package com.scalar.db.storage.dynamo.ordered.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@code DataType} that encodes fixed-length values encoded using {@link
- * Bytes#putBytes( byte[], int, byte[], int, int)}. Intended to
- * make it easier to transition away from direct use of {@link
+ * An {@code DataType} that encodes fixed-length values encoded using {@link Bytes#putBytes( byte[],
+ * int, byte[], int, int)}. Intended to make it easier to transition away from direct use of {@link
  * Bytes}.
  *
  * @see Bytes#putBytes(byte[], int, byte[], int, int)

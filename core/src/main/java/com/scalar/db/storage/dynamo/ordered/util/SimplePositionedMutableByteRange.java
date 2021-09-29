@@ -53,11 +53,10 @@ package com.scalar.db.storage.dynamo.ordered.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Extends the basic {@link AbstractPositionedByteRange}
- * implementation with position support and it is a mutable version. {@code position} is considered
- * transient, not fundamental to the definition of the range, and does not participate in {@link
- * #compareTo(ByteRange)}, {@link #hashCode()}, or {@link #equals(Object)}. {@code Position} is
- * retained by copy operations.
+ * Extends the basic {@link AbstractPositionedByteRange} implementation with position support and it
+ * is a mutable version. {@code position} is considered transient, not fundamental to the definition
+ * of the range, and does not participate in {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
+ * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Public
 @edu.umd.cs.findbugs.annotations.SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
@@ -127,8 +126,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   @Override
-  public PositionedByteRange set(
-      byte[] bytes, int offset, int length) {
+  public PositionedByteRange set(byte[] bytes, int offset, int length) {
     this.position = 0;
     super.set(bytes, offset, length);
     limit = length;
@@ -177,8 +175,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   @Override
-  public PositionedByteRange put(
-      byte[] val, int offset, int length) {
+  public PositionedByteRange put(byte[] val, int offset, int length) {
     if (0 == length) return this;
     put(position, val, offset, length);
     this.position += length;
@@ -192,8 +189,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   @Override
-  public PositionedByteRange get(
-      int index, byte[] dst, int offset, int length) {
+  public PositionedByteRange get(int index, byte[] dst, int offset, int length) {
     super.get(index, dst, offset, length);
     return this;
   }
@@ -211,8 +207,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   @Override
-  public PositionedByteRange put(
-      int index, byte[] val, int offset, int length) {
+  public PositionedByteRange put(int index, byte[] val, int offset, int length) {
     if (0 == length) return this;
     System.arraycopy(val, offset, this.bytes, this.offset + index, length);
     return this;
@@ -235,8 +230,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   @Override
-  public PositionedByteRange shallowCopySubRange(
-      int innerOffset, int copyLength) {
+  public PositionedByteRange shallowCopySubRange(int innerOffset, int copyLength) {
     SimplePositionedMutableByteRange clone =
         new SimplePositionedMutableByteRange(bytes, offset + innerOffset, copyLength);
     clone.position = this.position;

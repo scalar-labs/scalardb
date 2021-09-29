@@ -24,8 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <p>This iterates over each serialized {@code Struct} field from the specified {@code
  * DataTypes<?>[]} definition. It allows you to read the field or skip over its serialized bytes
  * using {@link #next()} and {@link #skip()}, respectively. This is in contrast to the {@code
- * Struct} method which allow you to {@link
- * Struct#decode(PositionedByteRange)} or {@link
+ * Struct} method which allow you to {@link Struct#decode(PositionedByteRange)} or {@link
  * Struct#skip(PositionedByteRange)} over the entire {@code Struct} at once.
  *
  * <p>This iterator may also be used to read bytes from any {@code Struct} for which the specified
@@ -52,9 +51,7 @@ public class StructIterator implements Iterator<Object> {
    * @param src The buffer from which to read encoded values.
    * @param types The sequence of types to use as the schema for this {@code Struct}.
    */
-  public StructIterator(
-      PositionedByteRange src,
-      @SuppressWarnings("rawtypes") DataType[] types) {
+  public StructIterator(PositionedByteRange src, @SuppressWarnings("rawtypes") DataType[] types) {
     this.src = src;
     this.types = types;
   }

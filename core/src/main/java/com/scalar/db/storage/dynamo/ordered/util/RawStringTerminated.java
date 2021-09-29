@@ -18,9 +18,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes variable-length values encoded using {@link
- * Bytes#toBytes(String)}. Includes a termination marker following
- * the raw {@code byte[]} value. Intended to make it easier to transition away from direct use of
- * {@link Bytes}.
+ * Bytes#toBytes(String)}. Includes a termination marker following the raw {@code byte[]} value.
+ * Intended to make it easier to transition away from direct use of {@link Bytes}.
  *
  * @see Bytes#toBytes(String)
  * @see Bytes#toString(byte[], int, int)

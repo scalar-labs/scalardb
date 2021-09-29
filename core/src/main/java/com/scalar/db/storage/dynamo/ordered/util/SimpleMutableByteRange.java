@@ -114,8 +114,7 @@ public class SimpleMutableByteRange extends AbstractByteRange {
   }
 
   @Override
-  public ByteRange put(
-      int index, byte[] val, int offset, int length) {
+  public ByteRange put(int index, byte[] val, int offset, int length) {
     if (0 == length) return this;
     System.arraycopy(val, offset, this.bytes, this.offset + index, length);
     clearHashCache();

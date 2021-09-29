@@ -17,10 +17,9 @@ package com.scalar.db.storage.dynamo.ordered.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Wraps an existing {@link DataType} implementation as a
- * fixed-length version of itself. This has the useful side-effect of turning an existing {@link
- * DataType} which is not {@code skippable} into a {@code
- * skippable} variant.
+ * Wraps an existing {@link DataType} implementation as a fixed-length version of itself. This has
+ * the useful side-effect of turning an existing {@link DataType} which is not {@code skippable}
+ * into a {@code skippable} variant.
  */
 @InterfaceAudience.Public
 public class FixedLengthWrapper<T> implements DataType<T> {
@@ -31,8 +30,7 @@ public class FixedLengthWrapper<T> implements DataType<T> {
   /**
    * Create a fixed-length version of the {@code wrapped}.
    *
-   * @param base the {@link DataType} to restrict to a fixed
-   *     length.
+   * @param base the {@link DataType} to restrict to a fixed length.
    * @param length the maximum length (in bytes) for encoded values.
    */
   public FixedLengthWrapper(DataType<T> base, int length) {

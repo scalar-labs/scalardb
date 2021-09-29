@@ -699,12 +699,10 @@ public class OrderedBytes {
    *
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
-   * @param ord The {@link Order} to respect while encoding {@code
-   *     val}.
+   * @param ord The {@link Order} to respect while encoding {@code val}.
    * @return the number of bytes written.
    */
-  public static int encodeNumeric(
-      PositionedByteRange dst, long val, Order ord) {
+  public static int encodeNumeric(PositionedByteRange dst, long val, Order ord) {
     return encodeNumeric(dst, BigDecimal.valueOf(val), ord);
   }
 
@@ -713,12 +711,10 @@ public class OrderedBytes {
    *
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
-   * @param ord The {@link Order} to respect while encoding {@code
-   *     val}.
+   * @param ord The {@link Order} to respect while encoding {@code val}.
    * @return the number of bytes written.
    */
-  public static int encodeNumeric(
-      PositionedByteRange dst, double val, Order ord) {
+  public static int encodeNumeric(PositionedByteRange dst, double val, Order ord) {
     if (val == 0.0) {
       dst.put(ord.apply(ZERO));
       return 1;
@@ -743,12 +739,10 @@ public class OrderedBytes {
    *
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
-   * @param ord The {@link Order} to respect while encoding {@code
-   *     val}.
+   * @param ord The {@link Order} to respect while encoding {@code val}.
    * @return the number of bytes written.
    */
-  public static int encodeNumeric(
-      PositionedByteRange dst, BigDecimal val, Order ord) {
+  public static int encodeNumeric(PositionedByteRange dst, BigDecimal val, Order ord) {
     final int len, offset = dst.getOffset(), start = dst.getPosition();
     if (null == val) {
       return encodeNull(dst, ord);
@@ -902,13 +896,11 @@ public class OrderedBytes {
    *
    * @param dst The destination to which the encoded value is written.
    * @param val The value to encode.
-   * @param ord The {@link Order} to respect while encoding {@code
-   *     val}.
+   * @param ord The {@link Order} to respect while encoding {@code val}.
    * @return the number of bytes written.
    * @throws IllegalArgumentException when {@code val} contains a {@code \u0000}.
    */
-  public static int encodeString(
-      PositionedByteRange dst, String val, Order ord) {
+  public static int encodeString(PositionedByteRange dst, String val, Order ord) {
     if (null == val) {
       return encodeNull(dst, ord);
     }
@@ -979,11 +971,7 @@ public class OrderedBytes {
    * @return the number of bytes written.
    */
   public static int encodeBlobVar(
-      PositionedByteRange dst,
-      byte[] val,
-      int voff,
-      int vlen,
-      Order ord) {
+      PositionedByteRange dst, byte[] val, int voff, int vlen, Order ord) {
     if (null == val) {
       return encodeNull(dst, ord);
     }
@@ -1021,11 +1009,9 @@ public class OrderedBytes {
    * Encode a blob value using a modified varint encoding scheme.
    *
    * @return the number of bytes written.
-   * @see #encodeBlobVar(PositionedByteRange, byte[], int, int,
-   *     Order)
+   * @see #encodeBlobVar(PositionedByteRange, byte[], int, int, Order)
    */
-  public static int encodeBlobVar(
-      PositionedByteRange dst, byte[] val, Order ord) {
+  public static int encodeBlobVar(PositionedByteRange dst, byte[] val, Order ord) {
     return encodeBlobVar(dst, val, 0, null != val ? val.length : 0, ord);
   }
 
@@ -1083,11 +1069,7 @@ public class OrderedBytes {
    *     {@code 0x00} byte.
    */
   public static int encodeBlobCopy(
-      PositionedByteRange dst,
-      byte[] val,
-      int voff,
-      int vlen,
-      Order ord) {
+      PositionedByteRange dst, byte[] val, int voff, int vlen, Order ord) {
     if (null == val) {
       encodeNull(dst, ord);
       if (ASCENDING == ord) return 1;
@@ -1125,19 +1107,16 @@ public class OrderedBytes {
    * @return the number of bytes written.
    * @throws IllegalArgumentException when {@code ord} is DESCENDING and {@code val} contains a
    *     {@code 0x00} byte.
-   * @see #encodeBlobCopy(PositionedByteRange, byte[], int, int,
-   *     Order)
+   * @see #encodeBlobCopy(PositionedByteRange, byte[], int, int, Order)
    */
-  public static int encodeBlobCopy(
-      PositionedByteRange dst, byte[] val, Order ord) {
+  public static int encodeBlobCopy(PositionedByteRange dst, byte[] val, Order ord) {
     return encodeBlobCopy(dst, val, 0, null != val ? val.length : 0, ord);
   }
 
   /**
    * Decode a Blob value, byte-for-byte copy.
    *
-   * @see #encodeBlobCopy(PositionedByteRange, byte[], int, int,
-   *     Order)
+   * @see #encodeBlobCopy(PositionedByteRange, byte[], int, int, Order)
    */
   public static byte[] decodeBlobCopy(PositionedByteRange src) {
     byte header = src.get();
@@ -1160,12 +1139,10 @@ public class OrderedBytes {
    * Encode a null value.
    *
    * @param dst The destination to which encoded digits are written.
-   * @param ord The {@link Order} to respect while encoding {@code
-   *     val}.
+   * @param ord The {@link Order} to respect while encoding {@code val}.
    * @return the number of bytes written.
    */
-  public static int encodeNull(
-      PositionedByteRange dst, Order ord) {
+  public static int encodeNull(PositionedByteRange dst, Order ord) {
     dst.put(ord.apply(NULL));
     return 1;
   }
@@ -1177,8 +1154,7 @@ public class OrderedBytes {
    * @see #encodeInt64(PositionedByteRange, long, Order)
    * @see #decodeInt8(PositionedByteRange)
    */
-  public static int encodeInt8(
-      PositionedByteRange dst, byte val, Order ord) {
+  public static int encodeInt8(PositionedByteRange dst, byte val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     dst.put(FIXED_INT8).put((byte) (val ^ 0x80));
     ord.apply(dst.getBytes(), offset + start, 2);
@@ -1204,8 +1180,7 @@ public class OrderedBytes {
    * @see #encodeInt64(PositionedByteRange, long, Order)
    * @see #decodeInt16(PositionedByteRange)
    */
-  public static int encodeInt16(
-      PositionedByteRange dst, short val, Order ord) {
+  public static int encodeInt16(PositionedByteRange dst, short val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     dst.put(FIXED_INT16).put((byte) ((val >> 8) ^ 0x80)).put((byte) val);
     ord.apply(dst.getBytes(), offset + start, 3);
@@ -1233,8 +1208,7 @@ public class OrderedBytes {
    * @see #encodeInt64(PositionedByteRange, long, Order)
    * @see #decodeInt32(PositionedByteRange)
    */
-  public static int encodeInt32(
-      PositionedByteRange dst, int val, Order ord) {
+  public static int encodeInt32(PositionedByteRange dst, int val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     dst.put(FIXED_INT32)
         .put((byte) ((val >> 24) ^ 0x80))
@@ -1295,8 +1269,7 @@ public class OrderedBytes {
    * @return the number of bytes written.
    * @see #decodeInt64(PositionedByteRange)
    */
-  public static int encodeInt64(
-      PositionedByteRange dst, long val, Order ord) {
+  public static int encodeInt64(PositionedByteRange dst, long val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     dst.put(FIXED_INT64)
         .put((byte) ((val >> 56) ^ 0x80))
@@ -1329,15 +1302,13 @@ public class OrderedBytes {
 
   /**
    * Encode a 32-bit floating point value using the fixed-length encoding. Encoding format is
-   * described at length in {@link #encodeFloat64(PositionedByteRange, double,
-   * Order)}.
+   * described at length in {@link #encodeFloat64(PositionedByteRange, double, Order)}.
    *
    * @return the number of bytes written.
    * @see #decodeFloat32(PositionedByteRange)
    * @see #encodeFloat64(PositionedByteRange, double, Order)
    */
-  public static int encodeFloat32(
-      PositionedByteRange dst, float val, Order ord) {
+  public static int encodeFloat32(PositionedByteRange dst, float val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     int i = Float.floatToIntBits(val);
     i ^= ((i >> (Integer.SIZE - 1)) | Integer.MIN_VALUE);
@@ -1418,8 +1389,7 @@ public class OrderedBytes {
    * @return the number of bytes written.
    * @see #decodeFloat64(PositionedByteRange)
    */
-  public static int encodeFloat64(
-      PositionedByteRange dst, double val, Order ord) {
+  public static int encodeFloat64(PositionedByteRange dst, double val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     long lng = Double.doubleToLongBits(val);
     lng ^= ((lng >> (Long.SIZE - 1)) | Long.MIN_VALUE);
@@ -1590,8 +1560,7 @@ public class OrderedBytes {
   public static int skip(PositionedByteRange src) {
     final int start = src.getPosition();
     byte header = src.get();
-    Order ord =
-        (-1 == Integer.signum(header)) ? DESCENDING : ASCENDING;
+    Order ord = (-1 == Integer.signum(header)) ? DESCENDING : ASCENDING;
     header = ord.apply(header);
 
     switch (header) {
