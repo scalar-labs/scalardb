@@ -292,7 +292,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build());
     if (!metadata.getClusteringKeyNames().isEmpty()) {
       itemValues.put(
-          CLUSTERING_KEY,
+          METADATA_ATTR_CLUSTERING_KEY,
           AttributeValue.builder()
               .l(
                   metadata.getClusteringKeyNames().stream()
