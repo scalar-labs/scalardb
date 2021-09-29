@@ -27,6 +27,7 @@ import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Test;
 
+@SuppressWarnings("unchecked")
 public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   protected static final String NAMESPACE = "integration_testing";
