@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
@@ -37,6 +38,12 @@ public class TransactionModule extends AbstractModule {
   @Provides
   DatabaseConfig provideDatabaseConfig() {
     return config;
+  }
+
+  @Singleton
+  @Provides
+  CosmosConfig provideCosmosConfig() {
+    return new CosmosConfig(config.getProperties());
   }
 
   @Singleton

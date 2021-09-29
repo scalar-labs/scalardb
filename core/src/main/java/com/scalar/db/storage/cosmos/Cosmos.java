@@ -15,7 +15,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -48,7 +47,7 @@ public class Cosmos implements DistributedStorage {
   private Optional<String> tableName;
 
   @Inject
-  public Cosmos(DatabaseConfig config) {
+  public Cosmos(CosmosConfig config) {
     client =
         new CosmosClientBuilder()
             .endpoint(config.getContactPoints().get(0))

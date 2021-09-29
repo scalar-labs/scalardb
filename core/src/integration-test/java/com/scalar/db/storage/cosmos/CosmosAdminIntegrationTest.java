@@ -18,22 +18,25 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
+  private static final String PROP_COSMOSDB_URI = "scalardb.cosmos.uri";
+  private static final String PROP_COSMOSDB_PASSWORD = "scalardb.cosmos.password";
+  private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
 
-  private static Optional<String> namespacePrefix;
   private static DistributedStorageAdmin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    String contactPoint = System.getProperty("scalardb.cosmos.uri");
-    String password = System.getProperty("scalardb.cosmos.password");
-    namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
+    String contactPoint = System.getProperty(PROP_COSMOSDB_URI);
+    String password = System.getProperty(PROP_COSMOSDB_PASSWORD);
+    Optional<String> namespacePrefix =
+        Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    admin = new CosmosAdmin(new DatabaseConfig(props));
+    admin = new CosmosAdmin(new CosmosConfig(props));
     admin.createNamespace(NAMESPACE, ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));
     admin.createTable(
         NAMESPACE,
