@@ -8,6 +8,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
+import com.scalar.db.storage.cosmos.CosmosConfig;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Properties;
@@ -17,24 +18,26 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitIntegrationTestBase {
+  private static final String PROP_COSMOSDB_URI = "scalardb.cosmos.uri";
+  private static final String PROP_COSMOSDB_PASSWORD = "scalardb.cosmos.password";
+  private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
 
-  private static Optional<String> namespacePrefix;
   private static DistributedStorage originalStorage;
-  private static DatabaseConfig config;
+  private static CosmosConfig config;
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, ExecutionException {
-    String contactPoint = System.getProperty("scalardb.cosmos.uri");
-    String username = System.getProperty("scalardb.cosmos.username");
-    String password = System.getProperty("scalardb.cosmos.password");
-    namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
+    String contactPoint = System.getProperty(PROP_COSMOSDB_URI);
+    String password = System.getProperty(PROP_COSMOSDB_PASSWORD);
+    Optional<String> namespacePrefix =
+        Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
-    props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    config = new DatabaseConfig(props);
+    config = new CosmosConfig(props);
     originalStorage = new Cosmos(config);
     admin = new CosmosAdmin(config);
     createTables(ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));
