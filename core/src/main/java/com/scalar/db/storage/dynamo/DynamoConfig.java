@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -16,8 +17,10 @@ public class DynamoConfig extends DatabaseConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "dynamo.";
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint-override";
+  public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
   private Optional<String> endpointOverride;
+  @Nullable private String tableMetadataNamespace;
 
   public DynamoConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -45,9 +48,17 @@ public class DynamoConfig extends DatabaseConfig {
     } else {
       endpointOverride = Optional.empty();
     }
+
+    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_NAMESPACE))) {
+      tableMetadataNamespace = getProperties().getProperty(TABLE_METADATA_NAMESPACE);
+    }
   }
 
   public Optional<String> getEndpointOverride() {
     return endpointOverride;
+  }
+
+  public Optional<String> getTableMetadataNamespace() {
+    return Optional.ofNullable(tableMetadataNamespace);
   }
 }
