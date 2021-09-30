@@ -29,13 +29,11 @@ public class ConsensusCommitAdmin {
           .build();
 
   private final DistributedStorageAdmin admin;
-
-  @SuppressWarnings("unused")
-  private final ConsensusCommitConfig config;
+  private final String coordinatorNamespace;
 
   public ConsensusCommitAdmin(DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     this.admin = admin;
-    this.config = config;
+    coordinatorNamespace = config.getCoordinatorNamespace().orElse(Coordinator.NAMESPACE);
   }
 
   /**
@@ -45,7 +43,7 @@ public class ConsensusCommitAdmin {
    */
   public void createCoordinatorTable() throws ExecutionException {
     admin.createTable(
-        Coordinator.NAMESPACE,
+        coordinatorNamespace,
         Coordinator.TABLE,
         Coordinator.TABLE_METADATA,
         true,
@@ -60,7 +58,7 @@ public class ConsensusCommitAdmin {
    */
   public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
     admin.createTable(
-        Coordinator.NAMESPACE, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
+        coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
   }
 
   /**

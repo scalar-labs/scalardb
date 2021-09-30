@@ -13,7 +13,7 @@ public class ConsensusCommitConfigTest {
   private static final String ANY_HOST = "localhost";
 
   @Test
-  public void constructor_PropertiesWithoutPortGiven_ShouldLoadProperly() {
+  public void constructor_PropertiesWithOnlyContactPointsGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
@@ -25,6 +25,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
+    assertThat(config.getCoordinatorNamespace()).isNotPresent();
   }
 
   @Test
@@ -86,5 +87,21 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
+  }
+
+  @Test
+  public void constructor_PropertiesWithCoordinatorNamespaceGiven_ShouldLoadAsDefaultValue() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE, "changed_coordinator");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getCoordinatorNamespace()).isPresent();
+    assertThat(config.getCoordinatorNamespace().get()).isEqualTo("changed_coordinator");
   }
 }
