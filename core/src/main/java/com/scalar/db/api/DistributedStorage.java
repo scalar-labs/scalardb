@@ -158,4 +158,13 @@ public interface DistributedStorage {
    * StorageService and TransactionService, thus this should only be used when closing applications.
    */
   void close();
+
+  /**
+   * Returns the {@link TableMetadata} for the table in the storage.
+   *
+   * @param namespace a namespace of the table to get the metadata for
+   * @param tableName a table name to get the metadata for
+   * @return a {@code TableMetadata} for the specified table
+   */
+  TableMetadata getTableMetadata(String namespace, String tableName);
 }

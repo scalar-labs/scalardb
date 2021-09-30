@@ -9,6 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.List;
 import java.util.Optional;
@@ -86,5 +87,10 @@ public class StorageService implements DistributedStorage {
   @Override
   public void close() {
     storage.close();
+  }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    return storage.getTableMetadata(namespace, tableName);
   }
 }

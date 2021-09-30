@@ -176,4 +176,9 @@ public class Cosmos implements DistributedStorage {
   public void close() {
     client.close();
   }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    return metadataManager.getTableMetadata(namespace, tableName);
+  }
 }

@@ -13,6 +13,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.util.Utility;
@@ -177,5 +178,18 @@ public class MultiStorage implements DistributedStorage {
     for (DistributedStorage storage : storages) {
       storage.close();
     }
+  }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    String fullTaleName = Utility.getFullTableName(Optional.empty(), namespace, tableName);
+    DistributedStorage storage = tableStorageMap.get(fullTaleName);
+    if (storage == null) {
+      storage = namespaceStorageMap.get(namespace);
+      if (storage == null) {
+        storage = defaultStorage;
+      }
+    }
+    return storage.getTableMetadata(namespace, tableName);
   }
 }

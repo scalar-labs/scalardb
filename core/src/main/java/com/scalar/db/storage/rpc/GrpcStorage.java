@@ -225,4 +225,9 @@ public class GrpcStorage implements DistributedStorage {
       LOGGER.warn("failed to shutdown the channel", e);
     }
   }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    return metadataManager.getTableMetadata(namespace, tableName);
+  }
 }

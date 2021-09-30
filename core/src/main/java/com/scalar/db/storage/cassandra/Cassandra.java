@@ -181,4 +181,9 @@ public class Cassandra implements DistributedStorage {
   public void close() {
     clusterManager.close();
   }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    return metadataManager.getTableMetadata(namespace, tableName);
+  }
 }

@@ -10,6 +10,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.storage.common.checker.OperationChecker;
@@ -213,5 +214,10 @@ public class JdbcDatabase implements DistributedStorage {
     } catch (SQLException e) {
       LOGGER.error("failed to close the dataSource", e);
     }
+  }
+
+  @Override
+  public TableMetadata getTableMetadata(String namespace, String tableName) {
+    return jdbcService.getTableMetadataManager().getTableMetadata(namespace, tableName);
   }
 }

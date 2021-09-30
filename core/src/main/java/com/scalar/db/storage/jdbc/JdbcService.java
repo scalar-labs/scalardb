@@ -10,6 +10,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -199,5 +200,9 @@ public class JdbcService {
       }
     }
     return true;
+  }
+
+  TableMetadataManager getTableMetadataManager() {
+    return tableMetadataManager;
   }
 }
