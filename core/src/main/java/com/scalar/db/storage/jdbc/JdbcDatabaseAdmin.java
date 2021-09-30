@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabaseAdmin.class);
-  private static final String CASE_SENSITIVE_SETTING = " character set 'utf8' COLLATE 'utf8_bin'";
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
       ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
           .put(
@@ -137,14 +136,13 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     String fullNamespace = enclose(getFullNamespaceName(schemaPrefix, namespace));
     try (Connection connection = dataSource.getConnection()) {
       if (rdbEngine == RdbEngine.ORACLE) {
+        execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
+        execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+      } else if (rdbEngine == RdbEngine.MYSQL) {
         execute(
-            connection,
-            "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"" + CASE_SENSITIVE_SETTING);
-        execute(
-            connection,
-            "ALTER USER " + fullNamespace + " quota unlimited on USERS" + CASE_SENSITIVE_SETTING);
+            connection, "CREATE SCHEMA " + fullNamespace + " character set 'utf8' COLLATE 'utf8_bin'");
       } else {
-        execute(connection, "CREATE SCHEMA " + fullNamespace + CASE_SENSITIVE_SETTING);
+        execute(connection, "CREATE SCHEMA " + fullNamespace);
       }
     } catch (SQLException e) {
       throw new ExecutionException("creating the schema failed", e);
