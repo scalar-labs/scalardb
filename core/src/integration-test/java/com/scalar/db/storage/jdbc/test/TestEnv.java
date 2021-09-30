@@ -29,7 +29,7 @@ public class TestEnv implements Closeable {
 
   public TestEnv() {
     this(
-        System.getProperty(PROP_JDBC_URL,"jdbc:mysql://localhost:33066/"),
+        System.getProperty(PROP_JDBC_URL, "jdbc:mysql://localhost:33066/"),
         System.getProperty(PROP_JDBC_USERNAME, "root"),
         System.getProperty(PROP_JDBC_PASSWORD, "scalar"),
         Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX)));
