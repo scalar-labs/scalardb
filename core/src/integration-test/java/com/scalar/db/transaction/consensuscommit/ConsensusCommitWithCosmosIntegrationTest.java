@@ -49,17 +49,13 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
 
   @Before
   public void setUp() throws IOException {
+    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
     DistributedStorage storage = spy(originalStorage);
-    Coordinator coordinator = spy(new Coordinator(storage));
+    Coordinator coordinator = spy(new Coordinator(storage, consensusCommitConfig));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage,
-            new ConsensusCommitConfig(config.getProperties()),
-            coordinator,
-            recovery,
-            commit);
+        new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
