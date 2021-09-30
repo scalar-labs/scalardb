@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
@@ -64,10 +63,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
 
   private final CosmosClient client;
+  private final String metadataDatabase;
   private final Optional<String> databasePrefix;
 
   @Inject
-  public CosmosAdmin(DatabaseConfig config) {
+  public CosmosAdmin(CosmosConfig config) {
     client =
         new CosmosClientBuilder()
             .endpoint(config.getContactPoints().get(0))
@@ -75,11 +75,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
+    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
     databasePrefix = config.getNamespacePrefix();
   }
 
-  public CosmosAdmin(CosmosClient client, DatabaseConfig config) {
+  public CosmosAdmin(CosmosClient client, CosmosConfig config) {
     this.client = client;
+    metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
     databasePrefix = config.getNamespacePrefix();
   }
 
@@ -154,7 +156,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       CosmosTableMetadata cosmosTableMetadata =
           convertToCosmosTableMetadata(
               getFullTableName(databasePrefix, namespace, table), metadata);
-      getContainer().upsertItem(cosmosTableMetadata);
+      getMetadataContainer().upsertItem(cosmosTableMetadata);
     } catch (RuntimeException e) {
       throw new ExecutionException("adding the table metadata failed", e);
     }
@@ -170,7 +172,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     client.getDatabase(metadataDatabase).createContainerIfNotExists(containerProperties);
   }
 
-  private CosmosContainer getContainer() {
+  private CosmosContainer getMetadataContainer() {
     return client.getDatabase(fullMetadataDatabase()).getContainer(METADATA_CONTAINER);
   }
 
@@ -225,11 +227,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
     String fullTableName = getFullTableName(databasePrefix, namespace, table);
     try {
-      getContainer()
+      getMetadataContainer()
           .deleteItem(
               fullTableName, new PartitionKey(fullTableName), new CosmosItemRequestOptions());
       // Delete the metadata container and table if there is no more metadata stored
-      if (!getContainer()
+      if (!getMetadataContainer()
           .queryItems(
               "SELECT 1 FROM " + METADATA_CONTAINER + " OFFSET 0 LIMIT 1",
               new CosmosQueryRequestOptions(),
@@ -237,7 +239,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
           .stream()
           .findFirst()
           .isPresent()) {
-        getContainer().delete();
+        getMetadataContainer().delete();
         client.getDatabase(fullMetadataDatabase()).delete();
       }
     } catch (RuntimeException e) {
@@ -298,7 +300,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private CosmosTableMetadata readMetadata(String fullName) {
     try {
-      return getContainer()
+      return getMetadataContainer()
           .readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class)
           .getItem();
     } catch (NotFoundException e) {
@@ -348,7 +350,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   }
 
   private String fullMetadataDatabase() {
-    return Utility.getFullNamespaceName(databasePrefix, METADATA_DATABASE);
+    return Utility.getFullNamespaceName(databasePrefix, metadataDatabase);
   }
 
   @Override
@@ -399,7 +401,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               + ".id LIKE '"
               + fullDatabase
               + ".%'";
-      return getContainer()
+      return getMetadataContainer()
           .queryItems(
               selectAllDatabaseContainer,
               new CosmosQueryRequestOptions(),
