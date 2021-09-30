@@ -104,11 +104,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   public static final String METADATA_NAMESPACE = "scalardb";
   public static final String METADATA_TABLE = "metadata";
-  private static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
-  private static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
-  private static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
-  private static final String METADATA_ATTR_COLUMNS = "columns";
-  private static final String METADATA_ATTR_TABLE = "table";
+  @VisibleForTesting static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
+  @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
+  @VisibleForTesting static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
+  @VisibleForTesting static final String METADATA_ATTR_COLUMNS = "columns";
+  @VisibleForTesting static final String METADATA_ATTR_TABLE = "table";
   private static final long METADATA_TABLE_REQUEST_UNIT = 1;
 
   private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAP =
@@ -145,6 +145,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private final DynamoDbClient client;
   private final Optional<String> namespacePrefix;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
+  private final String metadataNamespace;
 
   @Inject
   public DynamoAdmin(DynamoConfig config) {
@@ -160,12 +161,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     namespacePrefix = config.getNamespacePrefix();
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
     namespacePrefix = config.getNamespacePrefix();
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
@@ -187,10 +190,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   DynamoAdmin(
       DynamoDbClient client,
       ApplicationAutoScalingClient applicationAutoScalingClient,
-      Optional<String> namespacePrefix) {
+      DynamoConfig config) {
     this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    this.namespacePrefix = namespacePrefix;
+    namespacePrefix = config.getNamespacePrefix();
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   @Override
@@ -498,7 +502,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private String getMetadataTable() {
-    return getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE);
+    return getFullTableName(namespacePrefix, metadataNamespace, METADATA_TABLE);
   }
 
   private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata) {
