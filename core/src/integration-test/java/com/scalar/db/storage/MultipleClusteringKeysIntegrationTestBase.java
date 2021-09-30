@@ -44,7 +44,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  protected static final List<DataType> CLUSTERING_KEY_TYPE_LIST =
+  protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
       ImmutableList.of(
           DataType.FLOAT,
           DataType.BIGINT,
