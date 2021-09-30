@@ -49,17 +49,14 @@ public class ConsensusCommitWithDistributedStorageServiceIntegrationTest
 
   @Before
   public void setUp() {
+    ConsensusCommitConfig consensusCommitConfig =
+        new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties());
     DistributedStorage storage = spy(originalStorage);
-    Coordinator coordinator = spy(new Coordinator(storage));
+    Coordinator coordinator = spy(new Coordinator(storage, consensusCommitConfig));
     RecoveryHandler recovery = spy(new RecoveryHandler(storage, coordinator));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     ConsensusCommitManager manager =
-        new ConsensusCommitManager(
-            storage,
-            new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties()),
-            coordinator,
-            recovery,
-            commit);
+        new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
     setUp(manager, storage, coordinator, recovery);
   }
 
