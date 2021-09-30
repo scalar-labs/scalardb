@@ -15,6 +15,7 @@ public class JdbcConfigTest {
   private static final String ANY_PASSWORD = "mysql";
   private static final String ANY_NAMESPACE_PREFIX = "prefix";
   private static final String JDBC_STORAGE = "jdbc";
+  private static final String ANY_TABLE_METADATA_SCHEMA = "any_schema";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -30,6 +31,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "200");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
 
     // Act
     JdbcConfig config = new JdbcConfig(props);
@@ -50,6 +52,8 @@ public class JdbcConfigTest {
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.isPreparedStatementsPoolEnabled()).isEqualTo(true);
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
+    assertThat(config.getTableMetadataSchema()).isPresent();
+    assertThat(config.getTableMetadataSchema().get()).isEqualTo(ANY_TABLE_METADATA_SCHEMA);
   }
 
   @Test
@@ -87,6 +91,7 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    assertThat(config.getTableMetadataSchema()).isNotPresent();
   }
 
   @Test
@@ -143,5 +148,6 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    assertThat(config.getTableMetadataSchema()).isNotPresent();
   }
 }
