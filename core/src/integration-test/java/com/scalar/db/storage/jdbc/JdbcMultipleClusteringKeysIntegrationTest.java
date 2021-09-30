@@ -5,6 +5,7 @@ import com.scalar.db.storage.jdbc.test.TestEnv;
 import java.util.Collections;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 public class JdbcMultipleClusteringKeysIntegrationTest
     extends MultipleClusteringKeysIntegrationTestBase {
@@ -26,4 +27,15 @@ public class JdbcMultipleClusteringKeysIntegrationTest
     distributedStorage.close();
     testEnv.close();
   }
+
+  // Ignore because jdbc rounds the float value
+  @Ignore
+  @Override
+  public void scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
+
+  // Ignore because jdbc rounds the float value
+  @Ignore
+  @Override
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
 }

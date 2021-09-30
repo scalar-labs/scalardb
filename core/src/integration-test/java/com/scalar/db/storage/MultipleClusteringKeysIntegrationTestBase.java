@@ -3,6 +3,7 @@ package com.scalar.db.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.math.DoubleMath;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Put;
@@ -23,6 +24,7 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +44,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
+  protected static final List<DataType> CLUSTERING_KEY_TYPE_LIST =
       ImmutableList.of(
           DataType.FLOAT,
           DataType.BIGINT,
@@ -58,184 +60,434 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   protected static DistributedStorage distributedStorage;
 
   @Test
-  public void scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
       throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.DOUBLE);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.FLOAT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyRangeOfValuesIntAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.INT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BIGINT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.BLOB);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyRangeOfValuesTextAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.TEXT);
+    }
+  }
+
+  public void scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
     RANDOM_GENERATOR.setSeed(777);
+    List<Value> valueList = Collections.synchronizedList(new ArrayList<>());
+    prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
+    List<Value<?>> expectedValues = new ArrayList<>();
+    for (int i = 5; i < 15; i++) {
+      expectedValues.add(valueList.get(i));
+    }
+
+    Scan scan =
+        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
+            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(14)), true)
+            .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+            .withOrdering(new Ordering(COL_NAME3, Order.ASC))
+            .forNamespace(getNamespaceName(cKeyTypeBefore))
+            .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Act
+    List<Result> scanRet = distributedStorage.scan(scan).all();
+    admin.truncateTable(
+        getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Assert
+    assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        List<Value> valueList = new ArrayList<>();
-        prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
-
-        List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 5; i < 15; i++) {
-          expectedValues.add(valueList.get(i));
-        }
-
-        Scan scan =
-            new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
-                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(14)), true)
-                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
-                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(getNamespaceName(cKeyTypeBefore))
-                .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Act
-        List<Result> scanRet = distributedStorage.scan(scan).all();
-        admin.truncateTable(
-            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Assert
-        assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
-      }
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.DOUBLE);
     }
   }
 
   @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult()
-      throws ExecutionException {
-    RANDOM_GENERATOR.setSeed(778);
-
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        List<Value> valueList = new ArrayList<>();
-        prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
-
-        List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 5; i < 20; i++) {
-          expectedValues.add(valueList.get(i));
-        }
-
-        Scan scan =
-            new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
-                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
-                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(getNamespaceName(cKeyTypeBefore))
-                .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Act
-        List<Result> scanRet = distributedStorage.scan(scan).all();
-        admin.truncateTable(
-            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Assert
-        assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
-      }
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.FLOAT);
     }
   }
 
   @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyStartInclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
       throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.INT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BIGINT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BLOB);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.TEXT);
+    }
+  }
+
+  public void scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+    //    RANDOM_GENERATOR.setSeed(778);
+    List<Value> valueList = Collections.synchronizedList(new ArrayList<>());
+    prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
+
+    List<Value<?>> expectedValues = new ArrayList<>();
+    for (int i = 5; i < 20; i++) {
+      expectedValues.add(valueList.get(i));
+    }
+
+    Scan scan =
+        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), true)
+            .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+            .withOrdering(new Ordering(COL_NAME3, Order.ASC))
+            .forNamespace(getNamespaceName(cKeyTypeBefore))
+            .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Act
+    List<Result> scanRet = distributedStorage.scan(scan).all();
+    admin.truncateTable(
+        getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Assert
+    assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.DOUBLE);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.FLOAT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyStartExclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.INT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BIGINT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BLOB);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.TEXT);
+    }
+  }
+
+  public void scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
     RANDOM_GENERATOR.setSeed(779);
 
+    List<Value> valueList = Collections.synchronizedList(new ArrayList<>());
+    prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
+
+    List<Value<?>> expectedValues = new ArrayList<>();
+    for (int i = 6; i < 20; i++) {
+      expectedValues.add(valueList.get(i));
+    }
+
+    Scan scan =
+        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), false)
+            .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+            .withOrdering(new Ordering(COL_NAME3, Order.ASC))
+            .forNamespace(getNamespaceName(cKeyTypeBefore))
+            .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Act
+    List<Result> scanRet = distributedStorage.scan(scan).all();
+    admin.truncateTable(
+        getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Assert
+    assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyEndInclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        List<Value> valueList = new ArrayList<>();
-        prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
-
-        List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 6; i < 20; i++) {
-          expectedValues.add(valueList.get(i));
-        }
-
-        Scan scan =
-            new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withStart(
-                    new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(5)), false)
-                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
-                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(getNamespaceName(cKeyTypeBefore))
-                .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Act
-        List<Result> scanRet = distributedStorage.scan(scan).all();
-        admin.truncateTable(
-            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Assert
-        assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
-      }
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.DOUBLE);
     }
   }
 
   @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyEndInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
       throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.FLOAT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndInclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.INT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyEndInclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BIGINT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BLOB);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndInclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.TEXT);
+    }
+  }
+
+  public void scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
     RANDOM_GENERATOR.setSeed(780);
 
+    List<Value> valueList = Collections.synchronizedList(new ArrayList<>());
+    prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
+
+    List<Value<?>> expectedValues = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      expectedValues.add(valueList.get(i));
+    }
+
+    Scan scan =
+        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), true)
+            .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+            .withOrdering(new Ordering(COL_NAME3, Order.ASC))
+            .forNamespace(getNamespaceName(cKeyTypeBefore))
+            .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Act
+    List<Result> scanRet = distributedStorage.scan(scan).all();
+    admin.truncateTable(
+        getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Assert
+    assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyEndExclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        List<Value> valueList = new ArrayList<>();
-        prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
-
-        List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-          expectedValues.add(valueList.get(i));
-        }
-
-        Scan scan =
-            new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), true)
-                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
-                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(getNamespaceName(cKeyTypeBefore))
-                .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Act
-        List<Result> scanRet = distributedStorage.scan(scan).all();
-        admin.truncateTable(
-            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Assert
-        assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
-      }
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.DOUBLE);
     }
   }
 
   @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyEndExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
       throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.FLOAT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndExclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.INT);
+    }
+  }
+
+  @Test
+  public void
+      scan_WithClusteringKeyEndExclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
+          throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BIGINT);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.BLOB);
+    }
+  }
+
+  @Test
+  public void scan_WithClusteringKeyEndExclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
+      throws ExecutionException {
+    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
+      scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+          cKeyTypeBefore, DataType.TEXT);
+    }
+  }
+
+  public void scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
     RANDOM_GENERATOR.setSeed(781);
 
-    for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
-      for (DataType cKeyTypeAfter : CLUSTERING_KEY_TYPE_LIST) {
-        List<Value> valueList = new ArrayList<>();
-        prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
+    List<Value> valueList = Collections.synchronizedList(new ArrayList<>());
+    prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
 
-        List<Value<?>> expectedValues = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
-          expectedValues.add(valueList.get(i));
-        }
-
-        Scan scan =
-            new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-                .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), false)
-                .withOrdering(new Ordering(COL_NAME2, Order.ASC))
-                .withOrdering(new Ordering(COL_NAME3, Order.ASC))
-                .forNamespace(getNamespaceName(cKeyTypeBefore))
-                .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Act
-        List<Result> scanRet = distributedStorage.scan(scan).all();
-        admin.truncateTable(
-            getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
-
-        // Assert
-        assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
-      }
+    List<Value<?>> expectedValues = new ArrayList<>();
+    for (int i = 0; i < 9; i++) {
+      expectedValues.add(valueList.get(i));
     }
+
+    Scan scan =
+        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), valueList.get(9)), false)
+            .withOrdering(new Ordering(COL_NAME2, Order.ASC))
+            .withOrdering(new Ordering(COL_NAME3, Order.ASC))
+            .forNamespace(getNamespaceName(cKeyTypeBefore))
+            .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Act
+    List<Result> scanRet = distributedStorage.scan(scan).all();
+    admin.truncateTable(
+        getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
+
+    // Assert
+    assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
   }
 
   protected void prepareRecords(
       List<Value> valueList, DataType cKeyTypeBefore, DataType cKeyTypeAfter)
       throws ExecutionException {
     for (int i = 0; i < 20; i++) {
-
       Value cKeyValueAfter = getRandomValue(COL_NAME3, cKeyTypeAfter);
 
       valueList.add(cKeyValueAfter);
@@ -253,7 +505,6 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         throw new ExecutionException("put data to database failed");
       }
     }
-
     valueList.sort(Value::compareTo);
   }
 
@@ -352,7 +603,14 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
       Value<?> expectedValue = expectedValues.get(i);
       Result actualResult = actual.get(i);
       Value<?> actualValue = actualResult.getValue(checkedColumn).get();
-      assertThat(actualValue).isEqualTo(expectedValue);
+      if (expectedValue instanceof FloatValue || expectedValue instanceof DoubleValue) {
+        assertThat(
+                DoubleMath.fuzzyEquals(
+                    expectedValue.getAsDouble(), actualValue.getAsDouble(), 1e-4))
+            .isTrue();
+      } else {
+        assertThat(actualValue).isEqualTo(expectedValue);
+      }
     }
   }
 }
