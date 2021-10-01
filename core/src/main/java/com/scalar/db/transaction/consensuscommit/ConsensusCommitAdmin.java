@@ -59,6 +59,25 @@ public class ConsensusCommitAdmin {
   }
 
   /**
+   * Truncates a coordinator table.
+   *
+   * @throws ExecutionException if the operation failed
+   */
+  public void truncateCoordinatorTable() throws ExecutionException {
+    admin.truncateTable(coordinatorNamespace, Coordinator.TABLE);
+  }
+
+  /**
+   * Drops a coordinator namespace/table.
+   *
+   * @throws ExecutionException if the operation failed
+   */
+  public void dropCoordinatorTable() throws ExecutionException {
+    admin.dropTable(coordinatorNamespace, Coordinator.TABLE);
+    admin.dropNamespace(coordinatorNamespace);
+  }
+
+  /**
    * Creates a new transactional table.
    *
    * @param namespace a namespace already created
