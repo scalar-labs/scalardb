@@ -15,7 +15,6 @@ import org.junit.BeforeClass;
 
 public class CosmosIntegrationTest extends IntegrationTestBase {
   private static final String PROP_COSMOSDB_URI = "scalardb.cosmos.uri";
-  private static final String PROP_COSMOSDB_USERNAME = "scalardb.cosmos.username";
   private static final String PROP_COSMOSDB_PASSWORD = "scalardb.cosmos.password";
   private static final String PROP_NAMESPACE_PREFIX = "scalardb.namespace_prefix";
 
@@ -24,7 +23,6 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws IOException, ExecutionException {
     String contactPoint = System.getProperty(PROP_COSMOSDB_URI);
-    String username = System.getProperty(PROP_COSMOSDB_USERNAME);
     String password = System.getProperty(PROP_COSMOSDB_PASSWORD);
     Optional<String> namespacePrefix =
         Optional.ofNullable(System.getProperty(PROP_NAMESPACE_PREFIX));
@@ -32,11 +30,11 @@ public class CosmosIntegrationTest extends IntegrationTestBase {
     // reuse this storage instance through the tests
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoint);
-    props.setProperty(DatabaseConfig.USERNAME, username);
     props.setProperty(DatabaseConfig.PASSWORD, password);
+    props.setProperty(DatabaseConfig.STORAGE, "cosmos");
     namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
 
-    DatabaseConfig config = new DatabaseConfig(props);
+    CosmosConfig config = new CosmosConfig(props);
     admin = new CosmosAdmin(config);
     storage = new Cosmos(config);
     createTable(ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000"));

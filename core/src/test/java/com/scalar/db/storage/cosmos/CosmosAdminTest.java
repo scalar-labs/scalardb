@@ -7,10 +7,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Arrays;
@@ -50,7 +49,7 @@ import org.mockito.MockitoAnnotations;
 
 public class CosmosAdminTest {
   @Mock private CosmosClient client;
-  @Mock private DatabaseConfig config;
+  @Mock private CosmosConfig config;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
   private CosmosAdmin admin;
@@ -65,27 +64,65 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void getTableMetadata_ContainerShouldBeCalledProperly() throws ExecutionException {
+  public void
+      getTableMetadata_WithoutTableMetadataDatabaseChanged_ShouldReturnCorrectTableMetadata()
+          throws ExecutionException {
+    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.empty());
+  }
+
+  @Test
+  public void getTableMetadata_WithTableMetadataDatabaseChanged_ShouldReturnCorrectTableMetadata()
+      throws ExecutionException {
+    getTableMetadata_ShouldReturnCorrectTableMetadata(Optional.of("changed"));
+  }
+
+  private void getTableMetadata_ShouldReturnCorrectTableMetadata(
+      Optional<String> tableMetadataDatabase) throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "table";
     String fullName = getFullTableName(Optional.empty(), namespace, table);
+    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     @SuppressWarnings("unchecked")
     CosmosItemResponse<CosmosTableMetadata> response = mock(CosmosItemResponse.class);
 
-    when(client.getDatabase(any())).thenReturn(database);
-    when(database.getContainer(any())).thenReturn(container);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
     when(container.readItem(
             anyString(),
             any(PartitionKey.class),
             ArgumentMatchers.<Class<CosmosTableMetadata>>any()))
         .thenReturn(response);
 
+    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
+    cosmosTableMetadata.setColumns(ImmutableMap.of("c1", "int", "c2", "text", "c3", "bigint"));
+    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c1"));
+    cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
+    cosmosTableMetadata.setSecondaryIndexNames(Collections.emptySet());
+
+    when(response.getItem()).thenReturn(cosmosTableMetadata);
+
+    if (tableMetadataDatabase.isPresent()) {
+      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
+      admin = new CosmosAdmin(client, config);
+    }
+
     // Act
-    admin.getTableMetadata(namespace, table);
+    TableMetadata actual = admin.getTableMetadata(namespace, table);
 
     // Assert
+    assertThat(actual)
+        .isEqualTo(
+            TableMetadata.newBuilder()
+                .addColumn("c1", DataType.INT)
+                .addColumn("c2", DataType.TEXT)
+                .addColumn("c3", DataType.BIGINT)
+                .addPartitionKey("c1")
+                .build());
+
+    verify(client).getDatabase(metadataDatabaseName);
+    verify(database).getContainer(CosmosAdmin.METADATA_CONTAINER);
     verify(container).readItem(fullName, new PartitionKey(fullName), CosmosTableMetadata.class);
     verify(response).getItem();
   }
@@ -148,7 +185,19 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void createTable_WithCorrectParams_ShouldCreateContainer() throws ExecutionException {
+  public void createTable_WithoutTableMetadataDatabaseChanged_ShouldCreateContainer()
+      throws ExecutionException {
+    createTable_ShouldCreateContainer(Optional.empty());
+  }
+
+  @Test
+  public void createTable_WithTableMetadataDatabaseChanged_ShouldCreateContainer()
+      throws ExecutionException {
+    createTable_ShouldCreateContainer(Optional.of("changed"));
+  }
+
+  private void createTable_ShouldCreateContainer(Optional<String> tableMetadataDatabase)
+      throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -167,10 +216,24 @@ public class CosmosAdminTest {
             .addSecondaryIndex("c4")
             .build();
 
-    when(client.getDatabase(any())).thenReturn(database);
-    when(database.getContainer(any())).thenReturn(container);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
     CosmosScripts cosmosScripts = Mockito.mock(CosmosScripts.class);
     when(container.getScripts()).thenReturn(cosmosScripts);
+
+    // for metadata table
+    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
+
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+
+    if (tableMetadataDatabase.isPresent()) {
+      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
+      admin = new CosmosAdmin(client, config);
+    }
 
     // Act
     admin.createTable(namespace, table, metadata, Collections.emptyMap());
@@ -179,13 +242,14 @@ public class CosmosAdminTest {
     verify(database).createContainer(any(CosmosContainerProperties.class));
     verify(cosmosScripts).createStoredProcedure(any(CosmosStoredProcedureProperties.class));
 
+    // for metadata table
     verify(client)
         .createDatabaseIfNotExists(
-            eq(getFullNamespaceName(Optional.empty(), CosmosAdmin.METADATA_DATABASE)),
+            eq(getFullNamespaceName(Optional.empty(), metadataDatabaseName)),
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
     ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
         ArgumentCaptor.forClass(CosmosContainerProperties.class);
-    verify(database).createContainerIfNotExists(containerPropertiesCaptor.capture());
+    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId())
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
@@ -205,61 +269,126 @@ public class CosmosAdminTest {
             .put("c7", "float")
             .build());
     cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c4"));
-    verify(container).upsertItem(cosmosTableMetadata);
+    verify(metadataContainer).upsertItem(cosmosTableMetadata);
   }
 
   @Test
   public void
-      dropTable_WithExistingContainerWithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase()
+      dropTable_WithNoMetadataLeftWithoutTableMetadataDatabaseChanged_ShouldDropContainerAndDeleteMetadataAndDatabase()
           throws ExecutionException {
+    dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(Optional.empty());
+  }
+
+  @Test
+  public void
+      dropTable_WithNoMetadataLeftWithTableMetadataDatabaseChanged_ShouldDropContainerAndDeleteMetadataAndDatabase()
+          throws ExecutionException {
+    dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(
+        Optional.of("changed"));
+  }
+
+  private void dropTable_WithNoMetadataLeft_ShouldDropContainerAndDeleteMetadataAndDatabase(
+      Optional<String> tableMetadataDatabase) throws ExecutionException {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
 
-    when(client.getDatabase(anyString())).thenReturn(database);
-    when(database.getContainer(anyString())).thenReturn(container);
+    when(client.getDatabase(namespace)).thenReturn(database);
+    when(database.getContainer(table)).thenReturn(container);
+
+    // for metadata table
+    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
+
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<Object> queryResults = mock(CosmosPagedIterable.class);
-    when(container.queryItems(anyString(), any(), eq(Object.class))).thenReturn(queryResults);
+    when(metadataContainer.queryItems(anyString(), any(), eq(Object.class)))
+        .thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.empty());
 
-    // Act
-    admin.dropTable(namespace, table);
-
-    // Assert
-    verify(container, times(2)).delete();
-    String fullTable = getFullTableName(Optional.empty(), namespace, table);
-    verify(container)
-        .deleteItem(
-            eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
-    verify(database).delete();
-  }
-
-  @Test
-  public void
-      dropTable_WithExistingContainerWithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata()
-          throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "sample_table";
-
-    when(client.getDatabase(anyString())).thenReturn(database);
-    when(database.getContainer(anyString())).thenReturn(container);
-    @SuppressWarnings("unchecked")
-    CosmosPagedIterable<Object> queryResults = mock(CosmosPagedIterable.class);
-    when(container.queryItems(anyString(), any(), eq(Object.class))).thenReturn(queryResults);
-    when(queryResults.stream()).thenReturn(Stream.of(new CosmosTableMetadata()));
+    if (tableMetadataDatabase.isPresent()) {
+      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
+      admin = new CosmosAdmin(client, config);
+    }
 
     // Act
     admin.dropTable(namespace, table);
 
     // Assert
     verify(container).delete();
+
+    // for metadata table
+    verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
     String fullTable = getFullTableName(Optional.empty(), namespace, table);
-    verify(container)
+    verify(metadataContainer)
         .deleteItem(
             eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
-    verify(database, never()).delete();
+    verify(metadataContainer).delete();
+    verify(metadataDatabase).delete();
+  }
+
+  @Test
+  public void
+      dropTable_WithMetadataLeftWithoutTableMetadataDatabaseChanged_ShouldDropContainerAndOnlyDeleteMetadata()
+          throws ExecutionException {
+    dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(Optional.empty());
+  }
+
+  @Test
+  public void
+      dropTable_WithMetadataLeftWithTableMetadataDatabaseChanged_ShouldDropContainerAndOnlyDeleteMetadata()
+          throws ExecutionException {
+    dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(Optional.of("changed"));
+  }
+
+  private void dropTable_WithMetadataLeft_ShouldDropContainerAndOnlyDeleteMetadata(
+      Optional<String> tableMetadataDatabase) throws ExecutionException {
+    // Arrange
+    String namespace = "ns";
+    String table = "sample_table";
+
+    when(client.getDatabase(anyString())).thenReturn(database);
+    when(database.getContainer(anyString())).thenReturn(container);
+
+    // for metadata table
+    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
+
+    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
+    CosmosContainer metadataContainer = mock(CosmosContainer.class);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
+    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
+        .thenReturn(metadataContainer);
+    @SuppressWarnings("unchecked")
+    CosmosPagedIterable<Object> queryResults = mock(CosmosPagedIterable.class);
+    when(metadataContainer.queryItems(anyString(), any(), eq(Object.class)))
+        .thenReturn(queryResults);
+    when(queryResults.stream()).thenReturn(Stream.of(new CosmosTableMetadata()));
+
+    if (tableMetadataDatabase.isPresent()) {
+      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
+      admin = new CosmosAdmin(client, config);
+    }
+
+    // Act
+    admin.dropTable(namespace, table);
+
+    // Assert
+    verify(container).delete();
+
+    // for metadata table
+    verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
+    verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
+    String fullTable = getFullTableName(Optional.empty(), namespace, table);
+    verify(metadataContainer)
+        .deleteItem(
+            eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
+    verify(metadataContainer, never()).delete();
+    verify(metadataDatabase, never()).delete();
   }
 
   @Test
@@ -316,28 +445,49 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void getNamespaceTableNames_ShouldGetTableNamesProperly() throws ExecutionException {
+  public void
+      getNamespaceTableNames_WithoutTableMetadataDatabaseChanged_ShouldGetTableNamesProperly()
+          throws ExecutionException {
+    getNamespaceTableNames_ShouldGetTableNamesProperly(Optional.empty());
+  }
+
+  @Test
+  public void getNamespaceTableNames_WithTableMetadataDatabaseChanged_ShouldGetTableNamesProperly()
+      throws ExecutionException {
+    getNamespaceTableNames_ShouldGetTableNamesProperly(Optional.of("changed"));
+  }
+
+  private void getNamespaceTableNames_ShouldGetTableNamesProperly(
+      Optional<String> tableMetadataDatabase) throws ExecutionException {
     // Arrange
     String namespace = "ns";
+    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     CosmosTableMetadata t1 = new CosmosTableMetadata();
     t1.setId(getFullTableName(Optional.empty(), namespace, "t1"));
     CosmosTableMetadata t2 = new CosmosTableMetadata();
     t2.setId(getFullTableName(Optional.empty(), namespace, "t2"));
 
-    when(client.getDatabase(anyString())).thenReturn(database);
-    when(database.getContainer(anyString())).thenReturn(container);
+    when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
+    when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<CosmosTableMetadata> queryResults = mock(CosmosPagedIterable.class);
     when(container.queryItems(anyString(), any(), eq(CosmosTableMetadata.class)))
         .thenReturn(queryResults);
     when(queryResults.stream()).thenReturn(Stream.of(t1, t2));
 
+    if (tableMetadataDatabase.isPresent()) {
+      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
+      admin = new CosmosAdmin(client, config);
+    }
+
     // Act
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
 
     // Assert
     assertThat(actualTableNames).containsExactly("t1", "t2");
+    verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
+    verify(database, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
     verify(container)
         .queryItems(
             eq("SELECT * FROM metadata WHERE metadata.id LIKE 'ns.%'"),

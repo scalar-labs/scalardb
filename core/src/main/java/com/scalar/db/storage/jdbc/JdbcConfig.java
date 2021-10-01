@@ -6,7 +6,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ public class JdbcConfig extends DatabaseConfig {
       PREFIX + "prepared_statements_pool.enabled";
   public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
       PREFIX + "prepared_statements_pool.max_open";
+  public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 5;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 10;
@@ -36,6 +39,7 @@ public class JdbcConfig extends DatabaseConfig {
   private int connectionPoolMaxTotal;
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
+  @Nullable private String tableMetadataSchema;
 
   public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -65,6 +69,10 @@ public class JdbcConfig extends DatabaseConfig {
         getBoolean(PREPARED_STATEMENTS_POOL_ENABLED, DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     preparedStatementsPoolMaxOpen =
         getInt(PREPARED_STATEMENTS_POOL_MAX_OPEN, DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+
+    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_SCHEMA))) {
+      tableMetadataSchema = getProperties().getProperty(TABLE_METADATA_SCHEMA);
+    }
   }
 
   private int getInt(String name, int defaultValue) {
@@ -109,5 +117,9 @@ public class JdbcConfig extends DatabaseConfig {
 
   public int getPreparedStatementsPoolMaxOpen() {
     return preparedStatementsPoolMaxOpen;
+  }
+
+  public Optional<String> getTableMetadataSchema() {
+    return Optional.ofNullable(tableMetadataSchema);
   }
 }
