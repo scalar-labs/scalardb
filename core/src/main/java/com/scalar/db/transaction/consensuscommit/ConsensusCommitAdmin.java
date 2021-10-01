@@ -37,26 +37,23 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Creates a coordinator table if it does not exist.
+   * Creates a coordinator namespace/table if it does not exist.
    *
    * @throws ExecutionException if the operation failed
    */
   public void createCoordinatorTable() throws ExecutionException {
-    admin.createTable(
-        coordinatorNamespace,
-        Coordinator.TABLE,
-        Coordinator.TABLE_METADATA,
-        true,
-        Collections.emptyMap());
+    admin.createNamespace(coordinatorNamespace, true);
+    admin.createTable(coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, true);
   }
 
   /**
-   * Creates a coordinator table if it does not exist.
+   * Creates a coordinator namespace/table if it does not exist.
    *
-   * @param options options to create
+   * @param options options to create namespace/table
    * @throws ExecutionException if the operation failed
    */
   public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
+    admin.createNamespace(coordinatorNamespace, true, options);
     admin.createTable(
         coordinatorNamespace, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
   }
