@@ -140,7 +140,8 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
         execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
       } else if (rdbEngine == RdbEngine.MYSQL) {
         execute(
-            connection, "CREATE SCHEMA " + fullNamespace + " character set 'utf8' COLLATE 'utf8_bin'");
+            connection,
+            "CREATE SCHEMA " + fullNamespace + " character set 'utf8' COLLATE 'utf8_bin'");
       } else {
         execute(connection, "CREATE SCHEMA " + fullNamespace);
       }
