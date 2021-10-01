@@ -3,9 +3,11 @@ package com.scalar.db.transaction.rpc;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
+import com.scalar.db.api.Operation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudConflictException;
@@ -31,8 +33,8 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionRequest.ValidateRequest;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import com.scalar.db.util.ProtoUtil;
 import com.scalar.db.util.Utility;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
@@ -56,7 +58,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
         TwoPhaseCommitTransactionRequest, TwoPhaseCommitTransactionResponse> {
 
   private final GrpcConfig config;
-  private final GrpcTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
   private final BlockingQueue<ResponseOrError> queue = new LinkedBlockingQueue<>();
   private final AtomicBoolean finished = new AtomicBoolean();
 
@@ -65,7 +67,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
   public GrpcTwoPhaseCommitTransactionOnBidirectionalStream(
       GrpcConfig config,
       TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub,
-      GrpcTableMetadataManager metadataManager) {
+      TableMetadataManager metadataManager) {
     this.config = config;
     this.metadataManager = metadataManager;
     stub.twoPhaseCommitTransaction(this);
@@ -172,7 +174,7 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
 
     GetResponse getResponse = responseOrError.getResponse().getGetResponse();
     if (getResponse.hasResult()) {
-      TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
+      TableMetadata tableMetadata = getTableMetadata(get);
       return Optional.of(ProtoUtil.toResult(getResponse.getResult(), tableMetadata));
     }
 
@@ -189,10 +191,18 @@ public class GrpcTwoPhaseCommitTransactionOnBidirectionalStream
                 .build());
     throwIfErrorForCrud(responseOrError);
 
-    TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
+    TableMetadata tableMetadata = getTableMetadata(scan);
     return responseOrError.getResponse().getScanResponse().getResultList().stream()
         .map(r -> ProtoUtil.toResult(r, tableMetadata))
         .collect(Collectors.toList());
+  }
+
+  private TableMetadata getTableMetadata(Operation operation) throws CrudException {
+    try {
+      return metadataManager.getTableMetadata(operation);
+    } catch (ExecutionException e) {
+      throw new CrudException("getting a metadata failed", e);
+    }
   }
 
   public void mutate(Mutation mutation) throws CrudException {

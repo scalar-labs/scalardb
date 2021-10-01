@@ -8,6 +8,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.util.Utility;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,12 +38,12 @@ public class SelectStatementHandler extends StatementHandler {
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
-   * {@link DynamoTableMetadataManager}
+   * {@link TableMetadataManager}
    *
    * @param client {@code DynamoDbClient}
    * @param metadataManager {@code TableMetadataManager}
    */
-  public SelectStatementHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
+  public SelectStatementHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 
@@ -51,24 +52,24 @@ public class SelectStatementHandler extends StatementHandler {
   public List<Map<String, AttributeValue>> handle(Operation operation) throws ExecutionException {
     checkArgument(operation, Get.class, Scan.class);
 
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
     try {
-      if (Utility.isSecondaryIndexSpecified(
-          operation, metadataManager.getTableMetadata(operation))) {
-        return executeQueryWithIndex((Selection) operation);
+      if (Utility.isSecondaryIndexSpecified(operation, tableMetadata)) {
+        return executeQueryWithIndex((Selection) operation, tableMetadata);
       }
 
       if (operation instanceof Get) {
-        return executeGet((Get) operation);
+        return executeGet((Get) operation, tableMetadata);
       } else {
-        return executeQuery((Scan) operation);
+        return executeQuery((Scan) operation, tableMetadata);
       }
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
   }
 
-  private List<Map<String, AttributeValue>> executeGet(Get get) {
-    DynamoOperation dynamoOperation = new DynamoOperation(get, metadataManager);
+  private List<Map<String, AttributeValue>> executeGet(Get get, TableMetadata tableMetadata) {
+    DynamoOperation dynamoOperation = new DynamoOperation(get, tableMetadata);
 
     GetItemRequest.Builder builder =
         GetItemRequest.builder()
@@ -91,8 +92,9 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private List<Map<String, AttributeValue>> executeQueryWithIndex(Selection selection) {
-    DynamoOperation dynamoOperation = new DynamoOperation(selection, metadataManager);
+  private List<Map<String, AttributeValue>> executeQueryWithIndex(
+      Selection selection, TableMetadata tableMetadata) {
+    DynamoOperation dynamoOperation = new DynamoOperation(selection, tableMetadata);
     Value<?> keyValue = selection.getPartitionKey().get().get(0);
     String column = keyValue.getName();
     String indexTable = dynamoOperation.getGlobalIndexName(column);
@@ -120,8 +122,8 @@ public class SelectStatementHandler extends StatementHandler {
     return new ArrayList<>(queryResponse.items());
   }
 
-  private List<Map<String, AttributeValue>> executeQuery(Scan scan) {
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+  private List<Map<String, AttributeValue>> executeQuery(Scan scan, TableMetadata tableMetadata) {
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
     getIndexName(scan)
@@ -131,7 +133,7 @@ public class SelectStatementHandler extends StatementHandler {
               builder.indexName(indexTableName);
             });
 
-    setConditions(builder, scan);
+    setConditions(builder, scan, tableMetadata);
 
     // When multiple clustering keys exist, the ordering and the limitation will be applied later
     if (dynamoOperation.isSingleClusteringKey() && !scan.getOrderings().isEmpty()) {
@@ -160,7 +162,6 @@ public class SelectStatementHandler extends StatementHandler {
     QueryResponse queryResponse = client.query(builder.build());
     List<Map<String, AttributeValue>> ret = new ArrayList<>(queryResponse.items());
     if (!dynamoOperation.isSingleClusteringKey()) {
-      TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
       ret = new ItemSorter(scan, tableMetadata).sort(ret);
     }
     return ret;
@@ -201,7 +202,7 @@ public class SelectStatementHandler extends StatementHandler {
     return Optional.empty();
   }
 
-  private void setConditions(QueryRequest.Builder builder, Scan scan) {
+  private void setConditions(QueryRequest.Builder builder, Scan scan, TableMetadata tableMetadata) {
     List<String> conditions = new ArrayList<>();
     List<String> filters = new ArrayList<>();
 
@@ -212,7 +213,7 @@ public class SelectStatementHandler extends StatementHandler {
     setEndCondition(scan, conditions, filters, isRangeEnabled);
     String keyConditions = String.join(" AND ", conditions);
 
-    Map<String, AttributeValue> bindMap = getPartitionKeyBindMap(scan);
+    Map<String, AttributeValue> bindMap = getPartitionKeyBindMap(scan, tableMetadata);
     if (isRangeEnabled) {
       bindMap.putAll(getRangeBindMap(scan));
     }
@@ -231,9 +232,10 @@ public class SelectStatementHandler extends StatementHandler {
     return DynamoOperation.PARTITION_KEY + " = " + DynamoOperation.PARTITION_KEY_ALIAS;
   }
 
-  private Map<String, AttributeValue> getPartitionKeyBindMap(Scan scan) {
+  private Map<String, AttributeValue> getPartitionKeyBindMap(
+      Scan scan, TableMetadata tableMetadata) {
     Map<String, AttributeValue> bindMap = new HashMap<>();
-    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadataManager);
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
 
     bindMap.put(

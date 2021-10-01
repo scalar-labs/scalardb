@@ -24,9 +24,11 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,7 +55,7 @@ public class PutStatementHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private CosmosTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;
@@ -62,7 +64,7 @@ public class PutStatementHandlerTest {
   @Captor ArgumentCaptor<List<Object>> captor;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new PutStatementHandler(client, metadataManager);
@@ -94,7 +96,7 @@ public class PutStatementHandlerTest {
     when(spResponse.getResponseAsString()).thenReturn("true");
 
     Put put = preparePut();
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 
@@ -127,7 +129,7 @@ public class PutStatementHandlerTest {
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_INT_1)
             .withValue(ANY_NAME_4, ANY_INT_2);
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 
@@ -171,7 +173,7 @@ public class PutStatementHandlerTest {
     when(spResponse.getResponseAsString()).thenReturn("true");
 
     Put put = preparePut().withCondition(new PutIfNotExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 
@@ -198,7 +200,7 @@ public class PutStatementHandlerTest {
         .thenReturn(spResponse);
 
     Put put = preparePut().withCondition(new PutIfExists());
-    CosmosMutation cosmosMutation = new CosmosMutation(put, metadataManager);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
     Record record = cosmosMutation.makeRecord();
     String query = cosmosMutation.makeConditionalQuery();
 

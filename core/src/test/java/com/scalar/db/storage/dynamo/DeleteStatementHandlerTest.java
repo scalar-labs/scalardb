@@ -16,6 +16,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import org.junit.Before;
@@ -39,12 +40,12 @@ public class DeleteStatementHandlerTest {
 
   private DeleteStatementHandler handler;
   @Mock private DynamoDbClient client;
-  @Mock private DynamoTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private DeleteItemResponse response;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new DeleteStatementHandler(client, metadataManager);
@@ -67,7 +68,7 @@ public class DeleteStatementHandlerTest {
     // Arrange
     when(client.deleteItem(any(DeleteItemRequest.class))).thenReturn(response);
     Delete delete = prepareDelete();
-    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadata);
 
     // Act Assert
     assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
@@ -106,7 +107,7 @@ public class DeleteStatementHandlerTest {
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
 
-    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadata);
 
     // Act Assert
     assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();
@@ -128,7 +129,7 @@ public class DeleteStatementHandlerTest {
 
     Delete delete = prepareDelete().withCondition(new DeleteIfExists());
 
-    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
+    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadata);
 
     // Act Assert
     assertThatCode(() -> handler.handle(delete)).doesNotThrowAnyException();

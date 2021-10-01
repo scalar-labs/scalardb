@@ -12,8 +12,8 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import io.grpc.Status;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +27,7 @@ public class GrpcTransactionManagerTest {
   @Mock private GrpcConfig config;
   @Mock private DistributedTransactionGrpc.DistributedTransactionStub stub;
   @Mock private DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
-  @Mock private GrpcTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
 
   private GrpcTransactionManager manager;
 

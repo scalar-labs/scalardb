@@ -33,7 +33,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   public ConsensusCommitManager(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     this.config = config;
-    this.coordinator = new Coordinator(storage);
+    this.coordinator = new Coordinator(storage, config);
     this.recovery = new RecoveryHandler(storage, coordinator);
     this.commit = new CommitHandler(storage, coordinator, recovery);
     this.namespace = storage.getNamespace();

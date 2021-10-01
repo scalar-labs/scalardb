@@ -2374,10 +2374,10 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private static void initStorageAndManagerAndCoordinator() {
     storage = new JdbcDatabase(testEnv.getJdbcConfig());
-    manager =
-        new TwoPhaseConsensusCommitManager(
-            storage, new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties()));
-    coordinator = new Coordinator(storage);
+    ConsensusCommitConfig consensusCommitConfig =
+        new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties());
+    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
+    coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 
   @AfterClass

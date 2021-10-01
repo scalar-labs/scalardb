@@ -4,8 +4,10 @@ import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,16 +30,16 @@ import software.amazon.awssdk.services.dynamodb.model.Update;
 @ThreadSafe
 public class BatchHandler {
   private final DynamoDbClient client;
-  private final DynamoTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
 
   /**
    * Constructs a {@code BatchHandler} with the specified {@link DynamoDbClient} and {@link
-   * DynamoTableMetadataManager}
+   * TableMetadataManager}
    *
    * @param client {@code DynamoDbClient} to create a statement with
    * @param metadataManager {@code TableMetadataManager}
    */
-  public BatchHandler(DynamoDbClient client, DynamoTableMetadataManager metadataManager) {
+  public BatchHandler(DynamoDbClient client, TableMetadataManager metadataManager) {
     this.client = client;
     this.metadataManager = metadataManager;
   }
@@ -55,9 +57,11 @@ public class BatchHandler {
       throw new IllegalArgumentException("DynamoDB cannot batch more than 25 mutations at once.");
     }
 
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(mutations.get(0));
+
     TransactWriteItemsRequest.Builder builder = TransactWriteItemsRequest.builder();
     List<TransactWriteItem> transactItems = new ArrayList<>();
-    mutations.forEach(m -> transactItems.add(makeWriteItem(m)));
+    mutations.forEach(m -> transactItems.add(makeWriteItem(m, tableMetadata)));
     builder.transactItems(transactItems);
 
     try {
@@ -74,20 +78,20 @@ public class BatchHandler {
     }
   }
 
-  private TransactWriteItem makeWriteItem(Mutation mutation) {
+  private TransactWriteItem makeWriteItem(Mutation mutation, TableMetadata tableMetadata) {
     TransactWriteItem.Builder itemBuilder = TransactWriteItem.builder();
 
     if (mutation instanceof com.scalar.db.api.Put) {
-      itemBuilder.update(makeUpdate((com.scalar.db.api.Put) mutation));
+      itemBuilder.update(makeUpdate((com.scalar.db.api.Put) mutation, tableMetadata));
     } else {
-      itemBuilder.delete(makeDelete((com.scalar.db.api.Delete) mutation));
+      itemBuilder.delete(makeDelete((com.scalar.db.api.Delete) mutation, tableMetadata));
     }
 
     return itemBuilder.build();
   }
 
-  private Update makeUpdate(com.scalar.db.api.Put put) {
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadataManager);
+  private Update makeUpdate(com.scalar.db.api.Put put, TableMetadata tableMetadata) {
+    DynamoMutation dynamoMutation = new DynamoMutation(put, tableMetadata);
     Update.Builder updateBuilder = Update.builder();
     String expression;
     String condition = null;
@@ -128,8 +132,8 @@ public class BatchHandler {
     return updateBuilder.build();
   }
 
-  private Delete makeDelete(com.scalar.db.api.Delete delete) {
-    DynamoMutation dynamoMutation = new DynamoMutation(delete, metadataManager);
+  private Delete makeDelete(com.scalar.db.api.Delete delete, TableMetadata tableMetadata) {
+    DynamoMutation dynamoMutation = new DynamoMutation(delete, tableMetadata);
     Delete.Builder deleteBuilder =
         Delete.builder().tableName(dynamoMutation.getTableName()).key(dynamoMutation.getKeyMap());
 

@@ -2,15 +2,18 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -20,16 +23,13 @@ public class ConsensusCommitAdminTest {
   private static final String TABLE = "test_table";
 
   @Mock private DistributedStorageAdmin distributedStorageAdmin;
-
-  @Mock
-  @SuppressWarnings("unused")
-  private ConsensusCommitConfig config;
-
-  @InjectMocks private ConsensusCommitAdmin admin;
+  @Mock private ConsensusCommitConfig config;
+  private ConsensusCommitAdmin admin;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
   }
 
   @Test
@@ -41,13 +41,62 @@ public class ConsensusCommitAdminTest {
     admin.createCoordinatorTable();
 
     // Assert
+    verify(distributedStorageAdmin).createNamespace(Coordinator.NAMESPACE, true);
+    verify(distributedStorageAdmin)
+        .createTable(Coordinator.NAMESPACE, Coordinator.TABLE, Coordinator.TABLE_METADATA, true);
+  }
+
+  @Test
+  public void
+      createCoordinatorTable_WithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+          throws ExecutionException {
+    // Arrange
+    when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+
+    // Act
+    admin.createCoordinatorTable();
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace("changed_coordinator", true);
+    verify(distributedStorageAdmin)
+        .createTable("changed_coordinator", Coordinator.TABLE, Coordinator.TABLE_METADATA, true);
+  }
+
+  @Test
+  public void createCoordinatorTable_WithOptions_shouldCreateCoordinatorTableProperly()
+      throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    // Act
+    admin.createCoordinatorTable(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace(Coordinator.NAMESPACE, true, options);
     verify(distributedStorageAdmin)
         .createTable(
-            Coordinator.NAMESPACE,
-            Coordinator.TABLE,
-            Coordinator.TABLE_METADATA,
-            true,
-            Collections.emptyMap());
+            Coordinator.NAMESPACE, Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
+  }
+
+  @Test
+  public void
+      createCoordinatorTable_WithOptionsWithCoordinatorNamespaceChanged_shouldCreateWithChangedNamespace()
+          throws ExecutionException {
+    // Arrange
+    Map<String, String> options = ImmutableMap.of("name", "value");
+
+    when(config.getCoordinatorNamespace()).thenReturn(Optional.of("changed_coordinator"));
+    admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
+
+    // Act
+    admin.createCoordinatorTable(options);
+
+    // Assert
+    verify(distributedStorageAdmin).createNamespace("changed_coordinator", true, options);
+    verify(distributedStorageAdmin)
+        .createTable(
+            "changed_coordinator", Coordinator.TABLE, Coordinator.TABLE_METADATA, true, options);
   }
 
   @Test
