@@ -11,6 +11,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
@@ -23,6 +24,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +71,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.DOUBLE);
@@ -78,7 +80,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.FLOAT);
@@ -87,7 +89,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.INT);
     }
@@ -95,7 +97,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BIGINT);
@@ -104,7 +106,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.BLOB);
     }
@@ -112,14 +114,14 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyRangeOfValuesTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(cKeyTypeBefore, DataType.TEXT);
     }
   }
 
   public void scan_WithClusteringKeyRangeOfValues_ShouldReturnProperlyResult(
-      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException, IOException {
     RANDOM_GENERATOR.setSeed(777);
     List<Value> valueList = new ArrayList<>();
     prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
@@ -139,7 +141,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
     // Act
-    List<Result> scanRet = distributedStorage.scan(scan).all();
+    List<Result> scanRet = scanAll(scan);
 
     // Assert
     assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
@@ -148,7 +150,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.DOUBLE);
@@ -158,7 +160,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.FLOAT);
@@ -167,7 +169,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyStartInclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.INT);
@@ -177,7 +179,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BIGINT);
@@ -187,7 +189,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BLOB);
@@ -197,7 +199,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.TEXT);
@@ -205,7 +207,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   }
 
   public void scan_WithClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
-      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException, IOException {
     RANDOM_GENERATOR.setSeed(778);
     List<Value> valueList = new ArrayList<>();
     prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
@@ -224,7 +226,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
     // Act
-    List<Result> scanRet = distributedStorage.scan(scan).all();
+    List<Result> scanRet = scanAll(scan);
 
     // Assert
     assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
@@ -233,7 +235,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartExclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.DOUBLE);
@@ -243,7 +245,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.FLOAT);
@@ -252,7 +254,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyStartExclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.INT);
@@ -262,7 +264,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartExclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BIGINT);
@@ -272,7 +274,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BLOB);
@@ -282,7 +284,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyStartExclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.TEXT);
@@ -290,7 +292,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   }
 
   public void scan_WithClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
-      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException, IOException {
     RANDOM_GENERATOR.setSeed(779);
     List<Value> valueList = new ArrayList<>();
     prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
@@ -309,7 +311,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
     // Act
-    List<Result> scanRet = distributedStorage.scan(scan).all();
+    List<Result> scanRet = scanAll(scan);
 
     // Assert
     assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
@@ -318,7 +320,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyEndInclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.DOUBLE);
@@ -327,7 +329,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.FLOAT);
@@ -336,7 +338,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndInclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.INT);
@@ -346,7 +348,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyEndInclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BIGINT);
@@ -355,7 +357,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BLOB);
@@ -364,7 +366,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndInclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.TEXT);
@@ -372,7 +374,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   }
 
   public void scan_WithClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
-      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException, IOException {
     RANDOM_GENERATOR.setSeed(780);
     List<Value> valueList = new ArrayList<>();
     prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
@@ -391,7 +393,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
     // Act
-    List<Result> scanRet = distributedStorage.scan(scan).all();
+    List<Result> scanRet = scanAll(scan);
 
     // Assert
     assertScanResultWithOrdering(scanRet, COL_NAME3, expectedValues);
@@ -400,7 +402,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyEndExclusiveRangeOfValuesDoubleAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.DOUBLE);
@@ -409,7 +411,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.FLOAT);
@@ -418,7 +420,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndExclusiveRangeOfValuesIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.INT);
@@ -428,7 +430,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   @Test
   public void
       scan_WithClusteringKeyEndExclusiveRangeOfValuesBigIntAfter_ShouldReturnProperlyResult()
-          throws ExecutionException {
+          throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BIGINT);
@@ -437,7 +439,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.BLOB);
@@ -446,7 +448,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithClusteringKeyEndExclusiveRangeOfValuesTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException {
+      throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : CLUSTERING_KEY_TYPE_LIST) {
       scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
           cKeyTypeBefore, DataType.TEXT);
@@ -454,7 +456,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   }
 
   public void scan_WithClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
-      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException {
+      DataType cKeyTypeBefore, DataType cKeyTypeAfter) throws ExecutionException, IOException {
     RANDOM_GENERATOR.setSeed(781);
     List<Value> valueList = new ArrayList<>();
     prepareRecords(valueList, cKeyTypeBefore, cKeyTypeAfter);
@@ -473,7 +475,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
             .forTable(getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
     // Act
-    List<Result> scanRet = distributedStorage.scan(scan).all();
+    List<Result> scanRet = scanAll(scan);
     admin.truncateTable(
         getNamespaceName(cKeyTypeBefore), getTableName(cKeyTypeBefore, cKeyTypeAfter));
 
@@ -599,6 +601,12 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
         return new TextValue(columnName, "fixed_text");
       default:
         throw new RuntimeException("Unsupported data type");
+    }
+  }
+
+  protected List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
+    try (Scanner scanner = distributedStorage.scan(scan)) {
+      return scanner.all();
     }
   }
 

@@ -38,4 +38,10 @@ public class JdbcMultipleClusteringKeysIntegrationTest
   @Override
   public void
       scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
+
+  // Ignore because jdbc rounds the float value
+  @Ignore
+  @Override
+  public void
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
 }
