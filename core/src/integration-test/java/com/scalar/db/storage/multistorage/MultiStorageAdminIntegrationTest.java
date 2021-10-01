@@ -3,14 +3,13 @@ package com.scalar.db.storage.multistorage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.cassandra.CassandraAdmin;
-import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
+import com.scalar.db.service.StorageFactory;
 import java.util.Arrays;
 import java.util.Properties;
 import org.junit.AfterClass;
@@ -31,34 +30,23 @@ public class MultiStorageAdminIntegrationTest {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  private static final String CASSANDRA_CONTACT_POINT = "localhost";
-  private static final String CASSANDRA_USERNAME = "cassandra";
-  private static final String CASSANDRA_PASSWORD = "cassandra";
-
-  private static final String MYSQL_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String MYSQL_USERNAME = "root";
-  private static final String MYSQL_PASSWORD = "mysql";
-
+  private static DistributedStorageAdmin admin1;
+  private static DistributedStorageAdmin admin2;
   private static MultiStorageAdmin multiStorageAdmin;
-  private static JdbcDatabaseAdmin jdbcAdmin;
-  private static CassandraAdmin cassandraAdmin;
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    initCassandra();
-    initMySql();
+  public static void setUpBeforeClass() throws ExecutionException {
+    initAdmin1();
+    initAdmin2();
     initMultiStorageAdmin();
   }
 
-  private static void initCassandra() throws Exception {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, CASSANDRA_CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, CASSANDRA_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, CASSANDRA_PASSWORD);
-    DatabaseConfig config = new DatabaseConfig(props);
-    cassandraAdmin = new CassandraAdmin(config);
-    cassandraAdmin.createNamespace(NAMESPACE1);
-    cassandraAdmin.createNamespace(NAMESPACE2);
+  private static void initAdmin1() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage1());
+    admin1 = factory.getAdmin();
+
+    // create tables
+    admin1.createNamespace(NAMESPACE1, true);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addPartitionKey(COL_NAME1)
@@ -70,21 +58,19 @@ public class MultiStorageAdminIntegrationTest {
             .addColumn(COL_NAME5, DataType.BOOLEAN)
             .build();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.createTable(NAMESPACE1, table, tableMetadata);
+      admin1.createTable(NAMESPACE1, table, tableMetadata, true);
     }
-    cassandraAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata);
+
+    admin1.createNamespace(NAMESPACE2, true);
+    admin1.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
   }
 
-  private static void initMySql() throws Exception {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, MYSQL_CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, MYSQL_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, MYSQL_PASSWORD);
-    props.setProperty(DatabaseConfig.STORAGE, "jdbc");
-    JdbcConfig config = new JdbcConfig(props);
-    jdbcAdmin = new JdbcDatabaseAdmin(config);
-    jdbcAdmin.createNamespace(NAMESPACE1);
-    jdbcAdmin.createNamespace(NAMESPACE2);
+  private static void initAdmin2() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage2());
+    admin2 = factory.getAdmin();
+
+    // create tables
+    admin2.createNamespace(NAMESPACE1, true);
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL_NAME1, DataType.TEXT)
@@ -93,76 +79,97 @@ public class MultiStorageAdminIntegrationTest {
             .addPartitionKey(COL_NAME1)
             .build();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      jdbcAdmin.createTable(NAMESPACE1, table, tableMetadata);
+      admin2.createTable(NAMESPACE1, table, tableMetadata, true);
     }
-    jdbcAdmin.createTable(NAMESPACE2, TABLE1, tableMetadata);
+
+    admin2.createNamespace(NAMESPACE2, true);
+    admin2.createTable(NAMESPACE2, TABLE1, tableMetadata, true);
   }
 
   private static void initMultiStorageAdmin() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
-    // Define storages, cassandra and mysql
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
+    // Define storages, storage1 and storage2
+    props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
 
-    // Define table mapping from table1 in namespace1 to cassandra, and from table2 in namespace1 to
-    // mysql
+    DatabaseConfig configForStorage1 = MultiStorageEnv.getDatabaseConfigForStorage1();
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.storage",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.STORAGE));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.contact_points",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (configForStorage1.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+      props.setProperty(
+          MultiStorageConfig.STORAGES + ".storage1.contact_port",
+          configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+    }
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.username",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.USERNAME));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.password",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.PASSWORD));
+
+    DatabaseConfig configForStorage2 = MultiStorageEnv.getDatabaseConfigForStorage2();
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.storage",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.STORAGE));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.contact_points",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (configForStorage2.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+      props.setProperty(
+          MultiStorageConfig.STORAGES + ".storage2.contact_port",
+          configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+    }
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.username",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.USERNAME));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.password",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.PASSWORD));
+
+    // Define table mapping from table1 in namespace1 to storage1, and from table2 in namespace1 to
+    // storage2
     props.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
-        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":mysql");
+        NAMESPACE1 + "." + TABLE1 + ":storage1," + NAMESPACE1 + "." + TABLE2 + ":storage2");
 
-    // Define namespace mapping from namespace2 and namespace3 to mysql
+    // Define namespace mapping from namespace2 and namespace3 to storage2
     props.setProperty(
-        MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":mysql," + NAMESPACE3 + ":mysql");
+        MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":storage2," + NAMESPACE3 + ":storage2");
 
-    // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+    // The default storage is storage1
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
     multiStorageAdmin = new MultiStorageAdmin(new MultiStorageConfig(props));
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass() throws ExecutionException {
     multiStorageAdmin.close();
-    cleanUpCassandra();
-    cleanUpMySql();
+    cleanUp(admin1);
+    cleanUp(admin2);
   }
 
-  private static void cleanUpCassandra() throws Exception {
+  private static void cleanUp(DistributedStorageAdmin admin) throws ExecutionException {
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.dropTable(NAMESPACE1, table);
+      admin.dropTable(NAMESPACE1, table);
     }
-    cassandraAdmin.dropNamespace(NAMESPACE1);
-    cassandraAdmin.dropTable(NAMESPACE2, TABLE1);
-    cassandraAdmin.dropNamespace(NAMESPACE2);
-    cassandraAdmin.close();
-  }
-
-  private static void cleanUpMySql() throws Exception {
-    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      jdbcAdmin.dropTable(NAMESPACE1, table);
-    }
-    jdbcAdmin.dropNamespace(NAMESPACE1);
-    jdbcAdmin.dropTable(NAMESPACE2, TABLE1);
-    jdbcAdmin.dropNamespace(NAMESPACE2);
-    jdbcAdmin.close();
+    admin.dropNamespace(NAMESPACE1);
+    admin.dropTable(NAMESPACE2, TABLE1);
+    admin.dropNamespace(NAMESPACE2);
+    admin.close();
   }
 
   @Test
   public void ddlOperationsTest() throws ExecutionException {
     // createNamespace
-    multiStorageAdmin.createNamespace(NAMESPACE3);
-    assertThat(cassandraAdmin.namespaceExists(NAMESPACE3)).isFalse();
-    assertThat(jdbcAdmin.namespaceExists(NAMESPACE3)).isTrue();
+    multiStorageAdmin.createNamespace(NAMESPACE3, true);
+    assertThat(admin1.namespaceExists(NAMESPACE3)).isFalse();
+    assertThat(admin2.namespaceExists(NAMESPACE3)).isTrue();
 
     // createTable
     multiStorageAdmin.createTable(
@@ -173,9 +180,10 @@ public class MultiStorageAdminIntegrationTest {
             .addColumn(COL_NAME2, DataType.INT)
             .addColumn(COL_NAME3, DataType.BOOLEAN)
             .addPartitionKey(COL_NAME1)
-            .build());
+            .build(),
+        true);
 
-    assertThat(jdbcAdmin.getNamespaceTableNames(NAMESPACE3).contains(TABLE1)).isTrue();
+    assertThat(admin2.getNamespaceTableNames(NAMESPACE3).contains(TABLE1)).isTrue();
 
     // truncateTable
     assertThatCode(() -> multiStorageAdmin.truncateTable(NAMESPACE3, TABLE1))
@@ -184,15 +192,15 @@ public class MultiStorageAdminIntegrationTest {
     // dropTable
     multiStorageAdmin.dropTable(NAMESPACE3, TABLE1);
 
-    assertThat(jdbcAdmin.getNamespaceTableNames(NAMESPACE3).contains(TABLE1)).isFalse();
+    assertThat(admin2.getNamespaceTableNames(NAMESPACE3).contains(TABLE1)).isFalse();
 
     // dropNamespace
     multiStorageAdmin.dropNamespace(NAMESPACE3);
-    assertThat(jdbcAdmin.namespaceExists(NAMESPACE3)).isFalse();
+    assertThat(admin2.namespaceExists(NAMESPACE3)).isFalse();
   }
 
   @Test
-  public void getTableMetadata_ForTable1InNamespace1_ShouldReturnMetadataFromCassandra()
+  public void getTableMetadata_ForTable1InNamespace1_ShouldReturnMetadataFromStorage1()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
@@ -232,7 +240,7 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable2InNamespace1_ShouldReturnMetadataFromMySql()
+  public void getTableMetadata_ForTable2InNamespace1_ShouldReturnMetadataFromStorage2()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
@@ -318,7 +326,7 @@ public class MultiStorageAdminIntegrationTest {
   }
 
   @Test
-  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromMySql()
+  public void getTableMetadata_ForTable1InNamespace2_ShouldReturnMetadataFromStorage2()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;

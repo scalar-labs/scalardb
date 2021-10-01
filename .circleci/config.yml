@@ -152,7 +152,7 @@ jobs:
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.namespace_prefix=${CIRCLE_BUILD_NUM}
+      - run: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
 
       - run:
           name: Save Gradle integration test reports
@@ -232,10 +232,7 @@ jobs:
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
       # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql
-
-      # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url="jdbc:mysql://localhost:3306/" -Dscalardb.jdbc.username=root -Dscalardb.jdbc.password=mysql -Dscalardb.namespace_prefix=ns_prefix
+      - run: gradle integrationTestJdbc
 
       - run:
           name: Save Gradle integration test reports
@@ -278,9 +275,6 @@ jobs:
 
       # run tests!
       - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
-
-      # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports
@@ -332,9 +326,6 @@ jobs:
       # run tests!
       - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
 
-      # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18 -Dscalardb.namespace_prefix=ns_prefix
-
       - run:
           name: Save Gradle integration test reports
           command: |
@@ -377,9 +368,6 @@ jobs:
 
       # run tests!
       - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
-
-      # run tests with the namespace prefix!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19 -Dscalardb.namespace_prefix=ns_prefix
 
       - run:
           name: Save Gradle integration test reports

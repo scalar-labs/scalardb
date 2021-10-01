@@ -31,13 +31,13 @@ public class ScalarDbServer implements Callable<Integer> {
       description = "A configuration file in properties format.")
   private String configFile;
 
-  private Properties properties;
+  private ServerConfig config;
   private Server server;
 
   public ScalarDbServer() {}
 
-  public ScalarDbServer(Properties properties) {
-    this.properties = properties;
+  public ScalarDbServer(ServerConfig config) {
+    this.config = config;
   }
 
   @Override
@@ -50,15 +50,15 @@ public class ScalarDbServer implements Callable<Integer> {
 
   public void start() throws IOException {
     if (configFile != null) {
-      properties = new Properties();
+      Properties properties = new Properties();
       try (FileInputStream fis = new FileInputStream(configFile)) {
         properties.load(fis);
       }
+      config = new ServerConfig(properties);
     }
 
-    ServerConfig config = new ServerConfig(properties);
     Injector injector =
-        Guice.createInjector(new ServerModule(config, new DatabaseConfig(properties)));
+        Guice.createInjector(new ServerModule(config, new DatabaseConfig(config.getProperties())));
 
     ServerBuilder<?> builder =
         ServerBuilder.forPort(config.getPort())
@@ -70,7 +70,8 @@ public class ScalarDbServer implements Callable<Integer> {
             .addService(ProtoReflectionService.newInstance());
 
     // Two-phase commit for JDBC is not supported for now
-    String transactionManager = properties.getProperty(DatabaseConfig.TRANSACTION_MANAGER);
+    String transactionManager =
+        config.getProperties().getProperty(DatabaseConfig.TRANSACTION_MANAGER);
     if (Strings.isNullOrEmpty(transactionManager) || !transactionManager.equals("jdbc")) {
       builder.addService(injector.getInstance(TwoPhaseCommitTransactionService.class));
     } else {

@@ -9,7 +9,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import java.util.Arrays;
@@ -37,7 +36,7 @@ public class CosmosMutationTest {
   @Mock private TableMetadata metadata;
 
   @Before
-  public void setUp() throws ExecutionException {
+  public void setUp() {
     MockitoAnnotations.initMocks(this);
 
     when(metadata.getPartitionKeyNames())

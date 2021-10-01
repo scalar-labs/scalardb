@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -14,17 +16,15 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.cassandra.Cassandra;
-import com.scalar.db.storage.cassandra.CassandraAdmin;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -41,13 +41,6 @@ public class MultiStorageIntegrationTest {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  private static final String CASSANDRA_CONTACT_POINT = "localhost";
-  private static final String CASSANDRA_USERNAME = "cassandra";
-  private static final String CASSANDRA_PASSWORD = "cassandra";
-
-  private static final String MYSQL_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String MYSQL_USERNAME = "root";
-  private static final String MYSQL_PASSWORD = "mysql";
   private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
@@ -58,121 +51,137 @@ public class MultiStorageIntegrationTest {
           .addPartitionKey(COL_NAME1)
           .addClusteringKey(COL_NAME4)
           .build();
-  private static Cassandra cassandra;
-  private static TestEnv testEnv;
-  private static JdbcDatabase mysql;
+
+  private static DistributedStorage storage1;
+  private static DistributedStorageAdmin admin1;
+  private static DistributedStorage storage2;
+  private static DistributedStorageAdmin admin2;
   private static MultiStorage multiStorage;
-  private static CassandraAdmin cassandraAdmin;
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    initCassandra();
-    initMySql();
+  public static void setUpBeforeClass() throws ExecutionException {
+    initStorage1AndAdmin1();
+    initStorage2AndAdmin2();
     initMultiStorage();
   }
 
-  private static void initCassandra() throws Exception {
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, CASSANDRA_CONTACT_POINT);
-    props.setProperty(DatabaseConfig.USERNAME, CASSANDRA_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, CASSANDRA_PASSWORD);
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    cassandraAdmin = new CassandraAdmin(config);
-    cassandraAdmin.createNamespace(NAMESPACE1);
-    cassandraAdmin.createNamespace(NAMESPACE2);
-
-    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.createTable(NAMESPACE1, table, TABLE_METADATA);
-    }
-    cassandraAdmin.createTable(NAMESPACE2, TABLE1, TABLE_METADATA);
-    cassandra = new Cassandra(config);
+  private static void initStorage1AndAdmin1() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage1());
+    admin1 = factory.getAdmin();
+    createTables(admin1);
+    storage1 = factory.getStorage();
   }
 
-  private static void initMySql() throws Exception {
-    testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
+  private static void initStorage2AndAdmin2() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(MultiStorageEnv.getDatabaseConfigForStorage2());
+    admin2 = factory.getAdmin();
+    createTables(admin2);
+    storage2 = factory.getStorage();
+  }
 
+  private static void createTables(DistributedStorageAdmin admin) throws ExecutionException {
+    admin.createNamespace(NAMESPACE1, true);
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      testEnv.createTable(NAMESPACE1, table, TABLE_METADATA);
+      admin.createTable(NAMESPACE1, table, TABLE_METADATA, true);
     }
-    testEnv.createTable(NAMESPACE2, TABLE1, TABLE_METADATA);
-
-    mysql = new JdbcDatabase(testEnv.getJdbcConfig());
+    admin.createNamespace(NAMESPACE2, true);
+    admin.createTable(NAMESPACE2, TABLE1, TABLE_METADATA, true);
   }
 
   private static void initMultiStorage() {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.STORAGE, "multi-storage");
 
-    // Define storages, cassandra and mysql
-    props.setProperty(MultiStorageConfig.STORAGES, "cassandra,mysql");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.storage", "cassandra");
-    props.setProperty(
-        MultiStorageConfig.STORAGES + ".cassandra.contact_points", CASSANDRA_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", CASSANDRA_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", CASSANDRA_PASSWORD);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.contact_points", MYSQL_CONTACT_POINT);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.username", MYSQL_USERNAME);
-    props.setProperty(MultiStorageConfig.STORAGES + ".mysql.password", MYSQL_PASSWORD);
+    // Define storages, storage1 and storage2
+    props.setProperty(MultiStorageConfig.STORAGES, "storage1,storage2");
 
-    // Define table mapping from table1 to cassandra, and from table2 to mysql
+    DatabaseConfig configForStorage1 = MultiStorageEnv.getDatabaseConfigForStorage1();
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.storage",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.STORAGE));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.contact_points",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (configForStorage1.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+      props.setProperty(
+          MultiStorageConfig.STORAGES + ".storage1.contact_port",
+          configForStorage1.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+    }
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.username",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.USERNAME));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage1.password",
+        configForStorage1.getProperties().getProperty(DatabaseConfig.PASSWORD));
+
+    DatabaseConfig configForStorage2 = MultiStorageEnv.getDatabaseConfigForStorage2();
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.storage",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.STORAGE));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.contact_points",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_POINTS));
+    if (configForStorage2.getProperties().containsValue(DatabaseConfig.CONTACT_PORT)) {
+      props.setProperty(
+          MultiStorageConfig.STORAGES + ".storage2.contact_port",
+          configForStorage2.getProperties().getProperty(DatabaseConfig.CONTACT_PORT));
+    }
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.username",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.USERNAME));
+    props.setProperty(
+        MultiStorageConfig.STORAGES + ".storage2.password",
+        configForStorage2.getProperties().getProperty(DatabaseConfig.PASSWORD));
+
+    // Define table mapping from table1 to storage1, and from table2 to storage2
     props.setProperty(
         MultiStorageConfig.TABLE_MAPPING,
-        NAMESPACE1 + "." + TABLE1 + ":cassandra," + NAMESPACE1 + "." + TABLE2 + ":mysql");
+        NAMESPACE1 + "." + TABLE1 + ":storage1," + NAMESPACE1 + "." + TABLE2 + ":storage2");
 
-    // Define namespace mapping from namespace2 to mysql
-    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":mysql");
+    // Define namespace mapping from namespace2 to storage2
+    props.setProperty(MultiStorageConfig.NAMESPACE_MAPPING, NAMESPACE2 + ":storage2");
 
-    // The default storage is cassandra
-    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "cassandra");
+    // The default storage is storage1
+    props.setProperty(MultiStorageConfig.DEFAULT_STORAGE, "storage1");
 
     multiStorage = new MultiStorage(new MultiStorageConfig(props));
   }
 
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTables(admin1);
+    truncateTables(admin2);
+  }
+
+  private void truncateTables(DistributedStorageAdmin admin) throws ExecutionException {
+    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
+      admin.truncateTable(NAMESPACE1, table);
+    }
+    admin.truncateTable(NAMESPACE2, TABLE1);
+  }
+
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass() throws ExecutionException {
     multiStorage.close();
-    cleanUpCassandra();
-    cleanUpMySql();
+    cleanUp(storage1, admin1);
+    cleanUp(storage2, admin2);
   }
 
-  private static void cleanUpCassandra() throws Exception {
-    cassandra.close();
+  private static void cleanUp(DistributedStorage storage, DistributedStorageAdmin admin)
+      throws ExecutionException {
+    storage.close();
     for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.dropTable(NAMESPACE1, table);
+      admin.dropTable(NAMESPACE1, table);
     }
-    cassandraAdmin.dropTable(NAMESPACE2, TABLE1);
-    cassandraAdmin.dropNamespace(NAMESPACE1);
-    cassandraAdmin.dropNamespace(NAMESPACE2);
-    cassandraAdmin.close();
-  }
+    admin.dropNamespace(NAMESPACE1);
 
-  private static void cleanUpMySql() throws Exception {
-    mysql.close();
-    testEnv.deleteTables();
-    testEnv.close();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    truncateCassandra();
-    truncateMySql();
-  }
-
-  private void truncateCassandra() throws Exception {
-    for (String table : Arrays.asList(TABLE1, TABLE2, TABLE3)) {
-      cassandraAdmin.truncateTable(NAMESPACE1, table);
-    }
-    cassandraAdmin.truncateTable(NAMESPACE2, TABLE1);
-  }
-
-  private void truncateMySql() throws Exception {
-    testEnv.deleteTableData();
+    admin.dropTable(NAMESPACE2, TABLE1);
+    admin.dropNamespace(NAMESPACE2);
+    admin.close();
   }
 
   @Test
-  public void whenPutDataIntoTable1_DataShouldBeWrittenIntoCassandra() throws ExecutionException {
+  public void whenPutDataIntoTable1_DataShouldBeWrittenIntoStorage1() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -194,26 +203,26 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoMySql() throws ExecutionException {
+  public void whenPutDataIntoTable2_DataShouldBeWrittenIntoStorage2() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -235,22 +244,22 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
   }
 
   @Test
@@ -278,26 +287,27 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenScanDataFromTable1_DataShouldBeScannedFromCassandra() throws Exception {
+  public void whenScanDataFromTable1_DataShouldBeScannedFromStorage1()
+      throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -306,7 +316,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    cassandra.mutate(
+    storage1.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -326,19 +336,20 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(results.get(0))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(0))).isEqualTo(2);
+    assertThat(getCol4Value(results.get(0))).isEqualTo(0);
+    assertThat(getCol1Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol4Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol1Value(results.get(2))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(2))).isEqualTo(0);
+    assertThat(getCol4Value(results.get(2))).isEqualTo(2);
   }
 
   @Test
-  public void whenScanDataFromTable2_DataShouldBeScannedFromMySql() throws Exception {
+  public void whenScanDataFromTable2_DataShouldBeScannedFromStorage2()
+      throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -347,7 +358,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    mysql.mutate(
+    storage2.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -367,19 +378,20 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(results.get(0))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(0))).isEqualTo(2);
+    assertThat(getCol4Value(results.get(0))).isEqualTo(0);
+    assertThat(getCol1Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol4Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol1Value(results.get(2))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(2))).isEqualTo(0);
+    assertThat(getCol4Value(results.get(2))).isEqualTo(2);
   }
 
   @Test
-  public void whenScanDataFromTable3_DataShouldBeScannedFromDefaultStorage() throws Exception {
+  public void whenScanDataFromTable3_DataShouldBeScannedFromDefaultStorage()
+      throws IOException, ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE3;
@@ -388,7 +400,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    cassandra.mutate(
+    storage1.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -408,26 +420,25 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(results.get(0))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(0))).isEqualTo(2);
+    assertThat(getCol4Value(results.get(0))).isEqualTo(0);
+    assertThat(getCol1Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol4Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol1Value(results.get(2))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(2))).isEqualTo(0);
+    assertThat(getCol4Value(results.get(2))).isEqualTo(2);
   }
 
-  private List<Result> scanAll(Scan scan) throws Exception {
+  private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
     try (Scanner scanner = multiStorage.scan(scan)) {
       return scanner.all();
     }
   }
 
   @Test
-  public void whenDeleteDataFromTable1_DataShouldBeDeletedFromCassandra()
-      throws ExecutionException {
+  public void whenDeleteDataFromTable1_DataShouldBeDeletedFromStorage1() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -439,8 +450,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.delete(
@@ -452,18 +463,18 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
   }
 
   @Test
-  public void whenDeleteDataFromTable2_DataShouldBeDeletedFromMySql() throws ExecutionException {
+  public void whenDeleteDataFromTable2_DataShouldBeDeletedFromStorage2() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -475,8 +486,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.delete(
@@ -488,13 +499,13 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
@@ -512,8 +523,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.delete(
@@ -525,18 +536,18 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
   }
 
   @Test
-  public void whenMutateDataToTable1_ShouldExecuteForCassandra() throws ExecutionException {
+  public void whenMutateDataToTable1_ShouldExecuteForStorage1() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE1;
@@ -549,8 +560,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.mutate(
@@ -569,29 +580,29 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = cassandra.get(get1);
+    result = storage1.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = cassandra.get(get2);
+    result = storage1.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = mysql.get(get1);
+    result = storage2.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    result = mysql.get(get2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(1);
+    result = storage2.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenMutateDataToTable2_ShouldExecuteForMySql() throws ExecutionException {
+  public void whenMutateDataToTable2_ShouldExecuteForStorage2() throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE1;
     String table = TABLE2;
@@ -604,8 +615,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.mutate(
@@ -624,25 +635,25 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = cassandra.get(get1);
+    result = storage1.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    result = cassandra.get(get2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(1);
+    result = storage1.get(get2);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get1);
+    result = storage2.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = mysql.get(get2);
+    result = storage2.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
   }
 
   @Test
@@ -659,8 +670,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.mutate(
@@ -679,29 +690,29 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = cassandra.get(get1);
+    result = storage1.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = cassandra.get(get2);
+    result = storage1.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = mysql.get(get1);
+    result = storage2.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    result = mysql.get(get2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(1);
+    result = storage2.get(get2);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenPutDataIntoTable1InNamespace2_DataShouldBeWrittenIntoMySql()
+  public void whenPutDataIntoTable1InNamespace2_DataShouldBeWrittenIntoStorage2()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -724,26 +735,27 @@ public class MultiStorageIntegrationTest {
 
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME2).get().getAsString().get()).isEqualTo("val2");
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
-    assertThat(result.get().getValue(COL_NAME5).get().getAsBoolean()).isTrue();
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol2Value(result.get())).isEqualTo("val2");
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
+    assertThat(getCol5Value(result.get())).isTrue();
   }
 
   @Test
-  public void whenScanDataFromTable1InNamespace2_DataShouldBeScannedFromMySql() throws Exception {
+  public void whenScanDataFromTable1InNamespace2_DataShouldBeScannedFromStorage2()
+      throws ExecutionException, IOException {
     // Arrange
     String namespace = NAMESPACE2;
     String table = TABLE1;
@@ -752,7 +764,7 @@ public class MultiStorageIntegrationTest {
     Key clusteringKey2 = new Key(COL_NAME4, 1);
     Key clusteringKey3 = new Key(COL_NAME4, 2);
 
-    mysql.mutate(
+    storage2.mutate(
         Arrays.asList(
             new Put(partitionKey, clusteringKey1)
                 .withValue(COL_NAME3, 2)
@@ -772,19 +784,19 @@ public class MultiStorageIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(2);
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(results.get(2).getValue(COL_NAME3).get().getAsInt()).isEqualTo(0);
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(results.get(0))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(0))).isEqualTo(2);
+    assertThat(getCol4Value(results.get(0))).isEqualTo(0);
+    assertThat(getCol1Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol4Value(results.get(1))).isEqualTo(1);
+    assertThat(getCol1Value(results.get(2))).isEqualTo(1);
+    assertThat(getCol3Value(results.get(2))).isEqualTo(0);
+    assertThat(getCol4Value(results.get(2))).isEqualTo(2);
   }
 
   @Test
-  public void whenDeleteDataFromTable1InNamespace2_DataShouldBeDeletedFromMySql()
+  public void whenDeleteDataFromTable1InNamespace2_DataShouldBeDeletedFromStorage2()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -797,8 +809,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.delete(
@@ -810,18 +822,18 @@ public class MultiStorageIntegrationTest {
     Optional<Result> result = multiStorage.get(get);
     assertThat(result.isPresent()).isFalse();
 
-    result = cassandra.get(get);
+    result = storage1.get(get);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(4);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(4);
 
-    result = mysql.get(get);
+    result = storage2.get(get);
     assertThat(result.isPresent()).isFalse();
   }
 
   @Test
-  public void whenMutateDataToTable1InNamespace2_ShouldExecuteForCassandra()
+  public void whenMutateDataToTable1InNamespace2_ShouldExecuteForStorage1()
       throws ExecutionException {
     // Arrange
     String namespace = NAMESPACE2;
@@ -835,8 +847,8 @@ public class MultiStorageIntegrationTest {
             .forNamespace(namespace)
             .forTable(table);
 
-    cassandra.put(put);
-    mysql.put(put);
+    storage1.put(put);
+    storage2.put(put);
 
     // Act
     multiStorage.mutate(
@@ -855,25 +867,25 @@ public class MultiStorageIntegrationTest {
     assertThat(result.isPresent()).isFalse();
     result = multiStorage.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
 
-    result = cassandra.get(get1);
+    result = storage1.get(get1);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
-    result = cassandra.get(get2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(1);
+    result = storage1.get(get2);
     assertThat(result.isPresent()).isFalse();
 
-    result = mysql.get(get1);
+    result = storage2.get(get1);
     assertThat(result.isPresent()).isFalse();
-    result = mysql.get(get2);
+    result = storage2.get(get2);
     assertThat(result.isPresent()).isTrue();
-    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
-    assertThat(result.get().getValue(COL_NAME3).get().getAsInt()).isEqualTo(3);
-    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+    assertThat(getCol1Value(result.get())).isEqualTo(1);
+    assertThat(getCol3Value(result.get())).isEqualTo(3);
+    assertThat(getCol4Value(result.get())).isEqualTo(2);
   }
 
   @Test
@@ -881,5 +893,31 @@ public class MultiStorageIntegrationTest {
     // Arrange Act Assert
     assertThatThrownBy(() -> multiStorage.mutate(Collections.emptyList()))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private int getCol1Value(Result result) {
+    assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
+    return result.getValue(COL_NAME1).get().getAsInt();
+  }
+
+  private String getCol2Value(Result result) {
+    assertThat(result.getValue(COL_NAME2).isPresent()).isTrue();
+    assertThat(result.getValue(COL_NAME2).get().getAsString().isPresent()).isTrue();
+    return result.getValue(COL_NAME2).get().getAsString().get();
+  }
+
+  private int getCol3Value(Result result) {
+    assertThat(result.getValue(COL_NAME3).isPresent()).isTrue();
+    return result.getValue(COL_NAME3).get().getAsInt();
+  }
+
+  private int getCol4Value(Result result) {
+    assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
+    return result.getValue(COL_NAME4).get().getAsInt();
+  }
+
+  private boolean getCol5Value(Result result) {
+    assertThat(result.getValue(COL_NAME5).isPresent()).isTrue();
+    return result.getValue(COL_NAME5).get().getAsBoolean();
   }
 }
