@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
@@ -53,7 +52,6 @@ public class CassandraAdminTest {
   public void setUp() {
     MockitoAnnotations.initMocks(this);
     when(clusterManager.getSession()).thenReturn(cassandraSession);
-    when(config.getNamespacePrefix()).thenReturn(Optional.empty());
     cassandraAdmin = new CassandraAdmin(clusterManager, config);
   }
 
