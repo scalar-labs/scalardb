@@ -81,7 +81,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
               ImmutableMap.<DataType, String>builder()
                   .put(DataType.INT, "INT")
                   .put(DataType.BIGINT, "BIGINT")
-                  .put(DataType.TEXT, "VARCHAR(8000)")
+                  .put(DataType.TEXT, "VARCHAR(8000) COLLATE Latin1_General_BIN")
                   .put(DataType.FLOAT, "FLOAT(24)")
                   .put(DataType.DOUBLE, "FLOAT")
                   .put(DataType.BOOLEAN, "BIT")
@@ -154,6 +154,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       if (rdbEngine == RdbEngine.ORACLE) {
         execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
         execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
+      } else if (rdbEngine == RdbEngine.MYSQL) {
+        execute(
+            connection, "CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin");
       } else {
         execute(connection, "CREATE SCHEMA " + fullNamespace);
       }
