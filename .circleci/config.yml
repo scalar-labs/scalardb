@@ -113,8 +113,9 @@ jobs:
           # dockerize command is included in circleci/openjdk:8-jdk image
           command: dockerize -wait tcp://localhost:9042 -timeout 1m
 
-      # run tests!
-      - run: gradle integrationTestCassandra
+      - run:
+          name: Run integration test
+          command: gradle integrationTestCassandra
 
       - run:
           name: Save Gradle integration test reports
@@ -151,8 +152,10 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
+      - run:
+          name: Run integration test
+          no_output_timeout: 20m
+          command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
 
       - run:
           name: Save Gradle integration test reports
@@ -190,8 +193,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestDynamo
+      - run:
+          name: Run integration test
+          command: gradle integrationTestDynamo
 
       - run:
           name: Save Gradle integration test reports
@@ -231,8 +235,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestJdbc
+      - run:
+          name: Run integration test
+          command: gradle integrationTestJdbc
 
       - run:
           name: Save Gradle integration test reports
@@ -273,8 +278,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+      - run:
+          name: Run integration test
+          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - run:
           name: Save Gradle integration test reports
@@ -323,8 +329,9 @@ jobs:
           # dockerize command is included in circleci/openjdk:8-jdk image
           command: dockerize -wait tcp://localhost:5500 -timeout 15m
 
-      # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
+      - run:
+          name: Run integration test
+          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
 
       - run:
           name: Save Gradle integration test reports
@@ -366,8 +373,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+      - run:
+          name: Run integration test
+          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
 
       - run:
           name: Save Gradle integration test reports
@@ -417,8 +425,9 @@ jobs:
           # dockerize command is included in circleci/openjdk:8-jdk image
           command: dockerize -wait tcp://localhost:9042 -timeout 1m
 
-      # run tests!
-      - run: gradle integrationTestMultiStorage
+      - run:
+          name: Run integration test
+          command: gradle integrationTestMultiStorage
 
       - run:
           name: Save Gradle integration test reports
@@ -458,8 +467,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "server/build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestScalarDbServer
+      - run:
+          name: Run integration test
+          command: gradle integrationTestScalarDbServer
 
       - run:
           name: Save Gradle integration test reports
@@ -499,8 +509,9 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
-      # run tests!
-      - run: gradle integrationTestTwoPhaseConsesnsusCommit
+      - run:
+          name: Run integration test
+          command: gradle integrationTestTwoPhaseConsesnsusCommit
 
       - run:
           name: Save Gradle integration test reports
