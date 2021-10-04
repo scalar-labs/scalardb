@@ -20,7 +20,6 @@ import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import org.jooq.Field;
-import org.jooq.OrderField;
 import org.jooq.SQLDialect;
 import org.jooq.SelectConditionStep;
 import org.jooq.SelectWhereStep;
@@ -104,7 +103,7 @@ public class SelectStatementHandler extends StatementHandler {
       setStart(select, scan);
       setEnd(select, scan);
 
-      setOrderings(select, scan.getOrderings());
+      setOrderings(select, scan.getOrderings(), tableMetadata);
 
       query = select.getSQL(ParamType.INLINED);
       options =
@@ -178,17 +177,26 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private void setOrderings(
-      SelectConditionStep<org.jooq.Record> select, List<Scan.Ordering> scanOrderings) {
+      SelectConditionStep<org.jooq.Record> select,
+      List<Scan.Ordering> scanOrderings,
+      TableMetadata tableMetadata) {
     if (scanOrderings.isEmpty()) {
       return;
     }
 
+    // For partition key. To use the composite index, we always need to specify ordering for
+    // partition key when orderings are set
+    boolean reverse =
+        tableMetadata.getClusteringOrder(scanOrderings.get(0).getName())
+            != scanOrderings.get(0).getOrder();
+    Field<Object> partitionKeyField = DSL.field("r.concatenatedPartitionKey");
+    select.orderBy(reverse ? partitionKeyField.desc() : partitionKeyField.asc());
+
+    // For clustering keys
     scanOrderings.forEach(
         o -> {
           Field<Object> field = DSL.field("r.clusteringKey." + o.getName());
-          OrderField<Object> orderField =
-              (o.getOrder() == Scan.Ordering.Order.ASC) ? field.asc() : field.desc();
-          select.orderBy(orderField);
+          select.orderBy(o.getOrder() == Scan.Ordering.Order.ASC ? field.asc() : field.desc());
         });
   }
 
