@@ -6,7 +6,10 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
 
-/** A factory class to instantiate {@link DistributedTransactionManager} */
+/**
+ * A factory class to instantiate {@link DistributedTransactionManager} and {@link
+ * TwoPhaseCommitTransactionManager}
+ */
 public class TransactionFactory {
   private final Injector injector;
 

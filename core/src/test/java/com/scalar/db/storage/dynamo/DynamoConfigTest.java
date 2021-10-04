@@ -13,7 +13,6 @@ public class DynamoConfigTest {
   private static final String ANY_REGION = "any_region";
   private static final String ANY_ACCESS_KEY_ID = "any_access_key_id";
   private static final String ANY_SECRET_ACCESS_ID = "any_secret_access_id";
-  private static final String ANY_NAMESPACE_PREFIX = "any_prefix";
   private static final String DYNAMO_STORAGE = "dynamo";
   private static final String ANY_ENDPOINT_OVERRIDE = "http://localhost:8000";
   private static final String ANY_TABLE_METADATA_NAMESPACE = "any_namespace";
@@ -26,7 +25,6 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
@@ -40,8 +38,6 @@ public class DynamoConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
     assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();
@@ -57,7 +53,6 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_REGION);
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
@@ -73,7 +68,6 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(DynamoConfig.TABLE_METADATA_NAMESPACE, ANY_TABLE_METADATA_NAMESPACE);
 
     // Act
@@ -86,8 +80,6 @@ public class DynamoConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
     assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isFalse();
@@ -103,7 +95,6 @@ public class DynamoConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_ACCESS_KEY_ID);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_SECRET_ACCESS_ID);
     props.setProperty(DatabaseConfig.STORAGE, DYNAMO_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, ANY_ENDPOINT_OVERRIDE);
 
     // Act
@@ -116,8 +107,6 @@ public class DynamoConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_ACCESS_KEY_ID);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_SECRET_ACCESS_ID);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
     assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
     assertThat(config.getEndpointOverride().isPresent()).isTrue();

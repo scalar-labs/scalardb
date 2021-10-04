@@ -58,7 +58,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
-            .update(put.forFullNamespace().get(), put.forTable().get())
+            .update(put.forNamespace().get(), put.forTable().get())
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
             .build();
@@ -70,7 +70,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
-            .update(put.forFullNamespace().get(), put.forTable().get())
+            .update(put.forNamespace().get(), put.forTable().get())
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey())
             .build();
@@ -82,7 +82,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     InsertQuery insertQuery =
         queryBuilder
-            .insertInto(put.forFullNamespace().get(), put.forTable().get())
+            .insertInto(put.forNamespace().get(), put.forTable().get())
             .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
             .build();
     try (PreparedStatement preparedStatement = insertQuery.prepareAndBind(connection)) {
@@ -102,7 +102,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Delete delete = (Delete) mutation;
     DeleteQuery deleteQuery =
         queryBuilder
-            .deleteFrom(delete.forFullNamespace().get(), delete.forTable().get())
+            .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
             .where(delete.getPartitionKey(), delete.getClusteringKey(), condition.getExpressions())
             .build();
     executeMutate(deleteQuery);
@@ -113,7 +113,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Delete delete = (Delete) mutation;
     DeleteQuery deleteQuery =
         queryBuilder
-            .deleteFrom(delete.forFullNamespace().get(), delete.forTable().get())
+            .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
             .where(delete.getPartitionKey(), delete.getClusteringKey())
             .build();
     executeMutate(deleteQuery);
