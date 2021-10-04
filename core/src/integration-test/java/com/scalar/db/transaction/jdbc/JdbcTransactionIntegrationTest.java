@@ -4,23 +4,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.io.Value;
+import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -35,13 +40,16 @@ public class JdbcTransactionIntegrationTest {
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
 
-  private static TestEnv testEnv;
+  private static DistributedStorageAdmin admin;
   private static JdbcTransactionManager manager;
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv();
-    testEnv.createTable(
+  public static void setUpBeforeClass() throws ExecutionException {
+    JdbcConfig config = JdbcEnv.getJdbcConfig();
+    StorageFactory factory = new StorageFactory(config);
+    admin = factory.getAdmin();
+    admin.createNamespace(NAMESPACE, true);
+    admin.createTable(
         NAMESPACE,
         TABLE,
         TableMetadata.newBuilder()
@@ -50,20 +58,23 @@ public class JdbcTransactionIntegrationTest {
             .addColumn(BALANCE, DataType.INT)
             .addPartitionKey(ACCOUNT_ID)
             .addClusteringKey(ACCOUNT_TYPE)
-            .build());
+            .build(),
+        true);
 
-    manager = new JdbcTransactionManager(testEnv.getJdbcConfig());
+    manager = new JdbcTransactionManager(config);
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE);
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    testEnv.deleteTables();
-    testEnv.close();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  public static void tearDownAfterClass() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
+    admin.close();
+    manager.close();
   }
 
   @Test
@@ -129,8 +140,8 @@ public class JdbcTransactionIntegrationTest {
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
-    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
-    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
+    int expected = INITIAL_BALANCE;
+    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(BALANCE, expected);
     JdbcTransaction transaction = manager.start();
 
     // Act
@@ -140,9 +151,10 @@ public class JdbcTransactionIntegrationTest {
     // Assert
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
     JdbcTransaction another = manager.start();
-    Result result = another.get(get).get();
+    Optional<Result> result = another.get(get);
     another.commit();
-    assertThat(result.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
   @Test
@@ -155,18 +167,19 @@ public class JdbcTransactionIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
-    IntValue expected = new IntValue(BALANCE, afterBalance);
-    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
+    assertThat(result.isPresent()).isTrue();
+    int expected = getBalance(result.get()) + 100;
+    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(BALANCE, expected);
     transaction.put(put);
     transaction.commit();
 
     // Assert
     JdbcTransaction another = manager.start();
-    Result actual = another.get(get).get();
+    Optional<Result> actual = another.get(get);
     another.commit();
 
-    assertThat(actual.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
   }
 
   @Test
@@ -175,8 +188,8 @@ public class JdbcTransactionIntegrationTest {
     populateRecords();
     List<Get> gets = prepareGets(NAMESPACE, TABLE);
     int amount = 100;
-    IntValue fromBalance = new IntValue(BALANCE, INITIAL_BALANCE - amount);
-    IntValue toBalance = new IntValue(BALANCE, INITIAL_BALANCE + amount);
+    int fromBalance = INITIAL_BALANCE - amount;
+    int toBalance = INITIAL_BALANCE + amount;
     int from = 0;
     int to = NUM_TYPES;
 
@@ -187,10 +200,13 @@ public class JdbcTransactionIntegrationTest {
     JdbcTransaction another = null;
     try {
       another = manager.start();
-      assertThat(another.get(gets.get(from)).get().getValue(BALANCE))
-          .isEqualTo(Optional.of(fromBalance));
-      assertThat(another.get(gets.get(to)).get().getValue(BALANCE))
-          .isEqualTo(Optional.of(toBalance));
+      Optional<Result> fromResult = another.get(gets.get(from));
+      assertThat(fromResult.isPresent()).isTrue();
+      assertThat(getBalance(fromResult.get())).isEqualTo(fromBalance);
+
+      Optional<Result> toResult = another.get(gets.get(to));
+      assertThat(toResult.isPresent()).isTrue();
+      assertThat(getBalance(toResult.get())).isEqualTo(toBalance);
     } finally {
       if (another != null) {
         another.commit();
@@ -225,12 +241,14 @@ public class JdbcTransactionIntegrationTest {
     JdbcTransaction transaction = manager.start();
     List<Get> gets = prepareGets(NAMESPACE, TABLE);
 
-    Optional<Result> result1 = transaction.get(gets.get(fromId));
-    Optional<Result> result2 = transaction.get(gets.get(toId));
-    IntValue fromBalance =
-        new IntValue(BALANCE, result1.get().getValue(BALANCE).get().getAsInt() - amount);
-    IntValue toBalance =
-        new IntValue(BALANCE, result2.get().getValue(BALANCE).get().getAsInt() + amount);
+    Optional<Result> fromResult = transaction.get(gets.get(fromId));
+    assertThat(fromResult.isPresent()).isTrue();
+    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
+
+    Optional<Result> toResult = transaction.get(gets.get(toId));
+    assertThat(toResult.isPresent()).isTrue();
+    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
+
     List<Put> puts = preparePuts(NAMESPACE, TABLE);
     puts.get(fromId).withValue(fromBalance);
     puts.get(toId).withValue(toBalance);
@@ -318,5 +336,11 @@ public class JdbcTransactionIntegrationTest {
         .forNamespace(namespace)
         .forTable(table)
         .withConsistency(Consistency.LINEARIZABLE);
+  }
+
+  private int getBalance(Result result) {
+    Optional<Value<?>> balance = result.getValue(BALANCE);
+    assertThat(balance).isPresent();
+    return balance.get().getAsInt();
   }
 }

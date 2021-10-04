@@ -1,76 +1,87 @@
 package com.scalar.db.server;
 
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.BALANCE;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.INITIAL_BALANCE;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.NUM_ACCOUNTS;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.NUM_TYPES;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.TABLE_1;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.TABLE_2;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.createTables;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.deleteTables;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.getAccountId;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.getAccountType;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.getBalance;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.prepareDelete;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.prepareGet;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.preparePut;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.prepareScan;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.truncateTables;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import com.scalar.db.api.Consistency;
-import com.scalar.db.api.Delete;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.io.DataType;
-import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransaction;
 import com.scalar.db.transaction.rpc.GrpcTwoPhaseCommitTransactionManager;
-import java.util.Arrays;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrationTest {
 
-  static final String NAMESPACE = "integration_testing";
-  static final String TABLE_1 = "tx_test_table1";
-  static final String TABLE_2 = "tx_test_table2";
-  static final String ACCOUNT_ID = "account_id";
-  static final String ACCOUNT_TYPE = "account_type";
-  static final String BALANCE = "balance";
-  static final int INITIAL_BALANCE = 1000;
-  static final int NUM_ACCOUNTS = 4;
-  static final int NUM_TYPES = 4;
-
-  static final String CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  static final String USERNAME = "root";
-  static final String PASSWORD = "mysql";
-
-  private static TestEnv testEnv;
   private static ScalarDbServer server;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
   private static GrpcTwoPhaseCommitTransactionManager manager;
 
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException, IOException {
+    ServerConfig serverConfig = ServerEnv.getServerConfig();
+    if (serverConfig != null) {
+      server = new ScalarDbServer(serverConfig);
+      server.start();
+    }
+
+    GrpcConfig grpcConfig = ServerEnv.getGrpcConfig();
+    StorageFactory factory = new StorageFactory(grpcConfig);
+    admin = factory.getAdmin();
+    consensusCommitAdmin =
+        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(grpcConfig.getProperties()));
+    createTables(admin, consensusCommitAdmin);
+    manager = new GrpcTwoPhaseCommitTransactionManager(grpcConfig);
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTables(admin, consensusCommitAdmin);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTables(admin, consensusCommitAdmin);
+    admin.close();
+    manager.close();
+    if (server != null) {
+      server.shutdown();
+      server.blockUntilShutdown();
+    }
   }
 
   @Test
@@ -1239,121 +1250,5 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
     anotherTx.get(prepareGet(anotherId, anotherType, anotherTable));
     tx.delete(prepareDelete(id, type, table));
     anotherTx.delete(prepareDelete(anotherId, anotherType, anotherTable));
-  }
-
-  static Get prepareGet(int id, int type, String table) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
-    return new Get(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
-        .forTable(table)
-        .withConsistency(Consistency.LINEARIZABLE);
-  }
-
-  static Scan prepareScan(int id, int fromType, int toType, String table) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    return new Scan(partitionKey)
-        .forNamespace(NAMESPACE)
-        .forTable(table)
-        .withConsistency(Consistency.LINEARIZABLE)
-        .withStart(new Key(ACCOUNT_TYPE, fromType))
-        .withEnd(new Key(ACCOUNT_TYPE, toType));
-  }
-
-  static Put preparePut(int id, int type, String table) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
-    return new Put(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
-        .forTable(table)
-        .withConsistency(Consistency.LINEARIZABLE);
-  }
-
-  static Delete prepareDelete(int id, int type, String table) {
-    Key partitionKey = new Key(ACCOUNT_ID, id);
-    Key clusteringKey = new Key(ACCOUNT_TYPE, type);
-    return new Delete(partitionKey, clusteringKey)
-        .forNamespace(NAMESPACE)
-        .forTable(table)
-        .withConsistency(Consistency.LINEARIZABLE);
-  }
-
-  static int getAccountId(Result result) {
-    Optional<Value<?>> id = result.getValue(ACCOUNT_ID);
-    assertThat(id).isPresent();
-    return id.get().getAsInt();
-  }
-
-  static int getAccountType(Result result) {
-    Optional<Value<?>> type = result.getValue(ACCOUNT_TYPE);
-    assertThat(type).isPresent();
-    return type.get().getAsInt();
-  }
-
-  static int getBalance(Result result) {
-    Optional<Value<?>> balance = result.getValue(BALANCE);
-    assertThat(balance).isPresent();
-    return balance.get().getAsInt();
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-
-    // For the coordinator table
-    testEnv.createTable(
-        Coordinator.NAMESPACE,
-        Coordinator.TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ID, DataType.TEXT)
-            .addColumn(STATE, DataType.INT)
-            .addColumn(CREATED_AT, DataType.BIGINT)
-            .addPartitionKey(ID)
-            .build());
-
-    // For the test tables
-    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.createTable(
-          NAMESPACE,
-          table,
-          TableMetadata.newBuilder()
-              .addColumn(ACCOUNT_ID, DataType.INT)
-              .addColumn(ACCOUNT_TYPE, DataType.INT)
-              .addColumn(BALANCE, DataType.INT)
-              .addColumn(ID, DataType.TEXT)
-              .addColumn(STATE, DataType.INT)
-              .addColumn(VERSION, DataType.INT)
-              .addColumn(PREPARED_AT, DataType.BIGINT)
-              .addColumn(COMMITTED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
-              .addColumn(BEFORE_ID, DataType.TEXT)
-              .addColumn(BEFORE_STATE, DataType.INT)
-              .addColumn(BEFORE_VERSION, DataType.INT)
-              .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
-              .addPartitionKey(ACCOUNT_ID)
-              .addClusteringKey(ACCOUNT_TYPE)
-              .build());
-    }
-
-    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    server = new ScalarDbServer(serverProperties);
-    server.start();
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
-    manager = new GrpcTwoPhaseCommitTransactionManager(new GrpcConfig(properties));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    manager.close();
-    server.shutdown();
-    server.blockUntilShutdown();
-    testEnv.deleteTables();
-    testEnv.close();
   }
 }
