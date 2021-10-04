@@ -189,7 +189,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private void addTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    createMetadataSchemaAndTableIfNotExist();
+    createMetadataSchemaAndTableIfNotExists();
     try (Connection connection = dataSource.getConnection()) {
       // Start transaction to commit all the insert statements at once
       connection.setAutoCommit(false);
@@ -214,7 +214,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createMetadataSchemaAndTableIfNotExist() throws ExecutionException {
+  private void createMetadataSchemaAndTableIfNotExists() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       connection.setAutoCommit(false);
       connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
@@ -639,7 +639,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if ((rdbEngine == RdbEngine.MYSQL && e.getErrorCode() == 1049)
+      if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
           || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
           || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
           || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {

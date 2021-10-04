@@ -1,17 +1,5 @@
 package com.scalar.db.server;
 
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -19,13 +7,14 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -33,21 +22,23 @@ import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.Value;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.stream.IntStream;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -63,17 +54,74 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   static final int NUM_ACCOUNTS = 4;
   static final int NUM_TYPES = 4;
 
-  static final String CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  static final String USERNAME = "root";
-  static final String PASSWORD = "mysql";
-
-  private static TestEnv testEnv;
   private static ScalarDbServer server;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
   private static GrpcTransactionManager manager;
 
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException, IOException {
+    ServerConfig serverConfig = ServerEnv.getServerConfig();
+    if (serverConfig != null) {
+      server = new ScalarDbServer(serverConfig);
+      server.start();
+    }
+
+    GrpcConfig grpcConfig = ServerEnv.getGrpcConfig();
+    StorageFactory factory = new StorageFactory(grpcConfig);
+    admin = factory.getAdmin();
+    consensusCommitAdmin =
+        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(grpcConfig.getProperties()));
+    createTables(admin, consensusCommitAdmin);
+    manager = new GrpcTransactionManager(grpcConfig);
+  }
+
+  static void createTables(DistributedStorageAdmin admin, ConsensusCommitAdmin consensusCommitAdmin)
+      throws ExecutionException {
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    admin.createNamespace(NAMESPACE, true);
+    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_1, tableMetadata, true);
+    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_2, tableMetadata, true);
+    consensusCommitAdmin.createCoordinatorTable();
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTables(admin, consensusCommitAdmin);
+  }
+
+  static void truncateTables(
+      DistributedStorageAdmin admin, ConsensusCommitAdmin consensusCommitAdmin)
+      throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE_1);
+    admin.truncateTable(NAMESPACE, TABLE_2);
+    consensusCommitAdmin.truncateCoordinatorTable();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTables(admin, consensusCommitAdmin);
+    admin.close();
+    manager.close();
+    if (server != null) {
+      server.shutdown();
+      server.blockUntilShutdown();
+    }
+  }
+
+  static void deleteTables(DistributedStorageAdmin admin, ConsensusCommitAdmin consensusCommitAdmin)
+      throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE_1);
+    admin.dropTable(NAMESPACE, TABLE_2);
+    admin.dropNamespace(NAMESPACE);
+    consensusCommitAdmin.dropCoordinatorTable();
   }
 
   @Test
@@ -162,6 +210,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction1.commit();
 
     // Assert
+    assertThat(result1).isPresent();
     assertThat(result1.get()).isEqualTo(result2);
     assertThat(result1).isEqualTo(result3);
   }
@@ -169,8 +218,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
-    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
-    Put put = preparePut(0, 0, TABLE_1).withValue(expected);
+    int expected = INITIAL_BALANCE;
+    Put put = preparePut(0, 0, TABLE_1).withValue(BALANCE, expected);
     GrpcTransaction transaction = manager.start();
 
     // Act
@@ -180,9 +229,11 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Assert
     Get get = prepareGet(0, 0, TABLE_1);
     GrpcTransaction another = manager.start();
-    TransactionResult result = new TransactionResult(another.get(get).get());
+    Optional<Result> r = another.get(get);
+    assertThat(r).isPresent();
+    TransactionResult result = new TransactionResult(r.get());
     another.commit();
-    assertThat(result.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(getBalance(result)).isEqualTo(expected);
     assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
   }
@@ -197,17 +248,19 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
-    IntValue expected = new IntValue(BALANCE, afterBalance);
-    Put put = preparePut(0, 0, TABLE_1).withValue(expected);
+    assertThat(result).isPresent();
+    int expected = getBalance(result.get()) + 100;
+    Put put = preparePut(0, 0, TABLE_1).withValue(BALANCE, expected);
     transaction.put(put);
     transaction.commit();
 
     // Assert
     GrpcTransaction another = manager.start();
-    TransactionResult actual = new TransactionResult(another.get(get).get());
+    Optional<Result> r = another.get(get);
+    assertThat(r).isPresent();
+    TransactionResult actual = new TransactionResult(r.get());
     another.commit();
-    assertThat(actual.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(getBalance(actual)).isEqualTo(expected);
     assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
   }
@@ -240,8 +293,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> toGets = differentTables ? prepareGets(toTable) : fromGets;
 
     int amount = 100;
-    IntValue fromBalance = new IntValue(BALANCE, INITIAL_BALANCE - amount);
-    IntValue toBalance = new IntValue(BALANCE, INITIAL_BALANCE + amount);
+    int fromBalance = INITIAL_BALANCE - amount;
+    int toBalance = INITIAL_BALANCE + amount;
     int from = 0;
     int to = NUM_TYPES;
 
@@ -250,10 +303,12 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     GrpcTransaction another = manager.start();
-    assertThat(another.get(fromGets.get(from)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(fromBalance));
-    assertThat(another.get(toGets.get(to)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(toBalance));
+    Optional<Result> fromResult = another.get(fromGets.get(from));
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(fromBalance);
+    Optional<Result> toResult = another.get(toGets.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(toBalance);
     another.commit();
   }
 
@@ -274,7 +329,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Arrange
     boolean differentTables = !table1.equals(table2);
 
-    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    int expected = INITIAL_BALANCE;
     List<Put> puts1 = preparePuts(table1);
     List<Put> puts2 = differentTables ? preparePuts(table2) : puts1;
 
@@ -282,8 +337,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     int to = NUM_TYPES;
     int anotherFrom = to;
     int anotherTo = NUM_TYPES * 2;
-    puts1.get(from).withValue(expected);
-    puts2.get(to).withValue(expected);
+    puts1.get(from).withValue(BALANCE, expected);
+    puts2.get(to).withValue(BALANCE, expected);
 
     // Act Assert
     GrpcTransaction transaction = manager.start();
@@ -291,7 +346,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction.put(puts2.get(to));
 
     GrpcTransaction conflictingTransaction = manager.start();
-    puts1.get(anotherTo).withValue(expected);
+    puts1.get(anotherTo).withValue(BALANCE, expected);
     assertThatCode(
             () -> {
               conflictingTransaction.put(puts2.get(anotherFrom));
@@ -308,9 +363,12 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     GrpcTransaction another = manager.start();
     assertThat(another.get(gets1.get(from)).isPresent()).isFalse();
-    assertThat(another.get(gets2.get(to)).get().getValue(BALANCE)).isEqualTo(Optional.of(expected));
-    assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(expected));
+    Optional<Result> toResult = another.get(gets2.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(expected);
+    Optional<Result> anotherToResult = another.get(gets1.get(anotherTo));
+    assertThat(anotherToResult).isPresent();
+    assertThat(getBalance(anotherToResult.get())).isEqualTo(expected);
     another.commit();
   }
 
@@ -363,12 +421,15 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     GrpcTransaction another = manager.start();
-    assertThat(another.get(gets1.get(from)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE)));
-    assertThat(another.get(gets2.get(to)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount)));
-    assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount)));
+    Optional<Result> fromResult = another.get(gets1.get(from));
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE);
+    Optional<Result> toResult = another.get(gets2.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(INITIAL_BALANCE - amount);
+    Optional<Result> anotherToResult = another.get(gets1.get(anotherTo));
+    assertThat(anotherToResult).isPresent();
+    assertThat(getBalance(anotherToResult.get())).isEqualTo(INITIAL_BALANCE + amount);
     another.commit();
   }
 
@@ -416,12 +477,15 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> gets2 = prepareGets(table2);
 
     GrpcTransaction another = manager.start();
-    assertThat(another.get(gets1.get(from)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE)));
-    assertThat(another.get(gets2.get(to)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount2)));
-    assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
+    Optional<Result> fromResult = another.get(gets1.get(from));
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE);
+    Optional<Result> toResult = another.get(gets2.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(INITIAL_BALANCE - amount2);
+    Optional<Result> anotherToResult = another.get(gets1.get(anotherTo));
+    assertThat(anotherToResult).isPresent();
+    assertThat(getBalance(anotherToResult.get())).isEqualTo(INITIAL_BALANCE + amount2);
     another.commit();
   }
 
@@ -468,14 +532,18 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> gets2 = prepareGets(table2);
 
     GrpcTransaction another = manager.start();
-    assertThat(another.get(gets1.get(from)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount1)));
-    assertThat(another.get(gets2.get(to)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount1)));
-    assertThat(another.get(gets2.get(anotherFrom)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE - amount2)));
-    assertThat(another.get(gets1.get(anotherTo)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE + amount2)));
+    Optional<Result> fromResult = another.get(gets1.get(from));
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(INITIAL_BALANCE - amount1);
+    Optional<Result> toResult = another.get(gets2.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(INITIAL_BALANCE + amount1);
+    Optional<Result> anotherFromResult = another.get(gets2.get(anotherFrom));
+    assertThat(anotherFromResult).isPresent();
+    assertThat(getBalance(anotherFromResult.get())).isEqualTo(INITIAL_BALANCE - amount2);
+    Optional<Result> anotherToResult = another.get(gets1.get(anotherTo));
+    assertThat(anotherToResult).isPresent();
+    assertThat(getBalance(anotherToResult.get())).isEqualTo(INITIAL_BALANCE + amount2);
     another.commit();
   }
 
@@ -495,7 +563,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   public void putAndCommit_GetsAndPutsForSameKeyButDifferentTablesGiven_ShouldCommitBoth()
       throws TransactionException {
     // Arrange
-    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
+    int expected = INITIAL_BALANCE;
     List<Put> puts1 = preparePuts(TABLE_1);
     List<Put> puts2 = preparePuts(TABLE_2);
 
@@ -503,8 +571,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     int to = NUM_TYPES;
     int anotherFrom = from;
     int anotherTo = to;
-    puts1.get(from).withValue(expected);
-    puts1.get(to).withValue(expected);
+    puts1.get(from).withValue(BALANCE, expected);
+    puts1.get(to).withValue(BALANCE, expected);
 
     // Act Assert
     GrpcTransaction transaction = manager.start();
@@ -512,8 +580,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction.put(puts1.get(to));
 
     GrpcTransaction conflictingTransaction = manager.start();
-    puts2.get(from).withValue(expected);
-    puts2.get(to).withValue(expected);
+    puts2.get(from).withValue(BALANCE, expected);
+    puts2.get(to).withValue(BALANCE, expected);
     assertThatCode(
             () -> {
               conflictingTransaction.put(puts2.get(anotherFrom));
@@ -528,13 +596,18 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> gets1 = prepareGets(TABLE_1);
     List<Get> gets2 = prepareGets(TABLE_2);
     GrpcTransaction another = manager.start();
-    assertThat(another.get(gets1.get(from)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(expected));
-    assertThat(another.get(gets1.get(to)).get().getValue(BALANCE)).isEqualTo(Optional.of(expected));
-    assertThat(another.get(gets2.get(anotherFrom)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(expected));
-    assertThat(another.get(gets2.get(anotherTo)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(expected));
+    Optional<Result> fromResult = another.get(gets1.get(from));
+    assertThat(fromResult).isPresent();
+    assertThat(getBalance(fromResult.get())).isEqualTo(expected);
+    Optional<Result> toResult = another.get(gets1.get(to));
+    assertThat(toResult).isPresent();
+    assertThat(getBalance(toResult.get())).isEqualTo(expected);
+    Optional<Result> anotherFromResult = another.get(gets2.get(anotherFrom));
+    assertThat(anotherFromResult).isPresent();
+    assertThat(getBalance(anotherFromResult.get())).isEqualTo(expected);
+    Optional<Result> anotherToResult = another.get(gets2.get(anotherTo));
+    assertThat(anotherToResult).isPresent();
+    assertThat(getBalance(anotherToResult.get())).isEqualTo(expected);
     another.commit();
   }
 
@@ -612,8 +685,9 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> gets2 = differentTables ? prepareGets(table2) : gets1;
 
     GrpcTransaction another = manager.start();
-    assertThat(another.get(gets1.get(account1)).get().getValue(BALANCE))
-        .isEqualTo(Optional.of(new IntValue(BALANCE, INITIAL_BALANCE)));
+    Optional<Result> result = another.get(gets1.get(account1));
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE);
     assertThat(another.get(gets2.get(account2)).isPresent()).isFalse();
     assertThat(another.get(gets1.get(account3)).isPresent()).isFalse();
     another.commit();
@@ -695,14 +769,16 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     GrpcTransaction transaction2 = manager.start();
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
+    assertThat(result1).isPresent();
+    int current1 = getBalance(result1.get());
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
+    assertThat(result2).isPresent();
+    int current2 = getBalance(result2.get());
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
     Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
     Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
@@ -716,8 +792,10 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     result2 = transaction.get(get2_1);
     transaction.commit();
     // the results can not be produced by executing the transactions serially
-    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
-    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(result1).isPresent();
+    assertThat(getBalance(result1.get())).isEqualTo(2);
+    assertThat(result2).isPresent();
+    assertThat(getBalance(result2.get())).isEqualTo(2);
   }
 
   @Test
@@ -749,7 +827,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result1 = transaction1.get(prepareGet(0, 0, TABLE_1));
     int balance1 = 0;
     if (result1.isPresent()) {
-      balance1 = result1.get().getValue(BALANCE).get().getAsInt();
+      balance1 = getBalance(result1.get());
     }
     transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance1 + 1));
 
@@ -763,7 +841,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
+      balance3 = getBalance(result3.get());
     }
     transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
@@ -775,7 +853,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.commit();
-    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
   @Test
@@ -801,7 +880,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     Optional<Result> result3 = transaction3.get(prepareGet(0, 0, TABLE_1));
     int balance3 = 0;
     if (result3.isPresent()) {
-      balance3 = result3.get().getValue(BALANCE).get().getAsInt();
+      balance3 = getBalance(result3.get());
     }
     transaction3.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, balance3 + 1));
     transaction3.commit();
@@ -813,7 +892,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction = manager.start();
     Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
     transaction.commit();
-    assertThat(result.get().getValue(BALANCE).get().getAsInt()).isEqualTo(1);
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
   }
 
   @Test
@@ -900,7 +980,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction2.commit();
     assertThat(resultBefore.isPresent()).isTrue();
     assertThat(resultAfter.isPresent()).isTrue();
-    assertThat(resultAfter.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(getBalance(resultAfter.get())).isEqualTo(2);
   }
 
   @Test
@@ -1022,12 +1102,11 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     List<Get> fromGets = prepareGets(fromTable);
     List<Get> toGets = differentTables ? prepareGets(toTable) : fromGets;
     Optional<Result> fromResult = transaction.get(fromGets.get(fromId));
+    assertThat(fromResult).isPresent();
+    IntValue fromBalance = new IntValue(BALANCE, getBalance(fromResult.get()) - amount);
     Optional<Result> toResult = transaction.get(toGets.get(toId));
-
-    IntValue fromBalance =
-        new IntValue(BALANCE, fromResult.get().getValue(BALANCE).get().getAsInt() - amount);
-    IntValue toBalance =
-        new IntValue(BALANCE, toResult.get().getValue(BALANCE).get().getAsInt() + amount);
+    assertThat(toResult).isPresent();
+    IntValue toBalance = new IntValue(BALANCE, getBalance(toResult.get()) + amount);
 
     List<Put> fromPuts = preparePuts(fromTable);
     List<Put> toPuts = differentTables ? preparePuts(toTable) : fromPuts;
@@ -1145,64 +1224,21 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     return deletes;
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-
-    // For the coordinator table
-    testEnv.createTable(
-        Coordinator.NAMESPACE,
-        Coordinator.TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ID, DataType.TEXT)
-            .addColumn(STATE, DataType.INT)
-            .addColumn(CREATED_AT, DataType.BIGINT)
-            .addPartitionKey(ID)
-            .build());
-
-    // For the test tables
-    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.createTable(
-          NAMESPACE,
-          table,
-          TableMetadata.newBuilder()
-              .addColumn(ACCOUNT_ID, DataType.INT)
-              .addColumn(ACCOUNT_TYPE, DataType.INT)
-              .addColumn(BALANCE, DataType.INT)
-              .addColumn(ID, DataType.TEXT)
-              .addColumn(STATE, DataType.INT)
-              .addColumn(VERSION, DataType.INT)
-              .addColumn(PREPARED_AT, DataType.BIGINT)
-              .addColumn(COMMITTED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
-              .addColumn(BEFORE_ID, DataType.TEXT)
-              .addColumn(BEFORE_STATE, DataType.INT)
-              .addColumn(BEFORE_VERSION, DataType.INT)
-              .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
-              .addPartitionKey(ACCOUNT_ID)
-              .addClusteringKey(ACCOUNT_TYPE)
-              .build());
-    }
-
-    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    server = new ScalarDbServer(serverProperties);
-    server.start();
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
-    manager = new GrpcTransactionManager(new GrpcConfig(properties));
+  static int getAccountId(Result result) {
+    Optional<Value<?>> id = result.getValue(ACCOUNT_ID);
+    assertThat(id).isPresent();
+    return id.get().getAsInt();
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    manager.close();
-    server.shutdown();
-    server.blockUntilShutdown();
-    testEnv.deleteTables();
-    testEnv.close();
+  static int getAccountType(Result result) {
+    Optional<Value<?>> type = result.getValue(ACCOUNT_TYPE);
+    assertThat(type).isPresent();
+    return type.get().getAsInt();
+  }
+
+  static int getBalance(Result result) {
+    Optional<Value<?>> balance = result.getValue(BALANCE);
+    assertThat(balance).isPresent();
+    return balance.get().getAsInt();
   }
 }
