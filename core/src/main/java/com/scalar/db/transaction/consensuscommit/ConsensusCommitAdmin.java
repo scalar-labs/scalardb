@@ -49,7 +49,7 @@ public class ConsensusCommitAdmin {
   /**
    * Creates a coordinator namespace and table if it does not exist.
    *
-   * @param options options to create namespace/table
+   * @param options options to create namespace and table
    * @throws ExecutionException if the operation failed
    */
   public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
