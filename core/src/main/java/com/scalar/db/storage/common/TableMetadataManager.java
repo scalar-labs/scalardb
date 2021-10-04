@@ -10,6 +10,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 /** A class that manages and caches table metadata */
@@ -18,16 +19,19 @@ public class TableMetadataManager {
   private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;
 
   public TableMetadataManager(DistributedStorageAdmin admin, DatabaseConfig config) {
+    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    long tableMetadataCacheExpirationTimeSecs = config.getTableMetadataCacheExpirationTimeSecs();
+    if (tableMetadataCacheExpirationTimeSecs > 0) {
+      builder.expireAfterWrite(tableMetadataCacheExpirationTimeSecs, TimeUnit.SECONDS);
+    }
     tableMetadataCache =
-        CacheBuilder.newBuilder()
-            .build(
-                new CacheLoader<TableKey, Optional<TableMetadata>>() {
-                  @Override
-                  public Optional<TableMetadata> load(@Nonnull TableKey key)
-                      throws ExecutionException {
-                    return Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table));
-                  }
-                });
+        builder.build(
+            new CacheLoader<TableKey, Optional<TableMetadata>>() {
+              @Override
+              public Optional<TableMetadata> load(@Nonnull TableKey key) throws ExecutionException {
+                return Optional.ofNullable(admin.getTableMetadata(key.namespace, key.table));
+              }
+            });
   }
 
   /**

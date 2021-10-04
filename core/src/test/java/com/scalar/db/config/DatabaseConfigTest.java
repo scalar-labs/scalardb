@@ -49,9 +49,9 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
-    assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -73,9 +73,9 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
-    assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -97,9 +97,9 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
-    assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -123,9 +123,9 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
-    assertThat(config.getNamespacePrefix()).isNotPresent();
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -256,7 +256,6 @@ public class DatabaseConfigTest {
     assertThat(config.getContactPort()).isEqualTo(0);
     assertThat(config.getUsername().isPresent()).isFalse();
     assertThat(config.getPassword().isPresent()).isFalse();
-    assertThat(config.getNamespacePrefix().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(MultiStorage.class);
     assertThat(config.getAdminClass()).isEqualTo(MultiStorageAdmin.class);
   }
@@ -441,5 +440,27 @@ public class DatabaseConfigTest {
     // Act Assert
     assertThatThrownBy(() -> new DatabaseConfig(props))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void constructor_PropertiesWithTableMetadataExpirationTimeSecsGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.getContactPort()).isEqualTo(0);
+    assertThat(config.getUsername().isPresent()).isTrue();
+    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
+    assertThat(config.getPassword().isPresent()).isTrue();
+    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
   }
 }

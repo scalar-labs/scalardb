@@ -2,6 +2,7 @@ package com.scalar.db.storage.dynamo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
@@ -84,7 +85,8 @@ public class ItemSorter {
       case TEXT:
         return a1.s().compareTo(a2.s());
       case BLOB:
-        return a1.b().asByteBuffer().compareTo(a2.b().asByteBuffer());
+        return UnsignedBytes.lexicographicalComparator()
+            .compare(a1.b().asByteArray(), a2.b().asByteArray());
       default:
         throw new AssertionError();
     }

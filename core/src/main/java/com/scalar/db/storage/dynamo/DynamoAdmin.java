@@ -1,6 +1,5 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -20,7 +19,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -104,11 +102,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   public static final String METADATA_NAMESPACE = "scalardb";
   public static final String METADATA_TABLE = "metadata";
-  private static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
-  private static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
-  private static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
-  private static final String METADATA_ATTR_COLUMNS = "columns";
-  private static final String METADATA_ATTR_TABLE = "table";
+  @VisibleForTesting static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
+  @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
+  @VisibleForTesting static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
+  @VisibleForTesting static final String METADATA_ATTR_COLUMNS = "columns";
+  @VisibleForTesting static final String METADATA_ATTR_TABLE = "table";
   private static final long METADATA_TABLE_REQUEST_UNIT = 1;
 
   private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAP =
@@ -143,8 +141,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           .build();
 
   private final DynamoDbClient client;
-  private final Optional<String> namespacePrefix;
   private final ApplicationAutoScalingClient applicationAutoScalingClient;
+  private final String metadataNamespace;
 
   @Inject
   public DynamoAdmin(DynamoConfig config) {
@@ -159,13 +157,13 @@ public class DynamoAdmin implements DistributedStorageAdmin {
             .build();
 
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    namespacePrefix = config.getNamespacePrefix();
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   public DynamoAdmin(DynamoDbClient client, DynamoConfig config) {
     this.client = client;
     applicationAutoScalingClient = createApplicationAutoScalingClient(config);
-    namespacePrefix = config.getNamespacePrefix();
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   private AwsCredentialsProvider createCredentialsProvider(DynamoConfig config) {
@@ -187,10 +185,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   DynamoAdmin(
       DynamoDbClient client,
       ApplicationAutoScalingClient applicationAutoScalingClient,
-      Optional<String> namespacePrefix) {
+      DynamoConfig config) {
     this.client = client;
     this.applicationAutoScalingClient = applicationAutoScalingClient;
-    this.namespacePrefix = namespacePrefix;
+    metadataNamespace = config.getTableMetadataNamespace().orElse(METADATA_NAMESPACE);
   }
 
   @Override
@@ -235,7 +233,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
 
     // table name
-    requestBuilder.tableName(getFullTableName(namespacePrefix, namespace, table));
+    requestBuilder.tableName(getFullTableName(namespace, table));
 
     // create table
     try {
@@ -246,7 +244,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     try {
-      waitForTableCreation(getFullTableName(namespacePrefix, namespace, table));
+      waitForTableCreation(getFullTableName(namespace, table));
     } catch (DynamoDbException e) {
       throw new ExecutionException("getting table description failed", e);
     }
@@ -272,7 +270,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     // Add metadata
     itemValues.put(
         METADATA_ATTR_TABLE,
-        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
+        AttributeValue.builder().s(getFullTableName(namespace, table)).build());
     Map<String, AttributeValue> columns = new HashMap<>();
     for (String columnName : metadata.getColumnNames()) {
       columns.put(
@@ -312,10 +310,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       client.putItem(request);
     } catch (DynamoDbException e) {
       throw new ExecutionException(
-          "adding meta data for table "
-              + getFullTableName(namespacePrefix, namespace, table)
-              + " failed",
-          e);
+          "adding meta data for table " + getFullTableName(namespace, table) + " failed", e);
     }
   }
 
@@ -376,9 +371,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void dropTable(String namespace, String table) throws ExecutionException {
     disableAutoScaling(namespace, table);
     DeleteTableRequest request =
-        DeleteTableRequest.builder()
-            .tableName(getFullTableName(namespacePrefix, namespace, table))
-            .build();
+        DeleteTableRequest.builder().tableName(getFullTableName(namespace, table)).build();
     try {
       client.deleteTable(request);
       deleteTableMetadata(namespace, table);
@@ -395,7 +388,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     Map<String, AttributeValue> keyToDelete = new HashMap<>();
     keyToDelete.put(
         METADATA_ATTR_TABLE,
-        AttributeValue.builder().s(getFullTableName(namespacePrefix, namespace, table)).build());
+        AttributeValue.builder().s(getFullTableName(namespace, table)).build());
     DeleteItemRequest deleteReq =
         DeleteItemRequest.builder().tableName(getMetadataTable()).key(keyToDelete).build();
     try {
@@ -435,7 +428,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     do {
       ScanRequest scanRequest =
           ScanRequest.builder()
-              .tableName(getFullTableName(namespacePrefix, namespace, table))
+              .tableName(getFullTableName(namespace, table))
               .limit(DELETE_BATCH_SIZE)
               .exclusiveStartKey(lastKeyEvaluated)
               .build();
@@ -448,17 +441,14 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
         DeleteItemRequest deleteItemRequest =
             DeleteItemRequest.builder()
-                .tableName(getFullTableName(namespacePrefix, namespace, table))
+                .tableName(getFullTableName(namespace, table))
                 .key(keyToDelete)
                 .build();
         try {
           client.deleteItem(deleteItemRequest);
         } catch (DynamoDbException e) {
           throw new ExecutionException(
-              "Delete item from table "
-                  + getFullTableName(namespacePrefix, namespace, table)
-                  + " failed.",
-              e);
+              "Delete item from table " + getFullTableName(namespace, table) + " failed.", e);
         }
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
@@ -468,7 +458,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      String fullName = getFullTableName(namespacePrefix, namespace, table);
+      String fullName = getFullTableName(namespace, table);
       return readMetadata(fullName);
     } catch (RuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
@@ -498,7 +488,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private String getMetadataTable() {
-    return getFullTableName(namespacePrefix, METADATA_NAMESPACE, METADATA_TABLE);
+    return getFullTableName(metadataNamespace, METADATA_TABLE);
   }
 
   private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata) {
@@ -550,10 +540,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       Set<String> tableSet = new HashSet<>();
       ListTablesResponse listTablesResponse = client.listTables();
       List<String> tableNames = listTablesResponse.tableNames();
-      String fullNamespaceName = getFullNamespaceName(namespacePrefix, namespace) + ".";
+      String prefix = namespace + ".";
       for (String tableName : tableNames) {
-        if (tableName.startsWith(fullNamespaceName)) {
-          tableSet.add(tableName.substring(fullNamespaceName.length()));
+        if (tableName.startsWith(prefix)) {
+          tableSet.add(tableName.substring(prefix.length()));
         }
       }
       return tableSet;
@@ -569,7 +559,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       ListTablesResponse listTablesResponse = client.listTables();
       List<String> tableNames = listTablesResponse.tableNames();
       for (String tableName : tableNames) {
-        if (tableName.startsWith(getFullNamespaceName(namespacePrefix, namespace))) {
+        if (tableName.startsWith(namespace)) {
           namespaceExists = true;
           break;
         }
@@ -669,9 +659,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
     } catch (Exception e) {
       throw new ExecutionException(
-          "Unable to enable continuous backup for "
-              + getFullTableName(namespacePrefix, namespace, table),
-          e);
+          "Unable to enable continuous backup for " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -682,7 +670,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private UpdateContinuousBackupsRequest buildUpdateContinuousBackupsRequest(
       String namespace, String table) {
     return UpdateContinuousBackupsRequest.builder()
-        .tableName(getFullTableName(namespacePrefix, namespace, table))
+        .tableName(getFullTableName(namespace, table))
         .pointInTimeRecoverySpecification(buildPointInTimeRecoverySpecification())
         .build();
   }
@@ -851,12 +839,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private String getTableResourceID(String namespace, String table) {
-    return "table/" + getFullTableName(namespacePrefix, namespace, table);
+    return "table/" + getFullTableName(namespace, table);
   }
 
   private String getGlobalIndexResourceID(String namespace, String table, String globalIndex) {
     return "table/"
-        + getFullTableName(namespacePrefix, namespace, table)
+        + getFullTableName(namespace, table)
         + "/index/"
         + getGlobalIndexName(namespace, table, globalIndex);
   }
@@ -874,19 +862,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private String getLocalIndexName(String namespace, String tableName, String keyName) {
-    return getFullTableName(namespacePrefix, namespace, tableName)
-        + "."
-        + INDEX_NAME_PREFIX
-        + "."
-        + keyName;
+    return getFullTableName(namespace, tableName) + "." + INDEX_NAME_PREFIX + "." + keyName;
   }
 
   private String getGlobalIndexName(String namespace, String tableName, String keyName) {
-    return getFullTableName(namespacePrefix, namespace, tableName)
-        + "."
-        + GLOBAL_INDEX_NAME_PREFIX
-        + "."
-        + keyName;
+    return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
   }
 
   @Override
