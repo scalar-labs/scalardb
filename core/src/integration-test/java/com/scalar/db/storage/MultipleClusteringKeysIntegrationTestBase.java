@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -23,15 +24,16 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -60,9 +62,24 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
 
   private static final Random RANDOM_GENERATOR = new Random();
 
-  protected static Optional<String> namespacePrefix;
+  private static boolean initialized;
   protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage distributedStorage;
+  protected static DistributedStorage storage;
+
+  @Before
+  public void setUp() throws Exception {
+    if (!initialized) {
+      initialize();
+      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      admin = factory.getAdmin();
+      storage = factory.getStorage();
+      initialized = true;
+    }
+  }
+
+  protected void initialize() throws Exception {}
+
+  protected abstract DatabaseConfig getDatabaseConfig();
 
   @After
   public void tearDown() throws ExecutionException {
@@ -501,7 +518,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
       puts.add(put);
     }
     try {
-      distributedStorage.mutate(puts);
+      storage.mutate(puts);
     } catch (ExecutionException e) {
       throw new ExecutionException("put data to database failed", e);
     }
@@ -605,7 +622,7 @@ public abstract class MultipleClusteringKeysIntegrationTestBase {
   }
 
   protected List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
-    try (Scanner scanner = distributedStorage.scan(scan)) {
+    try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
   }
