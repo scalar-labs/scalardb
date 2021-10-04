@@ -12,7 +12,6 @@ public class CosmosConfigTest {
 
   private static final String ANY_ENDPOINT = "http://localhost:8081";
   private static final String ANY_KEY = "any_key";
-  private static final String ANY_NAMESPACE_PREFIX = "any_prefix";
   private static final String COSMOS_STORAGE = "cosmos";
   private static final String ANY_TABLE_METADATA_DATABASE = "any_database";
 
@@ -23,7 +22,6 @@ public class CosmosConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
     props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
 
     // Act
@@ -33,8 +31,6 @@ public class CosmosConfigTest {
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_ENDPOINT));
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
     assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
     assertThat(config.getTableMetadataDatabase()).isPresent();
@@ -47,7 +43,6 @@ public class CosmosConfigTest {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(CosmosConfig.TABLE_METADATA_DATABASE, ANY_TABLE_METADATA_DATABASE);
 
     // Act Assert
@@ -61,7 +56,6 @@ public class CosmosConfigTest {
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_ENDPOINT);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_KEY);
     props.setProperty(DatabaseConfig.STORAGE, COSMOS_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
     CosmosConfig config = new CosmosConfig(props);
@@ -70,8 +64,6 @@ public class CosmosConfigTest {
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_ENDPOINT));
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_KEY);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
     assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
     assertThat(config.getTableMetadataDatabase()).isNotPresent();

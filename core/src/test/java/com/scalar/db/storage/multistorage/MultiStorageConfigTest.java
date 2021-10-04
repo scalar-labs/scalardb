@@ -24,7 +24,6 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
     props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
     props.setProperty(
         MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");
@@ -54,8 +53,6 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("cassandra");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("cassandra");
-    assertThat(c.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(c.getNamespacePrefix().get()).isEqualTo("prefix_");
     assertThat(config.getDatabaseConfigMap().containsKey("mysql")).isTrue();
     c = config.getDatabaseConfigMap().get("mysql");
     assertThat(c.getStorageClass()).isEqualTo(JdbcDatabase.class);
@@ -65,7 +62,6 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("root");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("mysql");
-    assertThat(c.getNamespacePrefix().isPresent()).isFalse();
 
     assertThat(config.getTableStorageMap().size()).isEqualTo(3);
     assertThat(config.getTableStorageMap().get("user.order")).isEqualTo("cassandra");
@@ -90,7 +86,6 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
     props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
     props.setProperty(
         MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");
@@ -124,7 +119,6 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
     props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
     props.setProperty(
         MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");
@@ -159,7 +153,6 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
     props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
     props.setProperty(
         MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");
@@ -193,7 +186,6 @@ public class MultiStorageConfigTest {
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.contact_port", "7000");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.username", "cassandra");
     props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.password", "cassandra");
-    props.setProperty(MultiStorageConfig.STORAGES + ".cassandra.namespace_prefix", "prefix");
     props.setProperty(MultiStorageConfig.STORAGES + ".mysql.storage", "jdbc");
     props.setProperty(
         MultiStorageConfig.STORAGES + ".mysql.contact_points", "jdbc:mysql://localhost:3306/");

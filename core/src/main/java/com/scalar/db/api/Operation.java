@@ -23,7 +23,6 @@ public abstract class Operation {
 
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
   private Consistency consistency;
@@ -31,20 +30,9 @@ public abstract class Operation {
   public Operation(Key partitionKey, Key clusteringKey) {
     this.partitionKey = checkNotNull(partitionKey);
     this.clusteringKey = Optional.ofNullable(clusteringKey);
-    namespacePrefix = Optional.empty();
     namespace = Optional.empty();
     tableName = Optional.empty();
     consistency = Consistency.SEQUENTIAL;
-  }
-
-  /**
-   * Returns the namespace prefix for this operation
-   *
-   * @return an {@code Optional} with the returned namespace prefix
-   */
-  @Nonnull
-  public Optional<String> forNamespacePrefix() {
-    return namespacePrefix;
   }
 
   /**
@@ -55,24 +43,6 @@ public abstract class Operation {
   @Nonnull
   public Optional<String> forNamespace() {
     return namespace;
-  }
-
-  /**
-   * Returns the namespace with the prefix for this operation
-   *
-   * @return an {@code Optional} with the returned namespace with the prefix
-   */
-  @Nonnull
-  public Optional<String> forFullNamespace() {
-    if (!namespace.isPresent()) {
-      LOGGER.warn("namespace is not set. So, you might get an unexpected return value.");
-    }
-
-    if (namespace.isPresent() && namespacePrefix.isPresent()) {
-      return Optional.of(namespacePrefix.get() + namespace.get());
-    } else {
-      return namespace;
-    }
   }
 
   /**
@@ -92,47 +62,11 @@ public abstract class Operation {
    */
   @Nonnull
   public Optional<String> forFullTableName() {
-    return forFullTableName(true);
-  }
-
-  /**
-   * Returns the full table name with the unprefixed namespace for this operation
-   *
-   * @return an {@code Optional} with the returned the full table name
-   */
-  @Nonnull
-  public Optional<String> forUnprefixedFullTableName() {
-    return forFullTableName(false);
-  }
-
-  @Nonnull
-  private Optional<String> forFullTableName(boolean withPrefix) {
     if (!namespace.isPresent() || !tableName.isPresent()) {
       LOGGER.warn("namespace or table name isn't specified");
       return Optional.empty();
     }
-
-    StringBuilder builder = new StringBuilder();
-    if (withPrefix && namespacePrefix.isPresent()) {
-      builder.append(namespacePrefix.get());
-    }
-    builder.append(namespace.get());
-    builder.append(".");
-    builder.append(tableName.get());
-
-    return Optional.of(builder.toString());
-  }
-
-  /**
-   * Sets the specified target namespace prefix for this operation We don't have to set it
-   * explicitly since the prefix will be set by Scalar DB.
-   *
-   * @param prefix target namespace prefix for this operation
-   * @return this object
-   */
-  public Operation forNamespacePrefix(String prefix) {
-    this.namespacePrefix = Optional.ofNullable(prefix);
-    return this;
+    return Optional.of(namespace.get() + "." + tableName.get());
   }
 
   /**
@@ -226,10 +160,6 @@ public abstract class Operation {
                 other.clusteringKey.orElse(null),
                 Ordering.natural().nullsFirst())
             .compare(
-                namespacePrefix.orElse(null),
-                other.namespacePrefix.orElse(null),
-                Ordering.natural().nullsFirst())
-            .compare(
                 namespace.orElse(null),
                 other.namespace.orElse(null),
                 Ordering.natural().nullsFirst())
@@ -244,8 +174,7 @@ public abstract class Operation {
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        partitionKey, clusteringKey, namespacePrefix, namespace, tableName, consistency);
+    return Objects.hash(partitionKey, clusteringKey, namespace, tableName, consistency);
   }
 
   /**

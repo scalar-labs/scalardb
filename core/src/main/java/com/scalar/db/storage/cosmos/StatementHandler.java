@@ -55,7 +55,7 @@ public abstract class StatementHandler {
   @Nonnull
   protected CosmosContainer getContainer(Operation operation) {
     return client
-        .getDatabase(operation.forFullNamespace().get())
+        .getDatabase(operation.forNamespace().get())
         .getContainer(operation.forTable().get());
   }
 }
