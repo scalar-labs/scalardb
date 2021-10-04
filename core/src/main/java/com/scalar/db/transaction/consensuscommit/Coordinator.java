@@ -44,6 +44,13 @@ public class Coordinator {
   private final DistributedStorage storage;
   private final String coordinatorNamespace;
 
+  /** @deprecated As of release 3.3.0. Will be removed in release 4.0.0. */
+  @Deprecated
+  public Coordinator(DistributedStorage storage) {
+    this.storage = storage;
+    coordinatorNamespace = NAMESPACE;
+  }
+
   public Coordinator(DistributedStorage storage, ConsensusCommitConfig config) {
     this.storage = storage;
     coordinatorNamespace = config.getCoordinatorNamespace().orElse(NAMESPACE);
