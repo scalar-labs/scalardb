@@ -37,7 +37,7 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Creates a coordinator namespace/table if it does not exist.
+   * Creates a coordinator namespace and table if it does not exist.
    *
    * @throws ExecutionException if the operation failed
    */
@@ -47,7 +47,7 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Creates a coordinator namespace/table if it does not exist.
+   * Creates a coordinator namespace and table if it does not exist.
    *
    * @param options options to create namespace/table
    * @throws ExecutionException if the operation failed
@@ -68,7 +68,7 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Drops a coordinator namespace/table.
+   * Drops a coordinator namespace and table.
    *
    * @throws ExecutionException if the operation failed
    */
