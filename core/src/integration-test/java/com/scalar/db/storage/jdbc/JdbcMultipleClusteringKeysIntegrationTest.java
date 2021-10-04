@@ -1,11 +1,13 @@
 package com.scalar.db.storage.jdbc;
 
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.MultipleClusteringKeysIntegrationTestBase;
 import com.scalar.db.storage.jdbc.test.TestEnv;
+import java.io.IOException;
 import java.util.Collections;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 
 public class JdbcMultipleClusteringKeysIntegrationTest
     extends MultipleClusteringKeysIntegrationTestBase {
@@ -28,20 +30,35 @@ public class JdbcMultipleClusteringKeysIntegrationTest
     testEnv.close();
   }
 
-  // Ignore because jdbc rounds the float value
-  @Ignore
   @Override
-  public void scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+      throws IOException, ExecutionException {
+    // Ignore in case of mysql, mysql rounds the float value
+    Assume.assumeTrue(
+        JdbcUtils.getRdbEngine(testEnv.getJdbcConfig().getContactPoints().get(0))
+            != RdbEngine.MYSQL);
+    super.scan_WithClusteringKeyRangeOfValuesFloatAfter_ShouldReturnProperlyResult();
+  }
 
-  // Ignore because jdbc rounds the float value
-  @Ignore
   @Override
   public void
-      scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
+      scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+          throws IOException, ExecutionException {
+    // Ignore in case of mysql, mysql rounds the float value
+    Assume.assumeTrue(
+        JdbcUtils.getRdbEngine(testEnv.getJdbcConfig().getContactPoints().get(0))
+            != RdbEngine.MYSQL);
+    super.scan_WithClusteringKeyStartInclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult();
+  }
 
-  // Ignore because jdbc rounds the float value
-  @Ignore
   @Override
   public void
-      scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult() {}
+      scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult()
+          throws IOException, ExecutionException {
+    // Ignore in case of mysql, mysql rounds the float value
+    Assume.assumeTrue(
+        JdbcUtils.getRdbEngine(testEnv.getJdbcConfig().getContactPoints().get(0))
+            != RdbEngine.MYSQL);
+    super.scan_WithClusteringKeyStartExclusiveRangeOfValuesFloatAfter_ShouldReturnProperlyResult();
+  }
 }
