@@ -1,7 +1,6 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -16,7 +15,6 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.jdbc.query.QueryUtils;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,7 +25,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -81,7 +78,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
               ImmutableMap.<DataType, String>builder()
                   .put(DataType.INT, "INT")
                   .put(DataType.BIGINT, "BIGINT")
-                  .put(DataType.TEXT, "VARCHAR(8000)")
+                  .put(DataType.TEXT, "VARCHAR(8000) COLLATE Latin1_General_BIN")
                   .put(DataType.FLOAT, "FLOAT(24)")
                   .put(DataType.DOUBLE, "FLOAT")
                   .put(DataType.BOOLEAN, "BIT")
@@ -123,21 +120,18 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private final BasicDataSource dataSource;
   private final RdbEngine rdbEngine;
-  private final Optional<String> schemaPrefix;
   private final String metadataSchema;
 
   @Inject
   public JdbcDatabaseAdmin(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    schemaPrefix = config.getNamespacePrefix();
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   public JdbcDatabaseAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    schemaPrefix = config.getNamespacePrefix();
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
@@ -145,22 +139,20 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   JdbcDatabaseAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
     this.dataSource = dataSource;
     this.rdbEngine = rdbEngine;
-    schemaPrefix = config.getNamespacePrefix();
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    String fullNamespace = enclose(getFullNamespaceName(schemaPrefix, namespace));
+    String fullNamespace = enclose(namespace);
     try (Connection connection = dataSource.getConnection()) {
       if (rdbEngine == RdbEngine.ORACLE) {
         execute(connection, "CREATE USER " + fullNamespace + " IDENTIFIED BY \"oracle\"");
         execute(connection, "ALTER USER " + fullNamespace + " quota unlimited on USERS");
       } else if (rdbEngine == RdbEngine.MYSQL) {
         execute(
-            connection,
-            "CREATE SCHEMA " + fullNamespace + " character set 'utf8' COLLATE 'utf8_bin'");
+            connection, "CREATE SCHEMA " + fullNamespace + " character set utf8 COLLATE utf8_bin");
       } else {
         execute(connection, "CREATE SCHEMA " + fullNamespace);
       }
@@ -193,7 +185,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private void addTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    createMetadataSchemaAndTableIfNotExist();
+    createMetadataSchemaAndTableIfNotExists();
     try (Connection connection = dataSource.getConnection()) {
       // Start transaction to commit all the insert statements at once
       connection.setAutoCommit(false);
@@ -218,7 +210,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void createMetadataSchemaAndTableIfNotExist() throws ExecutionException {
+  private void createMetadataSchemaAndTableIfNotExists() throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
       connection.setAutoCommit(false);
       connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
@@ -240,11 +232,11 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     switch (rdbEngine) {
       case MYSQL:
       case POSTGRESQL:
-        execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(getMetadataSchema()));
+        execute(connection, "CREATE SCHEMA IF NOT EXISTS " + enclose(metadataSchema));
         break;
       case SQL_SERVER:
         try {
-          execute(connection, "CREATE SCHEMA " + enclose(getMetadataSchema()));
+          execute(connection, "CREATE SCHEMA " + enclose(metadataSchema));
         } catch (SQLException e) {
           // Suppress the exception thrown when the schema already exists
           if (e.getErrorCode() != 2714) {
@@ -256,16 +248,14 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       case ORACLE:
         try {
           execute(
-              connection,
-              "CREATE USER " + enclose(getMetadataSchema()) + " IDENTIFIED BY \"oracle\"");
+              connection, "CREATE USER " + enclose(metadataSchema) + " IDENTIFIED BY \"oracle\"");
         } catch (SQLException e) {
           // Suppress the exception thrown when the user already exists
           if (e.getErrorCode() != 1920) {
             throw e;
           }
         }
-        execute(
-            connection, "ALTER USER " + enclose(getMetadataSchema()) + " quota unlimited on USERS");
+        execute(connection, "ALTER USER " + enclose(metadataSchema) + " quota unlimited on USERS");
         break;
     }
   }
@@ -274,7 +264,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private void createMetadataTableIfNotExists(Connection connection) throws SQLException {
     String createTableStatement =
         "CREATE TABLE "
-            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+            + encloseFullTableName(metadataSchema, METADATA_TABLE)
             + "("
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " "
@@ -363,10 +353,6 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private String getMetadataSchema() {
-    return getFullNamespaceName(schemaPrefix, metadataSchema);
-  }
-
   private void insertMetadataColumn(
       String schema,
       String table,
@@ -408,8 +394,8 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
     return String.format(
         "INSERT INTO %s VALUES ('%s','%s','%s',%s,%s,%s,%d)",
-        encloseFullTableName(getMetadataSchema(), METADATA_TABLE),
-        getFullTableName(schemaPrefix, schema, table),
+        encloseFullTableName(metadataSchema, METADATA_TABLE),
+        getFullTableName(schema, table),
         columnName,
         dataType.toString(),
         keyType != null ? "'" + keyType + "'" : "NULL",
@@ -453,19 +439,18 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       }
       throw new ExecutionException(
           String.format(
-              "deleting the %s table metadata failed ",
-              getFullTableName(schemaPrefix, namespace, table)),
+              "deleting the %s table metadata failed ", getFullTableName(namespace, table)),
           e);
     }
   }
 
   private String getDeleteTableMetadataStatement(String schema, String table) {
     return "DELETE FROM "
-        + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+        + encloseFullTableName(metadataSchema, METADATA_TABLE)
         + " WHERE "
         + enclose(METADATA_COL_FULL_TABLE_NAME)
         + " = '"
-        + getFullTableName(schemaPrefix, schema, table)
+        + getFullTableName(schema, table)
         + "'";
   }
 
@@ -482,7 +467,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
         "SELECT DISTINCT "
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " FROM "
-            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE);
+            + encloseFullTableName(metadataSchema, METADATA_TABLE);
     try (Statement statement = connection.createStatement();
         ResultSet results = statement.executeQuery(selectAllTables)) {
       return !results.next();
@@ -491,7 +476,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private void deleteMetadataTable(Connection connection) throws SQLException {
     String dropTableStatement =
-        "DROP TABLE " + encloseFullTableName(getMetadataSchema(), METADATA_TABLE);
+        "DROP TABLE " + encloseFullTableName(metadataSchema, METADATA_TABLE);
 
     execute(connection, dropTableStatement);
   }
@@ -499,9 +484,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private void deleteMetadataSchema(Connection connection) throws SQLException {
     String dropStatement;
     if (rdbEngine == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(getMetadataSchema());
+      dropStatement = "DROP USER " + enclose(metadataSchema);
     } else {
-      dropStatement = "DROP SCHEMA " + enclose(getMetadataSchema());
+      dropStatement = "DROP SCHEMA " + enclose(metadataSchema);
     }
 
     execute(connection, dropStatement);
@@ -511,9 +496,9 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   public void dropNamespace(String namespace) throws ExecutionException {
     String dropStatement;
     if (rdbEngine == RdbEngine.ORACLE) {
-      dropStatement = "DROP USER " + enclose(getFullNamespaceName(schemaPrefix, namespace));
+      dropStatement = "DROP USER " + enclose(namespace);
     } else {
-      dropStatement = "DROP SCHEMA " + enclose(getFullNamespaceName(schemaPrefix, namespace));
+      dropStatement = "DROP SCHEMA " + enclose(namespace);
     }
 
     try (Connection connection = dataSource.getConnection()) {
@@ -522,22 +507,19 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       throw new ExecutionException(
           String.format(
               "error dropping the %s %s",
-              rdbEngine == RdbEngine.ORACLE ? "user" : "schema",
-              getFullNamespaceName(schemaPrefix, namespace)),
+              rdbEngine == RdbEngine.ORACLE ? "user" : "schema", namespace),
           e);
     }
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableStatement =
-        "TRUNCATE TABLE "
-            + encloseFullTableName(getFullNamespaceName(schemaPrefix, namespace), table);
+    String truncateTableStatement = "TRUNCATE TABLE " + encloseFullTableName(namespace, table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, truncateTableStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "error truncating the table " + getFullTableName(schemaPrefix, namespace, table), e);
+          "error truncating the table " + getFullTableName(namespace, table), e);
     }
   }
 
@@ -550,7 +532,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
             connection.prepareStatement(getSelectColumnsStatement())) {
-      preparedStatement.setString(1, getFullTableName(schemaPrefix, namespace, table));
+      preparedStatement.setString(1, getFullTableName(namespace, table));
 
       try (ResultSet resultSet = preparedStatement.executeQuery()) {
         while (resultSet.next()) {
@@ -607,7 +589,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
         + ","
         + enclose(METADATA_COL_INDEXED)
         + " FROM "
-        + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+        + encloseFullTableName(metadataSchema, METADATA_TABLE)
         + " WHERE "
         + enclose(METADATA_COL_FULL_TABLE_NAME)
         + "=? ORDER BY "
@@ -622,20 +604,20 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
         "SELECT DISTINCT "
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " FROM "
-            + encloseFullTableName(getMetadataSchema(), METADATA_TABLE)
+            + encloseFullTableName(metadataSchema, METADATA_TABLE)
             + " WHERE "
             + enclose(METADATA_COL_FULL_TABLE_NAME)
             + " LIKE ?";
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
             connection.prepareStatement(selectTablesOfNamespaceStatement)) {
-      String fullSchemaName = Utility.getFullNamespaceName(schemaPrefix, namespace) + ".";
-      preparedStatement.setString(1, fullSchemaName + "%");
+      String prefix = namespace + ".";
+      preparedStatement.setString(1, prefix + "%");
       try (ResultSet results = preparedStatement.executeQuery()) {
         Set<String> tableNames = new HashSet<>();
         while (results.next()) {
           String tableName =
-              results.getString(METADATA_COL_FULL_TABLE_NAME).substring(fullSchemaName.length());
+              results.getString(METADATA_COL_FULL_TABLE_NAME).substring(prefix.length());
           tableNames.add(tableName);
         }
         return tableNames;
@@ -643,7 +625,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } catch (SQLException e) {
       // An exception will be thrown if the metadata table does not exist when executing the select
       // query
-      if ((rdbEngine == RdbEngine.MYSQL && e.getErrorCode() == 1049)
+      if ((rdbEngine == RdbEngine.MYSQL && (e.getErrorCode() == 1049 || e.getErrorCode() == 1146))
           || (rdbEngine == RdbEngine.POSTGRESQL && e.getSQLState().equals("42P01"))
           || (rdbEngine == RdbEngine.ORACLE && e.getErrorCode() == 942)
           || (rdbEngine == RdbEngine.SQL_SERVER && e.getErrorCode() == 208)) {
@@ -683,7 +665,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     try (Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement =
             connection.prepareStatement(namespaceExistsStatement)) {
-      preparedStatement.setString(1, getFullNamespaceName(schemaPrefix, namespace));
+      preparedStatement.setString(1, namespace);
       return preparedStatement.executeQuery().next();
     } catch (SQLException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
@@ -704,9 +686,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     String createTableStatement =
-        "CREATE TABLE "
-            + enclosedFullTableName(getFullNamespaceName(schemaPrefix, schema), table, rdbEngine)
-            + "(";
+        "CREATE TABLE " + enclosedFullTableName(schema, table, rdbEngine) + "(";
     // Order the columns for their creation by (partition keys >> clustering keys >> other columns)
     LinkedHashSet<String> sortedColumnNames =
         Sets.newLinkedHashSet(
@@ -741,7 +721,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       // performance
       String alterTableStatement =
           "ALTER TABLE "
-              + enclosedFullTableName(getFullNamespaceName(schemaPrefix, schema), table, rdbEngine)
+              + enclosedFullTableName(schema, table, rdbEngine)
               + " INITRANS 3 MAXTRANS 255";
       execute(connection, alterTableStatement);
     }
@@ -776,18 +756,12 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       Connection connection, String schema, String table, TableMetadata metadata)
       throws SQLException {
     for (String indexedColumn : metadata.getSecondaryIndexNames()) {
-      String indexName =
-          String.join(
-              "_",
-              INDEX_NAME_PREFIX,
-              getFullNamespaceName(schemaPrefix, schema),
-              table,
-              indexedColumn);
+      String indexName = String.join("_", INDEX_NAME_PREFIX, schema, table, indexedColumn);
       String createIndexStatement =
           "CREATE INDEX "
               + indexName
               + " ON "
-              + encloseFullTableName(getFullNamespaceName(schemaPrefix, schema), table)
+              + encloseFullTableName(schema, table)
               + " ("
               + enclose(indexedColumn)
               + ")";
@@ -811,13 +785,12 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   }
 
   private void dropTableInternal(String schema, String table) throws ExecutionException {
-    String dropTableStatement =
-        "DROP TABLE " + encloseFullTableName(getFullNamespaceName(schemaPrefix, schema), table);
+    String dropTableStatement = "DROP TABLE " + encloseFullTableName(schema, table);
     try (Connection connection = dataSource.getConnection()) {
       execute(connection, dropTableStatement);
     } catch (SQLException e) {
       throw new ExecutionException(
-          "error dropping the table " + getFullTableName(schemaPrefix, schema, table), e);
+          "error dropping the table " + getFullTableName(schema, table), e);
     }
   }
 }

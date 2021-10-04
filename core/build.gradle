@@ -55,7 +55,6 @@ sourceSets {
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/jdbc/*.java'
-            include '**/com/scalar/db/storage/jdbc/test/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithJdbcDatabaseIntegrationTest.java'
             include '**/com/scalar/db/transaction/jdbc/*.java'
@@ -68,7 +67,6 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
             include '**/com/scalar/db/storage/multistorage/*.java'
-            include '**/com/scalar/db/storage/jdbc/test/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithMultiStorageIntegrationTest.java'
         }
@@ -79,7 +77,6 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
-            include '**/com/scalar/db/storage/jdbc/test/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/TwoPhaseConsensusCommitIntegrationTest.java'
         }
         resources.srcDir file('src/integration-test/resources')
@@ -149,6 +146,9 @@ task integrationTestCassandra(type: Test) {
     testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
     classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
 }
 
 task integrationTestCosmos(type: Test) {
@@ -190,6 +190,9 @@ task integrationTestMultiStorage(type: Test) {
     testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
     classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
 }
 
 task integrationTestTwoPhaseConsesnsusCommit(type: Test) {
@@ -198,6 +201,9 @@ task integrationTestTwoPhaseConsesnsusCommit(type: Test) {
     testClassesDirs = sourceSets.integrationTestTwoPhaseConsesnsusCommit.output.classesDirs
     classpath = sourceSets.integrationTestTwoPhaseConsesnsusCommit.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
 }
 
 task copyDependencies(type: Copy) {

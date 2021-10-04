@@ -76,7 +76,7 @@ public class BatchHandler {
 
     CosmosMutation cosmosMutation = new CosmosMutation(mutations.get(0), tableMetadata);
     client
-        .getDatabase(mutations.get(0).forFullNamespace().get())
+        .getDatabase(mutations.get(0).forNamespace().get())
         .getContainer(mutations.get(0).forTable().get())
         .getScripts()
         .getStoredProcedure(MUTATION_STORED_PROCEDURE)

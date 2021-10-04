@@ -1,66 +1,82 @@
 package com.scalar.db.server;
 
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.ACCOUNT_ID;
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.ACCOUNT_TYPE;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.BALANCE;
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.CONTACT_POINT;
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.NAMESPACE;
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.PASSWORD;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.TABLE_1;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.TABLE_2;
-import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.USERNAME;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.createTables;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.deleteTables;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.getBalance;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.prepareGet;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.preparePut;
 import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.prepareScan;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
+import static com.scalar.db.server.DistributedTransactionServiceWithConsensusCommitIntegrationTest.truncateTables;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
+import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
-import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.io.DataType;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegrationTest {
 
-  private static TestEnv testEnv;
   private static ScalarDbServer server;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
   private static GrpcTransactionManager manager;
 
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException, IOException {
+    ServerConfig serverConfig =
+        ServerEnv.getServerConfig(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    if (serverConfig != null) {
+      server = new ScalarDbServer(serverConfig);
+      server.start();
+    }
+
+    GrpcConfig grpcConfig = ServerEnv.getGrpcConfig();
+    StorageFactory factory = new StorageFactory(grpcConfig);
+    admin = factory.getAdmin();
+    consensusCommitAdmin =
+        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(grpcConfig.getProperties()));
+    createTables(admin, consensusCommitAdmin);
+    manager = new GrpcTransactionManager(grpcConfig);
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTables(admin, consensusCommitAdmin);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTables(admin, consensusCommitAdmin);
+    admin.close();
+    manager.close();
+    if (server != null) {
+      server.shutdown();
+      server.blockUntilShutdown();
+    }
   }
 
   private void
@@ -80,14 +96,16 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     GrpcTransaction transaction2 = manager.start();
     Get get1_1 = prepareGet(0, 1, table2);
     Optional<Result> result1 = transaction1.get(get1_1);
+    assertThat(result1).isPresent();
+    int current1 = getBalance(result1.get());
     Get get1_2 = prepareGet(0, 0, table1);
     transaction1.get(get1_2);
-    int current1 = result1.get().getValue(BALANCE).get().getAsInt();
     Get get2_1 = prepareGet(0, 0, table1);
     Optional<Result> result2 = transaction2.get(get2_1);
+    assertThat(result2).isPresent();
+    int current2 = getBalance(result2.get());
     Get get2_2 = prepareGet(0, 1, table2);
     transaction2.get(get2_2);
-    int current2 = result2.get().getValue(BALANCE).get().getAsInt();
     Put put1 = preparePut(0, 0, table1).withValue(BALANCE, current1 + 1);
     transaction1.put(put1);
     Put put2 = preparePut(0, 1, table2).withValue(BALANCE, current2 + 1);
@@ -100,8 +118,10 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     result1 = transaction.get(get1_1);
     result2 = transaction.get(get2_1);
     transaction.commit();
-    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
-    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 2));
+    assertThat(result1).isPresent();
+    assertThat(getBalance(result1.get())).isEqualTo(1);
+    assertThat(result2).isPresent();
+    assertThat(getBalance(result2.get())).isEqualTo(2);
     assertThat(thrown).isInstanceOf(CommitConflictException.class);
   }
 
@@ -156,7 +176,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     transaction.commit();
     assertThat(result1.isPresent()).isFalse();
     assertThat(result2.isPresent()).isTrue();
-    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(getBalance(result2.get())).isEqualTo(1);
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
   }
@@ -206,7 +226,7 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
     transaction.commit();
     assertThat(result1.isPresent()).isTrue();
-    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(getBalance(result1.get())).isEqualTo(1);
     assertThat(result2.isPresent()).isFalse();
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
@@ -244,72 +264,11 @@ public class DistributedTransactionServiceWithConsensusCommitWithExtraReadIntegr
     Optional<Result> result1 = transaction.get(prepareGet(0, 0, TABLE_1));
     Optional<Result> result2 = transaction.get(prepareGet(0, 1, TABLE_1));
     transaction.commit();
-    assertThat(result1.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 3));
-    assertThat(result2.get().getValue(BALANCE).get()).isEqualTo(new IntValue(BALANCE, 1));
+    assertThat(result1).isPresent();
+    assertThat(getBalance(result1.get())).isEqualTo(3);
+    assertThat(result2).isPresent();
+    assertThat(getBalance(result2.get())).isEqualTo(1);
     assertThat(thrown1).doesNotThrowAnyException();
     assertThat(thrown2).isInstanceOf(CommitConflictException.class);
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-
-    // For the coordinator table
-    testEnv.createTable(
-        Coordinator.NAMESPACE,
-        Coordinator.TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ID, DataType.TEXT)
-            .addColumn(STATE, DataType.INT)
-            .addColumn(CREATED_AT, DataType.BIGINT)
-            .addPartitionKey(ID)
-            .build());
-
-    // For the test tables
-    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.createTable(
-          NAMESPACE,
-          table,
-          TableMetadata.newBuilder()
-              .addColumn(ACCOUNT_ID, DataType.INT)
-              .addColumn(ACCOUNT_TYPE, DataType.INT)
-              .addColumn(BALANCE, DataType.INT)
-              .addColumn(ID, DataType.TEXT)
-              .addColumn(STATE, DataType.INT)
-              .addColumn(VERSION, DataType.INT)
-              .addColumn(PREPARED_AT, DataType.BIGINT)
-              .addColumn(COMMITTED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
-              .addColumn(BEFORE_ID, DataType.TEXT)
-              .addColumn(BEFORE_STATE, DataType.INT)
-              .addColumn(BEFORE_VERSION, DataType.INT)
-              .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
-              .addPartitionKey(ACCOUNT_ID)
-              .addClusteringKey(ACCOUNT_TYPE)
-              .build());
-    }
-
-    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(DatabaseConfig.ISOLATION_LEVEL, "SERIALIZABLE");
-    serverProperties.setProperty(ConsensusCommitConfig.SERIALIZABLE_STRATEGY, "EXTRA_READ");
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    server = new ScalarDbServer(serverProperties);
-    server.start();
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
-    manager = new GrpcTransactionManager(new GrpcConfig(properties));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    manager.close();
-    server.shutdown();
-    server.blockUntilShutdown();
-    testEnv.deleteTables();
-    testEnv.close();
   }
 }

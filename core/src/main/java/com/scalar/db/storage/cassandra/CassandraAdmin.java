@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
 import com.datastax.driver.core.ClusteringOrder;
@@ -25,7 +24,6 @@ import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -37,33 +35,28 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
   private final ClusterManager clusterManager;
-  private final Optional<String> keyspacePrefix;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
-    keyspacePrefix = config.getNamespacePrefix();
   }
 
   public CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
     this.clusterManager = clusterManager;
-    keyspacePrefix = config.getNamespacePrefix();
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    String fullKeyspace = fullKeyspace(namespace);
-    createTableInternal(fullKeyspace, table, metadata, options);
-    createSecondaryIndex(fullKeyspace, table, metadata.getSecondaryIndexNames());
+    createTableInternal(namespace, table, metadata, options);
+    createSecondaryIndex(namespace, table, metadata.getSecondaryIndexNames());
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    CreateKeyspace query =
-        SchemaBuilder.createKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
+    CreateKeyspace query = SchemaBuilder.createKeyspace(namespace);
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -82,58 +75,47 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           .getSession()
           .execute(query.with().replication(replicationOptions).getQueryString());
     } catch (RuntimeException e) {
-      throw new ExecutionException(
-          String.format(
-              "creating the keyspace %s failed", getFullNamespaceName(keyspacePrefix, namespace)),
-          e);
+      throw new ExecutionException(String.format("creating the keyspace %s failed", namespace), e);
     }
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    String dropTableQuery =
-        SchemaBuilder.dropTable(fullKeyspace(namespace), table).getQueryString();
+    String dropTableQuery = SchemaBuilder.dropTable(namespace, table).getQueryString();
     try {
       clusterManager.getSession().execute(dropTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format(
-              "dropping the %s table failed", getFullTableName(keyspacePrefix, namespace, table)),
-          e);
+          String.format("dropping the %s table failed", getFullTableName(namespace, table)), e);
     }
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    String dropKeyspace = SchemaBuilder.dropKeyspace(fullKeyspace(namespace)).getQueryString();
+    String dropKeyspace = SchemaBuilder.dropKeyspace(namespace).getQueryString();
     try {
       clusterManager.getSession().execute(dropKeyspace);
     } catch (RuntimeException e) {
-      throw new ExecutionException(
-          String.format("dropping the %s keyspace failed", fullKeyspace(namespace)), e);
+      throw new ExecutionException(String.format("dropping the %s keyspace failed", namespace), e);
     }
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableQuery =
-        QueryBuilder.truncate(fullKeyspace(namespace), table).getQueryString();
+    String truncateTableQuery = QueryBuilder.truncate(namespace, table).getQueryString();
     try {
       clusterManager.getSession().execute(truncateTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format(
-              "truncating the %s table failed", getFullTableName(keyspacePrefix, namespace, table)),
-          e);
+          String.format("truncating the %s table failed", getFullTableName(namespace, table)), e);
     }
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      String fullKeyspace = getFullNamespaceName(keyspacePrefix, namespace);
       com.datastax.driver.core.TableMetadata metadata =
-          clusterManager.getMetadata(fullKeyspace, table);
+          clusterManager.getMetadata(namespace, table);
       if (metadata == null) {
         return null;
       }
@@ -173,11 +155,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager
-              .getSession()
-              .getCluster()
-              .getMetadata()
-              .getKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
+          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
       if (keyspace == null) {
         return Collections.emptySet();
       }
@@ -193,19 +171,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager
-              .getSession()
-              .getCluster()
-              .getMetadata()
-              .getKeyspace(fullKeyspace(namespace));
+          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
       return keyspace != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
     }
-  }
-
-  private String fullKeyspace(String keyspace) {
-    return getFullNamespaceName(keyspacePrefix, keyspace);
   }
 
   @VisibleForTesting

@@ -1,17 +1,5 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_VERSION;
-import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,6 +8,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
@@ -27,6 +16,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
@@ -39,18 +29,28 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import org.junit.After;
+import java.util.Properties;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TwoPhaseConsensusCommitIntegrationTest {
+
+  private static final String PROP_CONTACT_POINTS = "scalardb.contact_points";
+  private static final String PROP_CONTACT_PORT = "scalardb.contact_port";
+  private static final String PROP_USERNAME = "scalardb.username";
+  private static final String PROP_PASSWORD = "scalardb.password";
+  private static final String PROP_STORAGE = "scalardb.storage";
+
+  private static final String DEFAULT_CONTACT_POINTS = "jdbc:mysql://localhost:3306/";
+  private static final String DEFAULT_USERNAME = "root";
+  private static final String DEFAULT_PASSWORD = "mysql";
+  private static final String DEFAULT_STORAGE = "jdbc";
 
   private static final String NAMESPACE = "integration_testing";
   private static final String TABLE_1 = "tx_test_table1";
@@ -64,23 +64,91 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
 
-  private static final String MYSQL_CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String MYSQL_USERNAME = "root";
-  private static final String MYSQL_PASSWORD = "mysql";
-
-  private static TestEnv testEnv;
-
   private static TwoPhaseConsensusCommitManager manager;
   private static DistributedStorage storage;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
   private static Coordinator coordinator;
 
-  @After
-  public void tearDown() throws Exception {
-    truncateMySql();
+  private static DatabaseConfig getDatabaseConfig() {
+    String contactPoints = System.getProperty(PROP_CONTACT_POINTS, DEFAULT_CONTACT_POINTS);
+    String contactPort = System.getProperty(PROP_CONTACT_PORT);
+    String username = System.getProperty(PROP_USERNAME, DEFAULT_USERNAME);
+    String password = System.getProperty(PROP_PASSWORD, DEFAULT_PASSWORD);
+    String storage = System.getProperty(PROP_STORAGE, DEFAULT_STORAGE);
+
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, contactPoints);
+    if (contactPort != null) {
+      properties.setProperty(DatabaseConfig.CONTACT_PORT, contactPort);
+    }
+    properties.setProperty(DatabaseConfig.USERNAME, username);
+    properties.setProperty(DatabaseConfig.PASSWORD, password);
+    properties.setProperty(DatabaseConfig.STORAGE, storage);
+    return new DatabaseConfig(properties);
   }
 
-  private void truncateMySql() throws Exception {
-    testEnv.deleteTableData();
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException {
+    DatabaseConfig config = getDatabaseConfig();
+    initStorageAndAdmin(config);
+    createTables();
+    initManagerAndCoordinator(config);
+  }
+
+  private static void initStorageAndAdmin(DatabaseConfig config) {
+    StorageFactory factory = new StorageFactory(config);
+    storage = factory.getStorage();
+    admin = factory.getAdmin();
+    consensusCommitAdmin =
+        new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
+  }
+
+  private static void createTables() throws ExecutionException {
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    admin.createNamespace(NAMESPACE, true);
+    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_1, tableMetadata, true);
+    consensusCommitAdmin.createTransactionalTable(NAMESPACE, TABLE_2, tableMetadata, true);
+    consensusCommitAdmin.createCoordinatorTable();
+  }
+
+  private static void initManagerAndCoordinator(DatabaseConfig config) {
+    ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
+    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
+    coordinator = new Coordinator(storage, consensusCommitConfig);
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTables();
+  }
+
+  private void truncateTables() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE_1);
+    admin.truncateTable(NAMESPACE, TABLE_2);
+    consensusCommitAdmin.truncateCoordinatorTable();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTables();
+    admin.close();
+    storage.close();
+    manager.close();
+  }
+
+  private static void deleteTables() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE_1);
+    admin.dropTable(NAMESPACE, TABLE_2);
+    admin.dropNamespace(NAMESPACE);
+    consensusCommitAdmin.dropCoordinatorTable();
   }
 
   @Test
@@ -2328,65 +2396,5 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     Optional<Value<?>> balance = result.getValue(BALANCE);
     assertThat(balance).isPresent();
     return balance.get().getAsInt();
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    initMySql();
-    initStorageAndManagerAndCoordinator();
-  }
-
-  private static void initMySql() throws Exception {
-    testEnv = new TestEnv(MYSQL_CONTACT_POINT, MYSQL_USERNAME, MYSQL_PASSWORD, Optional.empty());
-    for (String table : Arrays.asList(TABLE_1, TABLE_2)) {
-      testEnv.createTable(
-          NAMESPACE,
-          table,
-          TableMetadata.newBuilder()
-              .addColumn(ACCOUNT_ID, DataType.INT)
-              .addColumn(ACCOUNT_TYPE, DataType.INT)
-              .addColumn(BALANCE, DataType.INT)
-              .addColumn(ID, DataType.TEXT)
-              .addColumn(STATE, DataType.INT)
-              .addColumn(VERSION, DataType.INT)
-              .addColumn(PREPARED_AT, DataType.BIGINT)
-              .addColumn(COMMITTED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_PREFIX + BALANCE, DataType.INT)
-              .addColumn(BEFORE_ID, DataType.TEXT)
-              .addColumn(BEFORE_STATE, DataType.INT)
-              .addColumn(BEFORE_VERSION, DataType.INT)
-              .addColumn(BEFORE_PREPARED_AT, DataType.BIGINT)
-              .addColumn(BEFORE_COMMITTED_AT, DataType.BIGINT)
-              .addPartitionKey(ACCOUNT_ID)
-              .addClusteringKey(ACCOUNT_TYPE)
-              .build());
-    }
-
-    TableMetadata coordinatorTableMetadata =
-        TableMetadata.newBuilder()
-            .addColumn(ID, DataType.TEXT)
-            .addColumn(STATE, DataType.INT)
-            .addColumn(CREATED_AT, DataType.BIGINT)
-            .addPartitionKey(ID)
-            .build();
-    testEnv.createTable(Coordinator.NAMESPACE, Coordinator.TABLE, coordinatorTableMetadata);
-  }
-
-  private static void initStorageAndManagerAndCoordinator() {
-    storage = new JdbcDatabase(testEnv.getJdbcConfig());
-    ConsensusCommitConfig consensusCommitConfig =
-        new ConsensusCommitConfig(testEnv.getJdbcConfig().getProperties());
-    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
-    coordinator = new Coordinator(storage, consensusCommitConfig);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    cleanUpMySql();
-  }
-
-  private static void cleanUpMySql() throws Exception {
-    testEnv.deleteTables();
-    testEnv.close();
   }
 }

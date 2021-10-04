@@ -72,6 +72,9 @@ task integrationTestScalarDbServer(type: Test) {
     testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
     classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+    }
 }
 
 spotless {

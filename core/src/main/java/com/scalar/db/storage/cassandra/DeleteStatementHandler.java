@@ -56,7 +56,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
 
   private com.datastax.driver.core.querybuilder.Delete prepare(Delete del) {
     com.datastax.driver.core.querybuilder.Delete delete =
-        QueryBuilder.delete().from(del.forFullNamespace().get(), del.forTable().get());
+        QueryBuilder.delete().from(del.forNamespace().get(), del.forTable().get());
     com.datastax.driver.core.querybuilder.Delete.Where where = delete.where();
 
     del.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
