@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.nio.charset.StandardCharsets;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 import software.amazon.awssdk.core.SdkBytes;
@@ -264,10 +266,27 @@ public class ItemSorterTest {
   @Test
   public void sort_ItemsGivenWithDescOrderingBlob_ShouldSortProperly() {
     // Arrange
+    Random random = new Random(777);
+    byte[] bytes1 = new byte[20];
+    random.nextBytes(bytes1);
+    BlobValue value1 = new BlobValue(ANY_NAME_8, bytes1);
+
+    byte[] bytes2 = new byte[20];
+    random.nextBytes(bytes2);
+    BlobValue value2 = new BlobValue(ANY_NAME_8, bytes2);
+
+    if (value1.compareTo(value2) < 0) {
+      BlobValue valueTemp = value1;
+      value1 = value2;
+      value2 = valueTemp;
+    }
+
     Map<String, AttributeValue> item1 = prepareItemWithSmallValues();
+    item1.put(
+        ANY_NAME_8, AttributeValue.builder().b(SdkBytes.fromByteArray(value1.get().get())).build());
     Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
     item2.put(
-        ANY_NAME_8, AttributeValue.builder().b(SdkBytes.fromByteArray(ANY_LARGE_BLOB)).build());
+        ANY_NAME_8, AttributeValue.builder().b(SdkBytes.fromByteArray(value2.get().get())).build());
     Scan scan =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withOrdering(new Scan.Ordering(ANY_NAME_8, Scan.Ordering.Order.DESC));
@@ -280,8 +299,8 @@ public class ItemSorterTest {
     List<Map<String, AttributeValue>> actual = sorter.sort(items);
 
     // Assert
-    assertThat(actual.get(0).get(ANY_NAME_8).b().asByteArray()).isEqualTo(ANY_LARGE_BLOB);
-    assertThat(actual.get(1).get(ANY_NAME_8).b().asByteArray()).isEqualTo(ANY_SMALL_BLOB);
+    assertThat(actual.get(0).get(ANY_NAME_8).b().asByteArray()).isEqualTo(value1.get().get());
+    assertThat(actual.get(1).get(ANY_NAME_8).b().asByteArray()).isEqualTo(value2.get().get());
   }
 
   @Test
