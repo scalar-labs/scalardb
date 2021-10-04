@@ -39,7 +39,8 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 @SuppressWarnings("unchecked")
-@SuppressFBWarnings("MS_CANNOT_BE_FINAL")
+@SuppressFBWarnings(
+    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public abstract class MultipleClusteringKeysIntegrationTestBase {
 
