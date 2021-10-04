@@ -2,9 +2,6 @@ package com.scalar.db.storage.dynamo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.collect.ImmutableMap;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -13,15 +10,13 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -36,19 +31,48 @@ public class DynamoWithReservedKeywordIntegrationTest {
   protected static final String COL_NAME3 = "c3";
   protected static final String COL_NAME4 = "status"; // Reserved keyword
 
-  private static Optional<String> namespacePrefix;
-  private static DistributedStorageAdmin admin;
-  private static DistributedStorage dynamo;
+  private static DynamoAdmin admin;
+  private static Dynamo dynamo;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException {
+    DynamoConfig config = DynamoEnv.getDynamoConfig();
+    admin = new DynamoAdmin(config);
+    dynamo = new Dynamo(config);
+    createTable();
+  }
+
+  private static void createTable() throws ExecutionException {
+    Map<String, String> options = DynamoEnv.getCreateOptions();
+    admin.createNamespace(NAMESPACE, true, options);
+    admin.createTable(
+        NAMESPACE,
+        TABLE,
+        TableMetadata.newBuilder()
+            .addColumn(COL_NAME1, DataType.INT)
+            .addColumn(COL_NAME2, DataType.INT)
+            .addColumn(COL_NAME3, DataType.TEXT)
+            .addColumn(COL_NAME4, DataType.TEXT)
+            .addPartitionKey(COL_NAME1)
+            .addClusteringKey(COL_NAME2)
+            .addSecondaryIndex(COL_NAME3)
+            .build(),
+        true,
+        options);
+  }
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE);
     dynamo.with(NAMESPACE, TABLE);
   }
 
-  @After
-  public void tearDown() throws ExecutionException {
-    // truncate the TABLE
-    admin.truncateTable(NAMESPACE, TABLE);
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
+    admin.close();
+    dynamo.close();
   }
 
   @Test
@@ -68,8 +92,7 @@ public class DynamoWithReservedKeywordIntegrationTest {
 
     // Assert
     assertThat(result).isPresent();
-    assertThat(result.get().getValue(COL_NAME4)).isPresent();
-    assertThat(result.get().getValue(COL_NAME4).get().getAsString().get()).isEqualTo(status);
+    assertThat(getCol4Value(result.get())).isEqualTo(status);
   }
 
   @Test
@@ -93,8 +116,7 @@ public class DynamoWithReservedKeywordIntegrationTest {
 
     // Assert
     assertThat(result).isPresent();
-    assertThat(result.get().getValue(COL_NAME4)).isPresent();
-    assertThat(result.get().getValue(COL_NAME4).get().getAsString().get()).isEqualTo(status);
+    assertThat(getCol4Value(result.get())).isEqualTo(status);
   }
 
   @Test
@@ -120,9 +142,9 @@ public class DynamoWithReservedKeywordIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(3);
-    assertThat(results.get(0).getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s0");
-    assertThat(results.get(1).getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s1");
-    assertThat(results.get(2).getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s2");
+    assertThat(getCol4Value(results.get(0))).isEqualTo("s0");
+    assertThat(getCol4Value(results.get(1))).isEqualTo("s1");
+    assertThat(getCol4Value(results.get(2))).isEqualTo("s2");
   }
 
   @Test
@@ -150,15 +172,16 @@ public class DynamoWithReservedKeywordIntegrationTest {
     // Assert
     assertThat(results.size()).isEqualTo(3);
     for (Result result : results) {
+      assertThat(result.getValue(COL_NAME2).isPresent()).isTrue();
       switch (result.getValue(COL_NAME2).get().getAsInt()) {
         case 0:
-          assertThat(result.getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s0");
+          assertThat(getCol4Value(result)).isEqualTo("s0");
           break;
         case 1:
-          assertThat(result.getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s1");
+          assertThat(getCol4Value(result)).isEqualTo("s1");
           break;
         case 2:
-          assertThat(result.getValue(COL_NAME4).get().getAsString().get()).isEqualTo("s2");
+          assertThat(getCol4Value(result)).isEqualTo("s2");
           break;
         default:
           throw new AssertionError();
@@ -166,48 +189,9 @@ public class DynamoWithReservedKeywordIntegrationTest {
     }
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws ExecutionException {
-    String endpointOverride =
-        System.getProperty("scalardb.dynamo.endpoint_override", "http://localhost:8000");
-    String region = System.getProperty("scalardb.dynamo.region", "us-west-2");
-    String accessKeyId = System.getProperty("scalardb.dynamo.access_key_id", "fakeMyKeyId");
-    String secretAccessKey =
-        System.getProperty("scalardb.dynamo.secret_access_key", "fakeSecretAccessKey");
-    namespacePrefix = Optional.ofNullable(System.getProperty("scalardb.namespace_prefix"));
-
-    Properties props = new Properties();
-    if (endpointOverride != null) {
-      props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
-    }
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, region);
-    props.setProperty(DatabaseConfig.USERNAME, accessKeyId);
-    props.setProperty(DatabaseConfig.PASSWORD, secretAccessKey);
-    props.setProperty(DatabaseConfig.STORAGE, "dynamo");
-    namespacePrefix.ifPresent(n -> props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, n));
-    DynamoConfig config = new DynamoConfig(props);
-    admin = new DynamoAdmin(config);
-    dynamo = new Dynamo(config);
-
-    admin.createTable(
-        NAMESPACE,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.INT)
-            .addColumn(COL_NAME2, DataType.INT)
-            .addColumn(COL_NAME3, DataType.TEXT)
-            .addColumn(COL_NAME4, DataType.TEXT)
-            .addPartitionKey(COL_NAME1)
-            .addClusteringKey(COL_NAME2)
-            .addSecondaryIndex(COL_NAME3)
-            .build(),
-        ImmutableMap.of("no-scaling", "true", "no-backup", "true"));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws ExecutionException {
-    admin.dropTable(NAMESPACE, TABLE);
-    admin.close();
-    dynamo.close();
+  private String getCol4Value(Result result) {
+    assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(result.getValue(COL_NAME4).get().getAsString().isPresent()).isTrue();
+    return result.getValue(COL_NAME4).get().getAsString().get();
   }
 }

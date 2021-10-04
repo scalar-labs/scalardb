@@ -2,56 +2,54 @@ package com.scalar.db.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
-import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.io.DataType;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.storage.IntegrationTestBase;
-import com.scalar.db.storage.jdbc.test.TestEnv;
-import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.storage.rpc.GrpcStorage;
+import com.scalar.db.storage.StorageIntegrationTestBase;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class DistributedStorageServiceIntegrationTest extends IntegrationTestBase {
+public class DistributedStorageServiceIntegrationTest extends StorageIntegrationTestBase {
 
-  private static final String CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String USERNAME = "root";
-  private static final String PASSWORD = "mysql";
-
-  private static TestEnv testEnv;
   private static ScalarDbServer server;
-  private static DistributedStorage storage;
 
-  @Before
-  public void setUp() {
-    storage.with(NAMESPACE, TABLE);
-    setUp(storage);
+  @Override
+  protected void initialize() throws IOException {
+    ServerConfig config = ServerEnv.getServerConfig();
+    if (config != null) {
+      server = new ScalarDbServer(config);
+      server.start();
+    }
   }
 
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  @Override
+  protected DatabaseConfig getDatabaseConfig() {
+    return ServerEnv.getGrpcConfig();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    StorageIntegrationTestBase.tearDownAfterClass();
+    if (server != null) {
+      server.shutdown();
+      server.blockUntilShutdown();
+    }
   }
 
   @Test
-  public void scan_ScanLargeData_ShouldRetrieveExpectedValues() throws Exception {
+  public void scan_ScanLargeData_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
     List<Integer> expectedValues = new ArrayList<>();
@@ -71,7 +69,8 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
   }
 
   @Test
-  public void scan_ScanLargeDataWithOrdering_ShouldRetrieveExpectedValues() throws Exception {
+  public void scan_ScanLargeDataWithOrdering_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
     // Arrange
     Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
     for (int i = 0; i < 345; i++) {
@@ -92,46 +91,11 @@ public class DistributedStorageServiceIntegrationTest extends IntegrationTestBas
     // Assert
     assertThat(results.size()).isEqualTo(234);
     for (int i = 0; i < 234; i++) {
+      assertThat(results.get(i).getPartitionKey().isPresent()).isTrue();
+      assertThat(results.get(i).getClusteringKey().isPresent()).isTrue();
+
       assertThat(results.get(i).getPartitionKey().get().get().get(0).getAsInt()).isEqualTo(1);
       assertThat(results.get(i).getClusteringKey().get().get().get(0).getAsInt()).isEqualTo(i);
     }
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-    testEnv.createTable(
-        NAMESPACE,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.INT)
-            .addColumn(COL_NAME2, DataType.TEXT)
-            .addColumn(COL_NAME3, DataType.INT)
-            .addColumn(COL_NAME4, DataType.INT)
-            .addColumn(COL_NAME5, DataType.BOOLEAN)
-            .addPartitionKey(COL_NAME1)
-            .addClusteringKey(COL_NAME4)
-            .addSecondaryIndex(COL_NAME3)
-            .build());
-
-    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    server = new ScalarDbServer(serverProperties);
-    server.start();
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
-    storage = new GrpcStorage(new GrpcConfig(properties));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    storage.close();
-    server.shutdown();
-    server.blockUntilShutdown();
-    testEnv.deleteTables();
-    testEnv.close();
   }
 }
