@@ -36,14 +36,12 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Inject
   public JdbcTransactionManager(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config, true);
-    Optional<String> namespacePrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
-    jdbcService =
-        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, namespacePrefix);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

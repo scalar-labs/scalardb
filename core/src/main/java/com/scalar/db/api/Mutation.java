@@ -78,7 +78,6 @@ public abstract class Mutation extends Operation {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("namespacePrefix", forNamespacePrefix())
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
