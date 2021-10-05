@@ -28,6 +28,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -55,7 +56,7 @@ public class BatchHandlerTest {
   @Mock private CosmosClient client;
   @Mock private CosmosDatabase database;
   @Mock private CosmosContainer container;
-  @Mock private CosmosTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
   @Mock private TableMetadata metadata;
   @Mock private CosmosScripts cosmosScripts;
   @Mock private CosmosStoredProcedure storedProcedure;
@@ -64,7 +65,7 @@ public class BatchHandlerTest {
   @Captor ArgumentCaptor<List<Object>> captor;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ExecutionException {
     MockitoAnnotations.initMocks(this);
 
     handler = new BatchHandler(client, metadataManager);
@@ -106,10 +107,10 @@ public class BatchHandlerTest {
     Put put2 = preparePut().withCondition(new PutIfNotExists());
     Delete delete1 = prepareDelete();
     Delete delete2 = prepareDelete().withCondition(new DeleteIfExists());
-    CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadataManager);
-    CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadataManager);
-    CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadataManager);
-    CosmosMutation cosmosMutation4 = new CosmosMutation(delete2, metadataManager);
+    CosmosMutation cosmosMutation1 = new CosmosMutation(put1, metadata);
+    CosmosMutation cosmosMutation2 = new CosmosMutation(put2, metadata);
+    CosmosMutation cosmosMutation3 = new CosmosMutation(delete1, metadata);
+    CosmosMutation cosmosMutation4 = new CosmosMutation(delete2, metadata);
     Record record1 = cosmosMutation1.makeRecord();
     Record record2 = cosmosMutation2.makeRecord();
     Record emptyRecord = new Record();

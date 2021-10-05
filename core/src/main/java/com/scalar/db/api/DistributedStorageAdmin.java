@@ -45,7 +45,7 @@ public interface DistributedStorageAdmin {
   String INDEX_NAME_PREFIX = "index";
 
   /**
-   * Creates a namespace
+   * Creates a namespace.
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
@@ -54,7 +54,7 @@ public interface DistributedStorageAdmin {
   void createNamespace(String namespace, Map<String, String> options) throws ExecutionException;
 
   /**
-   * Creates a namespace
+   * Creates a namespace.
    *
    * @param namespace the namespace to create
    * @param options namespace creation options
@@ -72,7 +72,7 @@ public interface DistributedStorageAdmin {
   }
 
   /**
-   * Creates a namespace
+   * Creates a namespace.
    *
    * @param namespace the namespace to create
    * @param ifNotExists if set to true, the namespace will be created only if it does not exist
@@ -88,7 +88,7 @@ public interface DistributedStorageAdmin {
   }
 
   /**
-   * Creates a namespace
+   * Creates a namespace.
    *
    * @param namespace the namespace to create
    * @throws ExecutionException if the namespace already exits among other
@@ -178,12 +178,44 @@ public interface DistributedStorageAdmin {
   void dropTable(String namespace, String table) throws ExecutionException;
 
   /**
+   * Drops the specified table.
+   *
+   * @param namespace a namespace to drop
+   * @param table a table to drop
+   * @param ifExists if set to true, the table will be dropped only if it exists. If set to false,
+   *     it will try to drop the table but may throw an exception if it does not exist
+   * @throws ExecutionException if the operation failed
+   */
+  default void dropTable(String namespace, String table, boolean ifExists)
+      throws ExecutionException {
+    if (ifExists && !getNamespaceTableNames(namespace).contains(table)) {
+      return;
+    }
+    dropTable(namespace, table);
+  }
+
+  /**
    * Drops the specified namespace.
    *
    * @param namespace a namespace to drop
    * @throws ExecutionException if the operation failed
    */
   void dropNamespace(String namespace) throws ExecutionException;
+
+  /**
+   * Drops the specified namespace.
+   *
+   * @param namespace a namespace to drop
+   * @param ifExists if set to true, the namespace will be dropped only if it exists. If set to
+   *     false, it will try to drop the namespace but may throw an exception if it does not exist
+   * @throws ExecutionException if the operation failed
+   */
+  default void dropNamespace(String namespace, boolean ifExists) throws ExecutionException {
+    if (ifExists && !namespaceExists(namespace)) {
+      return;
+    }
+    dropNamespace(namespace);
+  }
 
   /**
    * Truncates the specified table.
@@ -195,7 +227,7 @@ public interface DistributedStorageAdmin {
   void truncateTable(String namespace, String table) throws ExecutionException;
 
   /**
-   * Retrieves the table metadata of the specified table
+   * Retrieves the table metadata of the specified table.
    *
    * @param namespace a namespace to retrieve
    * @param table a table to retrieve
@@ -205,7 +237,7 @@ public interface DistributedStorageAdmin {
   TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException;
 
   /**
-   * Returns the names of the table belonging to the given namespace
+   * Returns the names of the table belonging to the given namespace.
    *
    * @param namespace a namespace
    * @return a set of table names
@@ -214,7 +246,7 @@ public interface DistributedStorageAdmin {
   Set<String> getNamespaceTableNames(String namespace) throws ExecutionException;
 
   /**
-   * Return true if the namespace exists
+   * Return true if the namespace exists.
    *
    * @param namespace a namespace
    * @return true if the namespace exists, false otherwise

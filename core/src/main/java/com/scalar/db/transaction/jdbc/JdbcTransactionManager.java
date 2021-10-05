@@ -7,10 +7,11 @@ import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.jdbc.JdbcService;
-import com.scalar.db.storage.jdbc.JdbcTableMetadataManager;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -35,14 +36,12 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Inject
   public JdbcTransactionManager(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config, true);
-    Optional<String> namespacePrefix = config.getNamespacePrefix();
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    JdbcTableMetadataManager tableMetadataManager =
-        new JdbcTableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
-    jdbcService =
-        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, namespacePrefix);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

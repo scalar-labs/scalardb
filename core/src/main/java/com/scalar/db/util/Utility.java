@@ -21,26 +21,7 @@ public final class Utility {
   }
 
   public static void setTargetToIfNot(
-      List<? extends Operation> operations,
-      Optional<String> namespacePrefix,
-      Optional<String> namespace,
-      Optional<String> tableName) {
-    operations.forEach(o -> setTargetToIfNot(o, namespacePrefix, namespace, tableName));
-  }
-
-  public static void setTargetToIfNot(
       Operation operation, Optional<String> namespace, Optional<String> tableName) {
-    setTargetToIfNot(operation, Optional.empty(), namespace, tableName);
-  }
-
-  public static void setTargetToIfNot(
-      Operation operation,
-      Optional<String> namespacePrefix,
-      Optional<String> namespace,
-      Optional<String> tableName) {
-    if (!operation.forNamespacePrefix().isPresent()) {
-      operation.forNamespacePrefix(namespacePrefix.orElse(null));
-    }
     if (!operation.forNamespace().isPresent()) {
       operation.forNamespace(namespace.orElse(null));
     }
@@ -101,24 +82,11 @@ public final class Utility {
   /**
    * Return a fully qualified table name
    *
-   * @param namespacePrefix an optional namespace prefix
    * @param namespace a namespace
    * @param table a table
    * @return a fully qualified table name
    */
-  public static String getFullTableName(
-      Optional<String> namespacePrefix, String namespace, String table) {
-    return namespacePrefix.orElse("") + namespace + "." + table;
-  }
-
-  /**
-   * Return the namespace prefix concatenated to the namespace
-   *
-   * @param namespacePrefix an optional namespace prefix
-   * @param namespace a namespace
-   * @return the namespace prefix concatenated to the namespace
-   */
-  public static String getFullNamespaceName(Optional<String> namespacePrefix, String namespace) {
-    return namespacePrefix.orElse("") + namespace;
+  public static String getFullTableName(String namespace, String table) {
+    return namespace + "." + table;
   }
 }

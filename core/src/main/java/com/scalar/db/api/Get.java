@@ -89,7 +89,6 @@ public class Get extends Selection {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("namespacePrefix", forNamespacePrefix())
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())

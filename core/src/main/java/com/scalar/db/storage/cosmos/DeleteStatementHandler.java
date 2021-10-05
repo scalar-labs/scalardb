@@ -7,6 +7,9 @@ import com.azure.cosmos.models.PartitionKey;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.concurrent.ThreadSafe;
@@ -19,25 +22,25 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class DeleteStatementHandler extends MutateStatementHandler {
 
-  public DeleteStatementHandler(CosmosClient client, CosmosTableMetadataManager metadataManager) {
+  public DeleteStatementHandler(CosmosClient client, TableMetadataManager metadataManager) {
     super(client, metadataManager);
   }
 
   @Override
-  protected List<Record> execute(Operation operation) throws CosmosException {
+  protected List<Record> execute(Operation operation) throws CosmosException, ExecutionException {
     Mutation mutation = (Mutation) operation;
-
+    TableMetadata tableMetadata = metadataManager.getTableMetadata(mutation);
     if (mutation.getCondition().isPresent()) {
-      executeStoredProcedure(mutation);
+      executeStoredProcedure(mutation, tableMetadata);
     } else {
-      execute(mutation);
+      execute(mutation, tableMetadata);
     }
 
     return Collections.emptyList();
   }
 
-  private void execute(Mutation mutation) throws CosmosException {
-    CosmosMutation cosmosMutation = new CosmosMutation(mutation, metadataManager);
+  private void execute(Mutation mutation, TableMetadata tableMetadata) throws CosmosException {
+    CosmosMutation cosmosMutation = new CosmosMutation(mutation, tableMetadata);
     cosmosMutation.checkArgument(Delete.class);
 
     if (cosmosMutation.isPrimaryKeySpecified()) {
@@ -48,7 +51,7 @@ public class DeleteStatementHandler extends MutateStatementHandler {
       getContainer(mutation).deleteItem(id, partitionKey, options);
     } else {
       // clustering key is not fully specified
-      executeStoredProcedure(mutation);
+      executeStoredProcedure(mutation, tableMetadata);
     }
   }
 }

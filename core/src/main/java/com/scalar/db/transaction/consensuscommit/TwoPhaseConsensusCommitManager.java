@@ -45,7 +45,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     this.storage = storage;
     this.config = config;
 
-    coordinator = new Coordinator(storage);
+    coordinator = new Coordinator(storage, config);
     recovery = new RecoveryHandler(storage, coordinator);
     commit = new CommitHandler(storage, coordinator, recovery);
     if (config.isActiveTransactionsManagementEnabled()) {

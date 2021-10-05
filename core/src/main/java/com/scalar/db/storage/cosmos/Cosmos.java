@@ -15,8 +15,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.Utility;
 import java.util.List;
@@ -36,18 +36,17 @@ public class Cosmos implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cosmos.class);
 
   private final CosmosClient client;
-  private final CosmosTableMetadataManager metadataManager;
+  private final TableMetadataManager metadataManager;
   private final SelectStatementHandler selectStatementHandler;
   private final PutStatementHandler putStatementHandler;
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final OperationChecker operationChecker;
-  private final Optional<String> namespacePrefix;
   private Optional<String> namespace;
   private Optional<String> tableName;
 
   @Inject
-  public Cosmos(DatabaseConfig config) {
+  public Cosmos(CosmosConfig config) {
     client =
         new CosmosClientBuilder()
             .endpoint(config.getContactPoints().get(0))
@@ -56,11 +55,10 @@ public class Cosmos implements DistributedStorage {
             .consistencyLevel(ConsistencyLevel.STRONG)
             .buildClient();
 
-    namespacePrefix = config.getNamespacePrefix();
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    metadataManager = new CosmosTableMetadataManager(client, namespacePrefix);
+    metadataManager = new TableMetadataManager(new CosmosAdmin(client, config), config);
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);
@@ -100,7 +98,7 @@ public class Cosmos implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
 
     List<Record> records = selectStatementHandler.handle(get);
@@ -118,7 +116,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
 
     List<Record> records = selectStatementHandler.handle(scan);
@@ -129,7 +127,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
 
     putStatementHandler.handle(put);
@@ -142,7 +140,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
 
     deleteStatementHandler.handle(delete);
@@ -166,9 +164,11 @@ public class Cosmos implements DistributedStorage {
       return;
     }
 
-    Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
-    mutations.forEach(operationChecker::check);
+    for (Mutation mutation : mutations) {
+      operationChecker.check(mutation);
+    }
     batchHandler.handle(mutations);
   }
 

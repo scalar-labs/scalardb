@@ -10,6 +10,8 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
@@ -33,27 +35,24 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class JdbcService {
 
-  private final JdbcTableMetadataManager tableMetadataManager;
+  private final TableMetadataManager tableMetadataManager;
   private final OperationChecker operationChecker;
   private final QueryBuilder queryBuilder;
-  private final Optional<String> namespacePrefix;
 
   public JdbcService(
-      JdbcTableMetadataManager tableMetadataManager,
+      TableMetadataManager tableMetadataManager,
       OperationChecker operationChecker,
-      QueryBuilder queryBuilder,
-      Optional<String> namespacePrefix) {
+      QueryBuilder queryBuilder) {
     this.tableMetadataManager = Objects.requireNonNull(tableMetadataManager);
     this.operationChecker = Objects.requireNonNull(operationChecker);
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
-    this.namespacePrefix = Objects.requireNonNull(namespacePrefix);
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public Optional<Result> get(
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException {
-    Utility.setTargetToIfNot(get, namespacePrefix, namespace, tableName);
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
     Utility.addProjectionsForKeys(get, tableMetadata);
@@ -61,7 +60,7 @@ public class JdbcService {
     SelectQuery selectQuery =
         queryBuilder
             .select(get.getProjections())
-            .from(get.forFullNamespace().get(), get.forTable().get())
+            .from(get.forNamespace().get(), get.forTable().get(), tableMetadata)
             .where(get.getPartitionKey(), get.getClusteringKey())
             .build();
 
@@ -82,13 +81,13 @@ public class JdbcService {
 
   public Scanner getScanner(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException {
-    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery = buildSelectQueryForScan(scan);
+    SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
     PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
@@ -101,13 +100,13 @@ public class JdbcService {
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public List<Result> scan(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException {
-    Utility.setTargetToIfNot(scan, namespacePrefix, namespace, tableName);
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
-    SelectQuery selectQuery = buildSelectQueryForScan(scan);
+    SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
     try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
         ResultSet resultSet = preparedStatement.executeQuery()) {
       List<Result> ret = new ArrayList<>();
@@ -120,10 +119,10 @@ public class JdbcService {
     }
   }
 
-  private SelectQuery buildSelectQueryForScan(Scan scan) {
+  private SelectQuery buildSelectQueryForScan(Scan scan, TableMetadata tableMetadata) {
     return queryBuilder
         .select(scan.getProjections())
-        .from(scan.forFullNamespace().get(), scan.forTable().get())
+        .from(scan.forNamespace().get(), scan.forTable().get(), tableMetadata)
         .where(
             scan.getPartitionKey(),
             scan.getStartClusteringKey(),
@@ -137,14 +136,14 @@ public class JdbcService {
 
   public boolean put(
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException {
-    Utility.setTargetToIfNot(put, namespacePrefix, namespace, tableName);
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
           queryBuilder
-              .upsertInto(put.forFullNamespace().get(), put.forTable().get())
+              .upsertInto(put.forNamespace().get(), put.forTable().get())
               .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
               .build()
               .prepareAndBind(connection)) {
@@ -158,14 +157,14 @@ public class JdbcService {
 
   public boolean delete(
       Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException {
-    Utility.setTargetToIfNot(delete, namespacePrefix, namespace, tableName);
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
 
     if (!delete.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
           queryBuilder
-              .deleteFrom(delete.forFullNamespace().get(), delete.forTable().get())
+              .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
               .where(delete.getPartitionKey(), delete.getClusteringKey())
               .build()
               .prepareAndBind(connection)) {
@@ -182,9 +181,9 @@ public class JdbcService {
       Connection connection,
       Optional<String> namespace,
       Optional<String> tableName)
-      throws SQLException {
+      throws SQLException, ExecutionException {
     checkArgument(mutations.size() != 0);
-    Utility.setTargetToIfNot(mutations, namespacePrefix, namespace, tableName);
+    Utility.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
 
     for (Mutation mutation : mutations) {

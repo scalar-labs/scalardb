@@ -47,19 +47,21 @@ public class DatabaseConfig {
   private Optional<String> password;
   private Class<? extends DistributedStorage> storageClass;
   private Class<? extends DistributedStorageAdmin> adminClass;
-  private Optional<String> namespacePrefix;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
+  private long tableMetadataCacheExpirationTimeSecs = -1;
+
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
   public static final String CONTACT_PORT = PREFIX + "contact_port";
   public static final String USERNAME = PREFIX + "username";
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
-  public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+  public static final String TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS =
+      PREFIX + "table_metadata.cache_expiration_time_secs";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
     this(new FileInputStream(propertiesFile));
@@ -127,16 +129,9 @@ public class DatabaseConfig {
       }
       username = Optional.ofNullable(props.getProperty(USERNAME));
       password = Optional.ofNullable(props.getProperty(PASSWORD));
-
-      if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
-        namespacePrefix = Optional.empty();
-      } else {
-        namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
-      }
     } else {
       username = Optional.empty();
       password = Optional.empty();
-      namespacePrefix = Optional.empty();
     }
 
     transactionManagerClass = ConsensusCommitManager.class;
@@ -182,6 +177,11 @@ public class DatabaseConfig {
     if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
       isolation = Isolation.valueOf(props.getProperty(ISOLATION_LEVEL).toUpperCase());
     }
+
+    if (!Strings.isNullOrEmpty(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS))) {
+      tableMetadataCacheExpirationTimeSecs =
+          Long.parseLong(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS));
+    }
   }
 
   public List<String> getContactPoints() {
@@ -213,15 +213,15 @@ public class DatabaseConfig {
     return twoPhaseCommitTransactionManagerClass;
   }
 
-  public Optional<String> getNamespacePrefix() {
-    return namespacePrefix;
-  }
-
   public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {
     return transactionManagerClass;
   }
 
   public Isolation getIsolation() {
     return isolation;
+  }
+
+  public long getTableMetadataCacheExpirationTimeSecs() {
+    return tableMetadataCacheExpirationTimeSecs;
   }
 }

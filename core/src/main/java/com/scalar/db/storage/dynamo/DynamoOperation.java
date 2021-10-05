@@ -31,9 +31,9 @@ public class DynamoOperation {
   private final Operation operation;
   private final TableMetadata metadata;
 
-  public DynamoOperation(Operation operation, DynamoTableMetadataManager metadataManager) {
+  public DynamoOperation(Operation operation, TableMetadata metadata) {
     this.operation = operation;
-    this.metadata = metadataManager.getTableMetadata(operation);
+    this.metadata = metadata;
   }
 
   @Nonnull
@@ -53,20 +53,12 @@ public class DynamoOperation {
 
   @Nonnull
   public String getIndexName(String clusteringKey) {
-    return operation.forUnprefixedFullTableName().get()
-        + "."
-        + INDEX_NAME_PREFIX
-        + "."
-        + clusteringKey;
+    return operation.forFullTableName().get() + "." + INDEX_NAME_PREFIX + "." + clusteringKey;
   }
 
   @Nonnull
   public String getGlobalIndexName(String column) {
-    return operation.forUnprefixedFullTableName().get()
-        + "."
-        + GLOBAL_INDEX_NAME_PREFIX
-        + "."
-        + column;
+    return operation.forFullTableName().get() + "." + GLOBAL_INDEX_NAME_PREFIX + "." + column;
   }
 
   @Nonnull

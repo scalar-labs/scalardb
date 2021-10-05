@@ -12,7 +12,6 @@ public final class Attribute {
   public static final String PREPARED_AT = "tx_prepared_at";
   public static final String COMMITTED_AT = "tx_committed_at";
   public static final String CREATED_AT = "tx_created_at";
-  public static final String METADATA = "tx_metadata";
   public static final String BEFORE_PREFIX = "before_";
   public static final String BEFORE_ID = BEFORE_PREFIX + ID;
   public static final String BEFORE_STATE = BEFORE_PREFIX + STATE;
@@ -42,10 +41,6 @@ public final class Attribute {
 
   public static BigIntValue toCreatedAtValue(long createdAt) {
     return new BigIntValue(Attribute.CREATED_AT, createdAt);
-  }
-
-  public static TextValue toMetadataValue(String metadata) {
-    return new TextValue(Attribute.METADATA, metadata);
   }
 
   public static TextValue toBeforeIdValue(String transactionId) {

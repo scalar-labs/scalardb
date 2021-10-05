@@ -12,8 +12,8 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TransactionState;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.storage.rpc.GrpcTableMetadataManager;
 import io.grpc.Status;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.Before;
@@ -27,7 +27,7 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   @Mock private GrpcConfig config;
   @Mock private TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionStub stub;
   @Mock private TwoPhaseCommitTransactionGrpc.TwoPhaseCommitTransactionBlockingStub blockingStub;
-  @Mock private GrpcTableMetadataManager metadataManager;
+  @Mock private TableMetadataManager metadataManager;
 
   private GrpcTwoPhaseCommitTransactionManager manager;
 

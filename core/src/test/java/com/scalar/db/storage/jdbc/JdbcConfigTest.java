@@ -13,8 +13,8 @@ public class JdbcConfigTest {
   private static final String ANY_JDBC_URL = "jdbc:mysql://localhost:3306/";
   private static final String ANY_USERNAME = "root";
   private static final String ANY_PASSWORD = "mysql";
-  private static final String ANY_NAMESPACE_PREFIX = "prefix";
   private static final String JDBC_STORAGE = "jdbc";
+  private static final String ANY_TABLE_METADATA_SCHEMA = "any_schema";
 
   @Test
   public void constructor_AllPropertiesGiven_ShouldLoadProperly() {
@@ -24,12 +24,12 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "1");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "100");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "200");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
 
     // Act
     JdbcConfig config = new JdbcConfig(props);
@@ -41,8 +41,6 @@ public class JdbcConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
@@ -50,6 +48,8 @@ public class JdbcConfigTest {
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(200);
     assertThat(config.isPreparedStatementsPoolEnabled()).isEqualTo(true);
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
+    assertThat(config.getTableMetadataSchema()).isPresent();
+    assertThat(config.getTableMetadataSchema().get()).isEqualTo(ANY_TABLE_METADATA_SCHEMA);
   }
 
   @Test
@@ -61,7 +61,6 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act
     JdbcConfig config = new JdbcConfig(props);
@@ -73,8 +72,6 @@ public class JdbcConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
@@ -87,6 +84,7 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    assertThat(config.getTableMetadataSchema()).isNotPresent();
   }
 
   @Test
@@ -97,7 +95,6 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "aaa");
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
@@ -112,7 +109,6 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
-    props.setProperty(DatabaseConfig.NAMESPACE_PREFIX, ANY_NAMESPACE_PREFIX);
     props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "aaa");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "bbb");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "ccc");
@@ -129,8 +125,6 @@ public class JdbcConfigTest {
     assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getNamespacePrefix().isPresent()).isTrue();
-    assertThat(config.getNamespacePrefix().get()).isEqualTo(ANY_NAMESPACE_PREFIX + "_");
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
@@ -143,5 +137,6 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    assertThat(config.getTableMetadataSchema()).isNotPresent();
   }
 }

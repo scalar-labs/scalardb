@@ -1,8 +1,8 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 
+import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
@@ -14,16 +14,18 @@ import com.datastax.driver.core.schemabuilder.TableOptions.CompactionOptions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.StorageRuntimeException;
+import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -33,41 +35,28 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
   private final ClusterManager clusterManager;
-  private final CassandraTableMetadataManager metadataManager;
-  private final Optional<String> keyspacePrefix;
 
   @Inject
   public CassandraAdmin(DatabaseConfig config) {
     clusterManager = new ClusterManager(config);
-    metadataManager =
-        new CassandraTableMetadataManager(clusterManager, config.getNamespacePrefix());
-    keyspacePrefix = config.getNamespacePrefix();
   }
 
-  @VisibleForTesting
-  CassandraAdmin(
-      CassandraTableMetadataManager metadataManager,
-      ClusterManager clusterManager,
-      Optional<String> keyspacePrefix) {
+  public CassandraAdmin(ClusterManager clusterManager, DatabaseConfig config) {
     this.clusterManager = clusterManager;
-    this.metadataManager = metadataManager;
-    this.keyspacePrefix = keyspacePrefix;
   }
 
   @Override
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    String fullKeyspace = fullKeyspace(namespace);
-    createTableInternal(fullKeyspace, table, metadata, options);
-    createSecondaryIndex(fullKeyspace, table, metadata.getSecondaryIndexNames());
+    createTableInternal(namespace, table, metadata, options);
+    createSecondaryIndex(namespace, table, metadata.getSecondaryIndexNames());
   }
 
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    CreateKeyspace query =
-        SchemaBuilder.createKeyspace(getFullNamespaceName(keyspacePrefix, namespace));
+    CreateKeyspace query = SchemaBuilder.createKeyspace(namespace);
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -86,67 +75,94 @@ public class CassandraAdmin implements DistributedStorageAdmin {
           .getSession()
           .execute(query.with().replication(replicationOptions).getQueryString());
     } catch (RuntimeException e) {
-      throw new ExecutionException(
-          String.format(
-              "creating the keyspace %s failed", getFullNamespaceName(keyspacePrefix, namespace)),
-          e);
+      throw new ExecutionException(String.format("creating the keyspace %s failed", namespace), e);
     }
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    String dropTableQuery =
-        SchemaBuilder.dropTable(fullKeyspace(namespace), table).getQueryString();
+    String dropTableQuery = SchemaBuilder.dropTable(namespace, table).getQueryString();
     try {
       clusterManager.getSession().execute(dropTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format(
-              "dropping the %s table failed", getFullTableName(keyspacePrefix, namespace, table)),
-          e);
+          String.format("dropping the %s table failed", getFullTableName(namespace, table)), e);
     }
-    metadataManager.deleteTableMetadata(namespace, table);
   }
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    String dropKeyspace = SchemaBuilder.dropKeyspace(fullKeyspace(namespace)).getQueryString();
+    String dropKeyspace = SchemaBuilder.dropKeyspace(namespace).getQueryString();
     try {
       clusterManager.getSession().execute(dropKeyspace);
     } catch (RuntimeException e) {
-      throw new ExecutionException(
-          String.format("dropping the %s keyspace failed", fullKeyspace(namespace)), e);
+      throw new ExecutionException(String.format("dropping the %s keyspace failed", namespace), e);
     }
   }
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableQuery =
-        QueryBuilder.truncate(fullKeyspace(namespace), table).getQueryString();
+    String truncateTableQuery = QueryBuilder.truncate(namespace, table).getQueryString();
     try {
       clusterManager.getSession().execute(truncateTableQuery);
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format(
-              "truncating the %s table failed", getFullTableName(keyspacePrefix, namespace, table)),
-          e);
+          String.format("truncating the %s table failed", getFullTableName(namespace, table)), e);
     }
   }
 
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
-      return metadataManager.getTableMetadata(namespace, table);
-    } catch (StorageRuntimeException e) {
+      com.datastax.driver.core.TableMetadata metadata =
+          clusterManager.getMetadata(namespace, table);
+      if (metadata == null) {
+        return null;
+      }
+      return createTableMetadata(metadata);
+    } catch (RuntimeException e) {
       throw new ExecutionException("getting a table metadata failed", e);
+    }
+  }
+
+  private TableMetadata createTableMetadata(com.datastax.driver.core.TableMetadata metadata) {
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    metadata
+        .getColumns()
+        .forEach(c -> builder.addColumn(c.getName(), fromCassandraDataType(c.getType().getName())));
+    metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
+    for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
+      String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
+      ClusteringOrder clusteringOrder = metadata.getClusteringOrder().get(i);
+      builder.addClusteringKey(clusteringColumnName, convertOrder(clusteringOrder));
+    }
+    metadata.getIndexes().forEach(i -> builder.addSecondaryIndex(i.getTarget()));
+    return builder.build();
+  }
+
+  private Scan.Ordering.Order convertOrder(ClusteringOrder clusteringOrder) {
+    switch (clusteringOrder) {
+      case ASC:
+        return Scan.Ordering.Order.ASC;
+      case DESC:
+        return Scan.Ordering.Order.DESC;
+      default:
+        throw new AssertionError();
     }
   }
 
   @Override
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
-      return metadataManager.getTableNames(namespace);
-    } catch (StorageRuntimeException e) {
+      KeyspaceMetadata keyspace =
+          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
+      if (keyspace == null) {
+        return Collections.emptySet();
+      }
+      return keyspace.getTables().stream()
+          .map(com.datastax.driver.core.TableMetadata::getName)
+          .collect(Collectors.toSet());
+    } catch (RuntimeException e) {
       throw new ExecutionException("retrieving the table names of the namespace failed", e);
     }
   }
@@ -155,19 +171,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager
-              .getSession()
-              .getCluster()
-              .getMetadata()
-              .getKeyspace(fullKeyspace(namespace));
+          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
       return keyspace != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
     }
-  }
-
-  private String fullKeyspace(String keyspace) {
-    return getFullNamespaceName(keyspacePrefix, keyspace);
   }
 
   @VisibleForTesting
@@ -249,6 +257,35 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   }
 
   /**
+   * Return the Scalar DB datatype value that is equivalent to {@link
+   * com.datastax.driver.core.DataType}
+   *
+   * @return Scalar DB datatype that is equivalent {@link com.datastax.driver.core.DataType}
+   */
+  private DataType fromCassandraDataType(
+      com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
+    switch (cassandraDataTypeName) {
+      case INT:
+        return DataType.INT;
+      case BIGINT:
+        return DataType.BIGINT;
+      case FLOAT:
+        return DataType.FLOAT;
+      case DOUBLE:
+        return DataType.DOUBLE;
+      case TEXT:
+        return DataType.TEXT;
+      case BOOLEAN:
+        return DataType.BOOLEAN;
+      case BLOB:
+        return DataType.BLOB;
+      default:
+        throw new UnsupportedTypeException(
+            String.format("%s is not yet supported", cassandraDataTypeName));
+    }
+  }
+
+  /**
    * Returns the equivalent {@link com.datastax.driver.core.DataType}
    *
    * @return the equivalent {@link com.datastax.driver.core.DataType} to the Scalar DB data type
@@ -274,13 +311,13 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
-  enum CompactionStrategy {
+  public enum CompactionStrategy {
     STCS,
     LCS,
     TWCS
   }
 
-  enum ReplicationStrategy {
+  public enum ReplicationStrategy {
     SIMPLE_STRATEGY("SimpleStrategy"),
     NETWORK_TOPOLOGY_STRATEGY("NetworkTopologyStrategy");
     private final String strategyName;

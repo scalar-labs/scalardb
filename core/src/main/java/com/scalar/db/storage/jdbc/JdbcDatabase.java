@@ -12,6 +12,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import java.sql.Connection;
@@ -43,14 +44,12 @@ public class JdbcDatabase implements DistributedStorage {
   @Inject
   public JdbcDatabase(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
-    Optional<String> namespacePrefix = config.getNamespacePrefix();
     RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
-    JdbcTableMetadataManager tableMetadataManager =
-        new JdbcTableMetadataManager(dataSource, namespacePrefix, rdbEngine);
+    TableMetadataManager tableMetadataManager =
+        new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
-    QueryBuilder queryBuilder = new QueryBuilder(tableMetadataManager, rdbEngine);
-    jdbcService =
-        new JdbcService(tableMetadataManager, operationChecker, queryBuilder, namespacePrefix);
+    QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
+    jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

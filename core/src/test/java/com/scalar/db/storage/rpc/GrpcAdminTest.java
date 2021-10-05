@@ -12,6 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
 import com.scalar.db.rpc.GetNamespaceTableNamesResponse;
+import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import java.util.Collections;
 import java.util.Map;
@@ -24,7 +25,6 @@ public class GrpcAdminTest {
 
   @Mock private GrpcConfig config;
   @Mock private DistributedStorageAdminGrpc.DistributedStorageAdminBlockingStub stub;
-  @Mock private GrpcTableMetadataManager metadataManager;
 
   private GrpcAdmin admin;
 
@@ -33,7 +33,7 @@ public class GrpcAdminTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    admin = new GrpcAdmin(config, stub, metadataManager);
+    admin = new GrpcAdmin(stub, config);
     when(config.getDeadlineDurationMillis()).thenReturn(60000L);
     when(stub.withDeadlineAfter(anyLong(), any())).thenReturn(stub);
   }
@@ -117,16 +117,19 @@ public class GrpcAdminTest {
   }
 
   @Test
-  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly() {
+  public void getTableMetadata_IsCalledWithProperArguments_MetadataManagerShouldBeCalledProperly()
+      throws ExecutionException {
     // Arrange
     String namespace = "namespace";
     String table = "table";
+    GetTableMetadataResponse response = mock(GetTableMetadataResponse.class);
+    when(stub.getTableMetadata(any())).thenReturn(response);
 
     // Act
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(metadataManager).getTableMetadata(namespace, table);
+    verify(stub).getTableMetadata(any());
   }
 
   @Test

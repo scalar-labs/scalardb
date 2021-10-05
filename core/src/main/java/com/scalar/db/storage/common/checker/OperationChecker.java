@@ -8,6 +8,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
@@ -29,7 +30,7 @@ public class OperationChecker {
     this.metadataManager = metadataManager;
   }
 
-  public void check(Get get) {
+  public void check(Get get) throws ExecutionException {
     TableMetadata metadata = getMetadata(get);
 
     checkProjections(get, metadata);
@@ -50,7 +51,7 @@ public class OperationChecker {
     checkPrimaryKey(get, metadata);
   }
 
-  public void check(Scan scan) {
+  public void check(Scan scan) throws ExecutionException {
     TableMetadata metadata = getMetadata(scan);
 
     checkProjections(scan, metadata);
@@ -171,7 +172,7 @@ public class OperationChecker {
     }
   }
 
-  public void check(Mutation mutation) {
+  public void check(Mutation mutation) throws ExecutionException {
     if (mutation instanceof Put) {
       check((Put) mutation);
     } else {
@@ -179,20 +180,20 @@ public class OperationChecker {
     }
   }
 
-  public void check(Put put) {
+  public void check(Put put) throws ExecutionException {
     TableMetadata metadata = getMetadata(put);
     checkPrimaryKey(put, metadata);
     checkValues(put, metadata);
     checkCondition(put, metadata);
   }
 
-  public void check(Delete delete) {
+  public void check(Delete delete) throws ExecutionException {
     TableMetadata metadata = getMetadata(delete);
     checkPrimaryKey(delete, metadata);
     checkCondition(delete, metadata);
   }
 
-  private TableMetadata getMetadata(Operation operation) {
+  private TableMetadata getMetadata(Operation operation) throws ExecutionException {
     TableMetadata metadata = metadataManager.getTableMetadata(operation);
     if (metadata == null) {
       throw new IllegalArgumentException(
