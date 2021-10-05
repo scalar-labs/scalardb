@@ -66,14 +66,7 @@ public class SchemaOperator {
     }
 
     if (hasTransactionTable) {
-      //      CoordinatorSchema coordinatorSchema = new CoordinatorSchema();
       try {
-        //        admin.createNamespace(coordinatorSchema.getNamespace(), true);
-        //        admin.createTable(
-        //            coordinatorSchema.getNamespace(),
-        //            coordinatorSchema.getTable(),
-        //            coordinatorSchema.getTableMetadata(),
-        //            true);
         consensusCommitAdmin.createCoordinatorTable();
       } catch (ExecutionException e) {
         LOGGER.warn("Failed on coordinator schema creation. " + e.getCause().getMessage());

@@ -111,7 +111,6 @@ public class Table {
       LOGGER.debug("transaction: " + transaction);
     }
 
-    // Add transaction metadata columns
     if (transaction) {
       isTransactionTable = true;
     }
