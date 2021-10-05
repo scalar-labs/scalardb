@@ -8,13 +8,11 @@ import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
-import com.scalar.db.transaction.consensuscommit.Attribute;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +25,6 @@ public class Table {
   private static final String PARTITION_KEY = "partition-key";
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
-  private static final String TRANSACTION_COL_PREFIX = "before_";
 
   private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
@@ -38,14 +35,6 @@ public class Table {
           .put("DOUBLE", DataType.DOUBLE)
           .put("TEXT", DataType.TEXT)
           .put("BLOB", DataType.BLOB)
-          .build();
-  private static final ImmutableMap<String, DataType> TRANSACTION_META_COLUMNS =
-      ImmutableMap.<String, DataType>builder()
-          .put(Attribute.COMMITTED_AT, DataType.BIGINT)
-          .put(Attribute.ID, DataType.TEXT)
-          .put(Attribute.PREPARED_AT, DataType.BIGINT)
-          .put(Attribute.STATE, DataType.INT)
-          .put(Attribute.VERSION, DataType.INT)
           .build();
   private static final ImmutableMap<String, Order> ORDER_MAP =
       ImmutableMap.<String, Order>builder().put("ASC", Order.ASC).put("DESC", Order.DESC).build();
@@ -88,14 +77,11 @@ public class Table {
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
-    Set<String> partitionKeySet = new HashSet<>();
     for (JsonElement partitionKey : partitionKeys) {
-      partitionKeySet.add(partitionKey.getAsString());
       tableBuilder.addPartitionKey(partitionKey.getAsString());
     }
 
     // Add clustering keys
-    Set<String> clusteringKeySet = new HashSet<>();
     if (tableDefinition.keySet().contains(CLUSTERING_KEY)) {
       JsonArray clusteringKeys = tableDefinition.get(CLUSTERING_KEY).getAsJsonArray();
       traveledKeys.add(CLUSTERING_KEY);
@@ -115,7 +101,6 @@ public class Table {
         } else {
           throw new RuntimeException("Invalid clustering keys");
         }
-        clusteringKeySet.add(clusteringKey);
       }
     }
 
@@ -129,10 +114,6 @@ public class Table {
     // Add transaction metadata columns
     if (transaction) {
       isTransactionTable = true;
-      for (Map.Entry<String, DataType> col : TRANSACTION_META_COLUMNS.entrySet()) {
-        tableBuilder.addColumn(col.getKey(), col.getValue());
-        tableBuilder.addColumn(TRANSACTION_COL_PREFIX + col.getKey(), col.getValue());
-      }
     }
 
     // Add columns
@@ -141,12 +122,6 @@ public class Table {
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
-    Set<String> columnNameSet =
-        columns.entrySet().stream().map(Entry::getKey).collect(Collectors.toSet());
-    Set<String> transactionMetaExtraColumnSet =
-        TRANSACTION_META_COLUMNS.keySet().stream()
-            .map(col -> TRANSACTION_COL_PREFIX + col)
-            .collect(Collectors.toSet());
     for (Entry<String, JsonElement> column : columns.entrySet()) {
       String columnName = column.getKey();
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
@@ -154,25 +129,6 @@ public class Table {
         throw new RuntimeException("Invalid column type for column " + columnName);
       }
       tableBuilder.addColumn(columnName, columnDataType);
-      if (transaction
-          && !partitionKeySet.contains(columnName)
-          && !clusteringKeySet.contains(columnName)) {
-
-        String transactionExtraColumn = TRANSACTION_COL_PREFIX + columnName;
-        if (TRANSACTION_META_COLUMNS.containsKey(columnName)
-            || transactionMetaExtraColumnSet.contains(columnName)
-            || columnNameSet.contains(transactionExtraColumn)) {
-          throw new RuntimeException(
-              "Column name \""
-                  + (columnNameSet.contains(transactionExtraColumn)
-                      ? transactionExtraColumn
-                      : columnName)
-                  + "\" in table \""
-                  + tableName
-                  + "\" has been already reserved as transaction metadata!");
-        }
-        tableBuilder.addColumn(transactionExtraColumn, columnDataType);
-      }
     }
 
     // Add secondary indexes

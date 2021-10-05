@@ -114,7 +114,7 @@ Using JDBC type DB
   -u, --user=<jdbcUser>      JDBC user
 ```
 ### Create databases/keyspaces and tables
-Using config file based from Scalar DB. Sample config file can be found [here](sample_data/database.properties)
+Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
 ```console
 $ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json
 ```

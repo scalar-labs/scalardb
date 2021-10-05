@@ -64,7 +64,7 @@ public class CosmosCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {
-      metaOptions.put(CosmosAdmin.RU, ru);
+      metaOptions.put(CosmosAdmin.REQUEST_UNIT, ru);
     }
     if (noScaling != null) {
       metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());

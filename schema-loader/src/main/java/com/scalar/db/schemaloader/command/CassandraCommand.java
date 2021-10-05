@@ -4,6 +4,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
+import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
+import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +46,7 @@ public class CassandraCommand implements Callable<Integer> {
   private String password;
 
   @Option(
-      names = {"-n", "--network-strategy"},
+      names = {"-n", "--replication-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   private ReplicationStrategy replicationStrategy;
@@ -52,7 +54,7 @@ public class CassandraCommand implements Callable<Integer> {
   @Option(
       names = {"-c", "--compaction-strategy"},
       description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
-  private CompactStrategy compactStrategy;
+  private CompactionStrategy compactionStrategy;
 
   @Option(
       names = {"-R", "--replication-factor"},
@@ -86,8 +88,8 @@ public class CassandraCommand implements Callable<Integer> {
     if (replicationStrategy != null) {
       metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.name());
     }
-    if (compactStrategy != null) {
-      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactStrategy.name());
+    if (compactionStrategy != null) {
+      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.name());
     }
     if (replicaFactor != null) {
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
@@ -103,16 +105,5 @@ public class CassandraCommand implements Callable<Integer> {
       operator.createTables(schemaParser.getTables());
     }
     return 0;
-  }
-
-  enum CompactStrategy {
-    STCS,
-    LCS,
-    TWCS
-  }
-
-  enum ReplicationStrategy {
-    SimpleStrategy,
-    NetworkTopologyStrategy
   }
 }

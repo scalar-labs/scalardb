@@ -44,9 +44,11 @@ spotless {
         googleJavaFormat()
     }
 }
+
 spotbugsMain.reports {
     html.enabled = true
 }
+
 spotbugsTest.reports {
     html.enabled = true
 }
