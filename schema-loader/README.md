@@ -21,49 +21,49 @@ The built cli application is `./build/install/schema-loader/bin/schema-loader`
 ### Available commands
 For using config file
 ```console
-Usage: schema-loader --config [-D] [--no-backup] [--no-scaling]
-                            [-c=<cassandraCompactStrategy>] -f=<schemaFile>
-                            [-n=<cassandraNetStrategy>] [-r=<ru>]
-                            [-R=<cassandraReplicaFactor>] <configPath>
+Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
+                              [-c=<compactionStrategy>] [-f=<schemaFile>]
+                              [-n=<replicationStrategy>] [-r=<ru>]
+                              [-R=<replicaFactor>] <configPath>
 Using config file for Scalar DB
-      <configPath>   Path to config file of Scalar DB
-  -c, --compaction-strategy=<cassandraCompactStrategy>
-                     Cassandra compaction strategy, should be LCS, STCS or TWCS
-  -D, --delete-all   Delete tables
+      <configPath>    Path to config file of Scalar DB
+  -c, --compaction-strategy=<compactionStrategy>
+                      Cassandra compaction strategy, should be LCS, STCS or TWCS
+      --coordinator   Create coordinator table
+  -D, --delete-all    Delete tables
   -f, --schema-file=<schemaFile>
-                     Path to schema json file
-  -n, --network-strategy=<cassandraNetStrategy>
-                     Cassandra network strategy, should be SimpleStrategy or
-                       NetworkTopologyStrategy
-      --no-backup    Disable continuous backup for Dynamo DB
-      --no-scaling   Disable auto-scaling (supported in Dynamo DB, Cosmos DB)
-  -r, --ru=<ru>      Base resource unit (supported in Dynamo DB, Cosmos DB)
-  -R, --replication-factor=<cassandraReplicaFactor>
-                     Cassandra replication factor
+                      Path to schema json file
+  -n, --replication-strategy=<replicationStrategy>
+                      Cassandra network strategy, should be SimpleStrategy or
+                        NetworkTopologyStrategy
+      --no-backup     Disable continuous backup for Dynamo DB
+      --no-scaling    Disable auto-scaling (supported in Dynamo DB, Cosmos DB)
+  -r, --ru=<ru>       Base resource unit (supported in Dynamo DB, Cosmos DB)
+  -R, --replication-factor=<replicaFactor>
+                      Cassandra replication factor
 ```
 For Cosmos DB
 ```console
-    Usage: schema-loader --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<cosmosURI>
-                                -p=<cosmosKey> [-r=<cosmosRU>]
-    Using Cosmos DB
-      -D, --delete-all         Delete tables
-      -f, --schema-file=<schemaFile>
-                               Path to schema json file
-      -h, --host=<cosmosURI>   Cosmos DB account URI
-          --no-scaling         Disable auto-scaling for Cosmos DB
-      -p, --password=<cosmosKey>
-                               Cosmos DB key
-      -r, --ru=<cosmosRU>      Base resource unit
+Usage: schema-loader --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<uri>
+                              -p=<key> [-r=<ru>]
+Using Cosmos DB
+  -D, --delete-all       Delete tables
+  -f, --schema-file=<schemaFile>
+                         Path to schema json file
+  -h, --host=<uri>       Cosmos DB account URI
+      --no-scaling       Disable auto-scaling for Cosmos DB
+  -p, --password=<key>   Cosmos DB key
+  -r, --ru=<ru>          Base resource unit
 ```
 For Dynamo DB
 ```console
 Usage: schema-loader --dynamo [-D] [--no-backup] [--no-scaling]
-                            [--endpoint-override=<dynamoEndpointOverride>]
-                            -f=<schemaFile> -p=<awsSecKey> [-r=<dynamoRU>]
-                            --region=<awsRegion> -u=<awsKeyId>
+                              [--endpoint-override=<endpointOverride>]
+                              -f=<schemaFile> -p=<awsSecKey> [-r=<ru>]
+                              --region=<awsRegion> -u=<awsKeyId>
 Using Dynamo DB
   -D, --delete-all           Delete tables
-      --endpoint-override=<dynamoEndpointOverride>
+      --endpoint-override=<endpointOverride>
                              Endpoint with which the Dynamo DB SDK should
                                communicate
   -f, --schema-file=<schemaFile>
@@ -71,47 +71,46 @@ Using Dynamo DB
       --no-backup            Disable continuous backup for Dynamo DB
       --no-scaling           Disable auto-scaling for Dynamo DB
   -p, --password=<awsSecKey> AWS access secret key
-  -r, --ru=<dynamoRU>        Base resource unit
+  -r, --ru=<ru>              Base resource unit
       --region=<awsRegion>   AWS region
   -u, --user=<awsKeyId>      AWS access key ID
 ```
 For Cassandra DB
 ```console
-Usage: schema-loader --cassandra [-D] [-c=<cassandraCompactStrategy>]
-                               -f=<schemaFile> -h=<cassandraIP>
-                               [-n=<cassandraNetStrategy>] [-p=<cassandraPw>]
-                               [-P=<cassandraPort>]
-                               [-R=<cassandraReplicaFactor>]
-                               [-u=<cassandraUser>]
+Usage: schema-loader --cassandra [-D] [-c=<compactionStrategy>] -f=<schemaFile>
+                                 -h=<hostIP> [-n=<replicationStrategy>]
+                                 [-p=<password>] [-P=<port>]
+                                 [-R=<replicaFactor>] [-u=<user>]
 Using Cassandra DB
-  -c, --compaction-strategy=<cassandraCompactStrategy>
-                             Cassandra compaction strategy, should be LCS, STCS
-                               or TWCS
-  -D, --delete-all           Delete tables
+  -c, --compaction-strategy=<compactionStrategy>
+                        Cassandra compaction strategy, should be LCS, STCS or
+                          TWCS
+  -D, --delete-all      Delete tables
   -f, --schema-file=<schemaFile>
-                             Path to schema json file
-  -h, --host=<cassandraIP>   Cassandra host IP
-  -n, --network-strategy=<cassandraNetStrategy>
-                             Cassandra network strategy, should be
-                               SimpleStrategy or NetworkTopologyStrategy
-  -p, --password=<cassandraPw>
-                             Cassandra password
-  -P, --port=<cassandraPort> Cassandra Port
-  -R, --replication-factor=<cassandraReplicaFactor>
-                             Cassandra replication factor
-  -u, --user=<cassandraUser> Cassandra user
+                        Path to schema json file
+  -h, --host=<hostIP>   Cassandra host IP
+  -n, --replication-strategy=<replicationStrategy>
+                        Cassandra network strategy, should be SimpleStrategy or
+                          NetworkTopologyStrategy
+  -p, --password=<password>
+                        Cassandra password
+  -P, --port=<port>     Cassandra Port
+  -R, --replication-factor=<replicaFactor>
+                        Cassandra replication factor
+  -u, --user=<user>     Cassandra user
 ```
 For JDBC type database
 ```console
-Usage: schema-loader --jdbc [-D] -f=<schemaFile> -j=<jdbcURL> -p=<jdbcPw>
-                          -u=<jdbcUser>
+Usage: schema-loader --jdbc [-D] -f=<schemaFile> -j=<url> -p=<password>
+                            -u=<user>
 Using JDBC type DB
-  -D, --delete-all           Delete tables
+  -D, --delete-all       Delete tables
   -f, --schema-file=<schemaFile>
-                             Path to schema json file
-  -j, --jdbc-url=<jdbcURL>   JDBC URL
-  -p, --password=<jdbcPw>    JDBC password
-  -u, --user=<jdbcUser>      JDBC user
+                         Path to schema json file
+  -j, --jdbc-url=<url>   JDBC URL
+  -p, --password=<password>
+                         JDBC password
+  -u, --user=<user>      JDBC user
 ```
 ### Create databases/keyspaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
