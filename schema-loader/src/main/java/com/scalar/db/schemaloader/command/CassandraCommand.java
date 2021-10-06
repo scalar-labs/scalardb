@@ -46,7 +46,7 @@ public class CassandraCommand implements Callable<Integer> {
   private String password;
 
   @Option(
-      names = {"-n", "--replication-strategy"},
+      names = {"-n", "--network-strategy"},
       description =
           "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   private ReplicationStrategy replicationStrategy;

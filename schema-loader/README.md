@@ -89,7 +89,7 @@ Using Cassandra DB
   -f, --schema-file=<schemaFile>
                         Path to schema json file
   -h, --host=<hostIP>   Cassandra host IP
-  -n, --replication-strategy=<replicationStrategy>
+  -n, --network-strategy=<replicationStrategy>
                         Cassandra network strategy, should be SimpleStrategy or
                           NetworkTopologyStrategy
   -p, --password=<password>
