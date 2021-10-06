@@ -49,7 +49,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
                   .put(DataType.INT, "INT")
                   .put(DataType.BIGINT, "BIGINT")
                   .put(DataType.TEXT, "LONGTEXT")
-                  .put(DataType.FLOAT, "FLOAT")
+                  .put(DataType.FLOAT, "DOUBLE")
                   .put(DataType.DOUBLE, "DOUBLE")
                   .put(DataType.BOOLEAN, "BOOLEAN")
                   .put(DataType.BLOB, "LONGBLOB")
