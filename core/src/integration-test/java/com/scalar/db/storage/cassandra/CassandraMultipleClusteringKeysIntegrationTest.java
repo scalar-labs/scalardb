@@ -1,27 +1,10 @@
 package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.MultipleClusteringKeysIntegrationTestBase;
-import java.util.Collections;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
 
 public class CassandraMultipleClusteringKeysIntegrationTest
-    extends MultipleClusteringKeysIntegrationTestBase {
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    admin = new CassandraAdmin(CassandraEnv.getDatabaseConfig());
-    storage = new Cassandra(CassandraEnv.getDatabaseConfig());
-    createTestTables(Collections.emptyMap());
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    deleteTestTables();
-    admin.close();
-    storage.close();
-  }
+    extends StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
