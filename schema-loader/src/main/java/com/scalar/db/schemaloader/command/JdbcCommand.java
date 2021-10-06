@@ -68,6 +68,7 @@ public class JdbcCommand implements Callable<Integer> {
       operator.createTables(schemaParser.getTables());
     }
 
+    operator.close();
     return 0;
   }
 }

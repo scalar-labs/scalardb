@@ -104,6 +104,8 @@ public class CassandraCommand implements Callable<Integer> {
     } else {
       operator.createTables(schemaParser.getTables());
     }
+
+    operator.close();
     return 0;
   }
 }

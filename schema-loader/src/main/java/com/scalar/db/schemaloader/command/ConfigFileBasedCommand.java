@@ -111,6 +111,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       }
     }
 
+    operator.close();
     return 0;
   }
 }

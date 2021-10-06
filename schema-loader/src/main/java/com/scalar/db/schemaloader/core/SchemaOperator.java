@@ -47,13 +47,13 @@ public class SchemaOperator {
         } else {
           admin.createTable(
               table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
-          LOGGER.info(
-              "Create table "
-                  + table.getTable()
-                  + " in namespace "
-                  + table.getNamespace()
-                  + " successfully.");
         }
+        LOGGER.info(
+            "Create table "
+                + table.getTable()
+                + " in namespace "
+                + table.getNamespace()
+                + " successfully.");
       } catch (ExecutionException e) {
         LOGGER.warn(
             "Create table "
@@ -124,5 +124,9 @@ public class SchemaOperator {
         LOGGER.warn("Get table from namespace " + namespace + " failed. " + e.getCause());
       }
     }
+  }
+
+  public void close() {
+    admin.close();
   }
 }
