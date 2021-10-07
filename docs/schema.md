@@ -21,7 +21,7 @@ Here are the supported data types in Scalar DB and their mapping to the data typ
 | BOOLEAN   | boolean   | boolean (JSON) | BOOL     | boolean  | boolean          | number(1)      | bit             |
 | INT       | int       | number (JSON)  | N        | int      | int              | int            | int             |
 | BIGINT    | bigint    | number (JSON)  | N        | bigint   | bigint           | number(19)     | bigint          |
-| FLOAT     | float     | number (JSON)  | N        | float    | float            | binary_float   | float(24)       |
+| FLOAT     | float     | number (JSON)  | N        | double   | float            | binary_float   | float(24)       |
 | DOUBLE    | double    | number (JSON)  | N        | double   | double precision | binary_double  | float           |
 | TEXT      | text      | string (JSON)  | S        | longtext | text             | varchar2(4000) | varchar(8000)   |
 | BLOB      | blob      | string (JSON)  | B        | longblob | bytea            | blob           | varbinary(8000) |
