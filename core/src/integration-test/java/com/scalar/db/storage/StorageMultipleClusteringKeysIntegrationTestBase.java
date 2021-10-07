@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
@@ -461,7 +462,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-  scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
+      scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -581,7 +582,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-  scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
+      scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -701,7 +702,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-  scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
+      scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -821,7 +822,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-  scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
+      scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -1730,7 +1731,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   private Value<?> getRandomValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, RANDOM_GENERATOR.nextLong());
+        return new BigIntValue(
+            columnName, nextLongBetween(BigIntValue.MIN_VALUE, BigIntValue.MAX_VALUE));
       case INT:
         return new IntValue(columnName, RANDOM_GENERATOR.nextInt());
       case FLOAT:
@@ -1749,6 +1751,11 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       default:
         throw new RuntimeException("Unsupported data type for random generating");
     }
+  }
+
+  public long nextLongBetween(long min, long max) {
+    OptionalLong randomLong = RANDOM_GENERATOR.longs(min, (max + 1)).limit(1).findFirst();
+    return randomLong.orElse(0);
   }
 
   private Value<?> getFixedValue(String columnName, DataType dataType) {
