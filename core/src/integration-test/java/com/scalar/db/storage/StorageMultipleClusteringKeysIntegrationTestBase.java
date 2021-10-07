@@ -51,7 +51,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
   protected static final int DATA_NUM = 20;
-  protected static final List<DataType> CLUSTERING_KEY_TYPE_LIST =
+  protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
       ImmutableList.of(
           DataType.BOOLEAN,
           DataType.INT,
@@ -264,7 +264,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(776);
+    RANDOM_GENERATOR.setSeed(771);
 
     List<Value<?>> valueList =
         prepareRecords(
@@ -368,7 +368,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(777);
+    RANDOM_GENERATOR.setSeed(772);
 
     List<Value<?>> valueList =
         prepareRecordsForScanOnlyWithBeforeClusteringKey(cKeyTypeBefore, cKeyClusteringOrderBefore);
@@ -495,7 +495,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
           throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(777);
+    RANDOM_GENERATOR.setSeed(773);
 
     List<Value<?>> valueList =
         prepareRecordsForScanOnlyWithBeforeClusteringKey(cKeyTypeBefore, cKeyClusteringOrderBefore);
@@ -615,7 +615,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
           throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(777);
+    RANDOM_GENERATOR.setSeed(774);
 
     List<Value<?>> valueList =
         prepareRecordsForScanOnlyWithBeforeClusteringKey(cKeyTypeBefore, cKeyClusteringOrderBefore);
@@ -735,7 +735,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
           throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(777);
+    RANDOM_GENERATOR.setSeed(775);
 
     List<Value<?>> valueList =
         prepareRecordsForScanOnlyWithBeforeClusteringKey(cKeyTypeBefore, cKeyClusteringOrderBefore);
@@ -855,7 +855,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
           throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(777);
+    RANDOM_GENERATOR.setSeed(776);
 
     List<Value<?>> valueList =
         prepareRecordsForScanOnlyWithBeforeClusteringKey(cKeyTypeBefore, cKeyClusteringOrderBefore);
