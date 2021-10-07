@@ -461,7 +461,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-      scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValuesBefore_ShouldReturnProperlyResult()
+  scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -581,7 +581,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-      scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValuesBefore_ShouldReturnProperlyResult()
+  scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -701,7 +701,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-      scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValuesBefore_ShouldReturnProperlyResult()
+  scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
@@ -821,7 +821,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void
-      scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValuesBefore_ShouldReturnProperlyResult()
+  scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult()
           throws ExecutionException, IOException {
     scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValues_ShouldReturnProperlyResult(
         DataType.BLOB, Order.ASC, false);
