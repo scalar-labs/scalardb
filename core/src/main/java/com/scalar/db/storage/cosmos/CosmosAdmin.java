@@ -85,10 +85,19 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      checkMetadata(metadata);
       createContainer(namespace, table, metadata);
       addTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
       throw new ExecutionException("creating the container failed", e);
+    }
+  }
+
+  private void checkMetadata(TableMetadata metadata) throws ExecutionException {
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
+        throw new ExecutionException("BLOB type is not supported for clustering keys in Cosmos DB");
+      }
     }
   }
 
