@@ -102,7 +102,6 @@ public class SchemaOperator {
     if (hasTransactionTable) {
       try {
         consensusCommitAdmin.dropCoordinatorTable();
-        namespaces.add(Coordinator.NAMESPACE);
       } catch (ExecutionException e) {
         LOGGER.warn(
             "Delete table "
