@@ -161,9 +161,9 @@ public class SelectStatementHandler extends StatementHandler {
                             statement.and(gt(start.get(i).getName(), bindMarker()));
                           }
                         } else {
-                          String cKeyName = start.get(i).getName();
-                          statement.and(eq(cKeyName, bindMarker()));
-                          traveledEqualKeySet.add(cKeyName);
+                          String clusteringKeyName = start.get(i).getName();
+                          statement.and(eq(clusteringKeyName, bindMarker()));
+                          traveledEqualKeySet.add(clusteringKeyName);
                         }
                       });
             });
@@ -188,10 +188,9 @@ public class SelectStatementHandler extends StatementHandler {
                             statement.and(lt(end.get(i).getName(), bindMarker()));
                           }
                         } else {
-                          String cKeyName = end.get(i).getName();
-                          if (!traveledEqualKeySet.contains(cKeyName)) {
-                            statement.and(eq(cKeyName, bindMarker()));
-                            traveledEqualKeySet.add(cKeyName);
+                          String clusteringKeyName = end.get(i).getName();
+                          if (!traveledEqualKeySet.contains(clusteringKeyName)) {
+                            statement.and(eq(clusteringKeyName, bindMarker()));
                           }
                         }
                       });
@@ -229,12 +228,10 @@ public class SelectStatementHandler extends StatementHandler {
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
-                        if (i == (start.size() - 1)) {
-                          start.get(i).accept(binder);
-                        } else {
+                        if (i != (start.size() - 1)) {
                           traveledEqualKeySet.add(start.get(i).getName());
-                          start.get(i).accept(binder);
                         }
+                        start.get(i).accept(binder);
                       });
             });
   }
