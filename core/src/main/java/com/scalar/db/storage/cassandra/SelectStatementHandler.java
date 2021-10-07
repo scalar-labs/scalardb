@@ -132,7 +132,6 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void createStatement(Select.Where statement, Scan scan) {
     setKey(statement, Optional.of(scan.getPartitionKey()));
-
     Set<String> traveledEqualKeySet = new HashSet<>();
 
     setStart(statement, scan, traveledEqualKeySet);
@@ -216,6 +215,13 @@ public class SelectStatementHandler extends StatementHandler {
     scan.getPartitionKey().forEach(v -> v.accept(binder));
 
     Set<String> traveledEqualKeySet = new HashSet<>();
+    bindStart(binder, scan, traveledEqualKeySet);
+    bindEnd(binder, scan, traveledEqualKeySet);
+
+    return bound;
+  }
+
+  private void bindStart(ValueBinder binder, Scan scan, Set<String> traveledEqualKeySet) {
     scan.getStartClusteringKey()
         .ifPresent(
             k -> {
@@ -231,6 +237,9 @@ public class SelectStatementHandler extends StatementHandler {
                         }
                       });
             });
+  }
+
+  private void bindEnd(ValueBinder binder, Scan scan, Set<String> traveledEqualKeySet) {
     scan.getEndClusteringKey()
         .ifPresent(
             k -> {
@@ -247,8 +256,6 @@ public class SelectStatementHandler extends StatementHandler {
                         }
                       });
             });
-
-    return bound;
   }
 
   private Ordering getOrdering(Scan.Ordering ordering) {
