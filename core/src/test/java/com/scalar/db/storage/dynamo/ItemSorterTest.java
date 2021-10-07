@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,8 +39,10 @@ public class ItemSorterTest {
   private static final double ANY_SMALL_DOUBLE = -10.0;
   private static final String ANY_LARGE_TEXT = "sssssss";
   private static final String ANY_SMALL_TEXT = "aa";
-  private static final byte[] ANY_LARGE_BLOB = "scalar".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] ANY_SMALL_BLOB = "a".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] ANY_LARGE_BLOB = new byte[] {1, 2, 3, 4, 40, 5};
+  // unsigned byte -1 > 37
+  private static final byte[] ANY_LARGE_BLOB1 = new byte[] {1, 2, 3, 4, -1, 5};
+  private static final byte[] ANY_SMALL_BLOB = new byte[] {1, 2, 3, 4, 37, 5, 5, 5, 5};
   private static final String ANY_COLUMN_NAME_1 = "val1";
 
   private TableMetadata metadata;
@@ -264,24 +266,33 @@ public class ItemSorterTest {
   @Test
   public void sort_ItemsGivenWithDescOrderingBlob_ShouldSortProperly() {
     // Arrange
-    Map<String, AttributeValue> item1 = prepareItemWithSmallValues();
-    Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
-    item2.put(
-        ANY_NAME_8, AttributeValue.builder().b(SdkBytes.fromByteArray(ANY_LARGE_BLOB)).build());
-    Scan scan =
-        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
-            .withOrdering(new Scan.Ordering(ANY_NAME_8, Scan.Ordering.Order.DESC));
-    List<Map<String, AttributeValue>> items = new ArrayList<>();
-    items.add(item1);
-    items.add(item2);
-    ItemSorter sorter = new ItemSorter(scan, metadata);
+    for (byte[] anyLargeBlob : new byte[][] {ANY_LARGE_BLOB, ANY_LARGE_BLOB1}) {
+      BlobValue value1 = new BlobValue(ANY_NAME_8, anyLargeBlob);
+      BlobValue value2 = new BlobValue(ANY_NAME_8, ANY_SMALL_BLOB);
 
-    // Act
-    List<Map<String, AttributeValue>> actual = sorter.sort(items);
+      Map<String, AttributeValue> item1 = prepareItemWithSmallValues();
+      item1.put(
+          ANY_NAME_8,
+          AttributeValue.builder().b(SdkBytes.fromByteArray(value1.get().get())).build());
+      Map<String, AttributeValue> item2 = prepareItemWithSmallValues();
+      item2.put(
+          ANY_NAME_8,
+          AttributeValue.builder().b(SdkBytes.fromByteArray(value2.get().get())).build());
+      Scan scan =
+          new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+              .withOrdering(new Scan.Ordering(ANY_NAME_8, Scan.Ordering.Order.DESC));
+      List<Map<String, AttributeValue>> items = new ArrayList<>();
+      items.add(item1);
+      items.add(item2);
+      ItemSorter sorter = new ItemSorter(scan, metadata);
 
-    // Assert
-    assertThat(actual.get(0).get(ANY_NAME_8).b().asByteArray()).isEqualTo(ANY_LARGE_BLOB);
-    assertThat(actual.get(1).get(ANY_NAME_8).b().asByteArray()).isEqualTo(ANY_SMALL_BLOB);
+      // Act
+      List<Map<String, AttributeValue>> actual = sorter.sort(items);
+
+      // Assert
+      assertThat(actual.get(0).get(ANY_NAME_8).b().asByteArray()).isEqualTo(value1.get().get());
+      assertThat(actual.get(1).get(ANY_NAME_8).b().asByteArray()).isEqualTo(value2.get().get());
+    }
   }
 
   @Test

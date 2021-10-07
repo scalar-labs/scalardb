@@ -19,6 +19,7 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.io.BooleanValue;
@@ -26,7 +27,9 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,9 +39,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
+import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 
-public abstract class IntegrationTestBase {
+@SuppressFBWarnings(
+    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+public abstract class StorageIntegrationTestBase {
 
   protected static final String NAMESPACE = "integration_testing";
   protected static final String TABLE = "test_table";
@@ -48,17 +55,40 @@ public abstract class IntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
 
-  @SuppressFBWarnings("MS_CANNOT_BE_FINAL")
+  private static boolean initialized;
+  protected static DistributedStorage storage;
   protected static DistributedStorageAdmin admin;
+  protected static String namespace;
 
-  private DistributedStorage storage;
-  private List<Put> puts;
-  private List<Delete> deletes;
+  @Before
+  public void setUp() throws Exception {
+    if (!initialized) {
+      initialize();
+      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      admin = factory.getAdmin();
+      namespace = getNamespace();
+      createTable();
+      storage = factory.getStorage();
+      initialized = true;
+    }
 
-  protected static void createTable(Map<String, String> options) throws ExecutionException {
-    admin.createNamespace(NAMESPACE, options);
+    truncateTable();
+    storage.with(namespace, TABLE);
+  }
+
+  protected void initialize() throws Exception {}
+
+  protected abstract DatabaseConfig getDatabaseConfig();
+
+  protected String getNamespace() {
+    return NAMESPACE;
+  }
+
+  private void createTable() throws ExecutionException {
+    Map<String, String> options = getCreateOptions();
+    admin.createNamespace(namespace, true, options);
     admin.createTable(
-        NAMESPACE,
+        namespace,
         TABLE,
         TableMetadata.newBuilder()
             .addColumn(COL_NAME1, DataType.INT)
@@ -70,20 +100,28 @@ public abstract class IntegrationTestBase {
             .addClusteringKey(COL_NAME4)
             .addSecondaryIndex(COL_NAME3)
             .build(),
+        true,
         options);
   }
 
-  protected static void deleteTable() throws ExecutionException {
-    admin.dropTable(NAMESPACE, TABLE);
-    admin.dropNamespace(NAMESPACE);
+  protected Map<String, String> getCreateOptions() {
+    return Collections.emptyMap();
   }
 
-  protected void setUp(DistributedStorage storage) {
-    this.storage = storage;
+  private void truncateTable() throws ExecutionException {
+    admin.truncateTable(namespace, TABLE);
   }
 
-  protected void deleteData() throws ExecutionException {
-    admin.truncateTable(NAMESPACE, TABLE);
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTable();
+    admin.close();
+    storage.close();
+  }
+
+  private static void deleteTable() throws ExecutionException {
+    admin.dropTable(namespace, TABLE);
+    admin.dropNamespace(namespace);
   }
 
   @Test
@@ -101,7 +139,7 @@ public abstract class IntegrationTestBase {
   @Test
   public void operation_WrongNamespaceGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with("wrong_" + NAMESPACE, TABLE); // a wrong namespace
+    storage.with("wrong_" + namespace, TABLE); // a wrong namespace
     Key partitionKey = new Key(COL_NAME1, 0);
     Key clusteringKey = new Key(COL_NAME4, 0);
     Get get = new Get(partitionKey, clusteringKey);
@@ -113,7 +151,7 @@ public abstract class IntegrationTestBase {
   @Test
   public void operation_WrongTableGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
-    storage.with(NAMESPACE, "wrong_" + TABLE); // a wrong table
+    storage.with(namespace, "wrong_" + TABLE); // a wrong table
     Key partitionKey = new Key(COL_NAME1, 0);
     Key clusteringKey = new Key(COL_NAME4, 0);
     Get get = new Get(partitionKey, clusteringKey);
@@ -178,7 +216,8 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithProjectionsGiven_ShouldRetrieveSpecifiedValues() throws Exception {
+  public void scan_ScanWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+      throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -205,7 +244,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scan_ScanWithPartitionKeyGivenAndResultsIteratedWithOne_ShouldReturnWhatsPut()
-      throws Exception {
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -239,7 +278,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scan_ScanWithPartitionGivenThreeTimes_ShouldRetrieveResultsProperlyEveryTime()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -268,7 +307,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scan_ScanWithStartInclusiveRangeGiven_ShouldRetrieveResultsOfGivenRange()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -286,7 +325,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scan_ScanWithEndInclusiveRangeGiven_ShouldRetrieveResultsOfGivenRange()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -303,9 +342,10 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithOrderAscGiven_ShouldReturnAscendingOrderedResults() throws Exception {
+  public void scan_ScanWithOrderAscGiven_ShouldReturnAscendingOrderedResults()
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
         new Scan(new Key(COL_NAME1, 0))
@@ -325,9 +365,10 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithOrderDescGiven_ShouldReturnDescendingOrderedResults() throws Exception {
+  public void scan_ScanWithOrderDescGiven_ShouldReturnDescendingOrderedResults()
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     Scan scan =
         new Scan(new Key(COL_NAME1, 0))
@@ -347,9 +388,10 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithLimitGiven_ShouldReturnGivenNumberOfResults() throws Exception {
+  public void scan_ScanWithLimitGiven_ShouldReturnGivenNumberOfResults()
+      throws IOException, ExecutionException {
     // setup
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
 
     Scan scan =
@@ -368,7 +410,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scannerIterator_ScanWithPartitionKeyGiven_ShouldRetrieveCorrectResults()
-      throws Exception {
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -385,7 +427,8 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scannerIterator_OneAndIteratorCalled_ShouldRetrieveCorrectResults() throws Exception {
+  public void scannerIterator_OneAndIteratorCalled_ShouldRetrieveCorrectResults()
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -402,12 +445,14 @@ public abstract class IntegrationTestBase {
     assertThat(result.isPresent()).isTrue();
 
     List<Integer> expected = new ArrayList<>(Arrays.asList(0, 1, 2));
-    expected.remove(Integer.valueOf(result.get().getValue(COL_NAME4).get().getAsInt()));
+    assertThat(result.get().getValue(COL_NAME4).isPresent()).isTrue();
+    expected.remove(result.get().getValue(COL_NAME4).get().getAsInt());
     assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, expected);
   }
 
   @Test
-  public void scannerIterator_AllAndIteratorCalled_ShouldRetrieveCorrectResults() throws Exception {
+  public void scannerIterator_AllAndIteratorCalled_ShouldRetrieveCorrectResults()
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -427,7 +472,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void scannerIterator_IteratorCalledMultipleTimes_ShouldRetrieveCorrectResults()
-      throws Exception {
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -450,7 +495,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Key partitionKey = new Key(COL_NAME1, pKey);
     Key clusteringKey = new Key(COL_NAME4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
@@ -478,7 +523,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
     Key partitionKey = new Key(COL_NAME1, pKey);
     Key clusteringKey = new Key(COL_NAME4, cKey);
@@ -505,11 +550,11 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutGiven_ShouldStoreProperly() throws Exception {
+  public void put_MultiplePutGiven_ShouldStoreProperly() throws IOException, ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
@@ -523,11 +568,12 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutWithIfNotExistsGiven_ShouldStoreProperly() throws Exception {
+  public void put_MultiplePutWithIfNotExistsGiven_ShouldStoreProperly()
+      throws IOException, ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
     puts.get(2).withCondition(new PutIfNotExists());
@@ -544,7 +590,7 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws Exception {
+  public void put_PutWithoutValuesGiven_ShouldStoreProperly() throws ExecutionException {
     // Arrange
     Key partitionKey = new Key(COL_NAME1, 0);
     Key clusteringKey = new Key(COL_NAME4, 0);
@@ -559,7 +605,7 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws Exception {
+  public void put_PutWithoutValuesGivenTwice_ShouldStoreProperly() throws ExecutionException {
     // Arrange
     Key partitionKey = new Key(COL_NAME1, 0);
     Key clusteringKey = new Key(COL_NAME4, 0);
@@ -577,11 +623,11 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void put_MultiplePutWithIfNotExistsGivenWhenOneExists_ShouldThrowNoMutationException()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1).withCondition(new PutIfNotExists());
@@ -602,9 +648,9 @@ public abstract class IntegrationTestBase {
   @Test
   public void
       put_MultiplePutWithDifferentPartitionsWithIfNotExistsGiven_ShouldThrowIllegalArgumentException()
-          throws Exception {
+          throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(3).withCondition(new PutIfNotExists());
     puts.get(6).withCondition(new PutIfNotExists());
@@ -625,9 +671,9 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void put_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
 
     // Act
     assertThatThrownBy(() -> storage.put(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
@@ -644,9 +690,10 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutWithDifferentConditionsGiven_ShouldStoreProperly() throws Exception {
+  public void put_MultiplePutWithDifferentConditionsGiven_ShouldStoreProperly()
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     storage.put(puts.get(1));
     puts.get(0).withCondition(new PutIfNotExists());
     puts.get(1)
@@ -670,7 +717,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.get(0).withCondition(new PutIfExists());
     Get get = prepareGet(pKey, cKey);
 
@@ -688,7 +735,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Get get = prepareGet(pKey, cKey);
 
     // Act Assert
@@ -713,7 +760,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Get get = prepareGet(pKey, cKey);
 
     // Act Assert
@@ -742,7 +789,7 @@ public abstract class IntegrationTestBase {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Get get = prepareGet(pKey, cKey);
 
     // Act Assert
@@ -767,7 +814,7 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -867,10 +914,10 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void delete_MultipleDeleteWithDifferentConditionsGiven_ShouldDeleteProperly()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
-    deletes = prepareDeletes();
+    List<Put> puts = preparePuts();
+    List<Delete> deletes = prepareDeletes();
     storage.mutate(Arrays.asList(puts.get(0), puts.get(1), puts.get(2)));
     deletes.get(0).withCondition(new DeleteIfExists());
     deletes
@@ -891,11 +938,11 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void mutate_MultiplePutGiven_ShouldStoreProperly() throws Exception {
+  public void mutate_MultiplePutGiven_ShouldStoreProperly() throws ExecutionException, IOException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Scan scan = new Scan(new Key(COL_NAME1, pKey));
 
     // Act
@@ -910,9 +957,9 @@ public abstract class IntegrationTestBase {
 
   @Test
   public void mutate_MultiplePutWithDifferentPartitionsGiven_ShouldThrowIllegalArgumentException()
-      throws Exception {
+      throws IOException, ExecutionException {
     // Arrange
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
 
     // Act
     assertThatCode(() -> storage.mutate(Arrays.asList(puts.get(0), puts.get(3), puts.get(6))))
@@ -929,10 +976,11 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldUpdateAndDeleteRecordsProperly() throws Exception {
+  public void mutate_PutAndDeleteGiven_ShouldUpdateAndDeleteRecordsProperly()
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.get(1).withValue(COL_NAME3, Integer.MAX_VALUE);
     puts.get(2).withValue(COL_NAME3, Integer.MIN_VALUE);
 
@@ -953,11 +1001,11 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void mutate_SinglePutGiven_ShouldStoreProperly() throws Exception {
+  public void mutate_SinglePutGiven_ShouldStoreProperly() throws ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     Key partitionKey = new Key(COL_NAME1, pKey);
     Key clusteringKey = new Key(COL_NAME4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
@@ -983,7 +1031,7 @@ public abstract class IntegrationTestBase {
   @Test
   public void
       mutate_SingleDeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
-          throws Exception {
+          throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -1060,7 +1108,7 @@ public abstract class IntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws Exception {
+  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int c3 = 3;
@@ -1075,6 +1123,9 @@ public abstract class IntegrationTestBase {
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
     for (Result result : actual) {
+      assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
+      assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
+
       int col1Val = result.getValue(COL_NAME1).get().getAsInt();
       int col4Val = result.getValue(COL_NAME4).get().getAsInt();
       List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
@@ -1097,7 +1148,7 @@ public abstract class IntegrationTestBase {
   }
 
   private void populateRecords() {
-    puts = preparePuts();
+    List<Put> puts = preparePuts();
     puts.forEach(p -> assertThatCode(() -> storage.put(p)).doesNotThrowAnyException());
   }
 
@@ -1153,7 +1204,7 @@ public abstract class IntegrationTestBase {
     return deletes;
   }
 
-  protected List<Result> scanAll(Scan scan) throws Exception {
+  protected List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
@@ -1170,6 +1221,7 @@ public abstract class IntegrationTestBase {
     for (Result result : actual) {
       assertThat(result.getValue(COL_NAME1))
           .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
+      assertThat(result.getValue(checkedColumn).isPresent()).isTrue();
 
       int actualClusteringKeyValue = result.getValue(checkedColumn).get().getAsInt();
       assertThat(expectedValuesSet).contains(actualClusteringKeyValue);

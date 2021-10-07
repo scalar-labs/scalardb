@@ -83,7 +83,6 @@ public class Delete extends Mutation {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("namespacePrefix", forNamespacePrefix())
         .add("namespace", forNamespace())
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())

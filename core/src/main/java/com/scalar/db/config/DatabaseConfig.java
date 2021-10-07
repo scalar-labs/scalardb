@@ -47,7 +47,6 @@ public class DatabaseConfig {
   private Optional<String> password;
   private Class<? extends DistributedStorage> storageClass;
   private Class<? extends DistributedStorageAdmin> adminClass;
-  private Optional<String> namespacePrefix;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
   private Isolation isolation = Isolation.SNAPSHOT;
@@ -59,7 +58,6 @@ public class DatabaseConfig {
   public static final String USERNAME = PREFIX + "username";
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
-  public static final String NAMESPACE_PREFIX = PREFIX + "namespace_prefix";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS =
@@ -131,16 +129,9 @@ public class DatabaseConfig {
       }
       username = Optional.ofNullable(props.getProperty(USERNAME));
       password = Optional.ofNullable(props.getProperty(PASSWORD));
-
-      if (Strings.isNullOrEmpty(props.getProperty(NAMESPACE_PREFIX))) {
-        namespacePrefix = Optional.empty();
-      } else {
-        namespacePrefix = Optional.of(props.getProperty(NAMESPACE_PREFIX) + "_");
-      }
     } else {
       username = Optional.empty();
       password = Optional.empty();
-      namespacePrefix = Optional.empty();
     }
 
     transactionManagerClass = ConsensusCommitManager.class;
@@ -220,10 +211,6 @@ public class DatabaseConfig {
   public Class<? extends TwoPhaseCommitTransactionManager>
       getTwoPhaseCommitTransactionManagerClass() {
     return twoPhaseCommitTransactionManagerClass;
-  }
-
-  public Optional<String> getNamespacePrefix() {
-    return namespacePrefix;
   }
 
   public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {

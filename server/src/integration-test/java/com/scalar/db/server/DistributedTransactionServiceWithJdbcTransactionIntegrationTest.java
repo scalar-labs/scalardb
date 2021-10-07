@@ -4,29 +4,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.Value;
 import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.storage.jdbc.test.TestEnv;
+import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.stream.IntStream;
-import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -41,17 +43,61 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   private static final int NUM_ACCOUNTS = 4;
   private static final int NUM_TYPES = 4;
 
-  private static final String CONTACT_POINT = "jdbc:mysql://localhost:3306/";
-  private static final String USERNAME = "root";
-  private static final String PASSWORD = "mysql";
-
-  private static TestEnv testEnv;
   private static ScalarDbServer server;
+  private static DistributedStorageAdmin admin;
   private static GrpcTransactionManager manager;
 
-  @After
-  public void tearDown() throws Exception {
-    testEnv.deleteTableData();
+  @BeforeClass
+  public static void setUpBeforeClass() throws ExecutionException, IOException {
+    ServerConfig serverConfig = ServerEnv.getServerConfigWithJdbc();
+    if (serverConfig != null) {
+      server = new ScalarDbServer(serverConfig);
+      server.start();
+    }
+
+    GrpcConfig grpcConfig = ServerEnv.getGrpcConfig();
+    StorageFactory factory = new StorageFactory(grpcConfig);
+    admin = factory.getAdmin();
+    createTable();
+    manager = new GrpcTransactionManager(grpcConfig);
+  }
+
+  private static void createTable() throws ExecutionException {
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(ACCOUNT_ID, DataType.INT)
+            .addColumn(ACCOUNT_TYPE, DataType.INT)
+            .addColumn(BALANCE, DataType.INT)
+            .addPartitionKey(ACCOUNT_ID)
+            .addClusteringKey(ACCOUNT_TYPE)
+            .build();
+    admin.createNamespace(NAMESPACE, true);
+    admin.createTable(NAMESPACE, TABLE, tableMetadata, true);
+  }
+
+  @Before
+  public void setUp() throws ExecutionException {
+    truncateTable();
+  }
+
+  private void truncateTable() throws ExecutionException {
+    admin.truncateTable(NAMESPACE, TABLE);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws ExecutionException {
+    deleteTable();
+    admin.close();
+    manager.close();
+    if (server != null) {
+      server.shutdown();
+      server.blockUntilShutdown();
+    }
+  }
+
+  private static void deleteTable() throws ExecutionException {
+    admin.dropTable(NAMESPACE, TABLE);
+    admin.dropNamespace(NAMESPACE);
   }
 
   @Test
@@ -117,8 +163,8 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
   @Test
   public void putAndCommit_PutGivenForNonExisting_ShouldCreateRecord() throws TransactionException {
     // Arrange
-    IntValue expected = new IntValue(BALANCE, INITIAL_BALANCE);
-    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
+    int expected = INITIAL_BALANCE;
+    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(BALANCE, expected);
     GrpcTransaction transaction = manager.start();
 
     // Act
@@ -128,9 +174,10 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     // Assert
     Get get = prepareGet(0, 0, NAMESPACE, TABLE);
     GrpcTransaction another = manager.start();
-    Result result = another.get(get).get();
+    Optional<Result> result = another.get(get);
+    assertThat(result).isPresent();
     another.commit();
-    assertThat(result.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
   @Test
@@ -143,18 +190,19 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
 
     // Act
     Optional<Result> result = transaction.get(get);
-    int afterBalance = result.get().getValue(BALANCE).get().getAsInt() + 100;
-    IntValue expected = new IntValue(BALANCE, afterBalance);
-    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(expected);
+    assertThat(result).isPresent();
+    int expected = getBalance(result.get()) + 100;
+    Put put = preparePut(0, 0, NAMESPACE, TABLE).withValue(BALANCE, expected);
     transaction.put(put);
     transaction.commit();
 
     // Assert
     GrpcTransaction another = manager.start();
-    Result actual = another.get(get).get();
+    Optional<Result> actual = another.get(get);
     another.commit();
 
-    assertThat(actual.getValue(BALANCE).get()).isEqualTo(expected);
+    assertThat(actual).isPresent();
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
   }
 
   @Test
@@ -163,8 +211,8 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     populateRecords();
     List<Get> gets = prepareGets(NAMESPACE, TABLE);
     int amount = 100;
-    IntValue fromBalance = new IntValue(BALANCE, INITIAL_BALANCE - amount);
-    IntValue toBalance = new IntValue(BALANCE, INITIAL_BALANCE + amount);
+    int fromBalance = INITIAL_BALANCE - amount;
+    int toBalance = INITIAL_BALANCE + amount;
     int from = 0;
     int to = NUM_TYPES;
 
@@ -175,10 +223,12 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     GrpcTransaction another = null;
     try {
       another = manager.start();
-      assertThat(another.get(gets.get(from)).get().getValue(BALANCE))
-          .isEqualTo(Optional.of(fromBalance));
-      assertThat(another.get(gets.get(to)).get().getValue(BALANCE))
-          .isEqualTo(Optional.of(toBalance));
+      Optional<Result> fromResult = another.get(gets.get(from));
+      assertThat(fromResult).isPresent();
+      assertThat(getBalance(fromResult.get())).isEqualTo(fromBalance);
+      Optional<Result> toResult = another.get(gets.get(to));
+      assertThat(toResult).isPresent();
+      assertThat(getBalance(toResult.get())).isEqualTo(toBalance);
     } finally {
       if (another != null) {
         another.commit();
@@ -214,11 +264,12 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
     List<Get> gets = prepareGets(NAMESPACE, TABLE);
 
     Optional<Result> result1 = transaction.get(gets.get(fromId));
+    assertThat(result1).isPresent();
+    IntValue fromBalance = new IntValue(BALANCE, getBalance(result1.get()) - amount);
     Optional<Result> result2 = transaction.get(gets.get(toId));
-    IntValue fromBalance =
-        new IntValue(BALANCE, result1.get().getValue(BALANCE).get().getAsInt() - amount);
-    IntValue toBalance =
-        new IntValue(BALANCE, result2.get().getValue(BALANCE).get().getAsInt() + amount);
+    assertThat(result2).isPresent();
+    IntValue toBalance = new IntValue(BALANCE, getBalance(result2.get()) + amount);
+
     List<Put> puts = preparePuts(NAMESPACE, TABLE);
     puts.get(fromId).withValue(fromBalance);
     puts.get(toId).withValue(toBalance);
@@ -308,39 +359,9 @@ public class DistributedTransactionServiceWithJdbcTransactionIntegrationTest {
         .withConsistency(Consistency.LINEARIZABLE);
   }
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    testEnv = new TestEnv(CONTACT_POINT, USERNAME, PASSWORD, Optional.empty());
-    testEnv.createTable(
-        NAMESPACE,
-        TABLE,
-        TableMetadata.newBuilder()
-            .addColumn(ACCOUNT_ID, DataType.INT)
-            .addColumn(ACCOUNT_TYPE, DataType.INT)
-            .addColumn(BALANCE, DataType.INT)
-            .addPartitionKey(ACCOUNT_ID)
-            .addClusteringKey(ACCOUNT_TYPE)
-            .build());
-
-    Properties serverProperties = new Properties(testEnv.getJdbcConfig().getProperties());
-    serverProperties.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
-    serverProperties.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "-1");
-    server = new ScalarDbServer(serverProperties);
-    server.start();
-
-    Properties properties = new Properties();
-    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "localhost");
-    properties.setProperty(DatabaseConfig.CONTACT_PORT, "60051");
-    properties.setProperty(DatabaseConfig.STORAGE, "grpc");
-    manager = new GrpcTransactionManager(new GrpcConfig(properties));
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    manager.close();
-    server.shutdown();
-    server.blockUntilShutdown();
-    testEnv.deleteTables();
-    testEnv.close();
+  private int getBalance(Result result) {
+    Optional<Value<?>> balance = result.getValue(BALANCE);
+    assertThat(balance).isPresent();
+    return balance.get().getAsInt();
   }
 }

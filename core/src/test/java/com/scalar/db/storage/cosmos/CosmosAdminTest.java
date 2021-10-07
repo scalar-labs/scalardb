@@ -1,6 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.util.Utility.getFullNamespaceName;
 import static com.scalar.db.util.Utility.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,7 +58,6 @@ public class CosmosAdminTest {
     MockitoAnnotations.initMocks(this);
 
     // Arrange
-    when(config.getNamespacePrefix()).thenReturn(Optional.empty());
     admin = new CosmosAdmin(client, config);
   }
 
@@ -81,7 +79,7 @@ public class CosmosAdminTest {
     // Arrange
     String namespace = "ns";
     String table = "table";
-    String fullName = getFullTableName(Optional.empty(), namespace, table);
+    String fullName = getFullTableName(namespace, table);
     String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     @SuppressWarnings("unchecked")
@@ -245,7 +243,7 @@ public class CosmosAdminTest {
     // for metadata table
     verify(client)
         .createDatabaseIfNotExists(
-            eq(getFullNamespaceName(Optional.empty(), metadataDatabaseName)),
+            eq(metadataDatabaseName),
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
     ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
         ArgumentCaptor.forClass(CosmosContainerProperties.class);
@@ -255,7 +253,7 @@ public class CosmosAdminTest {
     assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
         .containsExactly("/id");
     CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(Optional.empty(), namespace, table));
+    cosmosTableMetadata.setId(getFullTableName(namespace, table));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
     cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c4"));
     cosmosTableMetadata.setColumns(
@@ -324,7 +322,7 @@ public class CosmosAdminTest {
     // for metadata table
     verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
     verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
-    String fullTable = getFullTableName(Optional.empty(), namespace, table);
+    String fullTable = getFullTableName(namespace, table);
     verify(metadataContainer)
         .deleteItem(
             eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
@@ -383,7 +381,7 @@ public class CosmosAdminTest {
     // for metadata table
     verify(client, atLeastOnce()).getDatabase(metadataDatabaseName);
     verify(metadataDatabase, atLeastOnce()).getContainer(CosmosAdmin.METADATA_CONTAINER);
-    String fullTable = getFullTableName(Optional.empty(), namespace, table);
+    String fullTable = getFullTableName(namespace, table);
     verify(metadataContainer)
         .deleteItem(
             eq(fullTable), eq(new PartitionKey(fullTable)), refEq(new CosmosItemRequestOptions()));
@@ -464,9 +462,9 @@ public class CosmosAdminTest {
     String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
 
     CosmosTableMetadata t1 = new CosmosTableMetadata();
-    t1.setId(getFullTableName(Optional.empty(), namespace, "t1"));
+    t1.setId(getFullTableName(namespace, "t1"));
     CosmosTableMetadata t2 = new CosmosTableMetadata();
-    t2.setId(getFullTableName(Optional.empty(), namespace, "t2"));
+    t2.setId(getFullTableName(namespace, "t2"));
 
     when(client.getDatabase(metadataDatabaseName)).thenReturn(database);
     when(database.getContainer(CosmosAdmin.METADATA_CONTAINER)).thenReturn(container);
