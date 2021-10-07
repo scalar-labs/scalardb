@@ -29,7 +29,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   @Option(
       names = {"-n", "--replication-strategy"},
       description =
-          "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
+          "Cassandra replication strategy, should be SimpleStrategy or NetworkTopologyStrategy")
   private ReplicationStrategy replicationStrategy;
 
   @Option(
@@ -56,7 +56,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   private Boolean noBackup;
 
   @Option(names = "--coordinator", description = "Create coordinator table", defaultValue = "false")
-  private Boolean coordinator;
+  private boolean coordinator;
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -67,11 +67,10 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  private Boolean deleteTables;
+  private boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
-
     LOGGER.info("Config path: " + configPath);
     LOGGER.info("Schema path: " + schemaFile);
 
@@ -99,7 +98,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
     SchemaOperator operator = new SchemaOperator(dbConfig);
 
     if (coordinator) {
-      operator.createCoordinatorTable();
+      operator.createCoordinatorTable(metaOptions);
     }
 
     if (schemaFile != null) {
@@ -107,7 +106,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       if (deleteTables) {
         operator.deleteTables(schemaParser.getTables());
       } else {
-        operator.createTables(schemaParser.getTables());
+        operator.createTables(schemaParser.getTables(), metaOptions);
       }
     }
 

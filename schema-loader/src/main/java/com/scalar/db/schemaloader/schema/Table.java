@@ -47,10 +47,10 @@ public class Table {
   private Set<String> traveledKeys;
 
   @VisibleForTesting
-  public Table() {}
+  Table() {}
 
   @VisibleForTesting
-  public Table(Set<String> traveledKeys) {
+  Table(Set<String> traveledKeys) {
     this.traveledKeys = traveledKeys;
   }
 

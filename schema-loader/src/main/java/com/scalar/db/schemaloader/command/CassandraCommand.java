@@ -25,7 +25,7 @@ public class CassandraCommand implements Callable<Integer> {
       names = {"-h", "--host"},
       description = "Cassandra host IP",
       required = true)
-  private String hostIP;
+  private String hostIp;
 
   @Option(
       names = {"-P", "--port"},
@@ -71,14 +71,14 @@ public class CassandraCommand implements Callable<Integer> {
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  private Boolean deleteTables;
+  private boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIP);
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIp);
     props.setProperty(DatabaseConfig.CONTACT_PORT, port);
     props.setProperty(DatabaseConfig.USERNAME, user);
     props.setProperty(DatabaseConfig.PASSWORD, password);
@@ -102,7 +102,7 @@ public class CassandraCommand implements Callable<Integer> {
     if (deleteTables) {
       operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaParser.getTables());
+      operator.createTables(schemaParser.getTables(), metaOptions);
     }
 
     operator.close();

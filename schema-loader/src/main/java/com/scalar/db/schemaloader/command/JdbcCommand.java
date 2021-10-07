@@ -4,6 +4,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -45,11 +46,10 @@ public class JdbcCommand implements Callable<Integer> {
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  private Boolean deleteTables;
+  private boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {
-
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
@@ -65,7 +65,7 @@ public class JdbcCommand implements Callable<Integer> {
     if (deleteTables) {
       operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaParser.getTables());
+      operator.createTables(schemaParser.getTables(), Collections.emptyMap());
     }
 
     operator.close();

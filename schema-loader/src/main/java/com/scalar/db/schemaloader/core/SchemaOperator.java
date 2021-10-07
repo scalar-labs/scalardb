@@ -11,6 +11,7 @@ import com.scalar.db.transaction.consensuscommit.Coordinator;
 import com.scalar.db.util.Utility;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,14 +30,14 @@ public class SchemaOperator {
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(dbConfig.getProperties()));
   }
 
-  public void createTables(List<Table> tableList) {
+  public void createTables(List<Table> tableList, Map<String, String> metaOptions) {
     boolean hasTransactionTable = false;
 
     for (Table table : tableList) {
       try {
         admin.createNamespace(table.getNamespace(), true, table.getOptions());
       } catch (ExecutionException e) {
-        LOGGER.warn("Create namespace " + table.getNamespace() + " failed. " + e.getCause());
+        LOGGER.warn("Create namespace " + table.getNamespace() + " failed.", e);
       }
 
       try {
@@ -60,22 +61,22 @@ public class SchemaOperator {
                 + table.getTable()
                 + " in namespace "
                 + table.getNamespace()
-                + " failed. "
-                + e.getCause());
+                + " failed.",
+            e);
       }
     }
 
     if (hasTransactionTable) {
-      try {
-        consensusCommitAdmin.createCoordinatorTable();
-      } catch (ExecutionException e) {
-        LOGGER.warn("Failed on coordinator schema creation. " + e.getCause().getMessage());
-      }
+      createCoordinatorTable(metaOptions);
     }
   }
 
-  public void createCoordinatorTable() throws ExecutionException {
-    consensusCommitAdmin.createCoordinatorTable();
+  public void createCoordinatorTable(Map<String, String> options) {
+    try {
+      consensusCommitAdmin.createCoordinatorTable(options);
+    } catch (ExecutionException e) {
+      LOGGER.warn("Failed on coordinator schema creation.", e);
+    }
   }
 
   public void deleteTables(List<Table> tableList) {
@@ -95,19 +96,19 @@ public class SchemaOperator {
                 + " successfully.");
         namespaces.add(table.getNamespace());
       } catch (ExecutionException e) {
-        LOGGER.warn("Delete table " + table.getTable() + " failed. " + e.getCause());
+        LOGGER.warn("Delete table " + table.getTable() + " failed.", e);
       }
     }
     if (hasTransactionTable) {
       try {
-        admin.dropTable(Coordinator.NAMESPACE, Coordinator.TABLE);
+        consensusCommitAdmin.dropCoordinatorTable();
         namespaces.add(Coordinator.NAMESPACE);
       } catch (ExecutionException e) {
         LOGGER.warn(
             "Delete table "
                 + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-                + " failed. "
-                + e.getCause());
+                + " failed.",
+            e);
       }
     }
 
@@ -117,11 +118,11 @@ public class SchemaOperator {
           try {
             admin.dropNamespace(namespace);
           } catch (ExecutionException e) {
-            LOGGER.warn("Delete namespace " + namespace + " failed. " + e.getCause());
+            LOGGER.warn("Delete namespace " + namespace + " failed.", e);
           }
         }
       } catch (ExecutionException e) {
-        LOGGER.warn("Get table from namespace " + namespace + " failed. " + e.getCause());
+        LOGGER.warn("Get table from namespace " + namespace + " failed.", e);
       }
     }
   }
