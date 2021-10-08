@@ -88,7 +88,7 @@ public class DynamoCommand implements Callable<Integer> {
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
-    SchemaOperator operator = new SchemaOperator(dbConfig);
+    SchemaOperator operator = new SchemaOperator(dbConfig, true);
     SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {

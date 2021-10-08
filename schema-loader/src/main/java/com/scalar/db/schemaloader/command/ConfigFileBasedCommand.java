@@ -95,7 +95,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
-    SchemaOperator operator = new SchemaOperator(dbConfig);
+    SchemaOperator operator = new SchemaOperator(dbConfig, false);
 
     if (coordinator) {
       operator.createCoordinatorTable(metaOptions);
@@ -108,6 +108,10 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       } else {
         operator.createTables(schemaParser.getTables(), metaOptions);
       }
+    }
+
+    if (coordinator && deleteTables) {
+      operator.dropCoordinatorTable();
     }
 
     operator.close();

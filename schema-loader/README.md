@@ -151,7 +151,8 @@ $ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER>
 ### Delete tables
 Using config file
 ```console
-$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json -D
+# coordinator table only be deleted when option --coordinator is specified.
+$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json -D [--coordinator]
 ```
 
 Using cli arguments
@@ -268,7 +269,7 @@ When creating tables for a JDBC database with this tool, Scalar DB data types ar
 | INT | INT | INT | INT | INT |
 | BIGINT | BIGINT | BIGINT | NUMBER(19) | BIGINT |
 | TEXT | LONGTEXT | TEXT | VARCHAR2(4000) | VARCHAR(8000) |
-| FLOAT | FLOAT | FLOAT | BINARY_FLOAT | FLOAT(24) |
+| FLOAT | DOUBLE | FLOAT | BINARY_FLOAT | FLOAT(24) |
 | DOUBLE | DOUBLE | DOUBLE PRECISION | BINARY_DOUBLE | FLOAT |
 | BOOLEAN | BOOLEAN | BOOLEAN | NUMBER(1) | BIT |
 | BLOB | LONGBLOB | BYTEA | BLOB | VARBINARY(8000) |

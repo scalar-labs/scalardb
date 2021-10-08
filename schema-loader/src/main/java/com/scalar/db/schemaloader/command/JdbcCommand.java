@@ -59,7 +59,7 @@ public class JdbcCommand implements Callable<Integer> {
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
-    SchemaOperator operator = new SchemaOperator(dbConfig);
+    SchemaOperator operator = new SchemaOperator(dbConfig, true);
     SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), new HashMap<>());
 
     if (deleteTables) {

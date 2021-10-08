@@ -22,8 +22,10 @@ public class SchemaOperator {
 
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitAdmin consensusCommitAdmin;
+  private final boolean storageCommandSpecific;
 
-  public SchemaOperator(DatabaseConfig dbConfig) {
+  public SchemaOperator(DatabaseConfig dbConfig, boolean storageCommandSpecific) {
+    this.storageCommandSpecific = storageCommandSpecific;
     StorageFactory storageFactory = new StorageFactory(dbConfig);
     admin = storageFactory.getAdmin();
     consensusCommitAdmin =
@@ -66,7 +68,7 @@ public class SchemaOperator {
       }
     }
 
-    if (hasTransactionTable) {
+    if (hasTransactionTable && storageCommandSpecific) {
       createCoordinatorTable(metaOptions);
     }
   }
@@ -74,8 +76,16 @@ public class SchemaOperator {
   public void createCoordinatorTable(Map<String, String> options) {
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
+      LOGGER.info(
+          "Create table "
+              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
+              + " successfully.");
     } catch (ExecutionException e) {
-      LOGGER.warn("Failed on coordinator schema creation.", e);
+      LOGGER.warn(
+          "Create table "
+              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
+              + " failed.",
+          e);
     }
   }
 
@@ -99,16 +109,8 @@ public class SchemaOperator {
         LOGGER.warn("Delete table " + table.getTable() + " failed.", e);
       }
     }
-    if (hasTransactionTable) {
-      try {
-        consensusCommitAdmin.dropCoordinatorTable();
-      } catch (ExecutionException e) {
-        LOGGER.warn(
-            "Delete table "
-                + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-                + " failed.",
-            e);
-      }
+    if (hasTransactionTable && storageCommandSpecific) {
+      dropCoordinatorTable();
     }
 
     for (String namespace : namespaces) {
@@ -123,6 +125,22 @@ public class SchemaOperator {
       } catch (ExecutionException e) {
         LOGGER.warn("Get table from namespace " + namespace + " failed.", e);
       }
+    }
+  }
+
+  public void dropCoordinatorTable() {
+    try {
+      consensusCommitAdmin.dropCoordinatorTable();
+      LOGGER.info(
+          "Deleted table "
+              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
+              + " successfully.");
+    } catch (ExecutionException e) {
+      LOGGER.warn(
+          "Delete table "
+              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
+              + " failed.",
+          e);
     }
   }
 
