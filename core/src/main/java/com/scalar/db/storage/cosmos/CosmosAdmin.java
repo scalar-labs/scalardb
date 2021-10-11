@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -139,7 +140,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private CosmosContainerProperties computeContainerProperties(
       String table, TableMetadata metadata) {
     IndexingPolicy indexingPolicy = new IndexingPolicy();
-    ArrayList<IncludedPath> paths = new ArrayList<>();
+    List<IncludedPath> paths = new ArrayList<>();
 
     if (metadata.getClusteringKeyNames().isEmpty()) {
       paths.add(new IncludedPath(PARTITION_KEY_PATH + "/?"));
