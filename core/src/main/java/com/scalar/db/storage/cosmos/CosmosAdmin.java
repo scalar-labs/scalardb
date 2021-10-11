@@ -23,7 +23,7 @@ import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.UnsupportedTypeException;
@@ -161,8 +161,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               c -> {
                 CompositePath compositePath = new CompositePath();
                 compositePath.setPath(CLUSTERING_KEY_PATH_PREFIX + c);
-                // Always ASCENDING fow now
-                compositePath.setOrder(CompositePathSortOrder.ASCENDING);
+                compositePath.setOrder(
+                    metadata.getClusteringOrder(c) == Order.ASC
+                        ? CompositePathSortOrder.ASCENDING
+                        : CompositePathSortOrder.DESCENDING);
                 compositePaths.add(compositePath);
               });
 
@@ -216,6 +218,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     cosmosTableMetadata.setPartitionKeyNames(new ArrayList<>(tableMetadata.getPartitionKeyNames()));
     cosmosTableMetadata.setClusteringKeyNames(
         new ArrayList<>(tableMetadata.getClusteringKeyNames()));
+    cosmosTableMetadata.setClusteringOrders(
+        tableMetadata.getClusteringKeyNames().stream()
+            .collect(Collectors.toMap(c -> c, c -> tableMetadata.getClusteringOrder(c).name())));
     cosmosTableMetadata.setSecondaryIndexNames(tableMetadata.getSecondaryIndexNames());
     Map<String, String> columnTypeByName = new HashMap<>();
     tableMetadata
@@ -345,10 +350,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         .getColumns()
         .forEach((name, type) -> builder.addColumn(name, convertDataType(type)));
     cosmosTableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKey);
-    // The clustering order is always ASC for now
     cosmosTableMetadata
         .getClusteringKeyNames()
-        .forEach(n -> builder.addClusteringKey(n, Scan.Ordering.Order.ASC));
+        .forEach(
+            n ->
+                builder.addClusteringKey(
+                    n, Order.valueOf(cosmosTableMetadata.getClusteringOrders().get(n))));
     cosmosTableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndex);
     return builder.build();
   }
