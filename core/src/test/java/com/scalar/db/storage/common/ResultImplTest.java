@@ -62,7 +62,7 @@ public class ResultImplTest {
             .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
             .put(ANY_COLUMN_NAME_1, new BooleanValue(ANY_COLUMN_NAME_1, true))
             .put(ANY_COLUMN_NAME_2, new IntValue(ANY_COLUMN_NAME_2, Integer.MAX_VALUE))
-            .put(ANY_COLUMN_NAME_3, new BigIntValue(ANY_COLUMN_NAME_3, Long.MAX_VALUE))
+            .put(ANY_COLUMN_NAME_3, new BigIntValue(ANY_COLUMN_NAME_3, BigIntValue.MAX_VALUE))
             .put(ANY_COLUMN_NAME_4, new FloatValue(ANY_COLUMN_NAME_4, Float.MAX_VALUE))
             .put(ANY_COLUMN_NAME_5, new DoubleValue(ANY_COLUMN_NAME_5, Double.MAX_VALUE))
             .put(ANY_COLUMN_NAME_6, new TextValue(ANY_COLUMN_NAME_6, "string"))

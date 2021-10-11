@@ -20,7 +20,7 @@ public class MapVisitorTest {
       new BooleanValue("any_boolean", ANY_BOOLEAN);
   private static final int ANY_INT = Integer.MIN_VALUE;
   private static final IntValue ANY_INT_VALUE = new IntValue("any_int", ANY_INT);
-  private static final long ANY_BIGINT = Long.MAX_VALUE;
+  private static final long ANY_BIGINT = BigIntValue.MAX_VALUE;
   private static final BigIntValue ANY_BIGINT_VALUE = new BigIntValue("any_bigint", ANY_BIGINT);
   private static final float ANY_FLOAT = Float.MIN_NORMAL;
   private static final FloatValue ANY_FLOAT_VALUE = new FloatValue("any_float", ANY_FLOAT);
