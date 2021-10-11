@@ -9,6 +9,7 @@ import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +49,7 @@ public class ResultInterpreterTest {
     when(row.getString(ANY_NAME_2)).thenReturn(ANY_TEXT_2);
     when(row.getBool(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(row.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
-    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(Long.MAX_VALUE);
+    when(row.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntValue.MAX_VALUE);
     when(row.getFloat(ANY_COLUMN_NAME_4)).thenReturn(Float.MAX_VALUE);
     when(row.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(row.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
@@ -85,7 +86,8 @@ public class ResultInterpreterTest {
     assertThat(result.getValue(ANY_COLUMN_NAME_2).isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_2).get().getAsInt()).isEqualTo(Integer.MAX_VALUE);
     assertThat(result.getValue(ANY_COLUMN_NAME_3).isPresent()).isTrue();
-    assertThat(result.getValue(ANY_COLUMN_NAME_3).get().getAsLong()).isEqualTo(Long.MAX_VALUE);
+    assertThat(result.getValue(ANY_COLUMN_NAME_3).get().getAsLong())
+        .isEqualTo(BigIntValue.MAX_VALUE);
     assertThat(result.getValue(ANY_COLUMN_NAME_4).isPresent()).isTrue();
     assertThat(result.getValue(ANY_COLUMN_NAME_4).get().getAsFloat()).isEqualTo(Float.MAX_VALUE);
     assertThat(result.getValue(ANY_COLUMN_NAME_5).isPresent()).isTrue();
@@ -110,7 +112,7 @@ public class ResultInterpreterTest {
     assertThat(values.containsKey(ANY_COLUMN_NAME_2)).isTrue();
     assertThat(values.get(ANY_COLUMN_NAME_2).getAsInt()).isEqualTo(Integer.MAX_VALUE);
     assertThat(values.containsKey(ANY_COLUMN_NAME_3)).isTrue();
-    assertThat(values.get(ANY_COLUMN_NAME_3).getAsLong()).isEqualTo(Long.MAX_VALUE);
+    assertThat(values.get(ANY_COLUMN_NAME_3).getAsLong()).isEqualTo(BigIntValue.MAX_VALUE);
     assertThat(values.containsKey(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(values.get(ANY_COLUMN_NAME_4).getAsFloat()).isEqualTo(Float.MAX_VALUE);
     assertThat(values.containsKey(ANY_COLUMN_NAME_5)).isTrue();
