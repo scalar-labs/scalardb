@@ -9,8 +9,6 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.NotFoundException;
-import com.azure.cosmos.models.CompositePath;
-import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -55,8 +53,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
   private static final String CONTAINER_PARTITION_KEY = "/" + CONCATENATED_PARTITION_KEY;
   private static final String PARTITION_KEY_PATH = CONTAINER_PARTITION_KEY + "/?";
-  private static final String CLUSTERING_KEY_PATH_PREFIX = "/clusteringKey/";
-  private static final String SECONDARY_INDEX_KEY_PATH_PREFIX = "/values/";
+  private static final String CLUSTERING_KEY_PATH = "/clusteringKey/*";
+  private static final String SECONDARY_INDEX_KEY_PATH = "/values/";
   private static final String EXCLUDED_PATH = "/*";
   private static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
@@ -133,28 +131,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     IndexingPolicy indexingPolicy = new IndexingPolicy();
     ArrayList<IncludedPath> paths = new ArrayList<>();
     paths.add(new IncludedPath(PARTITION_KEY_PATH));
-
-    if (metadata.getClusteringKeyNames().size() == 1) {
-      paths.add(new IncludedPath(CLUSTERING_KEY_PATH_PREFIX + "*"));
-    } else if (metadata.getClusteringKeyNames().size() > 1) {
-      // Add a composite index if we have multiple clustering keys
-      ArrayList<CompositePath> compositePaths = new ArrayList<>();
-      metadata
-          .getClusteringKeyNames()
-          .forEach(
-              c -> {
-                CompositePath compositePath = new CompositePath();
-                compositePath.setPath(CLUSTERING_KEY_PATH_PREFIX + c);
-                // Always ASCENDING fow now
-                compositePath.setOrder(CompositePathSortOrder.ASCENDING);
-                compositePaths.add(compositePath);
-              });
-      indexingPolicy.setCompositeIndexes(Collections.singletonList(compositePaths));
-    }
-
+    paths.add(new IncludedPath(CLUSTERING_KEY_PATH));
     paths.addAll(
         metadata.getSecondaryIndexNames().stream()
-            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH_PREFIX + index + "/?"))
+            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH + index + "/?"))
             .collect(Collectors.toList()));
     indexingPolicy.setIncludedPaths(paths);
     indexingPolicy.setExcludedPaths(Collections.singletonList(new ExcludedPath(EXCLUDED_PATH)));

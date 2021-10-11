@@ -17,13 +17,11 @@ import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosScripts;
-import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
-import com.azure.cosmos.models.IndexingPolicy;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.ThroughputProperties;
 import com.azure.cosmos.util.CosmosPagedIterable;
@@ -205,6 +203,7 @@ public class CosmosAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
+            .addClusteringKey("c4", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -238,23 +237,7 @@ public class CosmosAdminTest {
     admin.createTable(namespace, table, metadata, Collections.emptyMap());
 
     // Assert
-    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
-        ArgumentCaptor.forClass(CosmosContainerProperties.class);
-
-    verify(database).createContainer(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
-
-    // check index related info
-    IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
-    assertThat(indexingPolicy.getIncludedPaths().size()).isEqualTo(3);
-    assertThat(indexingPolicy.getIncludedPaths().get(0).getPath())
-        .isEqualTo("/concatenatedPartitionKey/?");
-    assertThat(indexingPolicy.getIncludedPaths().get(1).getPath()).isEqualTo("/clusteringKey/*");
-    assertThat(indexingPolicy.getIncludedPaths().get(2).getPath()).isEqualTo("/values/c4/?");
-    assertThat(indexingPolicy.getExcludedPaths().size()).isEqualTo(1);
-    assertThat(indexingPolicy.getExcludedPaths().get(0).getPath()).isEqualTo("/*");
-    assertThat(indexingPolicy.getCompositeIndexes()).isEmpty();
-
+    verify(database).createContainer(any(CosmosContainerProperties.class));
     verify(cosmosScripts).createStoredProcedure(any(CosmosStoredProcedureProperties.class));
 
     // for metadata table
@@ -262,6 +245,8 @@ public class CosmosAdminTest {
         .createDatabaseIfNotExists(
             eq(metadataDatabaseName),
             refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
+    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
+        ArgumentCaptor.forClass(CosmosContainerProperties.class);
     verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
     assertThat(containerPropertiesCaptor.getValue().getId())
         .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
@@ -270,121 +255,7 @@ public class CosmosAdminTest {
     CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
     cosmosTableMetadata.setId(getFullTableName(namespace, table));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
-    cosmosTableMetadata.setClusteringKeyNames(Collections.singletonList("c1"));
-    cosmosTableMetadata.setColumns(
-        new ImmutableMap.Builder<String, String>()
-            .put("c1", "text")
-            .put("c2", "bigint")
-            .put("c3", "boolean")
-            .put("c4", "blob")
-            .put("c5", "int")
-            .put("c6", "double")
-            .put("c7", "float")
-            .build());
-    cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c4"));
-    verify(metadataContainer).upsertItem(cosmosTableMetadata);
-  }
-
-  @Test
-  public void
-      createTable_WithMultipleClusteringKeysWithoutTableMetadataDatabaseChanged_ShouldCreateContainerWithCompositeIndex()
-          throws ExecutionException {
-    createTable_WithMultipleClusteringKeys_ShouldCreateContainerWithCompositeIndex(
-        Optional.empty());
-  }
-
-  @Test
-  public void
-      createTable_WithMultipleClusteringKeysWithTableMetadataDatabaseChanged_ShouldCreateContainerWithCompositeIndex()
-          throws ExecutionException {
-    createTable_WithMultipleClusteringKeys_ShouldCreateContainerWithCompositeIndex(
-        Optional.of("changed"));
-  }
-
-  private void createTable_WithMultipleClusteringKeys_ShouldCreateContainerWithCompositeIndex(
-      Optional<String> tableMetadataDatabase) throws ExecutionException {
-    // Arrange
-    String namespace = "ns";
-    String table = "sample_table";
-    TableMetadata metadata =
-        TableMetadata.newBuilder()
-            .addPartitionKey("c3")
-            .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c2", Order.ASC)
-            .addColumn("c1", DataType.TEXT)
-            .addColumn("c2", DataType.BIGINT)
-            .addColumn("c3", DataType.BOOLEAN)
-            .addColumn("c4", DataType.BLOB)
-            .addColumn("c5", DataType.INT)
-            .addColumn("c6", DataType.DOUBLE)
-            .addColumn("c7", DataType.FLOAT)
-            .addSecondaryIndex("c4")
-            .build();
-
-    when(client.getDatabase(namespace)).thenReturn(database);
-    when(database.getContainer(table)).thenReturn(container);
-    CosmosScripts cosmosScripts = Mockito.mock(CosmosScripts.class);
-    when(container.getScripts()).thenReturn(cosmosScripts);
-
-    // for metadata table
-    String metadataDatabaseName = tableMetadataDatabase.orElse(CosmosAdmin.METADATA_DATABASE);
-
-    CosmosDatabase metadataDatabase = mock(CosmosDatabase.class);
-    CosmosContainer metadataContainer = mock(CosmosContainer.class);
-    when(client.getDatabase(metadataDatabaseName)).thenReturn(metadataDatabase);
-    when(metadataDatabase.getContainer(CosmosAdmin.METADATA_CONTAINER))
-        .thenReturn(metadataContainer);
-
-    if (tableMetadataDatabase.isPresent()) {
-      when(config.getTableMetadataDatabase()).thenReturn(tableMetadataDatabase);
-      admin = new CosmosAdmin(client, config);
-    }
-
-    // Act
-    admin.createTable(namespace, table, metadata, Collections.emptyMap());
-
-    // Assert
-    ArgumentCaptor<CosmosContainerProperties> containerPropertiesCaptor =
-        ArgumentCaptor.forClass(CosmosContainerProperties.class);
-
-    verify(database).createContainer(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId()).isEqualTo(table);
-
-    // check index related info
-    IndexingPolicy indexingPolicy = containerPropertiesCaptor.getValue().getIndexingPolicy();
-    assertThat(indexingPolicy.getIncludedPaths().size()).isEqualTo(2);
-    assertThat(indexingPolicy.getIncludedPaths().get(0).getPath())
-        .isEqualTo("/concatenatedPartitionKey/?");
-    assertThat(indexingPolicy.getIncludedPaths().get(1).getPath()).isEqualTo("/values/c4/?");
-    assertThat(indexingPolicy.getExcludedPaths().size()).isEqualTo(1);
-    assertThat(indexingPolicy.getExcludedPaths().get(0).getPath()).isEqualTo("/*");
-    assertThat(indexingPolicy.getCompositeIndexes().size()).isEqualTo(1);
-    assertThat(indexingPolicy.getCompositeIndexes().get(0).size()).isEqualTo(2);
-    assertThat(indexingPolicy.getCompositeIndexes().get(0).get(0).getPath())
-        .isEqualTo("/clusteringKey/c1");
-    assertThat(indexingPolicy.getCompositeIndexes().get(0).get(0).getOrder())
-        .isEqualTo(CompositePathSortOrder.ASCENDING);
-    assertThat(indexingPolicy.getCompositeIndexes().get(0).get(1).getPath())
-        .isEqualTo("/clusteringKey/c2");
-    assertThat(indexingPolicy.getCompositeIndexes().get(0).get(1).getOrder())
-        .isEqualTo(CompositePathSortOrder.ASCENDING); // always ASCENDING for now
-
-    verify(cosmosScripts).createStoredProcedure(any(CosmosStoredProcedureProperties.class));
-
-    // for metadata table
-    verify(client)
-        .createDatabaseIfNotExists(
-            eq(metadataDatabaseName),
-            refEq(ThroughputProperties.createManualThroughput(Integer.parseInt("400"))));
-    verify(metadataDatabase).createContainerIfNotExists(containerPropertiesCaptor.capture());
-    assertThat(containerPropertiesCaptor.getValue().getId())
-        .isEqualTo(CosmosAdmin.METADATA_CONTAINER);
-    assertThat(containerPropertiesCaptor.getValue().getPartitionKeyDefinition().getPaths())
-        .containsExactly("/id");
-    CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
-    cosmosTableMetadata.setId(getFullTableName(namespace, table));
-    cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
-    cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c2"));
+    cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c4"));
     cosmosTableMetadata.setColumns(
         new ImmutableMap.Builder<String, String>()
             .put("c1", "text")
