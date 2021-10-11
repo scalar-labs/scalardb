@@ -22,10 +22,8 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -132,18 +130,15 @@ public class SelectStatementHandler extends StatementHandler {
 
   private void createStatement(Select.Where statement, Scan scan) {
     setKey(statement, Optional.of(scan.getPartitionKey()));
-
-    Set<String> traveledEqualKeySet = new HashSet<>();
-
-    setStart(statement, scan, traveledEqualKeySet);
-    setEnd(statement, scan, traveledEqualKeySet);
+    setStart(statement, scan);
+    setEnd(statement, scan);
   }
 
   private void setKey(Select.Where statement, Optional<Key> key) {
     key.ifPresent(k -> k.forEach(v -> statement.and(eq(v.getName(), bindMarker()))));
   }
 
-  private void setStart(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
+  private void setStart(Select.Where statement, Scan scan) {
     if (!scan.getStartClusteringKey().isPresent()) {
       return;
     }
@@ -162,15 +157,13 @@ public class SelectStatementHandler extends StatementHandler {
                             statement.and(gt(start.get(i).getName(), bindMarker()));
                           }
                         } else {
-                          String cKeyName = start.get(i).getName();
-                          statement.and(eq(cKeyName, bindMarker()));
-                          traveledEqualKeySet.add(cKeyName);
+                          statement.and(eq(start.get(i).getName(), bindMarker()));
                         }
                       });
             });
   }
 
-  private void setEnd(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
+  private void setEnd(Select.Where statement, Scan scan) {
     if (!scan.getEndClusteringKey().isPresent()) {
       return;
     }
@@ -189,11 +182,7 @@ public class SelectStatementHandler extends StatementHandler {
                             statement.and(lt(end.get(i).getName(), bindMarker()));
                           }
                         } else {
-                          String cKeyName = end.get(i).getName();
-                          if (!traveledEqualKeySet.contains(cKeyName)) {
-                            statement.and(eq(cKeyName, bindMarker()));
-                            traveledEqualKeySet.add(cKeyName);
-                          }
+                          statement.and(eq(end.get(i).getName(), bindMarker()));
                         }
                       });
             });
@@ -214,39 +203,8 @@ public class SelectStatementHandler extends StatementHandler {
 
     // bind in the prepared order
     scan.getPartitionKey().forEach(v -> v.accept(binder));
-
-    Set<String> traveledEqualKeySet = new HashSet<>();
-    scan.getStartClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> start = k.get();
-              IntStream.range(0, start.size())
-                  .forEach(
-                      i -> {
-                        if (i == (start.size() - 1)) {
-                          start.get(i).accept(binder);
-                        } else {
-                          traveledEqualKeySet.add(start.get(i).getName());
-                          start.get(i).accept(binder);
-                        }
-                      });
-            });
-    scan.getEndClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> end = k.get();
-              IntStream.range(0, end.size())
-                  .forEach(
-                      i -> {
-                        if (i == (end.size() - 1)) {
-                          end.get(i).accept(binder);
-                        } else {
-                          if (!traveledEqualKeySet.contains(end.get(i).getName())) {
-                            end.get(i).accept(binder);
-                          }
-                        }
-                      });
-            });
+    scan.getStartClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
+    scan.getEndClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
 
     return bound;
   }

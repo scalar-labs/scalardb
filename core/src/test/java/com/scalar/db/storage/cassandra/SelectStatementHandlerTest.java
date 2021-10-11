@@ -227,6 +227,8 @@ public class SelectStatementHandlerTest {
                   "AND",
                   ANY_NAME_3 + ">=?",
                   "AND",
+                  ANY_NAME_2 + "=?",
+                  "AND",
                   ANY_NAME_3 + "<=?;",
                 });
     configureBehavior(expected);
@@ -383,7 +385,8 @@ public class SelectStatementHandlerTest {
     verify(bound).setString(0, ANY_TEXT_1);
     verify(bound).setString(1, ANY_TEXT_2);
     verify(bound).setString(2, ANY_TEXT_3);
-    verify(bound).setString(3, ANY_TEXT_4);
+    verify(bound).setString(3, ANY_TEXT_2);
+    verify(bound).setString(4, ANY_TEXT_4);
   }
 
   @Test
