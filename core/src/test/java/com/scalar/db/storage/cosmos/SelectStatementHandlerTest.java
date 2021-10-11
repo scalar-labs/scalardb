@@ -22,6 +22,7 @@ import com.azure.cosmos.util.CosmosPagedIterable;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
@@ -74,6 +75,7 @@ public class SelectStatementHandlerTest {
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
     when(metadata.getSecondaryIndexNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
   }
 
   private Get prepareGet() {
@@ -350,7 +352,7 @@ public class SelectStatementHandlerTest {
             + ANY_NAME_2
             + " >= '"
             + ANY_TEXT_2
-            + "') order by r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
             + ANY_NAME_2
             + " asc offset 0 limit "
             + ANY_LIMIT;
@@ -384,7 +386,7 @@ public class SelectStatementHandlerTest {
             + ANY_NAME_2
             + " >= '"
             + ANY_TEXT_2
-            + "') order by r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
             + ANY_NAME_2
             + " asc, r.clusteringKey."
             + ANY_NAME_3
