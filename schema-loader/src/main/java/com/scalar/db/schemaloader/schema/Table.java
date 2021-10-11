@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,12 +56,12 @@ public class Table {
   }
 
   public Table(String tableFullName, JsonObject tableDefinition, Map<String, String> metaOptions)
-      throws RuntimeException {
+      throws SchemaException {
     traveledKeys = new HashSet<>();
 
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
-      throw new RuntimeException("Table full name must contains table name and namespace");
+      throw new SchemaException("Table full name must contains table name and namespace");
     }
     namespace = fullName[0];
     tableName = fullName[1];
@@ -68,12 +69,12 @@ public class Table {
     options = buildOptions(tableDefinition, metaOptions);
   }
 
-  protected TableMetadata buildTableMetadata(JsonObject tableDefinition) {
+  protected TableMetadata buildTableMetadata(JsonObject tableDefinition) throws SchemaException {
     TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
 
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
-      throw new RuntimeException("Table must contains partition key");
+      throw new SchemaException("Table must contains partition key");
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
@@ -99,7 +100,7 @@ public class Table {
           order = clusteringKeyFull[1];
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
-          throw new RuntimeException("Invalid clustering keys");
+          throw new SchemaException("Invalid clustering keys");
         }
       }
     }
@@ -117,7 +118,7 @@ public class Table {
 
     // Add columns
     if (!tableDefinition.keySet().contains(COLUMNS)) {
-      throw new RuntimeException("Table must contains columns");
+      throw new SchemaException("Table must contains columns");
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
@@ -125,7 +126,7 @@ public class Table {
       String columnName = column.getKey();
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
       if (columnDataType == null) {
-        throw new RuntimeException("Invalid column type for column " + columnName);
+        throw new SchemaException("Invalid column type for column " + columnName);
       }
       tableBuilder.addColumn(columnName, columnDataType);
     }
@@ -147,7 +148,12 @@ public class Table {
     Map<String, String> options = new HashMap<>(metaOptions);
     for (Map.Entry<String, JsonElement> option : tableDefinition.entrySet()) {
       if (!traveledKeys.contains(option.getKey())) {
-        options.put(option.getKey(), option.getValue().getAsString());
+        // For backward compatibility
+        if (option.getKey().equals("network-strategy")) {
+          options.put(CassandraAdmin.REPLICATION_STRATEGY, option.getValue().getAsString());
+        } else {
+          options.put(option.getKey(), option.getValue().getAsString());
+        }
       }
     }
     return options;

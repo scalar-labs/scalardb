@@ -7,8 +7,6 @@ import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
-import com.scalar.db.util.Utility;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +20,10 @@ public class SchemaOperator {
 
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitAdmin consensusCommitAdmin;
-  private final boolean storageCommandSpecific;
+  private final boolean isStorageSpecificCommand;
 
-  public SchemaOperator(DatabaseConfig dbConfig, boolean storageCommandSpecific) {
-    this.storageCommandSpecific = storageCommandSpecific;
+  public SchemaOperator(DatabaseConfig dbConfig, boolean isStorageSpecificCommand) {
+    this.isStorageSpecificCommand = isStorageSpecificCommand;
     StorageFactory storageFactory = new StorageFactory(dbConfig);
     admin = storageFactory.getAdmin();
     consensusCommitAdmin =
@@ -68,7 +66,7 @@ public class SchemaOperator {
       }
     }
 
-    if (hasTransactionTable && storageCommandSpecific) {
+    if (hasTransactionTable && isStorageSpecificCommand) {
       createCoordinatorTable(metaOptions);
     }
   }
@@ -76,16 +74,9 @@ public class SchemaOperator {
   public void createCoordinatorTable(Map<String, String> options) {
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
-      LOGGER.info(
-          "Create table "
-              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-              + " successfully.");
+      LOGGER.info("Create the coordinator table successfully.");
     } catch (ExecutionException e) {
-      LOGGER.warn(
-          "Create table "
-              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-              + " failed.",
-          e);
+      LOGGER.warn("Create the coordinator table failed.", e);
     }
   }
 
@@ -109,7 +100,7 @@ public class SchemaOperator {
         LOGGER.warn("Delete table " + table.getTable() + " failed.", e);
       }
     }
-    if (hasTransactionTable && storageCommandSpecific) {
+    if (hasTransactionTable && isStorageSpecificCommand) {
       dropCoordinatorTable();
     }
 
@@ -131,16 +122,9 @@ public class SchemaOperator {
   public void dropCoordinatorTable() {
     try {
       consensusCommitAdmin.dropCoordinatorTable();
-      LOGGER.info(
-          "Deleted table "
-              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-              + " successfully.");
+      LOGGER.info("Delete the coordinator table successfully.");
     } catch (ExecutionException e) {
-      LOGGER.warn(
-          "Delete table "
-              + Utility.getFullTableName(Coordinator.NAMESPACE, Coordinator.TABLE)
-              + " failed.",
-          e);
+      LOGGER.warn("Delete the coordinator table failed.", e);
     }
   }
 

@@ -5,7 +5,6 @@ import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -60,7 +59,7 @@ public class JdbcCommand implements Callable<Integer> {
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
     SchemaOperator operator = new SchemaOperator(dbConfig, true);
-    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), new HashMap<>());
+    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), Collections.emptyMap());
 
     if (deleteTables) {
       operator.deleteTables(schemaParser.getTables());

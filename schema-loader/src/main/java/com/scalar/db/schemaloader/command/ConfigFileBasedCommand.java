@@ -55,7 +55,10 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
   private Boolean noBackup;
 
-  @Option(names = "--coordinator", description = "Create coordinator table", defaultValue = "false")
+  @Option(
+      names = "--coordinator",
+      description = "Create/delete coordinator table",
+      defaultValue = "false")
   private boolean coordinator;
 
   @Option(

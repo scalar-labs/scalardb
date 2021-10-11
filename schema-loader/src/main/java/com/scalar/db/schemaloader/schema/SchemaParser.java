@@ -3,6 +3,7 @@ package com.scalar.db.schemaloader.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -16,7 +17,8 @@ public class SchemaParser {
 
   private final List<Table> tableList;
 
-  public SchemaParser(String jsonFilePath, Map<String, String> metaOptions) throws Exception {
+  public SchemaParser(String jsonFilePath, Map<String, String> metaOptions)
+      throws SchemaException, IOException {
     Reader reader = Files.newBufferedReader(Paths.get(jsonFilePath));
     JsonObject schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
 
