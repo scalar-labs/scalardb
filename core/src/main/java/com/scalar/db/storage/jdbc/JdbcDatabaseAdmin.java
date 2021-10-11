@@ -163,66 +163,31 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try (Connection connection = dataSource.getConnection()) {
-      try {
-        connection.setAutoCommit(false);
-        connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-        createTableInternal(connection, namespace, table, metadata);
-        createIndex(connection, namespace, table, metadata);
-
-        connection.commit();
-      } catch (SQLException e) {
-        connection.rollback();
-        throw e;
-      }
+      createTableInternal(connection, namespace, table, metadata);
+      createIndex(connection, namespace, table, metadata);
+      addTableMetadata(connection, namespace, table, metadata);
     } catch (SQLException e) {
-      throw new ExecutionException("creating the table failed", e);
-    }
-    addTableMetadata(namespace, table, metadata);
-  }
-
-  private void addTableMetadata(String namespace, String table, TableMetadata metadata)
-      throws ExecutionException {
-    createMetadataSchemaAndTableIfNotExists();
-    try (Connection connection = dataSource.getConnection()) {
-      // Start transaction to commit all the insert statements at once
-      connection.setAutoCommit(false);
-      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-
-      LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
-      orderedColumns.addAll(metadata.getClusteringKeyNames());
-      orderedColumns.addAll(metadata.getColumnNames());
-
-      int ordinalPosition = 1;
-      try {
-        for (String column : orderedColumns) {
-          insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
-        }
-        connection.commit();
-      } catch (SQLException e) {
-        connection.rollback();
-        throw e;
-      }
-    } catch (SQLException e) {
-      throw new ExecutionException("adding the table metadata failed", e);
+      throw new ExecutionException(
+          "creating the table failed: " + getFullTableName(namespace, table), e);
     }
   }
 
-  private void createMetadataSchemaAndTableIfNotExists() throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      connection.setAutoCommit(false);
-      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-      try {
-        createMetadataSchemaIfNotExists(connection);
-        createMetadataTableIfNotExists(connection);
-        connection.commit();
-      } catch (SQLException e) {
-        connection.rollback();
-        throw e;
-      }
-
-    } catch (SQLException e) {
-      throw new ExecutionException("creating the metadata table failed", e);
+  private void addTableMetadata(
+      Connection connection, String namespace, String table, TableMetadata metadata)
+      throws SQLException {
+    createMetadataSchemaAndTableIfNotExists(connection);
+    LinkedHashSet<String> orderedColumns = new LinkedHashSet<>(metadata.getPartitionKeyNames());
+    orderedColumns.addAll(metadata.getClusteringKeyNames());
+    orderedColumns.addAll(metadata.getColumnNames());
+    int ordinalPosition = 1;
+    for (String column : orderedColumns) {
+      insertMetadataColumn(namespace, table, metadata, connection, ordinalPosition++, column);
     }
+  }
+
+  private void createMetadataSchemaAndTableIfNotExists(Connection connection) throws SQLException {
+    createMetadataSchemaIfNotExists(connection);
+    createMetadataTableIfNotExists(connection);
   }
 
   private void createMetadataSchemaIfNotExists(Connection connection) throws SQLException {
@@ -413,31 +378,31 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    dropTableInternal(namespace, table);
-    deleteTableMetadata(namespace, table);
+    try (Connection connection = dataSource.getConnection()) {
+      dropTableInternal(connection, namespace, table);
+      deleteTableMetadata(connection, namespace, table);
+    } catch (SQLException e) {
+      throw new ExecutionException(
+          "dropping the table failed: " + getFullTableName(namespace, table), e);
+    }
   }
 
-  private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
-    try (Connection connection = dataSource.getConnection()) {
-      connection.setAutoCommit(false);
-      connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-      try {
-        execute(connection, getDeleteTableMetadataStatement(namespace, table));
-        deleteMetadataSchemaAndTableIfEmpty(connection);
-        connection.commit();
-      } catch (SQLException e) {
-        connection.rollback();
-        throw e;
-      }
+  private void dropTableInternal(Connection connection, String schema, String table)
+      throws SQLException {
+    String dropTableStatement = "DROP TABLE " + encloseFullTableName(schema, table);
+    execute(connection, dropTableStatement);
+  }
 
+  private void deleteTableMetadata(Connection connection, String namespace, String table)
+      throws SQLException {
+    try {
+      execute(connection, getDeleteTableMetadataStatement(namespace, table));
+      deleteMetadataSchemaAndTableIfEmpty(connection);
     } catch (SQLException e) {
       if (e.getMessage().contains("Unknown table") || e.getMessage().contains("does not exist")) {
         return;
       }
-      throw new ExecutionException(
-          String.format(
-              "deleting the %s table metadata failed ", getFullTableName(namespace, table)),
-          e);
+      throw e;
     }
   }
 
@@ -779,15 +744,5 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   private String encloseFullTableName(String schema, String table) {
     return enclosedFullTableName(schema, table, rdbEngine);
-  }
-
-  private void dropTableInternal(String schema, String table) throws ExecutionException {
-    String dropTableStatement = "DROP TABLE " + encloseFullTableName(schema, table);
-    try (Connection connection = dataSource.getConnection()) {
-      execute(connection, dropTableStatement);
-    } catch (SQLException e) {
-      throw new ExecutionException(
-          "error dropping the table " + getFullTableName(schema, table), e);
-    }
   }
 }
