@@ -145,7 +145,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       paths.add(new IncludedPath(PARTITION_KEY_PATH + "/?"));
     } else {
       // Add a composite index when we have clustering keys
-      ArrayList<CompositePath> compositePaths = new ArrayList<>();
+      List<CompositePath> compositePaths = new ArrayList<>();
 
       // Add concatenated partition key to the composite path first
       CompositePath partitionKeyCompositePath = new CompositePath();
