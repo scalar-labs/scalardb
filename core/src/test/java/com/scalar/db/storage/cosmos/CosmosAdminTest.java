@@ -2,6 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.Utility.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -203,7 +204,7 @@ public class CosmosAdminTest {
         TableMetadata.newBuilder()
             .addPartitionKey("c3")
             .addClusteringKey("c1", Order.DESC)
-            .addClusteringKey("c4", Order.ASC)
+            .addClusteringKey("c2", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
             .addColumn("c3", DataType.BOOLEAN)
@@ -255,7 +256,7 @@ public class CosmosAdminTest {
     CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
     cosmosTableMetadata.setId(getFullTableName(namespace, table));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
-    cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c4"));
+    cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c2"));
     cosmosTableMetadata.setColumns(
         new ImmutableMap.Builder<String, String>()
             .put("c1", "text")
@@ -268,6 +269,25 @@ public class CosmosAdminTest {
             .build());
     cosmosTableMetadata.setSecondaryIndexNames(ImmutableSet.of("c4"));
     verify(metadataContainer).upsertItem(cosmosTableMetadata);
+  }
+
+  @Test
+  public void createTable_WithBlobClusteringKey_ShouldThrowExecutionException() {
+    // Arrange
+    String namespace = "ns";
+    String table = "sample_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1")
+            .addColumn("c1", DataType.BLOB)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .build();
+
+    // Act Assert
+    assertThatThrownBy(() -> admin.createTable(namespace, table, metadata))
+        .isInstanceOf(ExecutionException.class);
   }
 
   @Test
