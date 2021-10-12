@@ -1,5 +1,5 @@
 # Scalar DB Schema Loader
-This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file. Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) when you set the `transaction` parameter `true` in the schema file.
+This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file. Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter `true` in the schema file.
 
 There are two ways to specify general cli options in schema-loader.
   - Pass a Scalar DB configuration file, and additional options of database-specific.
