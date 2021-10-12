@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--jdbc", description = "Using JDBC type DB")
+@Command(name = "--jdbc", description = "Using a JDBC database")
 public class JdbcCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);

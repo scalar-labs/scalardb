@@ -44,15 +44,15 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
   @Option(
       names = {"-r", "--ru"},
-      description = "Base resource unit (supported in Dynamo DB, Cosmos DB)")
+      description = "Base resource unit (supported in DynamoDB, Cosmos DB)")
   private String ru;
 
   @Option(
       names = "--no-scaling",
-      description = "Disable auto-scaling (supported in Dynamo DB, Cosmos DB)")
+      description = "Disable auto-scaling (supported in DynamoDB, Cosmos DB)")
   private Boolean noScaling;
 
-  @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
+  @Option(names = "--no-backup", description = "Disable continuous backup for DynamoDB")
   private Boolean noBackup;
 
   @Option(

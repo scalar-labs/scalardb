@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--dynamo", description = "Using Dynamo DB")
+@Command(name = "--dynamo", description = "Using DynamoDB")
 public class DynamoCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
@@ -40,15 +40,15 @@ public class DynamoCommand implements Callable<Integer> {
       description = "Base resource unit")
   private String ru;
 
-  @Option(names = "--no-scaling", description = "Disable auto-scaling for Dynamo DB")
+  @Option(names = "--no-scaling", description = "Disable auto-scaling for DynamoDB")
   private Boolean noScaling;
 
-  @Option(names = "--no-backup", description = "Disable continuous backup for Dynamo DB")
+  @Option(names = "--no-backup", description = "Disable continuous backup for DynamoDB")
   private Boolean noBackup;
 
   @Option(
       names = "--endpoint-override",
-      description = "Endpoint with which the Dynamo DB SDK should communicate")
+      description = "Endpoint with which the DynamoDB SDK should communicate")
   private String endpointOverride;
 
   @Option(

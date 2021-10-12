@@ -1,10 +1,5 @@
 # Scalar DB Schema Loader
-This tool used for creating, deleting schemas along with necessary metadata of Scalar DB on Cosmos DB, DynamoDB, Cassandra and a JDBC database.
-  - For Cosmos DB, this tool works on databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB. You can specify the resource base unit, scaling option as well.
-  - For DynamoDB, this tool works on tables named with the database names, also inserts metadata which is required by Scalar DB. You can specify the resource base unit, backup and scaling option as well.
-  - For Cassandra, this tool works on databases(keyspaces) and tables, also inserts metadata which is required by Scalar DB. You can specify the compaction strategy, the network topology strategy, and the replication factor as well.
-  - For a JDBC database, this tool works on databases(schemas) and tables, also inserts metadata which is required by Scalar DB.
-  - Scalar DB metadata for transactions are automatically added when you set the `transaction` parameter `true` in the schema file.
+This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file. Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) when you set the `transaction` parameter `true` in the schema file.
 
 There are two ways to specify general cli options in schema-loader.
   - Pass a Scalar DB configuration file, and additional options of database-specific.
@@ -22,97 +17,97 @@ The built cli application is `./build/install/schema-loader/bin/schema-loader`
 For using config file
 ```console
 Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
-                              [-c=<compactionStrategy>] [-f=<schemaFile>]
-                              [-n=<replicationStrategy>] [-r=<ru>]
-                              [-R=<replicaFactor>] <configPath>
+                              [-c <compactionStrategy>] [-f <schemaFile>]
+                              [-n <replicationStrategy>] [-r <ru>]
+                              [-R <replicaFactor>] <configPath>
 Using config file for Scalar DB
       <configPath>    Path to config file of Scalar DB
-  -c, --compaction-strategy=<compactionStrategy>
+  -c, --compaction-strategy <compactionStrategy>
                       Cassandra compaction strategy, should be LCS, STCS or TWCS
-      --coordinator   Create coordinator table
+      --coordinator   Create/delete coordinator table
   -D, --delete-all    Delete tables
-  -f, --schema-file=<schemaFile>
+  -f, --schema-file <schemaFile>
                       Path to schema json file
-  -n, --replication-strategy=<replicationStrategy>
+  -n, --replication-strategy <replicationStrategy>
                       Cassandra network strategy, should be SimpleStrategy or
                         NetworkTopologyStrategy
-      --no-backup     Disable continuous backup for Dynamo DB
-      --no-scaling    Disable auto-scaling (supported in Dynamo DB, Cosmos DB)
-  -r, --ru=<ru>       Base resource unit (supported in Dynamo DB, Cosmos DB)
-  -R, --replication-factor=<replicaFactor>
+      --no-backup     Disable continuous backup for DynamoDB
+      --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
+  -r, --ru <ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
+  -R, --replication-factor <replicaFactor>
                       Cassandra replication factor
 ```
 For Cosmos DB
 ```console
-Usage: schema-loader --cosmos [-D] [--no-scaling] -f=<schemaFile> -h=<uri>
-                              -p=<key> [-r=<ru>]
+Usage: schema-loader --cosmos [-D] [--no-scaling] -f <schemaFile> -h <uri>
+                              -p <key> [-r <ru>]
 Using Cosmos DB
   -D, --delete-all       Delete tables
-  -f, --schema-file=<schemaFile>
+  -f, --schema-file <schemaFile>
                          Path to schema json file
-  -h, --host=<uri>       Cosmos DB account URI
+  -h, --host <uri>       Cosmos DB account URI
       --no-scaling       Disable auto-scaling for Cosmos DB
-  -p, --password=<key>   Cosmos DB key
-  -r, --ru=<ru>          Base resource unit
+  -p, --password <key>   Cosmos DB key
+  -r, --ru <ru>          Base resource unit
 ```
-For Dynamo DB
+For DynamoDB
 ```console
 Usage: schema-loader --dynamo [-D] [--no-backup] [--no-scaling]
-                              [--endpoint-override=<endpointOverride>]
-                              -f=<schemaFile> -p=<awsSecKey> [-r=<ru>]
-                              --region=<awsRegion> -u=<awsKeyId>
-Using Dynamo DB
+                              [--endpoint-override <endpointOverride>]
+                              -f <schemaFile> -p <awsSecKey> [-r <ru>]
+                              --region <awsRegion> -u <awsKeyId>
+Using DynamoDB
   -D, --delete-all           Delete tables
-      --endpoint-override=<endpointOverride>
-                             Endpoint with which the Dynamo DB SDK should
+      --endpoint-override <endpointOverride>
+                             Endpoint with which the DynamoDB SDK should
                                communicate
-  -f, --schema-file=<schemaFile>
+  -f, --schema-file <schemaFile>
                              Path to schema json file
-      --no-backup            Disable continuous backup for Dynamo DB
-      --no-scaling           Disable auto-scaling for Dynamo DB
-  -p, --password=<awsSecKey> AWS access secret key
-  -r, --ru=<ru>              Base resource unit
-      --region=<awsRegion>   AWS region
-  -u, --user=<awsKeyId>      AWS access key ID
+      --no-backup            Disable continuous backup for DynamoDB
+      --no-scaling           Disable auto-scaling for DynamoDB
+  -p, --password <awsSecKey> AWS access secret key
+  -r, --ru <ru>              Base resource unit
+      --region <awsRegion>   AWS region
+  -u, --user <awsKeyId>      AWS access key ID
 ```
-For Cassandra DB
+For Cassandra
 ```console
-Usage: schema-loader --cassandra [-D] [-c=<compactionStrategy>] -f=<schemaFile>
-                                 -h=<hostIP> [-n=<replicationStrategy>]
-                                 [-p=<password>] [-P=<port>]
-                                 [-R=<replicaFactor>] [-u=<user>]
-Using Cassandra DB
-  -c, --compaction-strategy=<compactionStrategy>
+Usage: schema-loader --cassandra [-D] [-c <compactionStrategy>] -f <schemaFile>
+                                 -h <hostIP> [-n <replicationStrategy>]
+                                 [-p <password>] [-P <port>]
+                                 [-R <replicaFactor>] [-u <user>]
+Using Cassandra
+  -c, --compaction-strategy <compactionStrategy>
                         Cassandra compaction strategy, should be LCS, STCS or
                           TWCS
   -D, --delete-all      Delete tables
-  -f, --schema-file=<schemaFile>
+  -f, --schema-file <schemaFile>
                         Path to schema json file
-  -h, --host=<hostIP>   Cassandra host IP
-  -n, --network-strategy=<replicationStrategy>
+  -h, --host <hostIP>   Cassandra host IP
+  -n, --network-strategy <replicationStrategy>
                         Cassandra network strategy, should be SimpleStrategy or
                           NetworkTopologyStrategy
-  -p, --password=<password>
+  -p, --password <password>
                         Cassandra password
-  -P, --port=<port>     Cassandra Port
-  -R, --replication-factor=<replicaFactor>
+  -P, --port <port>     Cassandra Port
+  -R, --replication-factor <replicaFactor>
                         Cassandra replication factor
-  -u, --user=<user>     Cassandra user
+  -u, --user <user>     Cassandra user
 ```
-For JDBC type database
+For a JDBC database
 ```console
-Usage: schema-loader --jdbc [-D] -f=<schemaFile> -j=<url> -p=<password>
-                            -u=<user>
-Using JDBC type DB
+Usage: schema-loader --jdbc [-D] -f <schemaFile> -j <url> -p <password>
+                            -u <user>
+Using a JDBC database
   -D, --delete-all       Delete tables
-  -f, --schema-file=<schemaFile>
+  -f, --schema-file <schemaFile>
                          Path to schema json file
-  -j, --jdbc-url=<url>   JDBC URL
-  -p, --password=<password>
+  -j, --jdbc-url <url>   JDBC URL
+  -p, --password <password>
                          JDBC password
-  -u, --user=<user>      JDBC user
+  -u, --user <user>      JDBC user
 ```
-### Create databases/keyspaces and tables
+### Create namespaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
 ```console
 $ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json

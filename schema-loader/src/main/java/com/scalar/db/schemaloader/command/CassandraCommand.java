@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--cassandra", description = "Using Cassandra DB")
+@Command(name = "--cassandra", description = "Using Cassandra")
 public class CassandraCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
