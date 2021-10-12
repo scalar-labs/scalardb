@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--dynamo", description = "Using DynamoDB")
+@Command(name = "--dynamo", description = "Create/Delete DynamoDB schemas")
 public class DynamoCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
@@ -53,7 +53,7 @@ public class DynamoCommand implements Callable<Integer> {
 
   @Option(
       names = {"-f", "--schema-file"},
-      description = "Path to schema json file",
+      description = "Path to the schema json file",
       required = true)
   private Path schemaFile;
 

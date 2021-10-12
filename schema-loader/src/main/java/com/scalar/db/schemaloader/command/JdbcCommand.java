@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--jdbc", description = "Using a JDBC database")
+@Command(name = "--jdbc", description = "Create/Delete JDBC schemas")
 public class JdbcCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
@@ -37,7 +37,7 @@ public class JdbcCommand implements Callable<Integer> {
 
   @Option(
       names = {"-f", "--schema-file"},
-      description = "Path to schema json file",
+      description = "Path to the schema json file",
       required = true)
   private Path schemaFile;
 

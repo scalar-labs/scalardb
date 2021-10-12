@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--cosmos", description = "Using Cosmos DB")
+@Command(name = "--cosmos", description = "Create/Delete Cosmos DB schemas")
 public class CosmosCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
@@ -42,7 +42,7 @@ public class CosmosCommand implements Callable<Integer> {
 
   @Option(
       names = {"-f", "--schema-file"},
-      description = "Path to schema json file",
+      description = "Path to the schema json file",
       required = true)
   private Path schemaFile;
 

@@ -37,7 +37,7 @@ public class SchemaOperator {
       try {
         admin.createNamespace(table.getNamespace(), true, table.getOptions());
       } catch (ExecutionException e) {
-        LOGGER.warn("Create namespace " + table.getNamespace() + " failed.", e);
+        LOGGER.warn("Creating the namespace " + table.getNamespace() + " failed.", e);
       }
 
       try {
@@ -50,16 +50,16 @@ public class SchemaOperator {
               table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
         }
         LOGGER.info(
-            "Create table "
+            "Creating the table "
                 + table.getTable()
-                + " in namespace "
+                + " in the namespace "
                 + table.getNamespace()
-                + " successfully.");
+                + " succeeded.");
       } catch (ExecutionException e) {
         LOGGER.warn(
-            "Create table "
+            "Creating the table "
                 + table.getTable()
-                + " in namespace "
+                + " in the namespace "
                 + table.getNamespace()
                 + " failed.",
             e);
@@ -74,9 +74,9 @@ public class SchemaOperator {
   public void createCoordinatorTable(Map<String, String> options) {
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
-      LOGGER.info("Create the coordinator table successfully.");
+      LOGGER.info("Creating the coordinator table succeeded.");
     } catch (ExecutionException e) {
-      LOGGER.warn("Create the coordinator table failed.", e);
+      LOGGER.warn("Creating the coordinator table failed.", e);
     }
   }
 
@@ -90,14 +90,14 @@ public class SchemaOperator {
       try {
         admin.dropTable(table.getNamespace(), table.getTable());
         LOGGER.info(
-            "Deleted table "
+            "Deleting the table "
                 + table.getTable()
-                + " in namespace "
+                + " in the namespace "
                 + table.getNamespace()
-                + " successfully.");
+                + " succeeded.");
         namespaces.add(table.getNamespace());
       } catch (ExecutionException e) {
-        LOGGER.warn("Delete table " + table.getTable() + " failed.", e);
+        LOGGER.warn("Deleting the table " + table.getTable() + " failed.", e);
       }
     }
     if (hasTransactionTable && isStorageSpecificCommand) {
@@ -110,11 +110,11 @@ public class SchemaOperator {
           try {
             admin.dropNamespace(namespace);
           } catch (ExecutionException e) {
-            LOGGER.warn("Delete namespace " + namespace + " failed.", e);
+            LOGGER.warn("Deleting the namespace " + namespace + " failed.", e);
           }
         }
       } catch (ExecutionException e) {
-        LOGGER.warn("Get table from namespace " + namespace + " failed.", e);
+        LOGGER.warn("Getting the tables from namespace " + namespace + " failed.", e);
       }
     }
   }
@@ -122,9 +122,9 @@ public class SchemaOperator {
   public void dropCoordinatorTable() {
     try {
       consensusCommitAdmin.dropCoordinatorTable();
-      LOGGER.info("Delete the coordinator table successfully.");
+      LOGGER.info("Deleting the coordinator table succeeded.");
     } catch (ExecutionException e) {
-      LOGGER.warn("Delete the coordinator table failed.", e);
+      LOGGER.warn("Deleting the coordinator table failed.", e);
     }
   }
 

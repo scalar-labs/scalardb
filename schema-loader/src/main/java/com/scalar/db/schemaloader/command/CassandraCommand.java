@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--cassandra", description = "Using Cassandra")
+@Command(name = "--cassandra", description = "Create/Delete Cassandra schemas")
 public class CassandraCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
@@ -47,13 +47,12 @@ public class CassandraCommand implements Callable<Integer> {
 
   @Option(
       names = {"-n", "--network-strategy"},
-      description =
-          "Cassandra network strategy, should be SimpleStrategy or NetworkTopologyStrategy")
+      description = "Cassandra network strategy, must be SimpleStrategy or NetworkTopologyStrategy")
   private ReplicationStrategy replicationStrategy;
 
   @Option(
       names = {"-c", "--compaction-strategy"},
-      description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
+      description = "Cassandra compaction strategy, must be LCS, STCS or TWCS")
   private CompactionStrategy compactionStrategy;
 
   @Option(
@@ -63,7 +62,7 @@ public class CassandraCommand implements Callable<Integer> {
 
   @Option(
       names = {"-f", "--schema-file"},
-      description = "Path to schema json file",
+      description = "Path to the schema json file",
       required = true)
   private Path schemaFile;
 

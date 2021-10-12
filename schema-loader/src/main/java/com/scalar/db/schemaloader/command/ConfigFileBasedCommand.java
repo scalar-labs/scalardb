@@ -18,23 +18,25 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name = "--config", description = "Using config file for Scalar DB")
+@Command(
+    name = "--config",
+    description = "Create/Delete schemas in the storage defined in the config file")
 public class ConfigFileBasedCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileBasedCommand.class);
 
-  @Parameters(index = "0", description = "Path to config file of Scalar DB")
+  @Parameters(index = "0", description = "Path to the config file of Scalar DB")
   private Path configPath;
 
   @Option(
       names = {"-n", "--replication-strategy"},
       description =
-          "Cassandra replication strategy, should be SimpleStrategy or NetworkTopologyStrategy")
+          "Cassandra replication strategy, must be SimpleStrategy or NetworkTopologyStrategy")
   private ReplicationStrategy replicationStrategy;
 
   @Option(
       names = {"-c", "--compaction-strategy"},
-      description = "Cassandra compaction strategy, should be LCS, STCS or TWCS")
+      description = "Cassandra compaction strategy, must be LCS, STCS or TWCS")
   private CompactionStrategy compactionStrategy;
 
   @Option(
@@ -63,7 +65,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
   @Option(
       names = {"-f", "--schema-file"},
-      description = "Path to schema json file")
+      description = "Path to the schema json file")
   private Path schemaFile;
 
   @Option(

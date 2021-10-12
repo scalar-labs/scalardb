@@ -20,16 +20,16 @@ Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
                               [-c <compactionStrategy>] [-f <schemaFile>]
                               [-n <replicationStrategy>] [-r <ru>]
                               [-R <replicaFactor>] <configPath>
-Using config file for Scalar DB
-      <configPath>    Path to config file of Scalar DB
+Create/Delete schemas in the storage defined in the config file
+      <configPath>    Path to the config file of Scalar DB
   -c, --compaction-strategy <compactionStrategy>
-                      Cassandra compaction strategy, should be LCS, STCS or TWCS
+                      Cassandra compaction strategy, must be LCS, STCS or TWCS
       --coordinator   Create/delete coordinator table
   -D, --delete-all    Delete tables
   -f, --schema-file <schemaFile>
-                      Path to schema json file
+                      Path to the schema json file
   -n, --replication-strategy <replicationStrategy>
-                      Cassandra network strategy, should be SimpleStrategy or
+                      Cassandra replication strategy, must be SimpleStrategy or
                         NetworkTopologyStrategy
       --no-backup     Disable continuous backup for DynamoDB
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
@@ -41,10 +41,10 @@ For Cosmos DB
 ```console
 Usage: schema-loader --cosmos [-D] [--no-scaling] -f <schemaFile> -h <uri>
                               -p <key> [-r <ru>]
-Using Cosmos DB
+Create/Delete Cosmos DB schemas
   -D, --delete-all       Delete tables
   -f, --schema-file <schemaFile>
-                         Path to schema json file
+                         Path to the schema json file
   -h, --host <uri>       Cosmos DB account URI
       --no-scaling       Disable auto-scaling for Cosmos DB
   -p, --password <key>   Cosmos DB key
@@ -56,13 +56,13 @@ Usage: schema-loader --dynamo [-D] [--no-backup] [--no-scaling]
                               [--endpoint-override <endpointOverride>]
                               -f <schemaFile> -p <awsSecKey> [-r <ru>]
                               --region <awsRegion> -u <awsKeyId>
-Using DynamoDB
+Create/Delete DynamoDB schemas
   -D, --delete-all           Delete tables
       --endpoint-override <endpointOverride>
                              Endpoint with which the DynamoDB SDK should
                                communicate
   -f, --schema-file <schemaFile>
-                             Path to schema json file
+                             Path to the schema json file
       --no-backup            Disable continuous backup for DynamoDB
       --no-scaling           Disable auto-scaling for DynamoDB
   -p, --password <awsSecKey> AWS access secret key
@@ -72,20 +72,20 @@ Using DynamoDB
 ```
 For Cassandra
 ```console
+Missing required options [--host <hostIp>, --schema-file <schemaFile>]
 Usage: schema-loader --cassandra [-D] [-c <compactionStrategy>] -f <schemaFile>
-                                 -h <hostIP> [-n <replicationStrategy>]
+                                 -h <hostIp> [-n <replicationStrategy>]
                                  [-p <password>] [-P <port>]
                                  [-R <replicaFactor>] [-u <user>]
-Using Cassandra
+Create/Delete Cassandra schemas
   -c, --compaction-strategy <compactionStrategy>
-                        Cassandra compaction strategy, should be LCS, STCS or
-                          TWCS
+                        Cassandra compaction strategy, must be LCS, STCS or TWCS
   -D, --delete-all      Delete tables
   -f, --schema-file <schemaFile>
-                        Path to schema json file
-  -h, --host <hostIP>   Cassandra host IP
+                        Path to the schema json file
+  -h, --host <hostIp>   Cassandra host IP
   -n, --network-strategy <replicationStrategy>
-                        Cassandra network strategy, should be SimpleStrategy or
+                        Cassandra network strategy, must be SimpleStrategy or
                           NetworkTopologyStrategy
   -p, --password <password>
                         Cassandra password
@@ -98,10 +98,10 @@ For a JDBC database
 ```console
 Usage: schema-loader --jdbc [-D] -f <schemaFile> -j <url> -p <password>
                             -u <user>
-Using a JDBC database
+Create/Delete JDBC schemas
   -D, --delete-all       Delete tables
   -f, --schema-file <schemaFile>
-                         Path to schema json file
+                         Path to the schema json file
   -j, --jdbc-url <url>   JDBC URL
   -p, --password <password>
                          JDBC password
