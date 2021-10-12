@@ -50,50 +50,53 @@ public class CosmosMultipleClusteringKeysIntegrationTest
 
   @Ignore
   @Override
-  public void
-      scan_OnlyWithBeforeClusteringKeyRangeOfValuesBlobBefore_ShouldReturnProperlyResult() {}
+  public void scan_WithBeforeClusteringKeyInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
+
+  @Ignore
+  @Override
+  public void scan_WithBeforeClusteringKeyExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
   public void
-      scan_OnlyWithBeforeClusteringKeyStartInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult() {}
+      scan_WithBeforeClusteringKeyStartInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
   public void
-      scan_OnlyWithBeforeClusteringKeyStartExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult() {}
+      scan_WithBeforeClusteringKeyStartExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
   public void
-      scan_OnlyWithBeforeClusteringKeyEndInclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult() {}
+      scan_WithBeforeClusteringKeyEndInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
   public void
-      scan_OnlyWithBeforeClusteringKeyEndExclusiveRangeOfValuesBlobBefore_ShouldReturnProperlyResult() {}
+      scan_WithBeforeClusteringKeyEndExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
-  public void scan_WithClusteringKeyRangeOfValuesBlobAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
-  public void
-      scan_WithClusteringKeyStartInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
-  public void
-      scan_WithClusteringKeyStartExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyStartInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
-  public void
-      scan_WithClusteringKeyEndInclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyStartExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 
   @Ignore
   @Override
-  public void
-      scan_WithClusteringKeyEndExclusiveRangeOfValuesBlobAfter_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyEndInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
+
+  @Ignore
+  @Override
+  public void scan_WithClusteringKeyEndExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 }
