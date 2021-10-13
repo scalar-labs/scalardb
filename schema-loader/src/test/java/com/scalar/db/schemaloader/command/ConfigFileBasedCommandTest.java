@@ -45,8 +45,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreatTableWithProperParams()
-          throws Exception {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreatTableWithProperParams() {
     // Arrange
 
     Map<String, String> metaOptions =
@@ -62,13 +61,13 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Act
     commandLine.execute(
         configFile,
-        "-n",
+        "--replication-strategy",
         replicationStrategy,
-        "-c",
+        "--compaction-strategy",
         compactionStrategy,
-        "-R",
+        "--replication-factor",
         replicationFactor,
-        "-r",
+        "--ru",
         ru,
         "--no-scaling",
         "--no-backup",
@@ -90,11 +89,11 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     int exitCode =
         commandLine.execute(
             configFile,
-            "-n",
+            "--replication-strategy",
             replicationStrategy,
-            "-c",
+            "--compaction- strategy",
             compactionStrategy,
-            "-R",
+            "--replication-factor",
             replicationFactor,
             "-f",
             schemaFile);
@@ -114,11 +113,11 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     int exitCode =
         commandLine.execute(
             configFile,
-            "-n",
+            "--replication-strategy",
             replicationStrategy,
-            "-c",
+            "--compaction-strategy",
             compactionStrategy,
-            "-R",
+            "--replication-factor",
             replicationFactor,
             "-f",
             schemaFile);
