@@ -60,6 +60,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
 
     // Act
     commandLine.execute(
+        "--config",
         configFile,
         "--replication-strategy",
         replicationStrategy,
@@ -88,6 +89,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Act
     int exitCode =
         commandLine.execute(
+            "--config",
             configFile,
             "--replication-strategy",
             replicationStrategy,
@@ -112,6 +114,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Act
     int exitCode =
         commandLine.execute(
+            "--config",
             configFile,
             "--replication-strategy",
             replicationStrategy,
@@ -135,7 +138,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     String configFile = "path_to_config_file";
 
     // Act
-    commandLine.execute(configFile, "-f", schemaFile, "-D");
+    commandLine.execute("-f", schemaFile, "-D", "--config", configFile);
 
     // Assert
     verify(operator).deleteTables(Mockito.any());
@@ -146,7 +149,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Arrange
 
     // Act
-    commandLine.execute(configFile, "--coordinator", "-D");
+    commandLine.execute("--coordinator", "-D", "-c", configFile);
 
     // Assert
     verify(operator).dropCoordinatorTable();
@@ -158,7 +161,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Arrange
 
     // Act
-    commandLine.execute(configFile, "-D");
+    commandLine.execute("-c", configFile, "-D");
 
     // Assert
     verify(operator, never()).dropCoordinatorTable();

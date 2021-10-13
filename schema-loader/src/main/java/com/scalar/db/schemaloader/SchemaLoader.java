@@ -6,36 +6,55 @@ import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
-@Command(
-    name = "schema-loader",
-    description = "Schema Loader for Scalar DB",
-    subcommands = {
-      ConfigFileBasedCommand.class,
-      CosmosCommand.class,
-      DynamoCommand.class,
-      CassandraCommand.class,
-      JdbcCommand.class
-    })
-public class SchemaLoader implements Runnable {
-
-  @Option(
-      names = {"-h", "--help"},
-      usageHelp = true,
-      description = "Displays this help message and quits.",
-      defaultValue = "true")
-  private Boolean showHelp;
+public class SchemaLoader {
 
   public static void main(String... args) {
-    new CommandLine(new SchemaLoader()).execute(args);
-  }
+    boolean config = false;
+    boolean cassandra = false;
+    boolean cosmos = false;
+    boolean dynamo = false;
+    boolean jdbc = false;
 
-  @Override
-  public void run() {
-    if (showHelp) {
-      CommandLine.usage(this, System.out);
+    for (String arg : args) {
+      switch (arg) {
+        case "--config":
+        case "-c":
+          config = true;
+          break;
+        case "--cassandra":
+          cassandra = true;
+          break;
+        case "--cosmos":
+          cosmos = true;
+          break;
+        case "--dynamo":
+          dynamo = true;
+          break;
+        case "--jdbc":
+          jdbc = true;
+          break;
+        default:
+          break;
+      }
     }
+
+    int status;
+    if (config) {
+      status = new CommandLine(new ConfigFileBasedCommand()).execute(args);
+    } else if (cassandra) {
+      status = new CommandLine(new CassandraCommand()).execute(args);
+    } else if (cosmos) {
+      status = new CommandLine(new CosmosCommand()).execute(args);
+    } else if (dynamo) {
+      status = new CommandLine(new DynamoCommand()).execute(args);
+    } else if (jdbc) {
+      status = new CommandLine(new JdbcCommand()).execute(args);
+    } else {
+      System.err.println(
+          "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
+      status = 1;
+    }
+    System.exit(status);
   }
 }

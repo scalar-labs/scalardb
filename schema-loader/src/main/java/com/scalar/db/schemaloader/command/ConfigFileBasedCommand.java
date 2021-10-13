@@ -16,17 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 @Command(
-    name = "--config",
+    name = "java -jar scalardb-schema-loader-<version>.jar",
     description = "Create/Delete schemas in the storage defined in the config file")
 public class ConfigFileBasedCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileBasedCommand.class);
-
-  @Parameters(index = "0", description = "Path to the config file of Scalar DB")
-  private Path configPath;
 
   @Option(
       names = "--replication-strategy",
@@ -54,6 +50,12 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
 
   @Option(names = "--no-backup", description = "Disable continuous backup (supported in DynamoDB)")
   private Boolean noBackup;
+
+  @Option(
+      names = {"-c", "--config"},
+      description = "Path to the config file of Scalar DB",
+      required = true)
+  private Path configPath;
 
   @Option(
       names = "--coordinator",

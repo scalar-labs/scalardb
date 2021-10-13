@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--cosmos", description = "Create/Delete Cosmos DB schemas")
+@Command(
+    name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
+    description = "Create/Delete Cosmos DB schemas")
 public class CosmosCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
