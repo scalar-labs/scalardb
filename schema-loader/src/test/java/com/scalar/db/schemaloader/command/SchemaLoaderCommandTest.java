@@ -19,8 +19,8 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest({ConfigFileBasedCommand.class})
-public class ConfigFileBasedCommandTest extends CommandTestBase {
+@PrepareForTest({SchemaLoaderCommand.class})
+public class SchemaLoaderCommandTest extends CommandTestBase {
 
   private static final String replicationStrategy = "SimpleStrategy";
   private static final String compactionStrategy = "LCS";
@@ -39,7 +39,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     PowerMockito.whenNew(FileInputStream.class).withAnyArguments().thenReturn(fileInputStream);
     PowerMockito.whenNew(DatabaseConfig.class).withAnyArguments().thenReturn(databaseConfig);
 
-    commandLine = new CommandLine(new ConfigFileBasedCommand());
+    commandLine = new CommandLine(new SchemaLoaderCommand());
     setCommandLineOutput();
   }
 

@@ -20,9 +20,9 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar",
     description = "Create/Delete schemas in the storage defined in the config file")
-public class ConfigFileBasedCommand implements Callable<Integer> {
+public class SchemaLoaderCommand implements Callable<Integer> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConfigFileBasedCommand.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoaderCommand.class);
 
   @Option(
       names = "--replication-strategy",
