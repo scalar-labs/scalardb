@@ -31,17 +31,17 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   @Option(
       names = {"-n", "--replication-strategy"},
       description =
-          "Cassandra replication strategy, must be SimpleStrategy or NetworkTopologyStrategy")
+          "The replication strategy, must be SimpleStrategy or NetworkTopologyStrategy (supported in Cassandra)")
   private ReplicationStrategy replicationStrategy;
 
   @Option(
       names = {"-c", "--compaction-strategy"},
-      description = "Cassandra compaction strategy, must be LCS, STCS or TWCS")
+      description = "The compaction strategy, must be LCS, STCS or TWCS (supported in Cassandra)")
   private CompactionStrategy compactionStrategy;
 
   @Option(
       names = {"-R", "--replication-factor"},
-      description = "Cassandra replication factor")
+      description = "The replication factor (supported in Cassandra)")
   private String replicaFactor;
 
   @Option(
@@ -54,7 +54,7 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
       description = "Disable auto-scaling (supported in DynamoDB, Cosmos DB)")
   private Boolean noScaling;
 
-  @Option(names = "--no-backup", description = "Disable continuous backup for DynamoDB")
+  @Option(names = "--no-backup", description = "Disable continuous backup (supported in DynamoDB)")
   private Boolean noBackup;
 
   @Option(
