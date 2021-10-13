@@ -1,5 +1,6 @@
 package com.scalar.db.schemaloader.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -28,6 +29,16 @@ public class SchemaOperator {
     admin = storageFactory.getAdmin();
     consensusCommitAdmin =
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(dbConfig.getProperties()));
+  }
+
+  @VisibleForTesting
+  public SchemaOperator(
+      DistributedStorageAdmin admin,
+      ConsensusCommitAdmin consensusCommitAdmin,
+      boolean isStorageSpecificCommand) {
+    this.isStorageSpecificCommand = isStorageSpecificCommand;
+    this.admin = admin;
+    this.consensusCommitAdmin = consensusCommitAdmin;
   }
 
   public void createTables(List<Table> tableList, Map<String, String> metaOptions) {

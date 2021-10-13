@@ -11,6 +11,7 @@ import com.google.gson.JsonPrimitive;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -59,8 +60,7 @@ public class TableTest {
   }
 
   @Test
-  public void
-      buildTableMetadata_MissingPartitionKeyInTableDefinition_ShouldThrowRuntimeException() {
+  public void buildTableMetadata_MissingPartitionKeyInTableDefinition_ShouldThrowSchemaException() {
     // Arrange
     when(tableDefinition.keySet())
         .thenReturn(ImmutableSet.<String>builder().add("clustering-key").add("columns").build());
@@ -69,7 +69,108 @@ public class TableTest {
     // Act
     // Assert
     Assertions.assertThatThrownBy(() -> table.buildTableMetadata(tableDefinition))
-        .isInstanceOf(RuntimeException.class);
+        .isInstanceOf(SchemaException.class);
+  }
+
+  @Test
+  public void
+      buildTableMetadata_InvalidClusteringKeyInTableDefinition_ShouldThrowSchemaException() {
+    // Arrange
+    String tableDefinitionJson =
+        "{\n"
+            + "    \"transaction\": false,\n"
+            + "    \"partition-key\": [\n"
+            + "      \"c1\"\n"
+            + "    ],\n"
+            + "    \"clustering-key\": [\n"
+            + "      \"c2 invalid format\"\n"
+            + "    ]\n"
+            + "  }";
+    JsonObject invalidTableDefinition =
+        JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    // Act
+    // Assert
+    Assertions.assertThatThrownBy(
+            () -> new Table("ns.tb", invalidTableDefinition, Collections.emptyMap()))
+        .isInstanceOf(SchemaException.class);
+  }
+
+  @Test
+  public void
+      buildTableMetadata_InvalidOrderOfClusteringKeyInTableDefinition_ShouldThrowSchemaException() {
+    // Arrange
+    String tableDefinitionJson =
+        "{\n"
+            + "    \"transaction\": false,\n"
+            + "    \"partition-key\": [\n"
+            + "      \"c1\"\n"
+            + "    ],\n"
+            + "    \"clustering-key\": [\n"
+            + "      \"c2 invalid_order\"\n"
+            + "    ]\n"
+            + "  }";
+    JsonObject invalidTableDefinition =
+        JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    // Act
+    // Assert
+    Assertions.assertThatThrownBy(
+            () -> new Table("ns.tb", invalidTableDefinition, Collections.emptyMap()))
+        .isInstanceOf(SchemaException.class);
+  }
+
+  @Test
+  public void
+      buildTableMetadata_MissingColumnDefinitionInTableDefinition_ShouldThrowSchemaException() {
+    // Arrange
+    String tableDefinitionJson =
+        "{\n"
+            + "    \"transaction\": false,\n"
+            + "    \"partition-key\": [\n"
+            + "      \"c1\"\n"
+            + "    ],\n"
+            + "    \"clustering-key\": [\n"
+            + "      \"c2 ASC\"\n"
+            + "    ]\n"
+            + "  }";
+    JsonObject invalidTableDefinition =
+        JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    // Act
+    // Assert
+    Assertions.assertThatThrownBy(
+            () -> new Table("ns.tb", invalidTableDefinition, Collections.emptyMap()))
+        .isInstanceOf(SchemaException.class);
+  }
+
+  @Test
+  public void
+      buildTableMetadata_InvalidColumnTypeDefinitionInTableDefinition_ShouldThrowSchemaException() {
+    // Arrange
+    String tableDefinitionJson =
+        "{\n"
+            + "    \"transaction\": false,\n"
+            + "    \"partition-key\": [\n"
+            + "      \"c1\"\n"
+            + "    ],\n"
+            + "    \"clustering-key\": [\n"
+            + "      \"c2 ASC\"\n"
+            + "    ],\n"
+            + "    \"columns\": {\n"
+            + "      \"c1\": \"INT\",\n"
+            + "      \"c2\": \"TEXT\",\n"
+            + "      \"c3\": \"INVALID_TYPE\"\n"
+            + "    }\n"
+            + "  }";
+    JsonObject invalidTableDefinition =
+        JsonParser.parseString(tableDefinitionJson).getAsJsonObject();
+
+    // Act
+    // Assert
+    Assertions.assertThatThrownBy(
+            () -> new Table("ns.tb", invalidTableDefinition, Collections.emptyMap()))
+        .isInstanceOf(SchemaException.class);
   }
 
   @Test
@@ -82,6 +183,7 @@ public class TableTest {
             + "      \"c1\"\n"
             + "    ],\n"
             + "    \"clustering-key\": [\n"
+            + "      \"c3\",\n"
             + "      \"c4 ASC\",\n"
             + "      \"c6 DESC\"\n"
             + "    ],\n"
@@ -104,6 +206,7 @@ public class TableTest {
 
     TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
     tableBuilder.addPartitionKey("c1");
+    tableBuilder.addClusteringKey("c3");
     tableBuilder.addClusteringKey("c4");
     tableBuilder.addClusteringKey("c6", Order.DESC);
     tableBuilder.addSecondaryIndex("c2");
@@ -118,20 +221,21 @@ public class TableTest {
 
     // Act
     TableMetadata tableMetadata =
-        new Table("ns.tb", tableDefinition, new HashMap<>()).getTableMetadata();
+        new Table("ns.tb", tableDefinition, Collections.emptyMap()).getTableMetadata();
 
     // Assert
     Assertions.assertThat(tableMetadata).isEqualTo(expectedTableMetadata);
   }
 
   @Test
-  public void Table_WrongFormatTableFullNameGiven_ShouldThrowRuntimeException() {
+  public void Table_WrongFormatTableFullNameGiven_ShouldThrowSchemaException() {
     // Arrange
     String tableFullName = "namespace_and_table_without_dot_separator";
 
     // Act
     // Assert
-    Assertions.assertThatThrownBy(() -> new Table(tableFullName, tableDefinition, new HashMap<>()))
-        .isInstanceOf(RuntimeException.class);
+    Assertions.assertThatThrownBy(
+            () -> new Table(tableFullName, tableDefinition, Collections.emptyMap()))
+        .isInstanceOf(SchemaException.class);
   }
 }

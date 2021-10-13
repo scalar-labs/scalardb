@@ -43,6 +43,7 @@ subprojects {
         junitVersion = '4.12'
         assertjVersion = '3.9.1'
         mockitoVersion = '2.16.0'
+        powerMockitoVersion = '2.0.9'
         spotbugsVersion = '4.3.0'
         errorproneVersion = '2.9.0'
         errorproneJavacVersion = '9+181-r4173-1'

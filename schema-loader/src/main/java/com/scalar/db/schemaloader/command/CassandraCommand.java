@@ -58,7 +58,7 @@ public class CassandraCommand implements Callable<Integer> {
   @Option(
       names = {"-R", "--replication-factor"},
       description = "Cassandra replication factor")
-  private String replicaFactor;
+  private String replicationFactor;
 
   @Option(
       names = {"-f", "--schema-file"},
@@ -85,13 +85,13 @@ public class CassandraCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = new HashMap<>();
     if (replicationStrategy != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.name());
+      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
     }
     if (compactionStrategy != null) {
-      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.name());
+      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
     }
-    if (replicaFactor != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
+    if (replicationFactor != null) {
+      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
 
     DatabaseConfig dbConfig = new DatabaseConfig(props);
