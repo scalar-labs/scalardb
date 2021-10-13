@@ -7,11 +7,14 @@ There are two ways to specify general cli options in schema-loader.
 
 # Usage
 ## Build & Run
-### Build application
+### Build application 
+In case if you want build `schema-loader` from source:
 ```console
-$ ./gradlew installDist
+$ ./gradlew schema-loader:shadowJar
 ```
-The built cli application is `./build/install/schema-loader/bin/schema-loader`
+>The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
+
+The built versions of `schema-loader` can be downloaded from [`releases`](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
 ### Available commands
 For using config file
@@ -23,19 +26,20 @@ Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
 Create/Delete schemas in the storage defined in the config file
       <configPath>    Path to the config file of Scalar DB
   -c, --compaction-strategy <compactionStrategy>
-                      Cassandra compaction strategy, must be LCS, STCS or TWCS
+                      The compaction strategy, must be LCS, STCS or TWCS
+                        (supported in Cassandra)
       --coordinator   Create/delete coordinator table
   -D, --delete-all    Delete tables
   -f, --schema-file <schemaFile>
                       Path to the schema json file
   -n, --replication-strategy <replicationStrategy>
-                      Cassandra replication strategy, must be SimpleStrategy or
-                        NetworkTopologyStrategy
-      --no-backup     Disable continuous backup for DynamoDB
+                      The replication strategy, must be SimpleStrategy or
+                        NetworkTopologyStrategy (supported in Cassandra)
+      --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
   -r, --ru <ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
   -R, --replication-factor <replicaFactor>
-                      Cassandra replication factor
+                      The replication factor (supported in Cassandra)
 ```
 For Cosmos DB
 ```console
@@ -110,27 +114,27 @@ Create/Delete JDBC schemas
 ### Create namespaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
 ```console
-$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json
+$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json
 ```
 
 Using cli arguments fully for configuration
 ```console
 # For Cosmos DB
-$ ./build/install/schema-loader/bin/schema-loader --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
 
 ```console
 # For DynamoDB
-$ ./build/install/schema-loader/bin/schema-loader --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
   - `-r` option is almost the same as Cosmos DB option. However, the unit means DynamoDB capacity unit. The read and write capacity units are set the same value.
 
 ```console
 # For Cassandra
-$ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
+$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
 
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
@@ -140,41 +144,41 @@ $ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> 
 
 ```console
 # For a JDBC database
-$ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
+$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json
 ```
 
 ### Delete tables
 Using config file
 ```console
 # coordinator table only be deleted when option --coordinator is specified.
-$ ./build/install/schema-loader/bin/schema-loader --config <PATH_TO_CONFIG_FILE> -f schema.json -D [--coordinator]
+$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json -D [--coordinator]
 ```
 
 Using cli arguments
 
 ```console
 # For Cosmos DB
-$ ./build/install/schema-loader/bin/schema-loader --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
 ```
 
 ```console
 # For DynamoDB
-$ ./build/install/schema-loader/bin/schema-loader --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f schema.json -D
 ```
 
 ```console
 # For Cassandra
-$ ./build/install/schema-loader/bin/schema-loader --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSNDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json -D
 ```
 
 ```console
 # For a JDBC database
-$ ./build/install/schema-loader/bin/schema-loader --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
 ```
 
 ### Show help
 ```console
-$ ./build/install/schema-loader/bin/schema-loader --help
+$ java -jar scalardb-schema-loader-<version>.jar --help
 ```
 
 ### Sample schema file
