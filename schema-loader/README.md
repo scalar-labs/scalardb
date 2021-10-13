@@ -20,26 +20,28 @@ The built versions of `schema-loader` can be downloaded from [`releases`](https:
 For using config file
 ```console
 Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
-                              [-c <compactionStrategy>] [-f <schemaFile>]
-                              [-n <replicationStrategy>] [-r <ru>]
-                              [-R <replicaFactor>] <configPath>
+                              [--compaction-strategy <compactionStrategy>]
+                              [-f <schemaFile>]
+                              [--replication-factor <replicaFactor>]
+                              [--replication-strategy <replicationStrategy>]
+                              [--ru <ru>] <configPath>
 Create/Delete schemas in the storage defined in the config file
       <configPath>    Path to the config file of Scalar DB
-  -c, --compaction-strategy <compactionStrategy>
+      --compaction-strategy <compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
       --coordinator   Create/delete coordinator table
   -D, --delete-all    Delete tables
   -f, --schema-file <schemaFile>
                       Path to the schema json file
-  -n, --replication-strategy <replicationStrategy>
-                      The replication strategy, must be SimpleStrategy or
-                        NetworkTopologyStrategy (supported in Cassandra)
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
-  -r, --ru <ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
-  -R, --replication-factor <replicaFactor>
+      --replication-factor <replicaFactor>
                       The replication factor (supported in Cassandra)
+      --replication-strategy <replicationStrategy>
+                      The replication strategy, must be SimpleStrategy or
+                        NetworkTopologyStrategy (supported in Cassandra)
+      --ru <ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
 ```
 For Cosmos DB
 ```console

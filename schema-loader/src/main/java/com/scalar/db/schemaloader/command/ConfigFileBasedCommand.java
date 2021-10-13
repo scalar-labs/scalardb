@@ -29,24 +29,22 @@ public class ConfigFileBasedCommand implements Callable<Integer> {
   private Path configPath;
 
   @Option(
-      names = {"-n", "--replication-strategy"},
+      names = "--replication-strategy",
       description =
           "The replication strategy, must be SimpleStrategy or NetworkTopologyStrategy (supported in Cassandra)")
   private ReplicationStrategy replicationStrategy;
 
   @Option(
-      names = {"-c", "--compaction-strategy"},
+      names = "--compaction-strategy",
       description = "The compaction strategy, must be LCS, STCS or TWCS (supported in Cassandra)")
   private CompactionStrategy compactionStrategy;
 
   @Option(
-      names = {"-R", "--replication-factor"},
+      names = "--replication-factor",
       description = "The replication factor (supported in Cassandra)")
   private String replicaFactor;
 
-  @Option(
-      names = {"-r", "--ru"},
-      description = "Base resource unit (supported in DynamoDB, Cosmos DB)")
+  @Option(names = "--ru", description = "Base resource unit (supported in DynamoDB, Cosmos DB)")
   private String ru;
 
   @Option(
