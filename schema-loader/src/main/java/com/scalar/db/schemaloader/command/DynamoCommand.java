@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--dynamo", description = "Create/Delete DynamoDB schemas")
+@Command(
+    name = "java -jar scalardb-schema-loader-<version>.jar --dynamo",
+    description = "Create/Delete DynamoDB schemas")
 public class DynamoCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);

@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--jdbc", description = "Create/Delete JDBC schemas")
+@Command(
+    name = "java -jar scalardb-schema-loader-<version>.jar --jdbc",
+    description = "Create/Delete JDBC schemas")
 public class JdbcCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
