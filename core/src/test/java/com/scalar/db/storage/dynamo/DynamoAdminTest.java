@@ -162,12 +162,6 @@ public class DynamoAdminTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(Collections.emptyMap());
 
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
-
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.count()).thenReturn(1);
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
