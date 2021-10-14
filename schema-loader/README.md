@@ -7,111 +7,111 @@ There are two ways to specify general cli options in schema-loader.
 
 # Usage
 ## Build & Run
-### Build application 
+### Build from source 
 In case if you want build `schema-loader` from source:
 ```console
 $ ./gradlew schema-loader:shadowJar
 ```
 >The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
+### Built versions
 The built versions of `schema-loader` can be downloaded from [`releases`](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
 ### Available commands
 For using config file
 ```console
-Usage: schema-loader --config [-D] [--coordinator] [--no-backup] [--no-scaling]
-                              [--compaction-strategy <compactionStrategy>]
-                              [-f <schemaFile>]
-                              [--replication-factor <replicaFactor>]
-                              [--replication-strategy <replicationStrategy>]
-                              [--ru <ru>] <configPath>
+Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
+       [--no-backup] [--no-scaling] -c=<configPath>
+       [--compaction-strategy=<compactionStrategy>] [-f=<schemaFile>]
+       [--replication-factor=<replicaFactor>]
+       [--replication-strategy=<replicationStrategy>] [--ru=<ru>]
 Create/Delete schemas in the storage defined in the config file
-      <configPath>    Path to the config file of Scalar DB
-      --compaction-strategy <compactionStrategy>
+  -c, --config=<configPath>
+                      Path to the config file of Scalar DB
+      --compaction-strategy=<compactionStrategy>
                       The compaction strategy, must be LCS, STCS or TWCS
                         (supported in Cassandra)
       --coordinator   Create/delete coordinator table
   -D, --delete-all    Delete tables
-  -f, --schema-file <schemaFile>
+  -f, --schema-file=<schemaFile>
                       Path to the schema json file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
-      --replication-factor <replicaFactor>
+      --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
-      --replication-strategy <replicationStrategy>
+      --replication-strategy=<replicationStrategy>
                       The replication strategy, must be SimpleStrategy or
                         NetworkTopologyStrategy (supported in Cassandra)
-      --ru <ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
+      --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
 ```
 For Cosmos DB
 ```console
-Usage: schema-loader --cosmos [-D] [--no-scaling] -f <schemaFile> -h <uri>
-                              -p <key> [-r <ru>]
+Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
+       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
 Create/Delete Cosmos DB schemas
   -D, --delete-all       Delete tables
-  -f, --schema-file <schemaFile>
+  -f, --schema-file=<schemaFile>
                          Path to the schema json file
-  -h, --host <uri>       Cosmos DB account URI
+  -h, --host=<uri>       Cosmos DB account URI
       --no-scaling       Disable auto-scaling for Cosmos DB
-  -p, --password <key>   Cosmos DB key
-  -r, --ru <ru>          Base resource unit
+  -p, --password=<key>   Cosmos DB key
+  -r, --ru=<ru>          Base resource unit
 ```
 For DynamoDB
 ```console
-Usage: schema-loader --dynamo [-D] [--no-backup] [--no-scaling]
-                              [--endpoint-override <endpointOverride>]
-                              -f <schemaFile> -p <awsSecKey> [-r <ru>]
-                              --region <awsRegion> -u <awsKeyId>
+Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
+       [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
+       -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
+       -u=<awsKeyId>
 Create/Delete DynamoDB schemas
   -D, --delete-all           Delete tables
-      --endpoint-override <endpointOverride>
+      --endpoint-override=<endpointOverride>
                              Endpoint with which the DynamoDB SDK should
                                communicate
-  -f, --schema-file <schemaFile>
+  -f, --schema-file=<schemaFile>
                              Path to the schema json file
       --no-backup            Disable continuous backup for DynamoDB
       --no-scaling           Disable auto-scaling for DynamoDB
-  -p, --password <awsSecKey> AWS access secret key
-  -r, --ru <ru>              Base resource unit
-      --region <awsRegion>   AWS region
-  -u, --user <awsKeyId>      AWS access key ID
+  -p, --password=<awsSecKey> AWS access secret key
+  -r, --ru=<ru>              Base resource unit
+      --region=<awsRegion>   AWS region
+  -u, --user=<awsKeyId>      AWS access key ID
 ```
 For Cassandra
 ```console
-Missing required options [--host <hostIp>, --schema-file <schemaFile>]
-Usage: schema-loader --cassandra [-D] [-c <compactionStrategy>] -f <schemaFile>
-                                 -h <hostIp> [-n <replicationStrategy>]
-                                 [-p <password>] [-P <port>]
-                                 [-R <replicaFactor>] [-u <user>]
+Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
+       [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
+       [-n=<replicationStrategy>] [-p=<password>] [-P=<port>]
+       [-R=<replicationFactor>] [-u=<user>]
 Create/Delete Cassandra schemas
-  -c, --compaction-strategy <compactionStrategy>
+  -c, --compaction-strategy=<compactionStrategy>
                         Cassandra compaction strategy, must be LCS, STCS or TWCS
   -D, --delete-all      Delete tables
-  -f, --schema-file <schemaFile>
+  -f, --schema-file=<schemaFile>
                         Path to the schema json file
-  -h, --host <hostIp>   Cassandra host IP
-  -n, --network-strategy <replicationStrategy>
+  -h, --host=<hostIp>   Cassandra host IP
+  -n, --network-strategy=<replicationStrategy>
                         Cassandra network strategy, must be SimpleStrategy or
                           NetworkTopologyStrategy
-  -p, --password <password>
+  -p, --password=<password>
                         Cassandra password
-  -P, --port <port>     Cassandra Port
-  -R, --replication-factor <replicaFactor>
+  -P, --port=<port>     Cassandra Port
+  -R, --replication-factor=<replicationFactor>
                         Cassandra replication factor
-  -u, --user <user>     Cassandra user
+  -u, --user=<user>     Cassandra user
 ```
 For a JDBC database
 ```console
-Usage: schema-loader --jdbc [-D] -f <schemaFile> -j <url> -p <password>
-                            -u <user>
+Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
+       -f=<schemaFile> -j=<url> -p=<password> -u=<user>
 Create/Delete JDBC schemas
   -D, --delete-all       Delete tables
-  -f, --schema-file <schemaFile>
+  -f, --schema-file=<schemaFile>
                          Path to the schema json file
-  -j, --jdbc-url <url>   JDBC URL
-  -p, --password <password>
+  -j, --jdbc-url=<url>   JDBC URL
+  -p, --password=<password>
                          JDBC password
-  -u, --user <user>      JDBC user
+  -u, --user=<user>      JDBC user
 ```
 ### Create namespaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
