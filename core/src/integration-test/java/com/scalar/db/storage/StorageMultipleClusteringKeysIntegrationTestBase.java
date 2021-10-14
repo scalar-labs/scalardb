@@ -185,83 +185,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithoutClusteringKeysDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithoutClusteringKeys_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithoutClusteringKeysFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithoutClusteringKeysIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithoutClusteringKeysBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithoutClusteringKeysBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithoutClusteringKeysTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithoutClusteringKeysBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
+  private void scan_WithoutClusteringKeys_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -306,69 +242,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeFloatBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -426,69 +310,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeFloatBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -546,72 +378,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void
-      scan_WithBeforeClusteringKeyStartInclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeStartInclusiveRangeFloatBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeyStartInclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyStartInclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartInclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartInclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyStartInclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -662,72 +439,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void
-      scan_WithBeforeClusteringKeyStartExclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeStartExclusiveRangeFloatBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeyStartExclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyStartExclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartExclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartExclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyStartExclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -778,70 +500,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeEndInclusiveRangeFloatBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyEndInclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -892,70 +561,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRangeDoubleBefore_ShouldReturnProperlyResult()
+  public void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.DOUBLE, Order.ASC, true);
+    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+      scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, false);
+      scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+          cKeyTypeBefore, Order.ASC, true);
+    }
   }
 
-  @Test
-  public void scan_WithBeforeClusteringKeEndExclusiveRangeFloatBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.FLOAT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRangeIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.INT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRangeBigIntBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BIGINT, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRangeBlobBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BLOB, Order.ASC, true);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRangeTextBefore_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.TEXT, Order.ASC, true);
-  }
-
-  @Test
-  public void
-      scan_WithBeforeClusteringKeyEndExclusiveRangeBooleanBefore_ShouldReturnProperlyResult()
-          throws ExecutionException, IOException {
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, false);
-    scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-        DataType.BOOLEAN, Order.ASC, true);
-  }
-
-  protected void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
       throws ExecutionException, IOException {
     truncateTable(
@@ -1053,83 +669,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyInclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -1191,83 +743,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyExclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -1329,83 +817,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -1459,83 +883,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -1589,83 +949,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -1719,83 +1015,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeDoubleAfter_ShouldReturnProperlyResult()
+  public void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult()
       throws ExecutionException, IOException {
     for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.DOUBLE, Order.ASC, true);
+      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+        scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
+        scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+      }
     }
   }
 
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeFloatAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.FLOAT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.INT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeBigIntAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BIGINT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeBlobAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BLOB, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeTextAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.TEXT, Order.ASC, true);
-    }
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRangeBooleanAfter_ShouldReturnProperlyResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, false);
-      scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
-          cKeyTypeBefore, Order.ASC, DataType.BOOLEAN, Order.ASC, true);
-    }
-  }
-
-  protected void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
+  private void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperlyResult(
       DataType cKeyTypeBefore,
       Order cKeyClusteringOrderBefore,
       DataType cKeyTypeAfter,
@@ -2004,7 +1236,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
   }
 
-  protected List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
+  private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }

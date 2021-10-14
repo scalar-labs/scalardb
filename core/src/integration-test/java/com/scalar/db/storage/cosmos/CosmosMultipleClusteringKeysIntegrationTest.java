@@ -7,7 +7,6 @@ import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 
 public class CosmosMultipleClusteringKeysIntegrationTest
     extends StorageMultipleClusteringKeysIntegrationTestBase {
@@ -39,64 +38,4 @@ public class CosmosMultipleClusteringKeysIntegrationTest
   protected Map<String, String> getCreateOptions() {
     return CosmosEnv.getCreateOptions();
   }
-
-  /*
-   * Ignore blob clustering key tests because blob is not supported for clustering key in Dynamo
-   */
-
-  @Ignore
-  @Override
-  public void scan_WithoutClusteringKeysBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithBeforeClusteringKeyInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithBeforeClusteringKeyExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void
-      scan_WithBeforeClusteringKeyStartInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void
-      scan_WithBeforeClusteringKeyStartExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void
-      scan_WithBeforeClusteringKeyEndInclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void
-      scan_WithBeforeClusteringKeyEndExclusiveRangeBlobBefore_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyStartInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyStartExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyEndInclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
-
-  @Ignore
-  @Override
-  public void scan_WithClusteringKeyEndExclusiveRangeBlobAfter_ShouldReturnProperlyResult() {}
 }
