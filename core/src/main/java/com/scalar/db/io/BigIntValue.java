@@ -1,5 +1,6 @@
 package com.scalar.db.io;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
@@ -8,13 +9,18 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A {@code Value} for a 64-bit singed integer
+ * A {@code Value} for a signed integer from -2^53 to 2^53. The range is determined by the numbers
+ * Double-precision floating-point format can exactly represent.
  *
  * @author Hiroyuki Yamada
  */
 @Immutable
 public final class BigIntValue implements Value<Long> {
+  public static final long MAX_VALUE = 9007199254740992L;
+  public static final long MIN_VALUE = -9007199254740992L;
+
   private static final String ANONYMOUS = "";
+
   private final String name;
   private final long value;
 
@@ -26,6 +32,7 @@ public final class BigIntValue implements Value<Long> {
    */
   public BigIntValue(String name, long value) {
     this.name = checkNotNull(name);
+    checkArgument(value >= MIN_VALUE && value <= MAX_VALUE, "Out of range value for BigIntValue");
     this.value = value;
   }
 

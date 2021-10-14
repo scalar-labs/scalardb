@@ -9,6 +9,8 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.NotFoundException;
+import com.azure.cosmos.models.CompositePath;
+import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -34,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -51,10 +54,9 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public static final String METADATA_CONTAINER = "metadata";
   private static final String ID = "id";
   private static final String CONCATENATED_PARTITION_KEY = "concatenatedPartitionKey";
-  private static final String CONTAINER_PARTITION_KEY = "/" + CONCATENATED_PARTITION_KEY;
-  private static final String PARTITION_KEY_PATH = CONTAINER_PARTITION_KEY + "/?";
-  private static final String CLUSTERING_KEY_PATH = "/clusteringKey/*";
-  private static final String SECONDARY_INDEX_KEY_PATH = "/values/";
+  private static final String PARTITION_KEY_PATH = "/" + CONCATENATED_PARTITION_KEY;
+  private static final String CLUSTERING_KEY_PATH_PREFIX = "/clusteringKey/";
+  private static final String SECONDARY_INDEX_KEY_PATH_PREFIX = "/values/";
   private static final String EXCLUDED_PATH = "/*";
   private static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
@@ -85,10 +87,19 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     try {
+      checkMetadata(metadata);
       createContainer(namespace, table, metadata);
       addTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
       throw new ExecutionException("creating the container failed", e);
+    }
+  }
+
+  private void checkMetadata(TableMetadata metadata) throws ExecutionException {
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
+        throw new ExecutionException("BLOB type is not supported for clustering keys in Cosmos DB");
+      }
     }
   }
 
@@ -129,17 +140,46 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private CosmosContainerProperties computeContainerProperties(
       String table, TableMetadata metadata) {
     IndexingPolicy indexingPolicy = new IndexingPolicy();
-    ArrayList<IncludedPath> paths = new ArrayList<>();
-    paths.add(new IncludedPath(PARTITION_KEY_PATH));
-    paths.add(new IncludedPath(CLUSTERING_KEY_PATH));
+    List<IncludedPath> paths = new ArrayList<>();
+
+    if (metadata.getClusteringKeyNames().isEmpty()) {
+      paths.add(new IncludedPath(PARTITION_KEY_PATH + "/?"));
+    } else {
+      // Add a composite index when we have clustering keys
+      List<CompositePath> compositePaths = new ArrayList<>();
+
+      // Add concatenated partition key to the composite path first
+      CompositePath partitionKeyCompositePath = new CompositePath();
+      partitionKeyCompositePath.setPath(PARTITION_KEY_PATH);
+      partitionKeyCompositePath.setOrder(CompositePathSortOrder.ASCENDING);
+      compositePaths.add(partitionKeyCompositePath);
+
+      // Then, add clustering keys to the composite path
+      metadata
+          .getClusteringKeyNames()
+          .forEach(
+              c -> {
+                CompositePath compositePath = new CompositePath();
+                compositePath.setPath(CLUSTERING_KEY_PATH_PREFIX + c);
+                // Always ASCENDING fow now
+                compositePath.setOrder(CompositePathSortOrder.ASCENDING);
+                compositePaths.add(compositePath);
+              });
+
+      indexingPolicy.setCompositeIndexes(Collections.singletonList(compositePaths));
+    }
+
     paths.addAll(
         metadata.getSecondaryIndexNames().stream()
-            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH + index + "/?"))
+            .map(index -> new IncludedPath(SECONDARY_INDEX_KEY_PATH_PREFIX + index + "/?"))
             .collect(Collectors.toList()));
-    indexingPolicy.setIncludedPaths(paths);
+
+    if (!paths.isEmpty()) {
+      indexingPolicy.setIncludedPaths(paths);
+    }
     indexingPolicy.setExcludedPaths(Collections.singletonList(new ExcludedPath(EXCLUDED_PATH)));
 
-    return new CosmosContainerProperties(table, CONTAINER_PARTITION_KEY)
+    return new CosmosContainerProperties(table, PARTITION_KEY_PATH)
         .setIndexingPolicy(indexingPolicy);
   }
 

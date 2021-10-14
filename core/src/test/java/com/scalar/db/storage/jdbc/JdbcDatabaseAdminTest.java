@@ -242,7 +242,7 @@ public class JdbcDatabaseAdminTest {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
         Optional.empty(),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` FLOAT, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `scalardb`",
@@ -349,7 +349,7 @@ public class JdbcDatabaseAdminTest {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
         Optional.of("changed"),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` FLOAT, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `changed`",
