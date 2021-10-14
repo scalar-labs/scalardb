@@ -397,7 +397,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     try {
-      ScanRequest scanRequest = ScanRequest.builder().tableName(getMetadataTable()).build();
+      ScanRequest scanRequest = ScanRequest.builder().tableName(getMetadataTable()).limit(1).build();
       ScanResponse scanResponse = client.scan(scanRequest);
       if (scanResponse.count() == 0) {
         try {
