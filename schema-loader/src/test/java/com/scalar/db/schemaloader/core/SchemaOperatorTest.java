@@ -111,7 +111,7 @@ public class SchemaOperatorTest {
     operator.createTables(tableList, Collections.emptyMap());
 
     // Assert
-    verify(consensusCommitAdmin, times(1)).createCoordinatorTable(Collections.emptyMap());
+    verify(consensusCommitAdmin).createCoordinatorTable(Collections.emptyMap());
   }
 
   @Test
@@ -133,7 +133,7 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(admin, times(3)).dropTable("ns", "tb");
-    verify(admin, times(1)).dropNamespace("ns");
+    verify(admin).dropNamespace("ns");
   }
 
   @Test
@@ -154,6 +154,6 @@ public class SchemaOperatorTest {
     operator.deleteTables(tableList);
 
     // Assert
-    verify(consensusCommitAdmin, times(1)).dropCoordinatorTable();
+    verify(consensusCommitAdmin).dropCoordinatorTable();
   }
 }

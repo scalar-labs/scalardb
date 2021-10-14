@@ -28,7 +28,7 @@ public class JdbcCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreatTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
     // Arrange
 
     // Act

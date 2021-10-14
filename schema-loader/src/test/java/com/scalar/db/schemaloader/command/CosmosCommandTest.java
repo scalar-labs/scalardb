@@ -31,7 +31,7 @@ public class CosmosCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreatTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
     // Arrange
     Map<String, String> metaOptions =
         ImmutableMap.<String, String>builder()
