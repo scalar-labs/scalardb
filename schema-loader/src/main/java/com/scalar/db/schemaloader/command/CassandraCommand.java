@@ -16,7 +16,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(name = "--cassandra", description = "Create/Delete Cassandra schemas")
+@Command(
+    name = "java -jar scalardb-schema-loader-<version>.jar --cassandra",
+    description = "Create/Delete Cassandra schemas")
 public class CassandraCommand implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);

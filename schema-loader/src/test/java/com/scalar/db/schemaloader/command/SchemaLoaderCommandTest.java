@@ -19,8 +19,8 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest({ConfigFileBasedCommand.class})
-public class ConfigFileBasedCommandTest extends CommandTestBase {
+@PrepareForTest({SchemaLoaderCommand.class})
+public class SchemaLoaderCommandTest extends CommandTestBase {
 
   private static final String replicationStrategy = "SimpleStrategy";
   private static final String compactionStrategy = "LCS";
@@ -39,7 +39,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     PowerMockito.whenNew(FileInputStream.class).withAnyArguments().thenReturn(fileInputStream);
     PowerMockito.whenNew(DatabaseConfig.class).withAnyArguments().thenReturn(databaseConfig);
 
-    commandLine = new CommandLine(new ConfigFileBasedCommand());
+    commandLine = new CommandLine(new SchemaLoaderCommand());
     setCommandLineOutput();
   }
 
@@ -60,6 +60,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
 
     // Act
     commandLine.execute(
+        "--config",
         configFile,
         "--replication-strategy",
         replicationStrategy,
@@ -88,6 +89,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Act
     int exitCode =
         commandLine.execute(
+            "--config",
             configFile,
             "--replication-strategy",
             replicationStrategy,
@@ -112,6 +114,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Act
     int exitCode =
         commandLine.execute(
+            "--config",
             configFile,
             "--replication-strategy",
             replicationStrategy,
@@ -135,7 +138,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     String configFile = "path_to_config_file";
 
     // Act
-    commandLine.execute(configFile, "-f", schemaFile, "-D");
+    commandLine.execute("-f", schemaFile, "-D", "--config", configFile);
 
     // Assert
     verify(operator).deleteTables(Mockito.any());
@@ -146,7 +149,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Arrange
 
     // Act
-    commandLine.execute(configFile, "--coordinator", "-D");
+    commandLine.execute("--coordinator", "-D", "-c", configFile);
 
     // Assert
     verify(operator).dropCoordinatorTable();
@@ -158,7 +161,7 @@ public class ConfigFileBasedCommandTest extends CommandTestBase {
     // Arrange
 
     // Act
-    commandLine.execute(configFile, "-D");
+    commandLine.execute("-c", configFile, "-D");
 
     // Assert
     verify(operator, never()).dropCoordinatorTable();
