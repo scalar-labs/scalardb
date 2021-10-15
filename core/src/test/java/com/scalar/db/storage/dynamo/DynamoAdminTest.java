@@ -101,12 +101,9 @@ public class DynamoAdminTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item()).thenReturn(Collections.emptyMap());
 
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(tableDescription.itemCount()).thenReturn((long) 1);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(1);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
     admin.dropNamespace(NAMESPACE);
@@ -191,11 +188,9 @@ public class DynamoAdminTest {
     when(response.item()).thenReturn(Collections.emptyMap());
 
     // for the table metadata table
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(tableDescription.itemCount()).thenReturn((long) 1);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(1);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
     admin.dropTable(NAMESPACE, TABLE);
@@ -214,11 +209,9 @@ public class DynamoAdminTest {
     when(response.item()).thenReturn(Collections.emptyMap());
 
     // for the table metadata table
-    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
-    TableDescription tableDescription = mock(TableDescription.class);
-    when(tableDescription.itemCount()).thenReturn((long) 0);
-    when(describeTableResponse.table()).thenReturn(tableDescription);
-    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    ScanResponse scanResponse = mock(ScanResponse.class);
+    when(scanResponse.count()).thenReturn(0);
+    when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     // Act
     admin.dropTable(NAMESPACE, TABLE);
