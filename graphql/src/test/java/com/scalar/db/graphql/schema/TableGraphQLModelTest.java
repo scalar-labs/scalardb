@@ -123,7 +123,7 @@ public class TableGraphQLModelTest {
     //   column_4: Float!
     // }
     GraphQLInputObjectType objectType = model.getPrimaryKeyInputObjectType();
-    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_key");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_Key");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(4);
     assertNonNullInputObjectField(fields.get(0), COLUMN_NAME_1, Scalars.GraphQLString);
@@ -139,12 +139,12 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input table_1_partition_key {
+    // input table_1_PartitionKey {
     //   column_1: String!
     //   column_2: Int!
     // }
     GraphQLInputObjectType objectType = model.getPartitionKeyInputObjectType();
-    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_partition_key");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PartitionKey");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(2);
     assertNonNullInputObjectField(fields.get(0), COLUMN_NAME_1, Scalars.GraphQLString);
@@ -158,11 +158,11 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // type get_table_1_payload {
+    // type table_1_GetPayload {
     //  table_1: table_1
     // }
     GraphQLObjectType objectType = model.getGetPayloadObjectType();
-    assertThat(objectType.getName()).isEqualTo("get_" + TABLE_NAME + "_payload");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_GetPayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
     assertNullableFieldDefinition(fields.get(0), TABLE_NAME, model.getObjectType());
@@ -176,10 +176,10 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Query {
-    //  get_table_1(key: table_1_key!): get_table_1_payload
+    //  table_1_get(key: table_1_Key!): table_1_GetPayload
     // }
     GraphQLFieldDefinition field = model.getQueryGetField();
-    assertNullableFieldDefinition(field, "get_" + TABLE_NAME, model.getGetPayloadObjectType());
+    assertNullableFieldDefinition(field, TABLE_NAME + "_get", model.getGetPayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(1);
 
     GraphQLArgument argument = field.getArguments().get(0);
@@ -193,12 +193,12 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // enum table_1_clustering_key_name {
+    // enum table_1_ClusteringKeyName {
     //  column_2
     //  column_3
     // }
     GraphQLEnumType enumType = model.getClusteringKeyNameEnum();
-    assertThat(enumType.getName()).isEqualTo(TABLE_NAME + "_clustering_key_name");
+    assertThat(enumType.getName()).isEqualTo(TABLE_NAME + "_ClusteringKeyName");
     assertThat(enumType.getValues().size()).isEqualTo(2);
 
     GraphQLEnumValueDefinition value1 = enumType.getValues().get(0);
@@ -227,14 +227,14 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input scan_table_1_input {
-    //  orderings: [scan_table_1_ordering]
-    //  start: [scan_table_1_boundary]
-    //  end: [scan_table_1_boundary]
+    // input table_1_ScanInput {
+    //  orderings: [table_1_ScanOrdering]
+    //  start: [table_1_ScanBoundary]
+    //  end: [table_1_ScanBoundary]
     //  limit: Int
     // }
     GraphQLInputObjectType objectType = model.getScanInputObjectType();
-    assertThat(objectType.getName()).isEqualTo("scan_" + TABLE_NAME + "_input");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_ScanInput");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(4);
 
@@ -266,12 +266,12 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input scan_table_1_ordering {
-    //  name: table_1_clustering_key_name!
+    // input table_1_ScanOrdering {
+    //  name: table_1_ClusteringKeyName!
     //  order: ScanOrderingOrder!
     // }
     GraphQLInputObjectType inputObjectType = model.getScanOrderingInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo("scan_" + TABLE_NAME + "_ordering");
+    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanOrdering");
     assertThat(inputObjectType.getFieldDefinitions().size()).isEqualTo(2);
     assertNonNullInputObjectField(
         inputObjectType.getFieldDefinitions().get(0), "name", model.getClusteringKeyNameEnum());
@@ -293,11 +293,11 @@ public class TableGraphQLModelTest {
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
-    // input scan_table_1_ordering {
+    // input table_1_ScanOrdering {
     //  order: ScanOrderingOrder!
     // }
     GraphQLInputObjectType inputObjectType = model.getScanOrderingInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo("scan_" + TABLE_NAME + "_ordering");
+    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanOrdering");
     assertThat(inputObjectType.getFieldDefinitions().size()).isEqualTo(1);
 
     GraphQLInputObjectField field = inputObjectType.getFieldDefinitions().get(0);
@@ -315,8 +315,8 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input scan_table_1_boundary {
-    //  name: table_1_clustering_key_name!
+    // input table_1_ScanBoundary {
+    //  name: table_1_ClusteringKeyName!
     //  inclusive: Boolean
     //  intValue: Int
     //  floatValue: Float
@@ -324,7 +324,7 @@ public class TableGraphQLModelTest {
     //  booleanValue: Boolean
     // }
     GraphQLInputObjectType inputObjectType = model.getScanBoundaryInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo("scan_" + TABLE_NAME + "_boundary");
+    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanBoundary");
     List<GraphQLInputObjectField> fields = inputObjectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(6);
     assertNonNullInputObjectField(fields.get(0), "name", model.getClusteringKeyNameEnum());
@@ -342,11 +342,11 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // type scan_table_1_payload {
+    // type table_1_ScanPayload {
     //  table_1: [table_1]!
     // }
     GraphQLObjectType objectType = model.getScanPayloadObjectType();
-    assertThat(objectType.getName()).isEqualTo("scan_" + TABLE_NAME + "_payload");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_ScanPayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
 
@@ -367,10 +367,10 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Query {
-    //  scan_table_1(key: table_1_partition_key!, input: scan_table_1_input): scan_table_1_payload
+    //  table_1_scan(key: table_1_PartitionKey!, input: table_1_ScanInput): table_1_ScanPayload
     // }
     GraphQLFieldDefinition field = model.getQueryScanField();
-    assertNullableFieldDefinition(field, "scan_" + TABLE_NAME, model.getScanPayloadObjectType());
+    assertNullableFieldDefinition(field, TABLE_NAME + "_scan", model.getScanPayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(2);
 
     List<GraphQLArgument> arguments = field.getArguments();
@@ -388,11 +388,11 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input put_table_1_values {
+    // input table_1_PutValues {
     //  column_5: Boolean
     // }
     GraphQLInputObjectType objectType = model.getPutValuesObjectType();
-    assertThat(objectType.getName()).isEqualTo("put_" + TABLE_NAME + "_values");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutValues");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
     assertNullableInputObjectField(fields.get(0), COLUMN_NAME_5, Scalars.GraphQLBoolean);
@@ -405,11 +405,11 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // type put_table_1_payload {
+    // type table_1_PutPayload {
     //  table_1: table_1
     // }
     GraphQLObjectType objectType = model.getPutPayloadObjectType();
-    assertThat(objectType.getName()).isEqualTo("put_" + TABLE_NAME + "_payload");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutPayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
     assertNullableFieldDefinition(fields.get(0), TABLE_NAME, model.getObjectType());
@@ -423,11 +423,11 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Mutation {
-    //  put_table_1(key: table_1_key!, values: put_table_1_values!, condition: PutCondition):
-    // put_table_1_payload
+    //  table_1_put(key: table_1_Key!, values: table_1_PutValues!, condition: PutCondition):
+    // table_1_PutPayload
     // }
     GraphQLFieldDefinition field = model.getMutationPutField();
-    assertNullableFieldDefinition(field, "put_" + TABLE_NAME, model.getPutPayloadObjectType());
+    assertNullableFieldDefinition(field, TABLE_NAME + "_put", model.getPutPayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(3);
 
     List<GraphQLArgument> arguments = field.getArguments();
@@ -446,11 +446,11 @@ public class TableGraphQLModelTest {
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // type delete_table_1_payload {
+    // type table_1_DeletePayload {
     //  table_1: table_1
     // }
     GraphQLObjectType objectType = model.getDeletePayloadObjectType();
-    assertThat(objectType.getName()).isEqualTo("delete_" + TABLE_NAME + "_payload");
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_DeletePayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
     assertNullableFieldDefinition(fields.get(0), TABLE_NAME, model.getObjectType());
@@ -464,11 +464,11 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Mutation {
-    //  delete_table_1(key: table_1_key!, condition: DeleteCondition): delete_table_1_payload
+    //  table_1_delete(key: table_1_Key!, condition: DeleteCondition): table_1_DeletePayload
     // }
     GraphQLFieldDefinition field = model.getMutationDeleteField();
     assertNullableFieldDefinition(
-        field, "delete_" + TABLE_NAME, model.getDeletePayloadObjectType());
+        field, TABLE_NAME + "_delete", model.getDeletePayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(2);
 
     List<GraphQLArgument> arguments = field.getArguments();

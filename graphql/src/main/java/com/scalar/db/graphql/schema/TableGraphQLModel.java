@@ -134,7 +134,7 @@ public class TableGraphQLModel {
     keyNames.addAll(tableMetadata.getPartitionKeyNames());
     keyNames.addAll(tableMetadata.getClusteringKeyNames());
 
-    GraphQLInputObjectType.Builder builder = newInputObject().name(objectType.getName() + "_key");
+    GraphQLInputObjectType.Builder builder = newInputObject().name(objectType.getName() + "_Key");
     keyNames.forEach(
         keyName -> {
           GraphQLScalarType type =
@@ -147,7 +147,7 @@ public class TableGraphQLModel {
 
   private GraphQLInputObjectType createPartitionKeyInputObjectType() {
     GraphQLInputObjectType.Builder builder =
-        newInputObject().name(objectType.getName() + "_partition_key");
+        newInputObject().name(objectType.getName() + "_PartitionKey");
     tableMetadata
         .getPartitionKeyNames()
         .forEach(
@@ -162,28 +162,28 @@ public class TableGraphQLModel {
 
   private GraphQLObjectType createGetPayloadObjectType() {
     return newObject()
-        .name("get_" + objectType.getName() + "_payload")
+        .name(objectType.getName() + "_GetPayload")
         .field(newFieldDefinition().name(objectType.getName()).type(objectType))
         .build();
   }
 
   private GraphQLFieldDefinition createQueryGetField() {
     return newFieldDefinition()
-        .name("get_" + objectType.getName())
+        .name(objectType.getName() + "_get")
         .type(getPayloadObjectType)
         .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
         .build();
   }
 
   private GraphQLEnumType createClusteringKeyNameEnum() {
-    GraphQLEnumType.Builder builder = newEnum().name(objectType.getName() + "_clustering_key_name");
+    GraphQLEnumType.Builder builder = newEnum().name(objectType.getName() + "_ClusteringKeyName");
     tableMetadata.getClusteringKeyNames().forEach(builder::value);
     return builder.build();
   }
 
   private GraphQLInputObjectType createScanOrderingInputObjectType() {
     GraphQLInputObjectType.Builder builder =
-        newInputObject().name("scan_" + objectType.getName() + "_ordering");
+        newInputObject().name(objectType.getName() + "_ScanOrdering");
     if (clusteringKeyNameEnum != null) {
       builder.field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)));
     }
@@ -194,7 +194,7 @@ public class TableGraphQLModel {
 
   private GraphQLInputObjectType createScanBoundaryInputObjectType() {
     GraphQLInputObjectType.Builder builder =
-        newInputObject().name("scan_" + objectType.getName() + "_boundary");
+        newInputObject().name(objectType.getName() + "_ScanBoundary");
     if (clusteringKeyNameEnum != null) {
       builder.field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)));
     }
@@ -209,7 +209,7 @@ public class TableGraphQLModel {
 
   private GraphQLInputObjectType createScanInputObjectType() {
     return newInputObject()
-        .name("scan_" + objectType.getName() + "_input")
+        .name(objectType.getName() + "_ScanInput")
         .field(newInputObjectField().name("orderings").type(list(scanOrderingInputObjectType)))
         .field(newInputObjectField().name("start").type(list(scanBoundaryInputObjectType)))
         .field(newInputObjectField().name("end").type(list(scanBoundaryInputObjectType)))
@@ -219,14 +219,14 @@ public class TableGraphQLModel {
 
   private GraphQLObjectType createScanPayloadObjectType() {
     return newObject()
-        .name("scan_" + objectType.getName() + "_payload")
+        .name(objectType.getName() + "_ScanPayload")
         .field(newFieldDefinition().name(objectType.getName()).type(nonNull(list(objectType))))
         .build();
   }
 
   private GraphQLFieldDefinition createQueryScanField() {
     return newFieldDefinition()
-        .name("scan_" + objectType.getName())
+        .name(objectType.getName() + "_scan")
         .type(scanPayloadObjectType)
         .argument(newArgument().name("key").type(nonNull(partitionKeyInputObjectType)))
         .argument(newArgument().name("input").type(scanInputObjectType))
@@ -235,7 +235,7 @@ public class TableGraphQLModel {
 
   private GraphQLInputObjectType createPutValuesObjectType() {
     GraphQLInputObjectType.Builder inputValues =
-        newInputObject().name("put_" + objectType.getName() + "_values");
+        newInputObject().name(objectType.getName() + "_PutValues");
 
     LinkedHashSet<String> keyNames = new LinkedHashSet<>();
     keyNames.addAll(getPartitionKeyNames());
@@ -251,14 +251,14 @@ public class TableGraphQLModel {
 
   private GraphQLObjectType createPutPayloadObjectType() {
     return newObject()
-        .name("put_" + objectType.getName() + "_payload")
+        .name(objectType.getName() + "_PutPayload")
         .field(newFieldDefinition().name(objectType.getName()).type(objectType))
         .build();
   }
 
   private GraphQLFieldDefinition createMutationPutField() {
     return newFieldDefinition()
-        .name("put_" + objectType.getName())
+        .name(objectType.getName() + "_put")
         .type(putPayloadObjectType)
         .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
         .argument(newArgument().name("values").type(nonNull(putValuesObjectType)))
@@ -268,14 +268,14 @@ public class TableGraphQLModel {
 
   private GraphQLObjectType createDeletePayloadObjectType() {
     return newObject()
-        .name("delete_" + objectType.getName() + "_payload")
+        .name(objectType.getName() + "_DeletePayload")
         .field(newFieldDefinition().name(objectType.getName()).type(objectType))
         .build();
   }
 
   private GraphQLFieldDefinition createMutationDeleteField() {
     return newFieldDefinition()
-        .name("delete_" + objectType.getName())
+        .name(objectType.getName() + "_delete")
         .type(deletePayloadObjectType)
         .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
         .argument(newArgument().name("condition").type(typeRef("DeleteCondition")))
