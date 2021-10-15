@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class TransactionInstrumentation extends SimpleInstrumentation {
-  private static final String RESULT_EXTENSIONS_TX_ID_KEY = "txId";
-  private static final String RESULT_EXTENSIONS_TRANSACTION_KEY = "transaction";
+  private static final String EXTENSIONS_TRANSACTION_KEY = "transaction";
+  private static final String EXTENSIONS_TX_ID_KEY = "txId";
 
   private final DistributedTransactionManager transactionManager;
   private final Map<String, DistributedTransaction> transactionMap;
@@ -93,8 +93,7 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     Map<Object, Object> withTxExt =
         new LinkedHashMap<>(currentExt == null ? Collections.emptyMap() : currentExt);
     withTxExt.put(
-        RESULT_EXTENSIONS_TRANSACTION_KEY,
-        ImmutableMap.of(RESULT_EXTENSIONS_TX_ID_KEY, transaction.getId()));
+        EXTENSIONS_TRANSACTION_KEY, ImmutableMap.of(EXTENSIONS_TX_ID_KEY, transaction.getId()));
 
     return CompletableFuture.completedFuture(
         new ExecutionResultImpl(executionResult.getData(), executionResult.getErrors(), withTxExt));
