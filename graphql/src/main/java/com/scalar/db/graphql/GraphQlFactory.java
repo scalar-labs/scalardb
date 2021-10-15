@@ -11,6 +11,7 @@ import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
+import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -106,9 +107,11 @@ public class GraphQlFactory {
     if (transactionManager != null) {
       schema.additionalDirective(CommonSchema.createTransactionDirective());
     }
-    return GraphQL.newGraphQL(schema.build())
-        // TODO: .instrumentation(new TransactionInstrumentation(transactionManager))
-        .build();
+    GraphQL.Builder graphql = GraphQL.newGraphQL(schema.build());
+    if (transactionManager != null) {
+      graphql.instrumentation(new TransactionInstrumentation(transactionManager));
+    }
+    return graphql.build();
   }
 
   public static final class Builder {
