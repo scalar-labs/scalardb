@@ -36,9 +36,9 @@ public class DynamoMultipleClusteringKeysIntegrationTest
   // Ignore tests for scan with exclusive range because DynamoDB does not support it
   @Ignore
   @Override
-  public void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperlyResult() {}
+  public void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult() {}
 
   @Ignore
   @Override
-  public void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperlyResult() {}
+  public void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult() {}
 }
