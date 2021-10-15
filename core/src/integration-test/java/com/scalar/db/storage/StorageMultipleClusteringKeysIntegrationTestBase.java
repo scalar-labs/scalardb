@@ -38,13 +38,10 @@ import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
 @SuppressFBWarnings(
     value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
