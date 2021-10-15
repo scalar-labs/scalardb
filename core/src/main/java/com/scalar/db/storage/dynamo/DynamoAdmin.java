@@ -68,7 +68,6 @@ import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
-import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
 
@@ -398,11 +397,10 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     }
 
     try {
-      DescribeTableResponse describeTableResponse =
-          client.describeTable(
-              DescribeTableRequest.builder().tableName(getMetadataTable()).build());
-      TableDescription tableDescription = describeTableResponse.table();
-      if (tableDescription.itemCount() == 0) {
+      ScanRequest scanRequest =
+          ScanRequest.builder().tableName(getMetadataTable()).limit(1).build();
+      ScanResponse scanResponse = client.scan(scanRequest);
+      if (scanResponse.count() == 0) {
         try {
           client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
         } catch (DynamoDbException e) {
