@@ -30,9 +30,13 @@ import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScal
 import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScalableTargetResponse;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsDescription;
+import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
@@ -219,6 +223,17 @@ public class DynamoAdminTest {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+
     // for the table metadata table
     describeTableResponse = mock(DescribeTableResponse.class);
     tableDescription = mock(TableDescription.class);
@@ -285,6 +300,17 @@ public class DynamoAdminTest {
     TableDescription tableDescription = mock(TableDescription.class);
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // for the table metadata table
     when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
