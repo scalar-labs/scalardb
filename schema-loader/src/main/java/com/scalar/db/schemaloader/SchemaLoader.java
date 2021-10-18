@@ -1,11 +1,15 @@
 package com.scalar.db.schemaloader;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import picocli.CommandLine;
 
 public class SchemaLoader {
@@ -20,14 +24,28 @@ public class SchemaLoader {
           .put("--dynamo", new DynamoCommand())
           .put("--jdbc", new JdbcCommand())
           .build();
+  private static final ImmutableList<String> STORAGE_SPECIFIC_OPTION_LIST =
+      ImmutableList.<String>builder()
+          .add("--cassandra")
+          .add("--cosmos")
+          .add("--dynamo")
+          .add("--jdbc")
+          .build();
 
   public static void main(String... args) {
     Object command = null;
+    String commandMode = "";
     for (String arg : args) {
       if (COMMAND_MAP.containsKey(arg)) {
         command = COMMAND_MAP.get(arg);
+        commandMode = arg;
         break;
       }
+    }
+    if (STORAGE_SPECIFIC_OPTION_LIST.contains(commandMode)) {
+      List<String> argList = new ArrayList<>(Arrays.asList(args));
+      argList.remove(commandMode);
+      args = argList.toArray(new String[0]);
     }
 
     int status;
