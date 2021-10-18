@@ -1,0 +1,61 @@
+plugins {
+    id 'java'
+    id 'com.github.spotbugs' version '4.7.1'
+    id 'net.ltgt.errorprone' version '2.0.2'
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
+}
+
+archivesBaseName = "scalardb-schema-loader"
+
+dependencies {
+    implementation project(':core')
+
+    implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
+    implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
+
+    testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
+    testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    testImplementation group: 'org.powermock', name: 'powermock-module-junit4', version: "${powerMockitoVersion}"
+    testImplementation group: 'org.powermock', name: 'powermock-api-mockito2', version: "${powerMockitoVersion}"
+
+    // for SpotBugs
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    // for Error Prone
+    errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
+    errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+// Build a fat jar
+shadowJar {
+    archiveClassifier.set("")
+    manifest {
+        attributes 'Main-Class': 'com.scalar.db.schemaloader.SchemaLoader'
+    }
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+
+spotbugsTest.reports {
+    html.enabled = true
+}
+
+// for docker
+distTar {
+    archiveFileName = "${project.name}.tar"
+}
