@@ -14,8 +14,8 @@ $ ./gradlew schema-loader:shadowJar
 ```
 >The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
-### Built versions
-The built versions of `schema-loader` can be downloaded from [`releases`](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
+### Release versions
+The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
 ### Available commands
 For using config file
@@ -116,9 +116,10 @@ Create/Delete JDBC schemas
 ### Create namespaces and tables
 Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
 ```console
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json
+$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
 ```
-
+  - if `--coordinator` is specified, the coordinator table will be created.
+  
 Using cli arguments fully for configuration
 ```console
 # For Cosmos DB
@@ -152,10 +153,10 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 ### Delete tables
 Using config file
 ```console
-# coordinator table only be deleted when option --coordinator is specified.
-$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json -D [--coordinator]
+$ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
 ```
-
+  - if `--coordinator` is specified, the coordinator table will be deleted.
+  
 Using cli arguments
 
 ```console
