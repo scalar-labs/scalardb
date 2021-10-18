@@ -1,22 +1,22 @@
 # Scalar DB Schema Loader
 This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file. Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter `true` in the schema file.
 
-There are two ways to specify general cli options in schema-loader.
-  - Pass a Scalar DB configuration file, and additional options of database-specific.
-  - Pass all the options separately.
+There are two ways to specify general CLI options in schema-loader.
+  - Pass a Scalar DB configuration file and database-specific options additionally.
+  - Pass the options without a Scalar DB configuration.
 
 # Usage
-## Build & Run
-### Build from source 
-In case if you want build `schema-loader` from source:
+## Install
+The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
+
+## Build
+In case if you want to build `schema-loader` from the source:
 ```console
 $ ./gradlew schema-loader:shadowJar
 ```
 >The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
-### Release versions
-The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
-
+## Run
 ### Available commands
 For using config file
 ```console
@@ -120,7 +120,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> 
 ```
   - if `--coordinator` is specified, the coordinator table will be created.
   
-Using cli arguments fully for configuration
+Using CLI arguments fully for configuration
 ```console
 # For Cosmos DB
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
@@ -157,7 +157,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> 
 ```
   - if `--coordinator` is specified, the coordinator table will be deleted.
   
-Using cli arguments
+Using CLI arguments
 
 ```console
 # For Cosmos DB
