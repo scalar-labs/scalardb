@@ -179,11 +179,6 @@ $ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [
 $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> -p <PASSWORD> -f schema.json -D
 ```
 
-### Show help
-```console
-$ java -jar scalardb-schema-loader-<version>.jar --help
-```
-
 ### Sample schema file
 ```json
 {
