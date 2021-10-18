@@ -7,9 +7,7 @@ import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import picocli.CommandLine;
 
 public class SchemaLoader {
@@ -34,23 +32,21 @@ public class SchemaLoader {
 
   public static void main(String... args) {
     Object command = null;
-    String commandMode = "";
+    String[] commandArgs = args;
     for (String arg : args) {
       if (COMMAND_MAP.containsKey(arg)) {
         command = COMMAND_MAP.get(arg);
-        commandMode = arg;
+        if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
+          // Remove the storage specific option from args
+          commandArgs = Arrays.stream(args).filter(a -> !a.equals(arg)).toArray(String[]::new);
+        }
         break;
       }
-    }
-    if (STORAGE_SPECIFIC_OPTION_LIST.contains(commandMode)) {
-      List<String> argList = new ArrayList<>(Arrays.asList(args));
-      argList.remove(commandMode);
-      args = argList.toArray(new String[0]);
     }
 
     int status;
     if (command != null) {
-      status = new CommandLine(command).execute(args);
+      status = new CommandLine(command).execute(commandArgs);
     } else {
       System.err.println(
           "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
