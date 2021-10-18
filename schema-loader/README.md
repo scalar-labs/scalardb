@@ -10,7 +10,7 @@ There are two ways to specify general CLI options in schema-loader.
 The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
 ## Build
-In case if you want to build `schema-loader` from the source:
+In case you want to build `schema-loader` from the source:
 ```console
 $ ./gradlew schema-loader:shadowJar
 ```
