@@ -1,11 +1,13 @@
 package com.scalar.db.schemaloader;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
+import java.util.Arrays;
 import picocli.CommandLine;
 
 public class SchemaLoader {
@@ -20,19 +22,31 @@ public class SchemaLoader {
           .put("--dynamo", new DynamoCommand())
           .put("--jdbc", new JdbcCommand())
           .build();
+  private static final ImmutableList<String> STORAGE_SPECIFIC_OPTION_LIST =
+      ImmutableList.<String>builder()
+          .add("--cassandra")
+          .add("--cosmos")
+          .add("--dynamo")
+          .add("--jdbc")
+          .build();
 
   public static void main(String... args) {
     Object command = null;
+    String[] commandArgs = args;
     for (String arg : args) {
       if (COMMAND_MAP.containsKey(arg)) {
         command = COMMAND_MAP.get(arg);
+        if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
+          // Remove the storage specific option from args
+          commandArgs = Arrays.stream(args).filter(a -> !a.equals(arg)).toArray(String[]::new);
+        }
         break;
       }
     }
 
     int status;
     if (command != null) {
-      status = new CommandLine(command).execute(args);
+      status = new CommandLine(command).execute(commandArgs);
     } else {
       System.err.println(
           "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
