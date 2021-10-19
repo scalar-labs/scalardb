@@ -15,6 +15,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -160,7 +161,8 @@ public class DynamoAdminTest {
                 .add(NAMESPACE + ".tb1")
                 .add(NAMESPACE + ".tb2")
                 .add(NAMESPACE + ".tb3")
-                .build());
+                .build())
+        .thenReturn(Collections.emptyList());
 
     GetItemResponse response = mock(GetItemResponse.class);
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
@@ -367,6 +369,11 @@ public class DynamoAdminTest {
     when(scanResponse.count()).thenReturn(1);
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables()).thenReturn(listTablesResponse);
+    List<String> tableList = Collections.emptyList();
+    when(listTablesResponse.tableNames()).thenReturn(tableList);
+
     if (tableMetadataNamespace.isPresent()) {
       when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
       admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
@@ -418,6 +425,11 @@ public class DynamoAdminTest {
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.count()).thenReturn(0);
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables()).thenReturn(listTablesResponse);
+    List<String> tableList = Collections.emptyList();
+    when(listTablesResponse.tableNames()).thenReturn(tableList);
 
     if (tableMetadataNamespace.isPresent()) {
       when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
