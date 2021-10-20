@@ -199,6 +199,10 @@ jobs:
           command: gradle schema-loader:shadowJar
 
       - run:
+          name: Clean previous CI running in case it was failed
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cosmos -h ${COSMOS_URI} -p ${COSMOS_PASSWORD} -f schema-loader/sample_data/schema_sample.json -D &> /dev/null || true
+
+      - run:
           name: Run creating tables using schema-loader with storage-specific command
           command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cosmos -h ${COSMOS_URI} -p ${COSMOS_PASSWORD} -f schema-loader/sample_data/schema_sample.json
 
