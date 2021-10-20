@@ -415,16 +415,16 @@ jobs:
 
       - run:
           name: Run creating tables using schema-loader with storage-specific command
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432 -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432/ -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432 -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432/ -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json -D
 
       - run:
           name: Create config file
           command: |
-            echo "scalar.db.contact_points=jdbc:postgresql://localhost:5432" >> database.properties
+            echo "scalar.db.contact_points=jdbc:postgresql://localhost:5432/" >> database.properties
             echo "scalar.db.username==postgres" >> database.properties
             echo "scalar.db.password=postgres" >> database.properties
             echo "scalar.db.storage=jdbc" >> database.properties
