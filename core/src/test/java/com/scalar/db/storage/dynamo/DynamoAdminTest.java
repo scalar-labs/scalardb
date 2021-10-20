@@ -15,6 +15,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,9 +31,13 @@ import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScal
 import software.amazon.awssdk.services.applicationautoscaling.model.RegisterScalableTargetResponse;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsDescription;
+import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
@@ -156,7 +161,8 @@ public class DynamoAdminTest {
                 .add(NAMESPACE + ".tb1")
                 .add(NAMESPACE + ".tb2")
                 .add(NAMESPACE + ".tb3")
-                .build());
+                .build())
+        .thenReturn(Collections.emptyList());
 
     GetItemResponse response = mock(GetItemResponse.class);
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
@@ -218,6 +224,17 @@ public class DynamoAdminTest {
     TableDescription tableDescription = mock(TableDescription.class);
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
+
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
 
     // for the table metadata table
     describeTableResponse = mock(DescribeTableResponse.class);
@@ -286,6 +303,17 @@ public class DynamoAdminTest {
     when(describeTableResponse.table()).thenReturn(tableDescription);
     when(tableDescription.tableStatus()).thenReturn(TableStatus.ACTIVE);
 
+    DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+        mock(DescribeContinuousBackupsResponse.class);
+    when(client.describeContinuousBackups(any(DescribeContinuousBackupsRequest.class)))
+        .thenReturn(describeContinuousBackupsResponse);
+    ContinuousBackupsDescription continuousBackupsDescription =
+        mock(ContinuousBackupsDescription.class);
+    when(describeContinuousBackupsResponse.continuousBackupsDescription())
+        .thenReturn(continuousBackupsDescription);
+    when(continuousBackupsDescription.continuousBackupsStatus())
+        .thenReturn(ContinuousBackupsStatus.ENABLED);
+
     // for the table metadata table
     when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
 
@@ -341,6 +369,11 @@ public class DynamoAdminTest {
     when(scanResponse.count()).thenReturn(1);
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables()).thenReturn(listTablesResponse);
+    List<String> tableList = Collections.emptyList();
+    when(listTablesResponse.tableNames()).thenReturn(tableList);
+
     if (tableMetadataNamespace.isPresent()) {
       when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
       admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
@@ -392,6 +425,11 @@ public class DynamoAdminTest {
     ScanResponse scanResponse = mock(ScanResponse.class);
     when(scanResponse.count()).thenReturn(0);
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
+
+    ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
+    when(client.listTables()).thenReturn(listTablesResponse);
+    List<String> tableList = Collections.emptyList();
+    when(listTablesResponse.tableNames()).thenReturn(tableList);
 
     if (tableMetadataNamespace.isPresent()) {
       when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
