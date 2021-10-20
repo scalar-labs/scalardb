@@ -3,17 +3,20 @@ workflows:
   version: 2
   scalardb-ci:
     jobs:
-      - check
+#      - check
       - integration-test-for-cassandra
-      - integration-test-for-cosmos
-      - integration-test-for-dynamo
-      - integration-test-for-jdbc-mysql
-      - integration-test-for-jdbc-postgresql
-      - integration-test-for-jdbc-oracle
-      - integration-test-for-jdbc-sqlserver
-      - integration-test-for-multi-storage
-      - integration-test-for-scalardb-server
-      - integration-test-for-two-phase-consensus-commit
+      - 2e2-test-schema-loader-cassandra:
+          requires:
+            - integration-test-for-cassandra
+#      - integration-test-for-cosmos
+#      - integration-test-for-dynamo
+#      - integration-test-for-jdbc-mysql
+#      - integration-test-for-jdbc-postgresql
+#      - integration-test-for-jdbc-oracle
+#      - integration-test-for-jdbc-sqlserver
+#      - integration-test-for-multi-storage
+#      - integration-test-for-scalardb-server
+#      - integration-test-for-two-phase-consensus-commit
 jobs:
   check:
     docker:
@@ -124,6 +127,36 @@ jobs:
             cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
           when: always
 
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cassandra -u cassandra -p cassandra -h localhost -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cassandra -u cassandra -p cassandra -h localhost -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=localhost" >> database.properties
+            echo "scalar.db.username==cassandra" >> database.properties
+            echo "scalar.db.password=cassandra" >> database.properties
+            echo "scalar.db.storage=cassandra" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
+
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
@@ -164,6 +197,35 @@ jobs:
             cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/
           when: always
 
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cosmos -h ${COSMOS_URI} -p ${COSMOS_PASSWORD} -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --cosmos -h ${COSMOS_URI} -p ${COSMOS_PASSWORD} -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=${COSMOS_URI}" >> database.properties
+            echo "scalar.db.password=${COSMOS_PASSWORD}" >> database.properties
+            echo "scalar.db.storage=cosmos" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
+
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
@@ -203,6 +265,37 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/
           when: always
+
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey -h us-west-2 --enpoint-override http://localhost:8000 -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey -h us-west-2 --enpoint-override http://localhost:8000 -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.enpoint_override=http://localhost:8000" >> database.properties
+            echo "scalar.db.contact_points=us-west-2" >> database.properties
+            echo "scalar.db.username==fakeMyKeyId" >> database.properties
+            echo "scalar.db.password=fakeSecretAccessKey" >> database.properties
+            echo "scalar.db.storage=dynamo" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -246,6 +339,36 @@ jobs:
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:mysql://localhost:3306/ -u root -p mysql -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:mysql://localhost:3306/ -u root -p mysql -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=jdbc:mysql://localhost:3306/" >> database.properties
+            echo "scalar.db.username==root" >> database.properties
+            echo "scalar.db.password=mysql" >> database.properties
+            echo "scalar.db.storage=jdbc" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
+
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
@@ -288,6 +411,36 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
+
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432 -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:postgresql://localhost:5432 -u postgres -p postgres -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=jdbc:postgresql://localhost:5432" >> database.properties
+            echo "scalar.db.username==postgres" >> database.properties
+            echo "scalar.db.password=postgres" >> database.properties
+            echo "scalar.db.storage=jdbc" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -340,6 +493,36 @@ jobs:
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
 
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:oracle:thin:@localhost:1521/XEPDB1 -u SYSTEM -p Oracle18 -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:oracle:thin:@localhost:1521/XEPDB1 -u SYSTEM -p Oracle18 -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=jdbc:oracle:thin:@localhost:1521/XEPDB1" >> database.properties
+            echo "scalar.db.username==SYSTEM" >> database.properties
+            echo "scalar.db.password=Oracle18" >> database.properties
+            echo "scalar.db.storage=jdbc" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
+
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
           destination: gradle_integration_test_reports
@@ -383,6 +566,36 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
           when: always
+
+      - run:
+          name: Build fat jar for schema-loader
+          command: gradle schema-loader:shadowJar
+
+      - run:
+          name: Run creating tables using schema-loader with storage-specific command
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlSever19 -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlSever19 -f schema-loader/sample_data/schema_sample.json -D
+
+      - run:
+          name: Create config file
+          command: |
+            echo "scalar.db.contact_points=jdbc:sqlserver://localhost:1433" >> database.properties
+            echo "scalar.db.username==sa" >> database.properties
+            echo "scalar.db.password=SqlSever19" >> database.properties
+            echo "scalar.db.storage=jdbc" >> database.properties
+
+      - run:
+          name: Run creating tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+
+      - run:
+          name: Run deleting tables using schema-loader with config file
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+
+      - run: rm database.properties
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
