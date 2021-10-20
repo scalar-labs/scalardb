@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.schema;
 
-public enum ScanOrderingOrder {
+enum ScanOrderingOrder {
   ASC,
   DESC
 }
