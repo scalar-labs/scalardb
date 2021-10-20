@@ -407,6 +407,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       if (scanResponse.count() == 0) {
         try {
           client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
+          waitForTableDeletion(metadataNamespace, METADATA_TABLE);
         } catch (DynamoDbException e) {
           throw new ExecutionException("deleting empty metadata table failed");
         }
