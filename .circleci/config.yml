@@ -140,17 +140,17 @@ jobs:
           name: Create config file
           command: |
             echo "scalar.db.contact_points=localhost" >> database.properties
-            echo "scalar.db.username==cassandra" >> database.properties
+            echo "scalar.db.username=cassandra" >> database.properties
             echo "scalar.db.password=cassandra" >> database.properties
             echo "scalar.db.storage=cassandra" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -215,11 +215,11 @@ jobs:
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -269,28 +269,28 @@ jobs:
 
       - run:
           name: Run creating tables using schema-loader with storage-specific command
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey -h us-west-2 --enpoint-override http://localhost:8000 -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey --region us-west-2 --endpoint-override http://localhost:8000 --no-backup --no-scaling -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey -h us-west-2 --enpoint-override http://localhost:8000 -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --dynamo -u fakeMyKeyId -p fakeSecretAccessKey --region us-west-2 --endpoint-override http://localhost:8000 --no-backup --no-scaling -f schema-loader/sample_data/schema_sample.json -D
 
       - run:
           name: Create config file
           command: |
-            echo "scalar.db.enpoint_override=http://localhost:8000" >> database.properties
+            echo "scalar.db.endpoint_override=http://localhost:8000" >> database.properties
             echo "scalar.db.contact_points=us-west-2" >> database.properties
-            echo "scalar.db.username==fakeMyKeyId" >> database.properties
+            echo "scalar.db.username=fakeMyKeyId" >> database.properties
             echo "scalar.db.password=fakeSecretAccessKey" >> database.properties
             echo "scalar.db.storage=dynamo" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --no-backup --no-scaling --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --no-backup --no-scaling --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -352,17 +352,17 @@ jobs:
           name: Create config file
           command: |
             echo "scalar.db.contact_points=jdbc:mysql://localhost:3306/" >> database.properties
-            echo "scalar.db.username==root" >> database.properties
+            echo "scalar.db.username=root" >> database.properties
             echo "scalar.db.password=mysql" >> database.properties
             echo "scalar.db.storage=jdbc" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -425,17 +425,17 @@ jobs:
           name: Create config file
           command: |
             echo "scalar.db.contact_points=jdbc:postgresql://localhost:5432/" >> database.properties
-            echo "scalar.db.username==postgres" >> database.properties
+            echo "scalar.db.username=postgres" >> database.properties
             echo "scalar.db.password=postgres" >> database.properties
             echo "scalar.db.storage=jdbc" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -506,17 +506,17 @@ jobs:
           name: Create config file
           command: |
             echo "scalar.db.contact_points=jdbc:oracle:thin:@localhost:1521/XEPDB1" >> database.properties
-            echo "scalar.db.username==SYSTEM" >> database.properties
+            echo "scalar.db.username=SYSTEM" >> database.properties
             echo "scalar.db.password=Oracle18" >> database.properties
             echo "scalar.db.storage=jdbc" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
@@ -570,27 +570,27 @@ jobs:
 
       - run:
           name: Run creating tables using schema-loader with storage-specific command
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlSever19 -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlServer19 -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlSever19 -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --jdbc -j jdbc:sqlserver://localhost:1433 -u sa -p SqlServer19 -f schema-loader/sample_data/schema_sample.json -D
 
       - run:
           name: Create config file
           command: |
             echo "scalar.db.contact_points=jdbc:sqlserver://localhost:1433" >> database.properties
-            echo "scalar.db.username==sa" >> database.properties
-            echo "scalar.db.password=SqlSever19" >> database.properties
+            echo "scalar.db.username=sa" >> database.properties
+            echo "scalar.db.password=SqlServer19" >> database.properties
             echo "scalar.db.storage=jdbc" >> database.properties
 
       - run:
           name: Run creating tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json
 
       - run:
           name: Run deleting tables using schema-loader with config file
-          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties -f schema-loader/sample_data/schema_sample.json -D
+          command: java -jar schema-loader/build/libs/scalardb-schema-loader-$(gradle schema-loader:properties -q | grep "version:" | awk '{print $2}').jar --config database.properties --coordinator -f schema-loader/sample_data/schema_sample.json -D
 
       - run: rm database.properties
 
