@@ -63,13 +63,14 @@ public class JdbcCommand implements Callable<Integer> {
     SchemaOperator operator = new SchemaOperator(dbConfig, true);
     SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), Collections.emptyMap());
 
+    boolean allSuccess = true;
     if (deleteTables) {
-      operator.deleteTables(schemaParser.getTables());
+      allSuccess &= operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaParser.getTables(), Collections.emptyMap());
+      allSuccess &= operator.createTables(schemaParser.getTables(), Collections.emptyMap());
     }
 
     operator.close();
-    return 0;
+    return allSuccess ? 0 : 1;
   }
 }

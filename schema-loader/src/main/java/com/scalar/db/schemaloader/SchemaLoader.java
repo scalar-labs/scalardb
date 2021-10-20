@@ -8,10 +8,12 @@ import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
 import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 public class SchemaLoader {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoader.class);
   private static final Object SCHEMA_LOADER_COMMAND = new SchemaLoaderCommand();
   private static final ImmutableMap<String, Object> COMMAND_MAP =
       ImmutableMap.<String, Object>builder()
@@ -35,6 +37,8 @@ public class SchemaLoader {
     String[] commandArgs = args;
     for (String arg : args) {
       if (COMMAND_MAP.containsKey(arg)) {
+        LOGGER.warn(
+            "Storage-specific command will be deprecated in the future. Please use --config CLI option along with config file instead.");
         command = COMMAND_MAP.get(arg);
         if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
           // Remove the storage specific option from args

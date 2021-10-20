@@ -100,13 +100,14 @@ public class CassandraCommand implements Callable<Integer> {
     SchemaOperator operator = new SchemaOperator(dbConfig, true);
     SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
+    boolean allSuccess = true;
     if (deleteTables) {
-      operator.deleteTables(schemaParser.getTables());
+      allSuccess &= operator.deleteTables(schemaParser.getTables());
     } else {
-      operator.createTables(schemaParser.getTables(), metaOptions);
+      allSuccess &= operator.createTables(schemaParser.getTables(), metaOptions);
     }
 
     operator.close();
-    return 0;
+    return allSuccess ? 0 : 1;
   }
 }

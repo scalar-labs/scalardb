@@ -41,13 +41,14 @@ public class SchemaOperator {
     this.consensusCommitAdmin = consensusCommitAdmin;
   }
 
-  public void createTables(List<Table> tableList, Map<String, String> metaOptions) {
+  public boolean createTables(List<Table> tableList, Map<String, String> metaOptions) {
     boolean hasTransactionTable = false;
-
+    boolean allSuccess = true;
     for (Table table : tableList) {
       try {
         admin.createNamespace(table.getNamespace(), true, table.getOptions());
       } catch (ExecutionException e) {
+        allSuccess = false;
         LOGGER.warn("Creating the namespace " + table.getNamespace() + " failed.", e);
       }
 
@@ -67,6 +68,7 @@ public class SchemaOperator {
                 + table.getNamespace()
                 + " succeeded.");
       } catch (ExecutionException e) {
+        allSuccess = false;
         LOGGER.warn(
             "Creating the table "
                 + table.getTable()
@@ -78,20 +80,24 @@ public class SchemaOperator {
     }
 
     if (hasTransactionTable && isStorageSpecificCommand) {
-      createCoordinatorTable(metaOptions);
+      allSuccess &= createCoordinatorTable(metaOptions);
     }
+    return allSuccess;
   }
 
-  public void createCoordinatorTable(Map<String, String> options) {
+  public boolean createCoordinatorTable(Map<String, String> options) {
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
       LOGGER.info("Creating the coordinator table succeeded.");
+      return true;
     } catch (ExecutionException e) {
       LOGGER.warn("Creating the coordinator table failed.", e);
+      return false;
     }
   }
 
-  public void deleteTables(List<Table> tableList) {
+  public boolean deleteTables(List<Table> tableList) {
+    boolean allSuccess = true;
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
@@ -109,10 +115,11 @@ public class SchemaOperator {
         namespaces.add(table.getNamespace());
       } catch (ExecutionException e) {
         LOGGER.warn("Deleting the table " + table.getTable() + " failed.", e);
+        allSuccess = false;
       }
     }
     if (hasTransactionTable && isStorageSpecificCommand) {
-      dropCoordinatorTable();
+      allSuccess &= dropCoordinatorTable();
     }
 
     for (String namespace : namespaces) {
@@ -126,16 +133,20 @@ public class SchemaOperator {
         }
       } catch (ExecutionException e) {
         LOGGER.warn("Getting the tables from namespace " + namespace + " failed.", e);
+        allSuccess = false;
       }
     }
+    return allSuccess;
   }
 
-  public void dropCoordinatorTable() {
+  public boolean dropCoordinatorTable() {
     try {
       consensusCommitAdmin.dropCoordinatorTable();
       LOGGER.info("Deleting the coordinator table succeeded.");
+      return true;
     } catch (ExecutionException e) {
       LOGGER.warn("Deleting the coordinator table failed.", e);
+      return false;
     }
   }
 
