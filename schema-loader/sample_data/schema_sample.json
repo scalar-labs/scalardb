@@ -27,9 +27,7 @@
     "compaction-strategy": "LCS",
     "network-strategy": "NetworkTopologyStrategy",
     "replication-factor": "1",
-    "ru": 5000,
-    "no-scaling": "false",
-    "no-backup": "false"
+    "ru": 5000
   },
   "test_ns2.test_table2": {
     "partition-key": [
