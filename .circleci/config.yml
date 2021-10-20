@@ -282,7 +282,7 @@ jobs:
       - run:
           name: Create config file
           command: |
-            echo "scalar.db.endpoint_override=http://localhost:8000" >> database.properties
+            echo "scalar.db.dynamo.endpoint-override=http://localhost:8000" >> database.properties
             echo "scalar.db.contact_points=us-west-2" >> database.properties
             echo "scalar.db.username=fakeMyKeyId" >> database.properties
             echo "scalar.db.password=fakeSecretAccessKey" >> database.properties
