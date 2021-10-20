@@ -49,9 +49,12 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ContinuousBackupsStatus;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeContinuousBackupsResponse;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -92,7 +95,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   private static final String PARTITION_KEY = "concatenatedPartitionKey";
   private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
-  private static final int CREATE_WAIT_DURATION_SECS = 3;
+  private static final int WAITING_DURATION_SECS = 3;
   private static final int COOL_DOWN_DURATION_SECS = 60;
   private static final double TARGET_USAGE_RATE = 70.0;
   private static final int DELETE_BATCH_SIZE = 100;
@@ -381,6 +384,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.deleteTable(request);
       deleteTableMetadata(namespace, table);
+      waitForTableDeletion(namespace, table);
     } catch (Exception e) {
       if (e instanceof ResourceNotFoundException) {
         LOGGER.warn("table " + request.tableName() + " not existed for deleting");
@@ -410,6 +414,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       if (scanResponse.count() == 0) {
         try {
           client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
+          waitForTableDeletion(METADATA_NAMESPACE, METADATA_TABLE);
         } catch (DynamoDbException e) {
           throw new ExecutionException("deleting empty metadata table failed");
         }
@@ -664,6 +669,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private void enableContinuousBackup(String namespace, String table) throws ExecutionException {
     try {
+      waitForTableBackupEnabledAtCreation(getFullTableName(namespacePrefix, namespace, table));
       client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
     } catch (Exception e) {
       throw new ExecutionException(
@@ -834,11 +840,35 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   private void waitForTableCreation(String tableFullName) {
     while (true) {
-      Uninterruptibles.sleepUninterruptibly(CREATE_WAIT_DURATION_SECS, TimeUnit.SECONDS);
+      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
       DescribeTableRequest describeTableRequest =
           DescribeTableRequest.builder().tableName(tableFullName).build();
       DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
       if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
+        break;
+      }
+    }
+  }
+
+  private void waitForTableBackupEnabledAtCreation(String tableFullName) {
+    while (true) {
+      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+      DescribeContinuousBackupsRequest describeContinuousBackupsRequest =
+          DescribeContinuousBackupsRequest.builder().tableName(tableFullName).build();
+      DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+          client.describeContinuousBackups(describeContinuousBackupsRequest);
+      if (describeContinuousBackupsResponse.continuousBackupsDescription().continuousBackupsStatus()
+          == ContinuousBackupsStatus.ENABLED) {
+        break;
+      }
+    }
+  }
+
+  private void waitForTableDeletion(String namespace, String tableName) throws ExecutionException {
+    while (true) {
+      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+      Set<String> tableSet = getNamespaceTableNames(namespace);
+      if (!tableSet.contains(tableName)) {
         break;
       }
     }
