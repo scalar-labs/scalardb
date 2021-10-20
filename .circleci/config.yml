@@ -3,20 +3,17 @@ workflows:
   version: 2
   scalardb-ci:
     jobs:
-#      - check
+      - check
       - integration-test-for-cassandra
-      - 2e2-test-schema-loader-cassandra:
-          requires:
-            - integration-test-for-cassandra
-#      - integration-test-for-cosmos
-#      - integration-test-for-dynamo
-#      - integration-test-for-jdbc-mysql
-#      - integration-test-for-jdbc-postgresql
-#      - integration-test-for-jdbc-oracle
-#      - integration-test-for-jdbc-sqlserver
-#      - integration-test-for-multi-storage
-#      - integration-test-for-scalardb-server
-#      - integration-test-for-two-phase-consensus-commit
+      - integration-test-for-cosmos
+      - integration-test-for-dynamo
+      - integration-test-for-jdbc-mysql
+      - integration-test-for-jdbc-postgresql
+      - integration-test-for-jdbc-oracle
+      - integration-test-for-jdbc-sqlserver
+      - integration-test-for-multi-storage
+      - integration-test-for-scalardb-server
+      - integration-test-for-two-phase-consensus-commit
 jobs:
   check:
     docker:
