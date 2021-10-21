@@ -1,5 +1,5 @@
 {
-  "test_ns.test_table": {
+  "schema_loader_test_ns.test_table": {
     "transaction": true,
     "partition-key": [
       "pk1"
@@ -29,7 +29,7 @@
     "replication-factor": "1",
     "ru": 5000
   },
-  "test_ns2.test_table2": {
+  "schema_loader_test_ns2.test_table2": {
     "partition-key": [
       "pk1"
     ],
