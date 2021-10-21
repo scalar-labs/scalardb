@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.io.FileInputStream;
@@ -45,7 +47,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
 
     Map<String, String> metaOptions =
@@ -132,7 +135,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables() {
+  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
     String schemaFile = "path_to_file";
     String configFile = "path_to_config_file";
@@ -145,7 +149,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithCoordinatorAndDeleteTable_ShouldCallDropCoordinatorTable() {
+  public void call_WithCoordinatorAndDeleteTable_ShouldCallDropCoordinatorTable()
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
 
     // Act
@@ -156,8 +161,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void
-      call_WithDeleteTableButNotHaveCoordinatorArgument_ShouldNotCallDropCoordinatorTable() {
+  public void call_WithDeleteTableButNotHaveCoordinatorArgument_ShouldNotCallDropCoordinatorTable()
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
 
     // Act
