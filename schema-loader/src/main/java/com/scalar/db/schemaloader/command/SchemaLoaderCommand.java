@@ -102,25 +102,24 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
     SchemaOperator operator = new SchemaOperator(dbConfig, false);
 
-    boolean allSuccess = true;
     if (coordinator) {
-      allSuccess &= operator.createCoordinatorTable(metaOptions);
+      operator.createCoordinatorTable(metaOptions);
     }
 
     if (schemaFile != null) {
       SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
       if (deleteTables) {
-        allSuccess &= operator.deleteTables(schemaParser.getTables());
+        operator.deleteTables(schemaParser.getTables());
       } else {
-        allSuccess &= operator.createTables(schemaParser.getTables(), metaOptions);
+        operator.createTables(schemaParser.getTables(), metaOptions);
       }
     }
 
     if (coordinator && deleteTables) {
-      allSuccess &= operator.dropCoordinatorTable();
+      operator.dropCoordinatorTable();
     }
 
     operator.close();
-    return allSuccess ? 0 : 1;
+    return 0;
   }
 }

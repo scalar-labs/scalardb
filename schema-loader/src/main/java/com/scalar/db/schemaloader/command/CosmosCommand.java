@@ -75,14 +75,13 @@ public class CosmosCommand implements Callable<Integer> {
     SchemaOperator operator = new SchemaOperator(dbConfig, true);
     SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), metaOptions);
 
-    boolean allSuccess = true;
     if (deleteTables) {
-      allSuccess &= operator.deleteTables(schemaParser.getTables());
+      operator.deleteTables(schemaParser.getTables());
     } else {
-      allSuccess &= operator.createTables(schemaParser.getTables(), metaOptions);
+      operator.createTables(schemaParser.getTables(), metaOptions);
     }
 
     operator.close();
-    return allSuccess ? 0 : 1;
+    return 0;
   }
 }
