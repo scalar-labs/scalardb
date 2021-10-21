@@ -261,11 +261,11 @@ public class CosmosAdminTest {
     assertThat(indexingPolicy.getCompositeIndexes().get(0).get(1).getPath())
         .isEqualTo("/clusteringKey/c1");
     assertThat(indexingPolicy.getCompositeIndexes().get(0).get(1).getOrder())
-        .isEqualTo(CompositePathSortOrder.ASCENDING); // always ASCENDING for now
+        .isEqualTo(CompositePathSortOrder.DESCENDING);
     assertThat(indexingPolicy.getCompositeIndexes().get(0).get(2).getPath())
         .isEqualTo("/clusteringKey/c2");
     assertThat(indexingPolicy.getCompositeIndexes().get(0).get(2).getOrder())
-        .isEqualTo(CompositePathSortOrder.ASCENDING); // always ASCENDING for now
+        .isEqualTo(CompositePathSortOrder.ASCENDING);
 
     verify(cosmosScripts).createStoredProcedure(any(CosmosStoredProcedureProperties.class));
 
@@ -283,6 +283,7 @@ public class CosmosAdminTest {
     cosmosTableMetadata.setId(getFullTableName(namespace, table));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
     cosmosTableMetadata.setClusteringKeyNames(Arrays.asList("c1", "c2"));
+    cosmosTableMetadata.setClusteringOrders(ImmutableMap.of("c1", "DESC", "c2", "ASC"));
     cosmosTableMetadata.setColumns(
         new ImmutableMap.Builder<String, String>()
             .put("c1", "text")
@@ -384,6 +385,7 @@ public class CosmosAdminTest {
     CosmosTableMetadata cosmosTableMetadata = new CosmosTableMetadata();
     cosmosTableMetadata.setId(getFullTableName(namespace, table));
     cosmosTableMetadata.setPartitionKeyNames(Collections.singletonList("c3"));
+    cosmosTableMetadata.setClusteringOrders(Collections.emptyMap());
     cosmosTableMetadata.setClusteringKeyNames(Collections.emptyList());
     cosmosTableMetadata.setColumns(
         new ImmutableMap.Builder<String, String>()
