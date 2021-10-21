@@ -5,11 +5,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +39,7 @@ public class SchemaOperatorTest {
 
   @Test
   public void createTables_WithProperTableList_ShouldCallAdminCreateNameSpace()
-      throws ExecutionException {
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -54,7 +56,7 @@ public class SchemaOperatorTest {
   @Test
   public void
       createTables_WithTableListContainTransactionalTable_ShouldCallConsensusCommitAdminCreateTransactionalTable()
-          throws ExecutionException {
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -75,7 +77,7 @@ public class SchemaOperatorTest {
 
   @Test
   public void createTables_WithTableListContainNonTransactionalTable_ShouldCallAdminCreateTable()
-      throws ExecutionException {
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -96,7 +98,7 @@ public class SchemaOperatorTest {
   @Test
   public void
       createTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminCreateCoordinatorTable()
-          throws ExecutionException {
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -116,8 +118,8 @@ public class SchemaOperatorTest {
 
   @Test
   public void
-      deleteTables_WithTableListAndNamespaceContainsOnlyProvidedTables_ShouldCallAdminDropTableAndDropNamespace()
-          throws ExecutionException {
+      deleteTables_WithTableListAndNamespaceContainsProvidedTables_ShouldCallAdminDropTableAndDropNamespace()
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -127,7 +129,9 @@ public class SchemaOperatorTest {
     when(table.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(table.getTableMetadata()).thenReturn(tableMetadata);
-    when(admin.getNamespaceTableNames("ns")).thenReturn(Collections.emptySet());
+    when(admin.namespaceExists("ns")).thenReturn(true);
+    when(admin.getNamespaceTableNames("ns")).thenReturn(ImmutableSet.of("tb"));
+
     // Act
     operator.deleteTables(tableList);
 
@@ -139,7 +143,7 @@ public class SchemaOperatorTest {
   @Test
   public void
       deleteTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminDropCoordinatorTable()
-          throws ExecutionException {
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -149,6 +153,10 @@ public class SchemaOperatorTest {
     when(table.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(table.getTableMetadata()).thenReturn(tableMetadata);
+
+    when(admin.namespaceExists(Coordinator.NAMESPACE)).thenReturn(true);
+    when(admin.getNamespaceTableNames(Coordinator.NAMESPACE))
+        .thenReturn(ImmutableSet.of(Coordinator.TABLE));
 
     // Act
     operator.deleteTables(tableList);

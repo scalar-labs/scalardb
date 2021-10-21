@@ -4,6 +4,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -34,7 +36,8 @@ public class CassandraCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
+          throws ExecutionException, SchemaOperatorException {
     // Arrange
     Map<String, String> metaOptions =
         ImmutableMap.<String, String>builder()
@@ -129,7 +132,8 @@ public class CassandraCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables() {
+  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
+      throws ExecutionException, SchemaOperatorException {
     // Arrange
 
     // Act
