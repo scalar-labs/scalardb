@@ -7,7 +7,9 @@ import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
 
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.Scan;
 import graphql.Scalars;
 import graphql.introspection.Introspection.DirectiveLocation;
 import graphql.schema.GraphQLArgument;
@@ -33,12 +35,12 @@ public class CommonSchema {
                         nonNull(
                             newEnum()
                                 .name("ConditionalExpressionOperator")
-                                .value(ConditionalExpressionOperator.EQ.name())
-                                .value(ConditionalExpressionOperator.NE.name())
-                                .value(ConditionalExpressionOperator.GT.name())
-                                .value(ConditionalExpressionOperator.GTE.name())
-                                .value(ConditionalExpressionOperator.LT.name())
-                                .value(ConditionalExpressionOperator.LTE.name())
+                                .value(ConditionalExpression.Operator.EQ.name())
+                                .value(ConditionalExpression.Operator.NE.name())
+                                .value(ConditionalExpression.Operator.GT.name())
+                                .value(ConditionalExpression.Operator.GTE.name())
+                                .value(ConditionalExpression.Operator.LT.name())
+                                .value(ConditionalExpression.Operator.LTE.name())
                                 .build())))
             .build();
 
@@ -46,8 +48,8 @@ public class CommonSchema {
         .add(
             newEnum()
                 .name("ScanOrderingOrder")
-                .value(ScanOrderingOrder.ASC.name())
-                .value(ScanOrderingOrder.DESC.name())
+                .value(Scan.Ordering.Order.ASC.name())
+                .value(Scan.Ordering.Order.DESC.name())
                 .build())
         .add(
             newInputObject()
