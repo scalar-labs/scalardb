@@ -78,6 +78,16 @@ public class ConsensusCommitAdmin {
   }
 
   /**
+   * Return true if a coordinator table exists.
+   *
+   * @return true if a coordinator table exists, false otherwise
+   * @throws ExecutionException if the operation failed
+   */
+  public boolean coordinatorTableExists() throws ExecutionException {
+    return admin.tableExists(coordinatorNamespace, Coordinator.TABLE);
+  }
+
+  /**
    * Creates a new transactional table.
    *
    * @param namespace a namespace already created
