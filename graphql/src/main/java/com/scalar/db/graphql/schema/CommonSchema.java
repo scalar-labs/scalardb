@@ -7,6 +7,7 @@ import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
 
 import com.google.common.collect.ImmutableSet;
+import com.scalar.db.api.Consistency;
 import graphql.Scalars;
 import graphql.introspection.Introspection.DirectiveLocation;
 import graphql.schema.GraphQLArgument;
@@ -84,6 +85,13 @@ public class CommonSchema {
                     newInputObjectField()
                         .name("expressions")
                         .type(list(nonNull(conditionalExpressionInputObject))))
+                .build())
+        .add(
+            newEnum()
+                .name("Consistency")
+                .value(Consistency.SEQUENTIAL.name())
+                .value(Consistency.EVENTUAL.name())
+                .value(Consistency.LINEARIZABLE.name())
                 .build())
         .build();
   }
