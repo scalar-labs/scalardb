@@ -11,6 +11,7 @@ import graphql.schema.GraphQLEnumValueDefinition;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
+import graphql.schema.GraphQLInputType;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
@@ -399,6 +400,29 @@ public class TableGraphQLModelTest {
   }
 
   @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreatePutInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // input table_1_PutInput {
+    //   key: table_1_Key!
+    //   values: table_1_PutValues!
+    //   condition: PutCondition
+    // }
+    GraphQLInputObjectType objectType = model.getPutInputObjectType();
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutInput");
+    List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
+    assertThat(fields.size()).isEqualTo(3);
+    assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
+    assertNonNullInputObjectField(fields.get(1), "values", model.getPutValuesObjectType());
+    GraphQLInputType conditionType = fields.get(2).getType();
+    assertThat(conditionType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) conditionType).getName()).isEqualTo("PutCondition");
+  }
+
+  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePutPayloadObjectType() {
     // Act
     TableGraphQLModel model =
@@ -423,20 +447,21 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Mutation {
-    //  table_1_put(key: table_1_Key!, values: table_1_PutValues!, condition: PutCondition):
-    // table_1_PutPayload
+    //  table_1_put(put: [table1_PutInput!]!): table_1_PutPayload
     // }
     GraphQLFieldDefinition field = model.getMutationPutField();
     assertNullableFieldDefinition(field, TABLE_NAME + "_put", model.getPutPayloadObjectType());
-    assertThat(field.getArguments().size()).isEqualTo(3);
+    assertThat(field.getArguments().size()).isEqualTo(1);
 
-    List<GraphQLArgument> arguments = field.getArguments();
-    assertNonNullArgument(arguments.get(0), "key", model.getPrimaryKeyInputObjectType());
-    assertNonNullArgument(arguments.get(1), "values", model.getPutValuesObjectType());
-    GraphQLArgument argument = arguments.get(2);
-    assertThat(argument.getName()).isEqualTo("condition");
-    assertThat(argument.getType()).isInstanceOf(GraphQLTypeReference.class);
-    assertThat(((GraphQLTypeReference) argument.getType()).getName()).isEqualTo("PutCondition");
+    GraphQLArgument argument = field.getArguments().get(0);
+    assertThat(argument.getName()).isEqualTo("put");
+    assertThat(argument.getType()).isInstanceOf(GraphQLNonNull.class);
+    GraphQLType wrappedType1 = ((GraphQLNonNull) argument.getType()).getWrappedType();
+    assertThat(wrappedType1).isInstanceOf(GraphQLList.class);
+    GraphQLType wrappedType2 = ((GraphQLList) wrappedType1).getWrappedType();
+    assertThat(wrappedType2).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType())
+        .isEqualTo(model.getPutInputObjectType());
   }
 
   @Test

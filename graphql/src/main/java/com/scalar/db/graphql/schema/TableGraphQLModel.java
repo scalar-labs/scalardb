@@ -58,6 +58,7 @@ public class TableGraphQLModel {
   private final GraphQLEnumType clusteringKeyNameEnum;
   private final GraphQLObjectType scanPayloadObjectType;
   private final GraphQLFieldDefinition mutationPutField;
+  private final GraphQLInputObjectType putInputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
   private final GraphQLObjectType putPayloadObjectType;
   private final GraphQLFieldDefinition mutationDeleteField;
@@ -102,6 +103,7 @@ public class TableGraphQLModel {
     this.queryScanField = createQueryScanField();
 
     this.putValuesObjectType = createPutValuesObjectType();
+    this.putInputObjectType = createPutInputObjectType();
     this.putPayloadObjectType = createPutPayloadObjectType();
     this.mutationPutField = createMutationPutField();
 
@@ -249,6 +251,15 @@ public class TableGraphQLModel {
     return inputValues.build();
   }
 
+  private GraphQLInputObjectType createPutInputObjectType() {
+    return newInputObject()
+        .name(objectType.getName() + "_PutInput")
+        .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
+        .field(newInputObjectField().name("values").type(nonNull(putValuesObjectType)))
+        .field(newInputObjectField().name("condition").type(typeRef("PutCondition")))
+        .build();
+  }
+
   private GraphQLObjectType createPutPayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_PutPayload")
@@ -260,9 +271,7 @@ public class TableGraphQLModel {
     return newFieldDefinition()
         .name(objectType.getName() + "_put")
         .type(putPayloadObjectType)
-        .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
-        .argument(newArgument().name("values").type(nonNull(putValuesObjectType)))
-        .argument(newArgument().name("condition").type(typeRef("PutCondition")))
+        .argument(newArgument().name("put").type(nonNull(list(nonNull(putInputObjectType)))))
         .build();
   }
 
@@ -348,6 +357,10 @@ public class TableGraphQLModel {
 
   public GraphQLFieldDefinition getMutationPutField() {
     return mutationPutField;
+  }
+
+  public GraphQLInputObjectType getPutInputObjectType() {
+    return putInputObjectType;
   }
 
   public GraphQLInputObjectType getPutValuesObjectType() {
