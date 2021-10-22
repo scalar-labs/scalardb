@@ -5,23 +5,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
-import java.io.FileInputStream;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest({SchemaLoaderCommand.class})
 public class SchemaLoaderCommandTest extends CommandTestBase {
 
   private static final String replicationStrategy = "SimpleStrategy";
@@ -32,15 +26,10 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   private static final Boolean noBackup = true;
   private static final String schemaFile = "path_to_file";
   private static final String configFile = "path_to_config_file";
-  @Mock private FileInputStream fileInputStream;
-  @Mock private DatabaseConfig databaseConfig;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    PowerMockito.whenNew(FileInputStream.class).withAnyArguments().thenReturn(fileInputStream);
-    PowerMockito.whenNew(DatabaseConfig.class).withAnyArguments().thenReturn(databaseConfig);
-
     commandLine = new CommandLine(new SchemaLoaderCommand());
     setCommandLineOutput();
   }

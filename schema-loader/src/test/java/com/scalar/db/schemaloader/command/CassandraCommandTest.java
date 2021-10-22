@@ -11,11 +11,9 @@ import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest(CassandraCommand.class)
 public class CassandraCommandTest extends CommandTestBase {
 
   private static final String host = "cassandra";

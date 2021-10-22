@@ -9,11 +9,9 @@ import java.util.Collections;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest(JdbcCommand.class)
 public class JdbcCommandTest extends CommandTestBase {
 
   private static final String jdbcUrl = "jdbc_url";

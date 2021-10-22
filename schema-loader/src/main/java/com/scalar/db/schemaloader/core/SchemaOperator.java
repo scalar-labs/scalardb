@@ -167,7 +167,7 @@ public class SchemaOperator {
 
     for (String namespace : namespaces) {
       if (!admin.namespaceExists(namespace)) {
-        LOGGER.warn("Namespace " + namespace + "doesn't exist for deleting.");
+        LOGGER.warn("Namespace " + namespace + " doesn't exist for deleting.");
       } else {
         try {
           admin.dropNamespace(namespace);

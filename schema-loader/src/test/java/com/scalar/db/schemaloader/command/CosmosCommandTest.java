@@ -11,11 +11,9 @@ import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest(CosmosCommand.class)
 public class CosmosCommandTest extends CommandTestBase {
 
   private static final String host = "cosmos_uri";

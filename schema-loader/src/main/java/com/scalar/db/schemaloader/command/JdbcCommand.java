@@ -2,9 +2,12 @@ package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import com.scalar.db.schemaloader.schema.SchemaParser;
+import com.scalar.db.schemaloader.schema.Table;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -59,14 +62,13 @@ public class JdbcCommand implements Callable<Integer> {
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
-    DatabaseConfig dbConfig = new DatabaseConfig(props);
-    SchemaOperator operator = new SchemaOperator(dbConfig, true);
-    SchemaParser schemaParser = new SchemaParser(schemaFile.toString(), Collections.emptyMap());
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, true);
+    List<Table> tableList = SchemaParser.parse(schemaFile.toString(), Collections.emptyMap());
 
     if (deleteTables) {
-      operator.deleteTables(schemaParser.getTables());
+      operator.deleteTables(tableList);
     } else {
-      operator.createTables(schemaParser.getTables(), Collections.emptyMap());
+      operator.createTables(tableList, Collections.emptyMap());
     }
 
     operator.close();

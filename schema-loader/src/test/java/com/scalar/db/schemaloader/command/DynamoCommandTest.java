@@ -11,11 +11,9 @@ import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest(DynamoCommand.class)
 public class DynamoCommandTest extends CommandTestBase {
 
   private static final String user = "aws_access_key";
