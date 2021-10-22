@@ -34,4 +34,4 @@ Thus, along with any required values by the application, additional values for t
 ## Schema creation
 
 It is a little hard for application developers to care for the schema mapping and metadata for transactions,
-so we offer a tool called [scalar-schema](../tools/scalar-schema/README.md) for creating schema without much knowledge about those.
+so we offer a tool called [schema-loader](../schema-loader/README.md) for creating schema without much knowledge about those.

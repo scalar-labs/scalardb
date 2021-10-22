@@ -48,29 +48,12 @@ You can create a JSON file `emoney-storage.json` with the JSON below.
 }
 ```
 
-To apply the schema, download the scalar schema standalone loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+To apply the schema, download the **scalardb-schema-loader** that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
-For Cassandra
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -R 1
+$ java -jar scalardb-schema-loader-<version>.jar --config <path_to_database.properties_file> -f emoney-storage.json
 ```
-
-For Cosmos DB
-```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f emoney-storage.json
-```
-  - `<COSMOS_DB_KEY>` you can use a primary key or a secondary key.
-
-For DynamoDB
-```
-$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json
-```
-  - `<REGION>` should be a string to specify an AWS region like `ap-northeast-1`.
-
-For JDBC databases
-```
-$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json
-```
+- The **database.properties** file contains the configurations for Scalar DB which was mentioned in **Getting Started with Scalar DB on X** documents.
 
 ## Store & retrieve data with storage API
 
@@ -166,33 +149,11 @@ You can create a JSON file `emoney-transaction.json` with the JSON bellow.
 
 Before reapplying the schema, please drop the existing namespace first by issuing the following. 
 
-For Cassandra
-
 ```
-$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-storage.json -D
-$ java -jar scalar-schema-standalone-<version>.jar --cassandra -h localhost -u <CASSNDRA_USER> -p <CASSANDRA_PASSWORD> -f emoney-transaction.json -R 1
+$ java -jar scalardb-schema-loader-<version>.jar --config <path_to_database.properties_file> -f emoney-storage.json -D
+$ java -jar scalardb-schema-loader-<version>.jar --config <path_to_database.properties_file> --coordinator -f emoney-transaction.json
 ```
-
-For Cosmos DB
-
-```
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f emoney-storage.json -D
-$ java -jar scalar-schema-standalone-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f emoney-transaction.json
-```
-
-For DynamoDB
-
-```
-$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-storage.json -D
-$ java -jar scalar-schema-standalone-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID> -p <AWS_ACCESS_SECRET_KEY> --region <REGION> -f emoney-transaction.json
-```
-
-For JDBC databases
-
-```
-$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-storage.json -D
-$ java -jar scalar-schema-standalone-<version>.jar --jdbc -j <JDBC_URL> -u <USERNAME> -p <PASSWORD> -f emoney-transaction.json
-```
+- The `--coordinator` is specified because we have a table with transaction enabled in the schema.
 
 ## Store & retrieve data with transaction API
 
@@ -306,7 +267,7 @@ These are just simple examples of how Scalar DB is used. For more information, p
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
 * [Requirements in the underlining databases](requirements.md)
 * [Database schema in Scalar DB](schema.md)
-* [Schema tool](../tools/scalar-schema/README.md)
+* [Schema loader](../schema-loader/README.md)
 * [How to Back up and Restore](backup-restore.md)
 * [Multi-storage](multi-storage.md)
 * [Scalar DB server](scalardb-server.md)
