@@ -164,6 +164,27 @@ public class TableGraphQLModelTest {
   }
 
   @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateGetInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // input table_1_GetInput {
+    //   key: table_1_Key!
+    //   consistency: Consistency
+    // }
+    GraphQLInputObjectType objectType = model.getGetInputObjectType();
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_GetInput");
+    List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
+    assertThat(fields.size()).isEqualTo(2);
+    assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
+    GraphQLInputType consistencyType = fields.get(1).getType();
+    assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
+  }
+
+  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateGetPayloadObjectType() {
     // Act
     TableGraphQLModel model =
@@ -188,14 +209,14 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Query {
-    //   table_1_get(key: table_1_Key!): table_1_GetPayload
+    //   table_1_get(get: table_1_GetInput!): table_1_GetPayload
     // }
     GraphQLFieldDefinition field = model.getQueryGetField();
     assertNullableFieldDefinition(field, TABLE_NAME + "_get", model.getGetPayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(1);
 
     GraphQLArgument argument = field.getArguments().get(0);
-    assertNonNullArgument(argument, "key", model.getPrimaryKeyInputObjectType());
+    assertNonNullArgument(argument, "get", model.getGetInputObjectType());
   }
 
   @Test

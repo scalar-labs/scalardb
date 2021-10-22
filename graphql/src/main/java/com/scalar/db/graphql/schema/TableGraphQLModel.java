@@ -50,6 +50,7 @@ public class TableGraphQLModel {
   private final GraphQLInputObjectType primaryKeyInputObjectType;
   private final GraphQLInputObjectType partitionKeyInputObjectType;
   private final GraphQLFieldDefinition queryGetField;
+  private final GraphQLInputObjectType getInputObjectType;
   private final GraphQLObjectType getPayloadObjectType;
   private final GraphQLFieldDefinition queryScanField;
   private final GraphQLInputObjectType scanInputObjectType;
@@ -89,6 +90,8 @@ public class TableGraphQLModel {
     this.objectType = createObjectType();
     this.primaryKeyInputObjectType = createPrimaryKeyInputObjectType();
     this.partitionKeyInputObjectType = createPartitionKeyInputObjectType();
+
+    this.getInputObjectType = createGetInputObjectType();
     this.getPayloadObjectType = createGetPayloadObjectType();
     this.queryGetField = createQueryGetField();
 
@@ -164,6 +167,14 @@ public class TableGraphQLModel {
     return builder.build();
   }
 
+  private GraphQLInputObjectType createGetInputObjectType() {
+    return newInputObject()
+        .name(objectType.getName() + "_GetInput")
+        .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
+        .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
+        .build();
+  }
+
   private GraphQLObjectType createGetPayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_GetPayload")
@@ -175,7 +186,7 @@ public class TableGraphQLModel {
     return newFieldDefinition()
         .name(objectType.getName() + "_get")
         .type(getPayloadObjectType)
-        .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
+        .argument(newArgument().name("get").type(nonNull(getInputObjectType)))
         .build();
   }
 
@@ -334,6 +345,10 @@ public class TableGraphQLModel {
 
   public GraphQLFieldDefinition getQueryGetField() {
     return queryGetField;
+  }
+
+  public GraphQLInputObjectType getGetInputObjectType() {
+    return getInputObjectType;
   }
 
   public GraphQLObjectType getGetPayloadObjectType() {
