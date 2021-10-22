@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import graphql.Scalars;
+import graphql.language.BooleanValue;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectType;
@@ -54,9 +55,9 @@ public class TableGraphQLModel {
   private final GraphQLObjectType getPayloadObjectType;
   private final GraphQLFieldDefinition queryScanField;
   private final GraphQLInputObjectType scanInputObjectType;
-  private final GraphQLInputObjectType scanOrderingInputObjectType;
-  private final GraphQLInputObjectType scanBoundaryInputObjectType;
   private final GraphQLEnumType clusteringKeyNameEnum;
+  private final GraphQLInputObjectType clusteringKeyInputObjectType;
+  private final GraphQLInputObjectType scanOrderingInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
   private final GraphQLFieldDefinition mutationPutField;
   private final GraphQLInputObjectType putInputObjectType;
@@ -97,14 +98,19 @@ public class TableGraphQLModel {
 
     if (tableMetadata.getClusteringKeyNames().isEmpty()) {
       this.clusteringKeyNameEnum = null;
+      this.clusteringKeyInputObjectType = null;
+      this.scanOrderingInputObjectType = null;
+      this.scanInputObjectType = null;
+      this.scanPayloadObjectType = null;
+      this.queryScanField = null;
     } else {
       this.clusteringKeyNameEnum = createClusteringKeyNameEnum();
+      this.clusteringKeyInputObjectType = createClusteringKeyInputObjectType();
+      this.scanOrderingInputObjectType = createScanOrderingInputObjectType();
+      this.scanInputObjectType = createScanInputObjectType();
+      this.scanPayloadObjectType = createScanPayloadObjectType();
+      this.queryScanField = createQueryScanField();
     }
-    this.scanOrderingInputObjectType = createScanOrderingInputObjectType();
-    this.scanBoundaryInputObjectType = createScanBoundaryInputObjectType();
-    this.scanInputObjectType = createScanInputObjectType();
-    this.scanPayloadObjectType = createScanPayloadObjectType();
-    this.queryScanField = createQueryScanField();
 
     this.putValuesObjectType = createPutValuesObjectType();
     this.putInputObjectType = createPutInputObjectType();
@@ -196,25 +202,10 @@ public class TableGraphQLModel {
     return builder.build();
   }
 
-  private GraphQLInputObjectType createScanOrderingInputObjectType() {
-    GraphQLInputObjectType.Builder builder =
-        newInputObject().name(objectType.getName() + "_ScanOrdering");
-    if (clusteringKeyNameEnum != null) {
-      builder.field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)));
-    }
-    return builder
-        .field(newInputObjectField().name("order").type(nonNull(typeRef("ScanOrderingOrder"))))
-        .build();
-  }
-
-  private GraphQLInputObjectType createScanBoundaryInputObjectType() {
-    GraphQLInputObjectType.Builder builder =
-        newInputObject().name(objectType.getName() + "_ScanBoundary");
-    if (clusteringKeyNameEnum != null) {
-      builder.field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)));
-    }
-    return builder
-        .field(newInputObjectField().name("inclusive").type(Scalars.GraphQLBoolean))
+  private GraphQLInputObjectType createClusteringKeyInputObjectType() {
+    return newInputObject()
+        .name(objectType.getName() + "_ClusteringKey")
+        .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
         .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
         .field(newInputObjectField().name("floatValue").type(Scalars.GraphQLFloat))
         .field(newInputObjectField().name("stringValue").type(Scalars.GraphQLString))
@@ -222,13 +213,35 @@ public class TableGraphQLModel {
         .build();
   }
 
+  private GraphQLInputObjectType createScanOrderingInputObjectType() {
+    return newInputObject()
+        .name(objectType.getName() + "_ScanOrdering")
+        .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
+        .field(newInputObjectField().name("order").type(nonNull(typeRef("ScanOrderingOrder"))))
+        .build();
+  }
+
   private GraphQLInputObjectType createScanInputObjectType() {
     return newInputObject()
         .name(objectType.getName() + "_ScanInput")
+        .field(
+            newInputObjectField().name("partitionKey").type(nonNull(partitionKeyInputObjectType)))
+        .field(
+            newInputObjectField().name("start").type(list(nonNull(clusteringKeyInputObjectType))))
+        .field(
+            newInputObjectField()
+                .name("startInclusive")
+                .type(Scalars.GraphQLBoolean)
+                .defaultValueLiteral(new BooleanValue(true)))
+        .field(newInputObjectField().name("end").type(list(nonNull(clusteringKeyInputObjectType))))
+        .field(
+            newInputObjectField()
+                .name("endInclusive")
+                .type(Scalars.GraphQLBoolean)
+                .defaultValueLiteral(new BooleanValue(true)))
         .field(newInputObjectField().name("orderings").type(list(scanOrderingInputObjectType)))
-        .field(newInputObjectField().name("start").type(list(scanBoundaryInputObjectType)))
-        .field(newInputObjectField().name("end").type(list(scanBoundaryInputObjectType)))
         .field(newInputObjectField().name("limit").type(Scalars.GraphQLInt))
+        .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
         .build();
   }
 
@@ -243,8 +256,7 @@ public class TableGraphQLModel {
     return newFieldDefinition()
         .name(objectType.getName() + "_scan")
         .type(scanPayloadObjectType)
-        .argument(newArgument().name("key").type(nonNull(partitionKeyInputObjectType)))
-        .argument(newArgument().name("input").type(scanInputObjectType))
+        .argument(newArgument().name("scan").type(nonNull(scanInputObjectType)))
         .build();
   }
 
@@ -367,12 +379,12 @@ public class TableGraphQLModel {
     return scanOrderingInputObjectType;
   }
 
-  public GraphQLInputObjectType getScanBoundaryInputObjectType() {
-    return scanBoundaryInputObjectType;
-  }
-
   public GraphQLEnumType getClusteringKeyNameEnum() {
     return clusteringKeyNameEnum;
+  }
+
+  public GraphQLInputObjectType getClusteringKeyInputObjectType() {
+    return clusteringKeyInputObjectType;
   }
 
   public GraphQLObjectType getScanPayloadObjectType() {

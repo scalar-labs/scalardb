@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import graphql.Scalars;
+import graphql.language.BooleanValue;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLEnumValueDefinition;
@@ -179,6 +180,7 @@ public class TableGraphQLModelTest {
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(2);
     assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
+    assertThat(fields.get(1).getName()).isEqualTo("consistency");
     GraphQLInputType consistencyType = fields.get(1).getType();
     assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
     assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
@@ -242,18 +244,6 @@ public class TableGraphQLModelTest {
   }
 
   @Test
-  public void
-      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateClusteringKeyEnum() {
-    // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
-            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
-
-    // Assert
-    assertThat(model.getClusteringKeyNameEnum()).isNull();
-  }
-
-  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateScanInputObjectType() {
     // Act
     TableGraphQLModel model =
@@ -261,35 +251,92 @@ public class TableGraphQLModelTest {
 
     // Assert
     // input table_1_ScanInput {
-    //   orderings: [table_1_ScanOrdering]
-    //   start: [table_1_ScanBoundary]
-    //   end: [table_1_ScanBoundary]
+    //   partitionKey: table_1_PartitionKey!
+    //   start: [table_1_ClusteringKey!]
+    //   startInclusive: Boolean = true
+    //   end: [table_1_ClusteringKey!]
+    //   endInclusive: Boolean = true
+    //   orderings: [table_1_Ordering!]
     //   limit: Int
+    //   consistency: Consistency
     // }
     GraphQLInputObjectType objectType = model.getScanInputObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_ScanInput");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(4);
+    assertThat(fields.size()).isEqualTo(8);
 
     GraphQLInputObjectField field = fields.get(0);
+    assertThat(field.getName()).isEqualTo("partitionKey");
+    assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) field.getType()).getWrappedType())
+        .isEqualTo(model.getPartitionKeyInputObjectType());
+
+    field = fields.get(1);
+    assertThat(field.getName()).isEqualTo("start");
+    assertThat(field.getType()).isInstanceOf(GraphQLList.class);
+    assertThat(((GraphQLList) field.getType()).getWrappedType()).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) ((GraphQLList) field.getType()).getWrappedType()).getWrappedType())
+        .isEqualTo(model.getClusteringKeyInputObjectType());
+
+    field = fields.get(2);
+    assertThat(field.getName()).isEqualTo("startInclusive");
+    assertThat(field.getType()).isEqualTo(Scalars.GraphQLBoolean);
+    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue())
+        .isEqualTo(true);
+
+    field = fields.get(3);
+    assertThat(field.getName()).isEqualTo("end");
+    assertThat(field.getType()).isInstanceOf(GraphQLList.class);
+    assertThat(((GraphQLList) field.getType()).getWrappedType()).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) ((GraphQLList) field.getType()).getWrappedType()).getWrappedType())
+        .isEqualTo(model.getClusteringKeyInputObjectType());
+
+    field = fields.get(4);
+    assertThat(field.getName()).isEqualTo("endInclusive");
+    assertThat(field.getType()).isEqualTo(Scalars.GraphQLBoolean);
+    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue())
+        .isEqualTo(true);
+
+    field = fields.get(5);
     assertThat(field.getName()).isEqualTo("orderings");
     assertThat(field.getType()).isInstanceOf(GraphQLList.class);
     assertThat(((GraphQLList) field.getType()).getWrappedType())
         .isEqualTo(model.getScanOrderingInputObjectType());
 
-    field = fields.get(1);
-    assertThat(field.getName()).isEqualTo("start");
-    assertThat(field.getType()).isInstanceOf(GraphQLList.class);
-    assertThat(((GraphQLList) field.getType()).getWrappedType())
-        .isEqualTo(model.getScanBoundaryInputObjectType());
+    field = fields.get(6);
+    assertNullableInputObjectField(field, "limit", Scalars.GraphQLInt);
 
-    field = fields.get(2);
-    assertThat(field.getName()).isEqualTo("end");
-    assertThat(field.getType()).isInstanceOf(GraphQLList.class);
-    assertThat(((GraphQLList) field.getType()).getWrappedType())
-        .isEqualTo(model.getScanBoundaryInputObjectType());
+    field = fields.get(7);
+    assertThat(field.getName()).isEqualTo("consistency");
+    GraphQLInputType consistencyType = field.getType();
+    assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
+  }
 
-    assertNullableInputObjectField(fields.get(3), "limit", Scalars.GraphQLInt);
+  @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateClusteringKeyInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // input table_1_ScanBoundary {
+    //   name: table_1_ClusteringKeyName!
+    //   inclusive: Boolean
+    //   intValue: Int
+    //   floatValue: Float
+    //   stringValue: String
+    //   booleanValue: Boolean
+    // }
+    GraphQLInputObjectType inputObjectType = model.getClusteringKeyInputObjectType();
+    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ClusteringKey");
+    List<GraphQLInputObjectField> fields = inputObjectType.getFieldDefinitions();
+    assertThat(fields.size()).isEqualTo(5);
+    assertNonNullInputObjectField(fields.get(0), "name", model.getClusteringKeyNameEnum());
+    assertNullableInputObjectField(fields.get(1), "intValue", Scalars.GraphQLInt);
+    assertNullableInputObjectField(fields.get(2), "floatValue", Scalars.GraphQLFloat);
+    assertNullableInputObjectField(fields.get(3), "stringValue", Scalars.GraphQLString);
+    assertNullableInputObjectField(fields.get(4), "booleanValue", Scalars.GraphQLBoolean);
   }
 
   @Test
@@ -315,57 +362,6 @@ public class TableGraphQLModelTest {
     GraphQLType wrappedType = ((GraphQLNonNull) field.getType()).getWrappedType();
     assertThat(wrappedType).isInstanceOf(GraphQLTypeReference.class);
     assertThat(((GraphQLTypeReference) wrappedType).getName()).isEqualTo("ScanOrderingOrder");
-  }
-
-  @Test
-  public void
-      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldCreateScanOrderingInputObjectTypeWithoutNameField() {
-    // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
-            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
-
-    // Assert
-    // input table_1_ScanOrdering {
-    //   order: ScanOrderingOrder!
-    // }
-    GraphQLInputObjectType inputObjectType = model.getScanOrderingInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanOrdering");
-    assertThat(inputObjectType.getFieldDefinitions().size()).isEqualTo(1);
-
-    GraphQLInputObjectField field = inputObjectType.getFieldDefinitions().get(0);
-    assertThat(field.getName()).isEqualTo("order");
-    assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
-    GraphQLType wrappedType = ((GraphQLNonNull) field.getType()).getWrappedType();
-    assertThat(wrappedType).isInstanceOf(GraphQLTypeReference.class);
-    assertThat(((GraphQLTypeReference) wrappedType).getName()).isEqualTo("ScanOrderingOrder");
-  }
-
-  @Test
-  public void constructor_NonNullArgumentsGiven_ShouldCreateScanBoundaryInputObjectType() {
-    // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
-
-    // Assert
-    // input table_1_ScanBoundary {
-    //   name: table_1_ClusteringKeyName!
-    //   inclusive: Boolean
-    //   intValue: Int
-    //   floatValue: Float
-    //   stringValue: String
-    //   booleanValue: Boolean
-    // }
-    GraphQLInputObjectType inputObjectType = model.getScanBoundaryInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanBoundary");
-    List<GraphQLInputObjectField> fields = inputObjectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(6);
-    assertNonNullInputObjectField(fields.get(0), "name", model.getClusteringKeyNameEnum());
-    assertNullableInputObjectField(fields.get(1), "inclusive", Scalars.GraphQLBoolean);
-    assertNullableInputObjectField(fields.get(2), "intValue", Scalars.GraphQLInt);
-    assertNullableInputObjectField(fields.get(3), "floatValue", Scalars.GraphQLFloat);
-    assertNullableInputObjectField(fields.get(4), "stringValue", Scalars.GraphQLString);
-    assertNullableInputObjectField(fields.get(5), "booleanValue", Scalars.GraphQLBoolean);
   }
 
   @Test
@@ -400,18 +396,12 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Query {
-    //   table_1_scan(key: table_1_PartitionKey!, input: table_1_ScanInput): table_1_ScanPayload
+    //   table_1_scan(scan: table_1_ScanInput!): table_1_ScanPayload
     // }
     GraphQLFieldDefinition field = model.getQueryScanField();
     assertNullableFieldDefinition(field, TABLE_NAME + "_scan", model.getScanPayloadObjectType());
-    assertThat(field.getArguments().size()).isEqualTo(2);
-
-    List<GraphQLArgument> arguments = field.getArguments();
-    assertNonNullArgument(arguments.get(0), "key", model.getPartitionKeyInputObjectType());
-
-    GraphQLArgument argument = arguments.get(1);
-    assertThat(argument.getName()).isEqualTo("input");
-    assertThat(argument.getType()).isEqualTo(model.getScanInputObjectType());
+    assertThat(field.getArguments().size()).isEqualTo(1);
+    assertNonNullArgument(field.getArguments().get(0), "scan", model.getScanInputObjectType());
   }
 
   @Test
@@ -544,5 +534,76 @@ public class TableGraphQLModelTest {
 
     GraphQLArgument argument = field.getArguments().get(0);
     assertNonNullListOfNonNullObjectArgument(argument, "delete", model.getDeleteInputObjectType());
+  }
+
+  @Test
+  public void
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateClusteringKeyEnum() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getClusteringKeyNameEnum()).isNull();
+  }
+
+  @Test
+  public void
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateClusteringKeyInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getClusteringKeyInputObjectType()).isNull();
+  }
+
+  @Test
+  public void
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanOrderingInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getScanOrderingInputObjectType()).isNull();
+  }
+
+  @Test
+  public void
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getScanInputObjectType()).isNull();
+  }
+
+  @Test
+  public void
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanPayloadObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getScanPayloadObjectType()).isNull();
+  }
+
+  @Test
+  public void constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateQueryScanField() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(
+            NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
+
+    // Assert
+    assertThat(model.getQueryScanField()).isNull();
   }
 }
