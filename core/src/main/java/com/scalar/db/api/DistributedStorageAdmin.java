@@ -240,7 +240,7 @@ public interface DistributedStorageAdmin {
    * Returns the names of the table belonging to the given namespace.
    *
    * @param namespace a namespace
-   * @return a set of table names
+   * @return a set of table names, an empty list if the namespace doesn't exist
    * @throws ExecutionException if the operation failed
    */
   Set<String> getNamespaceTableNames(String namespace) throws ExecutionException;
@@ -253,6 +253,18 @@ public interface DistributedStorageAdmin {
    * @throws ExecutionException if the operation failed
    */
   boolean namespaceExists(String namespace) throws ExecutionException;
+
+  /**
+   * Return true if the table exists.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return true if the table exists, false otherwise
+   * @throws ExecutionException if the operation failed
+   */
+  default boolean tableExists(String namespace, String table) throws ExecutionException {
+    return getNamespaceTableNames(namespace).contains(table);
+  }
 
   /** Closes connections to the storage. */
   void close();
