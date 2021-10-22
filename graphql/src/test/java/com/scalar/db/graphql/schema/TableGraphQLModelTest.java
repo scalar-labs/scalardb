@@ -54,6 +54,17 @@ public class TableGraphQLModelTest {
     assertThat(((GraphQLNonNull) argument.getType()).getWrappedType()).isEqualTo(type);
   }
 
+  private void assertNonNullListOfNonNullObjectArgument(
+      GraphQLArgument argument, String name, GraphQLType objectType) {
+    assertThat(argument.getName()).isEqualTo(name);
+    assertThat(argument.getType()).isInstanceOf(GraphQLNonNull.class);
+    GraphQLType wrappedType1 = ((GraphQLNonNull) argument.getType()).getWrappedType();
+    assertThat(wrappedType1).isInstanceOf(GraphQLList.class);
+    GraphQLType wrappedType2 = ((GraphQLList) wrappedType1).getWrappedType();
+    assertThat(wrappedType2).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType()).isEqualTo(objectType);
+  }
+
   private TableMetadata createTableMetadata() {
     return TableMetadata.newBuilder()
         .addColumn(COLUMN_NAME_1, DataType.TEXT)
@@ -447,21 +458,14 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Mutation {
-    //  table_1_put(put: [table1_PutInput!]!): table_1_PutPayload
+    //   table_1_put(put: [table1_PutInput!]!): table_1_PutPayload
     // }
     GraphQLFieldDefinition field = model.getMutationPutField();
     assertNullableFieldDefinition(field, TABLE_NAME + "_put", model.getPutPayloadObjectType());
     assertThat(field.getArguments().size()).isEqualTo(1);
 
     GraphQLArgument argument = field.getArguments().get(0);
-    assertThat(argument.getName()).isEqualTo("put");
-    assertThat(argument.getType()).isInstanceOf(GraphQLNonNull.class);
-    GraphQLType wrappedType1 = ((GraphQLNonNull) argument.getType()).getWrappedType();
-    assertThat(wrappedType1).isInstanceOf(GraphQLList.class);
-    GraphQLType wrappedType2 = ((GraphQLList) wrappedType1).getWrappedType();
-    assertThat(wrappedType2).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType())
-        .isEqualTo(model.getPutInputObjectType());
+    assertNonNullListOfNonNullObjectArgument(argument, "put", model.getPutInputObjectType());
   }
 
   @Test
@@ -510,18 +514,14 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type Mutation {
-    //  table_1_delete(key: table_1_Key!, condition: DeleteCondition): table_1_DeletePayload
+    //   table_1_delete(delete: [table_1_DeleteInput!]!): table_1_DeletePayload
     // }
     GraphQLFieldDefinition field = model.getMutationDeleteField();
     assertNullableFieldDefinition(
         field, TABLE_NAME + "_delete", model.getDeletePayloadObjectType());
-    assertThat(field.getArguments().size()).isEqualTo(2);
+    assertThat(field.getArguments().size()).isEqualTo(1);
 
-    List<GraphQLArgument> arguments = field.getArguments();
-    assertNonNullArgument(arguments.get(0), "key", model.getPrimaryKeyInputObjectType());
-    GraphQLArgument argument = arguments.get(1);
-    assertThat(argument.getName()).isEqualTo("condition");
-    assertThat(argument.getType()).isInstanceOf(GraphQLTypeReference.class);
-    assertThat(((GraphQLTypeReference) argument.getType()).getName()).isEqualTo("DeleteCondition");
+    GraphQLArgument argument = field.getArguments().get(0);
+    assertNonNullListOfNonNullObjectArgument(argument, "delete", model.getDeleteInputObjectType());
   }
 }

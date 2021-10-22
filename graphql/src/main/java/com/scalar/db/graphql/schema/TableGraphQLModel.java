@@ -296,8 +296,7 @@ public class TableGraphQLModel {
     return newFieldDefinition()
         .name(objectType.getName() + "_delete")
         .type(deletePayloadObjectType)
-        .argument(newArgument().name("key").type(nonNull(primaryKeyInputObjectType)))
-        .argument(newArgument().name("condition").type(typeRef("DeleteCondition")))
+        .argument(newArgument().name("delete").type(nonNull(list(nonNull(deleteInputObjectType)))))
         .build();
   }
 
