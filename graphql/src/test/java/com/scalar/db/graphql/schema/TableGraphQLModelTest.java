@@ -465,6 +465,27 @@ public class TableGraphQLModelTest {
   }
 
   @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateDeleteInputObjectType() {
+    // Act
+    TableGraphQLModel model =
+        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // input table_1_DeleteInput {
+    //   key: table_1_Key!
+    //   condition: DeleteCondition
+    // }
+    GraphQLInputObjectType objectType = model.getDeleteInputObjectType();
+    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_DeleteInput");
+    List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
+    assertThat(fields.size()).isEqualTo(2);
+    assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
+    GraphQLInputType conditionType = fields.get(1).getType();
+    assertThat(conditionType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) conditionType).getName()).isEqualTo("DeleteCondition");
+  }
+
+  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateDeletePayloadObjectType() {
     // Act
     TableGraphQLModel model =

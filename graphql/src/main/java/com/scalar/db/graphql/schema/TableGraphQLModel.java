@@ -62,6 +62,7 @@ public class TableGraphQLModel {
   private final GraphQLInputObjectType putValuesObjectType;
   private final GraphQLObjectType putPayloadObjectType;
   private final GraphQLFieldDefinition mutationDeleteField;
+  private final GraphQLInputObjectType deleteInputObjectType;
   private final GraphQLObjectType deletePayloadObjectType;
 
   public TableGraphQLModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
@@ -107,6 +108,7 @@ public class TableGraphQLModel {
     this.putPayloadObjectType = createPutPayloadObjectType();
     this.mutationPutField = createMutationPutField();
 
+    this.deleteInputObjectType = createDeleteInputObjectType();
     this.deletePayloadObjectType = createDeletePayloadObjectType();
     this.mutationDeleteField = createMutationDeleteField();
   }
@@ -275,6 +277,14 @@ public class TableGraphQLModel {
         .build();
   }
 
+  private GraphQLInputObjectType createDeleteInputObjectType() {
+    return newInputObject()
+        .name(objectType.getName() + "_DeleteInput")
+        .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
+        .field(newInputObjectField().name("condition").type(typeRef("DeleteCondition")))
+        .build();
+  }
+
   private GraphQLObjectType createDeletePayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_DeletePayload")
@@ -373,6 +383,10 @@ public class TableGraphQLModel {
 
   public GraphQLFieldDefinition getMutationDeleteField() {
     return mutationDeleteField;
+  }
+
+  public GraphQLInputObjectType getDeleteInputObjectType() {
+    return deleteInputObjectType;
   }
 
   public GraphQLObjectType getDeletePayloadObjectType() {
