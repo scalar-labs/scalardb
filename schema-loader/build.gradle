@@ -31,9 +31,13 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
+dockerPrepare {
+    dependsOn(shadowJar)
+}
+
 docker {
     name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
-    files tasks.distTar.outputs, 'conf/log4j.properties'
+    files tasks.shadowJar.outputs
 }
 
 // Build a fat jar
@@ -60,11 +64,3 @@ spotbugsMain.reports {
 spotbugsTest.reports {
     html.enabled = true
 }
-
-// for docker
-distTar {
-    dependsOn(shadowJar)
-    archiveFileName = "${project.name}.tar"
-}
-
-distZip.enabled(false)
