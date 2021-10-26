@@ -100,7 +100,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath, false);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath);
 
     if (coordinator) {
       operator.createCoordinatorTable(metaOptions);

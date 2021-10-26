@@ -99,7 +99,7 @@ public class CassandraCommand implements Callable<Integer> {
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, true);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
     List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {

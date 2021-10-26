@@ -5,7 +5,6 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -34,7 +33,7 @@ public class DynamoCommandTest extends CommandTestBase {
   @Test
   public void
       call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
-          throws ExecutionException, SchemaOperatorException {
+          throws ExecutionException {
     // Arrange
     Map<String, String> metaOptions =
         ImmutableMap.<String, String>builder()
@@ -64,7 +63,7 @@ public class DynamoCommandTest extends CommandTestBase {
 
   @Test
   public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
-      throws ExecutionException, SchemaOperatorException {
+      throws ExecutionException {
     // Arrange
 
     // Act

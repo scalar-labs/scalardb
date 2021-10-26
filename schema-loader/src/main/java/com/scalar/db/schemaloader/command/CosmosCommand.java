@@ -74,7 +74,7 @@ public class CosmosCommand implements Callable<Integer> {
       metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, true);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
     List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {

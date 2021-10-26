@@ -92,7 +92,7 @@ public class DynamoCommand implements Callable<Integer> {
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, true);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
     List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
 
     if (deleteTables) {

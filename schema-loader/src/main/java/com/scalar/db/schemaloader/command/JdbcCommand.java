@@ -62,7 +62,7 @@ public class JdbcCommand implements Callable<Integer> {
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, true);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
     List<Table> tableList = SchemaParser.parse(schemaFile.toString(), Collections.emptyMap());
 
     if (deleteTables) {

@@ -43,14 +43,11 @@ public class SchemaOperator {
   }
 
   public void createTables(List<Table> tableList, Map<String, String> metaOptions)
-      throws ExecutionException, SchemaOperatorException {
+      throws ExecutionException {
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
       String tableNamespace = table.getNamespace();
-
-      if (admin.namespaceExists(tableNamespace)) {
-        LOGGER.warn("Namespace " + tableNamespace + " already existed.");
-      } else {
+      if (!admin.namespaceExists(tableNamespace)) {
         try {
           admin.createNamespace(table.getNamespace(), true, table.getOptions());
         } catch (ExecutionException e) {
@@ -59,7 +56,7 @@ public class SchemaOperator {
         }
       }
 
-      if (admin.getNamespaceTableNames(table.getNamespace()).contains(table.getTable())) {
+      if (admin.tableExists(tableNamespace, table.getTable())) {
         LOGGER.warn(
             "Table "
                 + table.getTable()
@@ -105,10 +102,9 @@ public class SchemaOperator {
     }
   }
 
-  public void createCoordinatorTable(Map<String, String> options)
-      throws ExecutionException, SchemaOperatorException {
+  public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
     if (admin.namespaceExists(Coordinator.NAMESPACE)) {
-      if (admin.getNamespaceTableNames(Coordinator.NAMESPACE).contains(Coordinator.TABLE)) {
+      if (consensusCommitAdmin.coordinatorTableExists()) {
         LOGGER.warn("Table coordinator already existed.");
         return;
       }
@@ -121,22 +117,15 @@ public class SchemaOperator {
     }
   }
 
-  public void deleteTables(List<Table> tableList)
-      throws ExecutionException, SchemaOperatorException {
+  public void deleteTables(List<Table> tableList) throws ExecutionException {
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
       if (table.isTransactionTable()) {
         hasTransactionTable = true;
       }
-      if (!admin.namespaceExists(table.getNamespace())) {
-        LOGGER.warn(
-            "Namespace "
-                + table.getNamespace()
-                + " doesn't exist for deleting table "
-                + table.getTable());
-      } else {
-        if (!admin.getNamespaceTableNames(table.getNamespace()).contains(table.getTable())) {
+      if (admin.namespaceExists(table.getNamespace())) {
+        if (!admin.tableExists(table.getNamespace(), table.getTable())) {
           LOGGER.warn(
               "Table "
                   + table.getTable()
@@ -178,11 +167,11 @@ public class SchemaOperator {
     }
   }
 
-  public void dropCoordinatorTable() throws ExecutionException, SchemaOperatorException {
+  public void dropCoordinatorTable() throws ExecutionException {
     if (!admin.namespaceExists(Coordinator.NAMESPACE)) {
       LOGGER.warn("Table coordinator doesn't exist.");
     } else {
-      if (!admin.getNamespaceTableNames(Coordinator.NAMESPACE).contains(Coordinator.TABLE)) {
+      if (!consensusCommitAdmin.coordinatorTableExists()) {
         LOGGER.warn("Table coordinator doesn't exist.");
         return;
       }

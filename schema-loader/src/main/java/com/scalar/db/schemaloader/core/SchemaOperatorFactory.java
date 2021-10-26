@@ -7,14 +7,12 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 public class SchemaOperatorFactory {
-  public static SchemaOperator getSchemaOperator(
-      Properties properties, boolean isStorageSpecificCommand) {
+  public static SchemaOperator getSchemaOperator(Properties properties) {
     DatabaseConfig databaseConfig = new DatabaseConfig(properties);
-    return new SchemaOperator(databaseConfig, isStorageSpecificCommand);
+    return new SchemaOperator(databaseConfig, true);
   }
 
-  public static SchemaOperator getSchemaOperator(Path configPath, boolean isStorageSpecificCommand)
-      throws IOException {
+  public static SchemaOperator getSchemaOperator(Path configPath) throws IOException {
     DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
     return new SchemaOperator(dbConfig, false);
   }
