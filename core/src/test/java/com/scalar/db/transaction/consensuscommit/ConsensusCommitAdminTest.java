@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -155,6 +156,36 @@ public class ConsensusCommitAdminTest {
     // Assert
     verify(distributedStorageAdmin).dropTable(coordinatorNamespaceName, Coordinator.TABLE);
     verify(distributedStorageAdmin).dropNamespace(coordinatorNamespaceName);
+  }
+
+  @Test
+  public void coordinatorTableExists_WhenCoordinatorTableNotExist_shouldReturnFalse()
+      throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(Coordinator.NAMESPACE, Coordinator.TABLE))
+        .thenReturn(false);
+
+    // Act
+    boolean actual = admin.coordinatorTableExists();
+
+    // Assert
+    verify(distributedStorageAdmin).tableExists(Coordinator.NAMESPACE, Coordinator.TABLE);
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  public void coordinatorTableExists_WhenCoordinatorTableExists_shouldReturnTrue()
+      throws ExecutionException {
+    // Arrange
+    when(distributedStorageAdmin.tableExists(Coordinator.NAMESPACE, Coordinator.TABLE))
+        .thenReturn(true);
+
+    // Act
+    boolean actual = admin.coordinatorTableExists();
+
+    // Assert
+    verify(distributedStorageAdmin).tableExists(Coordinator.NAMESPACE, Coordinator.TABLE);
+    assertThat(actual).isTrue();
   }
 
   @Test
