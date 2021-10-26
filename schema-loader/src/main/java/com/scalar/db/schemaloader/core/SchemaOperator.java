@@ -8,7 +8,6 @@ import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -43,54 +42,58 @@ public class SchemaOperator {
   }
 
   public void createTables(List<Table> tableList, Map<String, String> metaOptions)
-      throws ExecutionException {
+      throws SchemaOperatorException {
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
       String tableNamespace = table.getNamespace();
-      if (!admin.namespaceExists(tableNamespace)) {
+      String tableName = table.getTable();
+      boolean namespaceExists;
+      try {
+        namespaceExists = admin.namespaceExists(tableNamespace);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException(
+            "Checking the existence of the namespace " + tableNamespace + " failed.", e);
+      }
+      if (!namespaceExists) {
         try {
-          admin.createNamespace(table.getNamespace(), true, table.getOptions());
+          admin.createNamespace(tableNamespace, true, table.getOptions());
         } catch (ExecutionException e) {
           throw new SchemaOperatorException(
-              "Creating the namespace " + table.getNamespace() + " failed.", e);
+              "Creating the namespace " + tableNamespace + " failed.", e);
         }
       }
-
-      if (admin.tableExists(tableNamespace, table.getTable())) {
+      boolean tableExists;
+      try {
+        tableExists = admin.tableExists(tableNamespace, tableName);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException(
+            "Checking the existence of the table " + tableName + " failed.", e);
+      }
+      if (tableExists) {
         LOGGER.warn(
-            "Table "
-                + table.getTable()
-                + " in the namespace "
-                + table.getNamespace()
-                + " already existed.");
+            "Table " + tableName + " in the namespace " + tableNamespace + " already existed.");
       } else {
         try {
           if (table.isTransactionTable()) {
             hasTransactionTable = true;
             consensusCommitAdmin.createTransactionalTable(
-                table.getNamespace(),
-                table.getTable(),
-                table.getTableMetadata(),
-                table.getOptions());
+                tableNamespace, tableName, table.getTableMetadata(), table.getOptions());
           } else {
             admin.createTable(
-                table.getNamespace(),
-                table.getTable(),
-                table.getTableMetadata(),
-                table.getOptions());
+                tableNamespace, tableName, table.getTableMetadata(), table.getOptions());
           }
           LOGGER.info(
               "Creating the table "
-                  + table.getTable()
+                  + tableName
                   + " in the namespace "
-                  + table.getNamespace()
+                  + tableNamespace
                   + " succeeded.");
         } catch (ExecutionException e) {
           throw new SchemaOperatorException(
               "Creating the table "
-                  + table.getTable()
+                  + tableName
                   + " in the namespace "
-                  + table.getNamespace()
+                  + tableNamespace
                   + " failed.",
               e);
         }
@@ -102,12 +105,17 @@ public class SchemaOperator {
     }
   }
 
-  public void createCoordinatorTable(Map<String, String> options) throws ExecutionException {
-    if (admin.namespaceExists(Coordinator.NAMESPACE)) {
-      if (consensusCommitAdmin.coordinatorTableExists()) {
-        LOGGER.warn("Table coordinator already existed.");
-        return;
-      }
+  public void createCoordinatorTable(Map<String, String> options) throws SchemaOperatorException {
+    boolean coordinatorTableExists;
+    try {
+      coordinatorTableExists = consensusCommitAdmin.coordinatorTableExists();
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Checking the existence of the table coordinator failed.", e);
+    }
+    if (coordinatorTableExists) {
+      LOGGER.warn("Table coordinator already existed.");
+      return;
     }
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
@@ -117,34 +125,46 @@ public class SchemaOperator {
     }
   }
 
-  public void deleteTables(List<Table> tableList) throws ExecutionException {
+  public void deleteTables(List<Table> tableList) throws SchemaOperatorException {
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
       if (table.isTransactionTable()) {
         hasTransactionTable = true;
       }
-      if (admin.namespaceExists(table.getNamespace())) {
-        if (!admin.tableExists(table.getNamespace(), table.getTable())) {
+      String tableNamespace = table.getNamespace();
+      String tableName = table.getTable();
+      boolean namespaceExists;
+      try {
+        namespaceExists = admin.namespaceExists(tableNamespace);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException(
+            "Checking the existence of the namespace " + tableNamespace + " failed.", e);
+      }
+      boolean tableExists;
+      try {
+        tableExists = admin.tableExists(tableNamespace, tableName);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException(
+            "Checking the existence of the table " + tableName + " failed.", e);
+      }
+
+      if (namespaceExists) {
+        if (!tableExists) {
           LOGGER.warn(
-              "Table "
-                  + table.getTable()
-                  + " in the namespace "
-                  + table.getNamespace()
-                  + " doesn't exist.");
+              "Table " + tableName + " in the namespace " + tableNamespace + " doesn't exist.");
         } else {
           try {
-            admin.dropTable(table.getNamespace(), table.getTable());
+            admin.dropTable(tableNamespace, tableName);
             LOGGER.info(
                 "Deleting the table "
-                    + table.getTable()
+                    + tableName
                     + " in the namespace "
-                    + table.getNamespace()
+                    + tableNamespace
                     + " succeeded.");
-            namespaces.add(table.getNamespace());
+            namespaces.add(tableNamespace);
           } catch (ExecutionException e) {
-            throw new SchemaOperatorException(
-                "Deleting the table " + table.getTable() + " failed.", e);
+            throw new SchemaOperatorException("Deleting the table " + tableName + " failed.", e);
           }
         }
       }
@@ -155,7 +175,14 @@ public class SchemaOperator {
     }
 
     for (String namespace : namespaces) {
-      if (!admin.namespaceExists(namespace)) {
+      boolean namespaceExists;
+      try {
+        namespaceExists = admin.namespaceExists(namespace);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException(
+            "Checking the existence of the namespace " + namespace + " failed.", e);
+      }
+      if (!namespaceExists) {
         LOGGER.warn("Namespace " + namespace + " doesn't exist for deleting.");
       } else {
         try {
@@ -167,20 +194,23 @@ public class SchemaOperator {
     }
   }
 
-  public void dropCoordinatorTable() throws ExecutionException {
-    if (!admin.namespaceExists(Coordinator.NAMESPACE)) {
+  public void dropCoordinatorTable() throws SchemaOperatorException {
+    boolean coordinatorTableExists;
+    try {
+      coordinatorTableExists = consensusCommitAdmin.coordinatorTableExists();
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Checking the existence of the table coordinator failed.", e);
+    }
+    if (!coordinatorTableExists) {
       LOGGER.warn("Table coordinator doesn't exist.");
-    } else {
-      if (!consensusCommitAdmin.coordinatorTableExists()) {
-        LOGGER.warn("Table coordinator doesn't exist.");
-        return;
-      }
-      try {
-        consensusCommitAdmin.dropCoordinatorTable();
-        LOGGER.info("Deleting the coordinator table succeeded.");
-      } catch (ExecutionException e) {
-        throw new SchemaOperatorException("Deleting the coordinator table failed.", e);
-      }
+      return;
+    }
+    try {
+      consensusCommitAdmin.dropCoordinatorTable();
+      LOGGER.info("Deleting the coordinator table succeeded.");
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException("Deleting the coordinator table failed.", e);
     }
   }
 
