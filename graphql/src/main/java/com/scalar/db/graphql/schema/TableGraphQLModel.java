@@ -248,7 +248,10 @@ public class TableGraphQLModel {
   private GraphQLObjectType createScanPayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_ScanPayload")
-        .field(newFieldDefinition().name(objectType.getName()).type(nonNull(list(objectType))))
+        .field(
+            newFieldDefinition()
+                .name(objectType.getName())
+                .type(nonNull(list(nonNull(objectType)))))
         .build();
   }
 
@@ -288,7 +291,10 @@ public class TableGraphQLModel {
   private GraphQLObjectType createPutPayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_PutPayload")
-        .field(newFieldDefinition().name(objectType.getName()).type(objectType))
+        .field(
+            newFieldDefinition()
+                .name(objectType.getName())
+                .type(nonNull(list(nonNull(objectType)))))
         .build();
   }
 
@@ -311,7 +317,10 @@ public class TableGraphQLModel {
   private GraphQLObjectType createDeletePayloadObjectType() {
     return newObject()
         .name(objectType.getName() + "_DeletePayload")
-        .field(newFieldDefinition().name(objectType.getName()).type(objectType))
+        .field(
+            newFieldDefinition()
+                .name(objectType.getName())
+                .type(nonNull(list(nonNull(objectType)))))
         .build();
   }
 

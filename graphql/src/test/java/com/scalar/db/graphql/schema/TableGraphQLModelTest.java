@@ -55,15 +55,26 @@ public class TableGraphQLModelTest {
     assertThat(((GraphQLNonNull) argument.getType()).getWrappedType()).isEqualTo(type);
   }
 
+  private void assertNonNullListOfNonNullObjectField(
+      GraphQLFieldDefinition field, String name, GraphQLType listElementType) {
+    assertThat(field.getName()).isEqualTo(name);
+    assertNonNullListOfNonNullObject(listElementType, field.getType());
+  }
+
   private void assertNonNullListOfNonNullObjectArgument(
       GraphQLArgument argument, String name, GraphQLType objectType) {
     assertThat(argument.getName()).isEqualTo(name);
-    assertThat(argument.getType()).isInstanceOf(GraphQLNonNull.class);
-    GraphQLType wrappedType1 = ((GraphQLNonNull) argument.getType()).getWrappedType();
+    assertNonNullListOfNonNullObject(objectType, argument.getType());
+  }
+
+  private void assertNonNullListOfNonNullObject(
+      GraphQLType listElementType, GraphQLType outerType) {
+    assertThat(outerType).isInstanceOf(GraphQLNonNull.class);
+    GraphQLType wrappedType1 = ((GraphQLNonNull) outerType).getWrappedType();
     assertThat(wrappedType1).isInstanceOf(GraphQLList.class);
     GraphQLType wrappedType2 = ((GraphQLList) wrappedType1).getWrappedType();
     assertThat(wrappedType2).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType()).isEqualTo(objectType);
+    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType()).isEqualTo(listElementType);
   }
 
   private TableMetadata createTableMetadata() {
@@ -372,20 +383,13 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type table_1_ScanPayload {
-    //   table_1: [table_1]!
+    //   table_1: [table_1!]!
     // }
     GraphQLObjectType objectType = model.getScanPayloadObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_ScanPayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
-
-    GraphQLFieldDefinition field = fields.get(0);
-    assertThat(field.getName()).isEqualTo(TABLE_NAME);
-    GraphQLType type = field.getType();
-    assertThat(type).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) type).getWrappedType()).isInstanceOf(GraphQLList.class);
-    assertThat(((GraphQLList) ((GraphQLNonNull) type).getWrappedType()).getWrappedType())
-        .isEqualTo(model.getObjectType());
+    assertNonNullListOfNonNullObjectField(fields.get(0), TABLE_NAME, model.getObjectType());
   }
 
   @Test
@@ -452,13 +456,13 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type table_1_PutPayload {
-    //   table_1: table_1
+    //   table_1: [table_1!]!
     // }
     GraphQLObjectType objectType = model.getPutPayloadObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutPayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
-    assertNullableFieldDefinition(fields.get(0), TABLE_NAME, model.getObjectType());
+    assertNonNullListOfNonNullObjectField(fields.get(0), TABLE_NAME, model.getObjectType());
   }
 
   @Test
@@ -508,13 +512,13 @@ public class TableGraphQLModelTest {
 
     // Assert
     // type table_1_DeletePayload {
-    //   table_1: table_1
+    //   table_1: [table_1!]!
     // }
     GraphQLObjectType objectType = model.getDeletePayloadObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_DeletePayload");
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
     assertThat(fields.size()).isEqualTo(1);
-    assertNullableFieldDefinition(fields.get(0), TABLE_NAME, model.getObjectType());
+    assertNonNullListOfNonNullObjectField(fields.get(0), TABLE_NAME, model.getObjectType());
   }
 
   @Test
