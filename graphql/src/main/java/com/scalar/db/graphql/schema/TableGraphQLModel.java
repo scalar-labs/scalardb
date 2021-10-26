@@ -57,7 +57,7 @@ public class TableGraphQLModel {
   private final GraphQLInputObjectType scanInputObjectType;
   private final GraphQLEnumType clusteringKeyNameEnum;
   private final GraphQLInputObjectType clusteringKeyInputObjectType;
-  private final GraphQLInputObjectType scanOrderingInputObjectType;
+  private final GraphQLInputObjectType orderingInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
   private final GraphQLFieldDefinition mutationPutField;
   private final GraphQLInputObjectType putInputObjectType;
@@ -99,14 +99,14 @@ public class TableGraphQLModel {
     if (tableMetadata.getClusteringKeyNames().isEmpty()) {
       this.clusteringKeyNameEnum = null;
       this.clusteringKeyInputObjectType = null;
-      this.scanOrderingInputObjectType = null;
+      this.orderingInputObjectType = null;
       this.scanInputObjectType = null;
       this.scanPayloadObjectType = null;
       this.queryScanField = null;
     } else {
       this.clusteringKeyNameEnum = createClusteringKeyNameEnum();
       this.clusteringKeyInputObjectType = createClusteringKeyInputObjectType();
-      this.scanOrderingInputObjectType = createScanOrderingInputObjectType();
+      this.orderingInputObjectType = createOrderingInputObjectType();
       this.scanInputObjectType = createScanInputObjectType();
       this.scanPayloadObjectType = createScanPayloadObjectType();
       this.queryScanField = createQueryScanField();
@@ -213,11 +213,11 @@ public class TableGraphQLModel {
         .build();
   }
 
-  private GraphQLInputObjectType createScanOrderingInputObjectType() {
+  private GraphQLInputObjectType createOrderingInputObjectType() {
     return newInputObject()
-        .name(objectType.getName() + "_ScanOrdering")
+        .name(objectType.getName() + "_Ordering")
         .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
-        .field(newInputObjectField().name("order").type(nonNull(typeRef("ScanOrderingOrder"))))
+        .field(newInputObjectField().name("order").type(nonNull(typeRef("Order"))))
         .build();
   }
 
@@ -239,7 +239,7 @@ public class TableGraphQLModel {
                 .name("endInclusive")
                 .type(Scalars.GraphQLBoolean)
                 .defaultValueLiteral(new BooleanValue(true)))
-        .field(newInputObjectField().name("orderings").type(list(scanOrderingInputObjectType)))
+        .field(newInputObjectField().name("orderings").type(list(orderingInputObjectType)))
         .field(newInputObjectField().name("limit").type(Scalars.GraphQLInt))
         .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
         .build();
@@ -375,8 +375,8 @@ public class TableGraphQLModel {
     return scanInputObjectType;
   }
 
-  public GraphQLInputObjectType getScanOrderingInputObjectType() {
-    return scanOrderingInputObjectType;
+  public GraphQLInputObjectType getOrderingInputObjectType() {
+    return orderingInputObjectType;
   }
 
   public GraphQLEnumType getClusteringKeyNameEnum() {

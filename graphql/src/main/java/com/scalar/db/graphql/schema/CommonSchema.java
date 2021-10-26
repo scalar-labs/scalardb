@@ -47,7 +47,7 @@ public class CommonSchema {
     return ImmutableSet.<GraphQLNamedInputType>builder()
         .add(
             newEnum()
-                .name("ScanOrderingOrder")
+                .name("Order")
                 .value(Scan.Ordering.Order.ASC.name())
                 .value(Scan.Ordering.Order.DESC.name())
                 .build())

@@ -301,7 +301,7 @@ public class TableGraphQLModelTest {
     assertThat(field.getName()).isEqualTo("orderings");
     assertThat(field.getType()).isInstanceOf(GraphQLList.class);
     assertThat(((GraphQLList) field.getType()).getWrappedType())
-        .isEqualTo(model.getScanOrderingInputObjectType());
+        .isEqualTo(model.getOrderingInputObjectType());
 
     field = fields.get(6);
     assertNullableInputObjectField(field, "limit", Scalars.GraphQLInt);
@@ -340,18 +340,18 @@ public class TableGraphQLModelTest {
   }
 
   @Test
-  public void constructor_NonNullArgumentsGiven_ShouldCreateScanOrderingInputObjectType() {
+  public void constructor_NonNullArgumentsGiven_ShouldCreateOrderingInputObjectType() {
     // Act
     TableGraphQLModel model =
         new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input table_1_ScanOrdering {
+    // input table_1_Ordering {
     //   name: table_1_ClusteringKeyName!
-    //   order: ScanOrderingOrder!
+    //   order: Order!
     // }
-    GraphQLInputObjectType inputObjectType = model.getScanOrderingInputObjectType();
-    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ScanOrdering");
+    GraphQLInputObjectType inputObjectType = model.getOrderingInputObjectType();
+    assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_Ordering");
     assertThat(inputObjectType.getFieldDefinitions().size()).isEqualTo(2);
     assertNonNullInputObjectField(
         inputObjectType.getFieldDefinitions().get(0), "name", model.getClusteringKeyNameEnum());
@@ -361,7 +361,7 @@ public class TableGraphQLModelTest {
     assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
     GraphQLType wrappedType = ((GraphQLNonNull) field.getType()).getWrappedType();
     assertThat(wrappedType).isInstanceOf(GraphQLTypeReference.class);
-    assertThat(((GraphQLTypeReference) wrappedType).getName()).isEqualTo("ScanOrderingOrder");
+    assertThat(((GraphQLTypeReference) wrappedType).getName()).isEqualTo("Order");
   }
 
   @Test
@@ -562,14 +562,14 @@ public class TableGraphQLModelTest {
 
   @Test
   public void
-      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanOrderingInputObjectType() {
+      constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateOrderingInputObjectType() {
     // Act
     TableGraphQLModel model =
         new TableGraphQLModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
-    assertThat(model.getScanOrderingInputObjectType()).isNull();
+    assertThat(model.getOrderingInputObjectType()).isNull();
   }
 
   @Test
