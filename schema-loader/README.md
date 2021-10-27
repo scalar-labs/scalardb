@@ -17,20 +17,20 @@ $ ./gradlew schema-loader:shadowJar
 >The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
 ## Docker
-Build the Scalar DB Schema Loader docker image:
-```console
-$ ./gradlew schema-loader:docker
-```
-- You can also use release Scalar DB Schema Loader docker image from [Scalar Labs Packages](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader)
-
-Using Scalar DB Schema Loader docker image:
+You can pull the docker image from [Scalar's container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader).
 ```console
 docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version> <command_arguments>
 ```
-- All available commands are described as bellow by simply replace 
+- You can specify the same command arguments as bellow by simply replacing 
 `java -jar scalardb-schema-loader-<version>.jar`
-by
+with
 `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`
+
+You can build the docker image as follows.
+```console
+$ ./gradlew schema-loader:docker
+```
+- You can also use the released docker image from [Scalar's container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader)
 
 ## Run
 ### Available commands
