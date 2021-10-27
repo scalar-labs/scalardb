@@ -31,11 +31,8 @@ dependencies {
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
 }
 
-dockerPrepare {
-    dependsOn(shadowJar)
-}
-
 docker {
+    dependsOn(shadowJar)
     name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
     files tasks.shadowJar.outputs
 }
