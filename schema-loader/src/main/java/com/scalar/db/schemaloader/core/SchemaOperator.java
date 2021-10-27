@@ -47,18 +47,11 @@ public class SchemaOperator {
     for (Table table : tableList) {
       String tableNamespace = table.getNamespace();
       String tableName = table.getTable();
-      if (!namespaceExists(tableNamespace)) {
-        try {
-          admin.createNamespace(tableNamespace, true, table.getOptions());
-        } catch (ExecutionException e) {
-          throw new SchemaOperatorException(
-              "Creating the namespace " + tableNamespace + " failed.", e);
-        }
-      }
 
+      createNamespace(tableNamespace, table.getOptions());
       if (tableExists(tableNamespace, tableName)) {
         LOGGER.warn(
-            "Table " + tableName + " in the namespace " + tableNamespace + " already existed.");
+            "Table " + tableName + " in the namespace " + tableNamespace + " already exists.");
       } else {
         hasTransactionTable |= table.isTransactionTable();
         createTable(table);
@@ -72,7 +65,7 @@ public class SchemaOperator {
 
   public void createCoordinatorTable(Map<String, String> options) throws SchemaOperatorException {
     if (coordinatorTableExists()) {
-      LOGGER.warn("Table coordinator already existed.");
+      LOGGER.warn("The coordinator table already exists.");
       return;
     }
     try {
@@ -93,13 +86,12 @@ public class SchemaOperator {
       String tableNamespace = table.getNamespace();
       String tableName = table.getTable();
 
-      if (namespaceExists(tableNamespace)) {
-        if (!tableExists(tableNamespace, tableName)) {
-          LOGGER.warn(
-              "Table " + tableName + " in the namespace " + tableNamespace + " doesn't exist.");
-        } else {
-          dropTable(tableNamespace, tableName, namespaces);
-        }
+      if (!tableExists(tableNamespace, tableName)) {
+        LOGGER.warn(
+            "Table " + tableName + " in the namespace " + tableNamespace + " doesn't exist.");
+      } else {
+        dropTable(tableNamespace, tableName);
+        namespaces.add(tableNamespace);
       }
     }
 
@@ -112,7 +104,7 @@ public class SchemaOperator {
 
   public void dropCoordinatorTable() throws SchemaOperatorException {
     if (!coordinatorTableExists()) {
-      LOGGER.warn("Table coordinator doesn't exist.");
+      LOGGER.warn("The coordinator table doesn't exist.");
       return;
     }
     try {
@@ -128,25 +120,31 @@ public class SchemaOperator {
       return consensusCommitAdmin.coordinatorTableExists();
     } catch (ExecutionException e) {
       throw new SchemaOperatorException(
-          "Checking the existence of the table coordinator failed.", e);
+          "Checking the existence of the coordinator table failed.", e);
     }
   }
 
-  private boolean namespaceExists(String namespace) throws SchemaOperatorException {
+  private boolean tableExists(String tableNamespace, String tableName)
+      throws SchemaOperatorException {
     try {
-      return admin.namespaceExists(namespace);
+      return admin.tableExists(tableNamespace, tableName);
     } catch (ExecutionException e) {
       throw new SchemaOperatorException(
-          "Checking the existence of the namespace " + namespace + " failed.", e);
+          "Checking the existence of the table "
+              + tableName
+              + " in the namespace "
+              + tableNamespace
+              + " failed.",
+          e);
     }
   }
 
-  private boolean tableExists(String namespace, String table) throws SchemaOperatorException {
+  private void createNamespace(String tableNamespace, Map<String, String> options)
+      throws SchemaOperatorException {
     try {
-      return admin.tableExists(namespace, table);
+      admin.createNamespace(tableNamespace, true, options);
     } catch (ExecutionException e) {
-      throw new SchemaOperatorException(
-          "Checking the existence of the table " + table + " failed.", e);
+      throw new SchemaOperatorException("Creating the namespace " + tableNamespace + " failed.", e);
     }
   }
 
@@ -173,8 +171,7 @@ public class SchemaOperator {
     }
   }
 
-  private void dropTable(String tableNamespace, String tableName, Set<String> namespaces)
-      throws SchemaOperatorException {
+  private void dropTable(String tableNamespace, String tableName) throws SchemaOperatorException {
     try {
       admin.dropTable(tableNamespace, tableName);
       LOGGER.info(
@@ -183,22 +180,19 @@ public class SchemaOperator {
               + " in the namespace "
               + tableNamespace
               + " succeeded.");
-      namespaces.add(tableNamespace);
     } catch (ExecutionException e) {
-      throw new SchemaOperatorException("Deleting the table " + tableName + " failed.", e);
+      throw new SchemaOperatorException(
+          "Deleting the table " + tableName + " in the namespace " + tableNamespace + " failed.",
+          e);
     }
   }
 
   private void dropNamespaces(Set<String> namespaces) throws SchemaOperatorException {
     for (String namespace : namespaces) {
-      if (!namespaceExists(namespace)) {
-        LOGGER.warn("Namespace " + namespace + " doesn't exist for deleting.");
-      } else {
-        try {
-          admin.dropNamespace(namespace);
-        } catch (ExecutionException e) {
-          throw new SchemaOperatorException("Deleting the namespace " + namespace + " failed.", e);
-        }
+      try {
+        admin.dropNamespace(namespace, true);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException("Deleting the namespace " + namespace + " failed.", e);
       }
     }
   }

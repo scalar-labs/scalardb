@@ -3,7 +3,7 @@ package com.scalar.db.schemaloader.command;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import java.util.Collections;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -28,7 +28,7 @@ public class JdbcCommandTest extends CommandTestBase {
   @Test
   public void
       call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
-          throws ExecutionException {
+          throws SchemaOperatorException {
     // Arrange
 
     // Act
@@ -40,7 +40,7 @@ public class JdbcCommandTest extends CommandTestBase {
 
   @Test
   public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
-      throws ExecutionException {
+      throws SchemaOperatorException {
     // Arrange
 
     // Act
