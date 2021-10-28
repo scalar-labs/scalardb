@@ -18,6 +18,7 @@ public class CosmosTableMetadata {
   private String id;
   private LinkedHashSet<String> partitionKeyNames;
   private LinkedHashSet<String> clusteringKeyNames;
+  private Map<String, String> clusteringOrders;
   private Set<String> secondaryIndexNames;
   private Map<String, String> columns;
 
@@ -33,6 +34,10 @@ public class CosmosTableMetadata {
 
   public void setClusteringKeyNames(List<String> clusteringKeyNames) {
     this.clusteringKeyNames = new ImmutableLinkedHashSet<>(clusteringKeyNames);
+  }
+
+  public void setClusteringOrders(Map<String, String> clusteringOrders) {
+    this.clusteringOrders = clusteringOrders;
   }
 
   public void setSecondaryIndexNames(Set<String> secondaryIndexNames) {
@@ -55,6 +60,10 @@ public class CosmosTableMetadata {
     return clusteringKeyNames;
   }
 
+  public Map<String, String> getClusteringOrders() {
+    return clusteringOrders;
+  }
+
   public Set<String> getSecondaryIndexNames() {
     return secondaryIndexNames;
   }
@@ -72,20 +81,17 @@ public class CosmosTableMetadata {
       return false;
     }
     CosmosTableMetadata that = (CosmosTableMetadata) o;
-    return Objects.equals(getId(), that.getId())
-        && Objects.equals(getPartitionKeyNames(), that.getPartitionKeyNames())
-        && Objects.equals(getClusteringKeyNames(), that.getClusteringKeyNames())
-        && Objects.equals(getSecondaryIndexNames(), that.getSecondaryIndexNames())
-        && Objects.equals(getColumns(), that.getColumns());
+    return Objects.equals(id, that.id)
+        && Objects.equals(partitionKeyNames, that.partitionKeyNames)
+        && Objects.equals(clusteringKeyNames, that.clusteringKeyNames)
+        && Objects.equals(clusteringOrders, that.clusteringOrders)
+        && Objects.equals(secondaryIndexNames, that.secondaryIndexNames)
+        && Objects.equals(columns, that.columns);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        getId(),
-        getPartitionKeyNames(),
-        getClusteringKeyNames(),
-        getSecondaryIndexNames(),
-        getColumns());
+        id, partitionKeyNames, clusteringKeyNames, clusteringOrders, secondaryIndexNames, columns);
   }
 }
