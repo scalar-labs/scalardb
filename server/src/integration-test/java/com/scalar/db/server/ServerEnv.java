@@ -21,18 +21,18 @@ public final class ServerEnv {
   private static final String PROP_SERVER_PASSWORD = "scalardb.server.password";
   private static final String PROP_SERVER_STORAGE = "scalardb.server.storage";
 
-  private static final String DEFAULT_SERVER_CONTACT_POINTS = "jdbc:mysql://localhost:33066/";
+  private static final String DEFAULT_SERVER_CONTACT_POINTS = "jdbc:mysql://localhost:3306/";
   private static final String DEFAULT_SERVER_USERNAME = "root";
-  private static final String DEFAULT_SERVER_PASSWORD = "scalar";
+  private static final String DEFAULT_SERVER_PASSWORD = "mysql";
   private static final String DEFAULT_SERVER_STORAGE = "jdbc";
 
   private static final String PROP_SERVER_JDBC_URL = "scalardb.server.jdbc.url";
   private static final String PROP_SERVER_JDBC_USERNAME = "scalardb.server.jdbc.username";
   private static final String PROP_SERVER_JDBC_PASSWORD = "scalardb.server.jdbc.password";
 
-  private static final String DEFAULT_SERVER_JDBC_URL = "jdbc:mysql://localhost:33066/";
+  private static final String DEFAULT_SERVER_JDBC_URL = "jdbc:mysql://localhost:3306/";
   private static final String DEFAULT_SERVER_JDBC_USERNAME = "root";
-  private static final String DEFAULT_SERVER_JDBC_PASSWORD = "scalar";
+  private static final String DEFAULT_SERVER_JDBC_PASSWORD = "mysql";
 
   private static final String PROP_GRPC_CONTACT_POINTS = "scalardb.grpc.contact_points";
   private static final String PROP_GRPC_CONTACT_PORT = "scalardb.grpc.contact_port";
