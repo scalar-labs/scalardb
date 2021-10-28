@@ -160,11 +160,11 @@ jobs:
       - run:
           name: Run integration test
           no_output_timeout: 20m
-          command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
+          command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD}
 
       - run:
           name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
+          command: gradle schema-loader:integrationTestSchemaLoaderCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD}
 
       - run:
           name: Save Gradle integration test reports

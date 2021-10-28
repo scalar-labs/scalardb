@@ -27,6 +27,21 @@ public class SchemaLoaderIntegrationTestDynamo extends SchemaLoaderIntegrationTe
   }
 
   @Override
+  protected List<String> getSchemaLoaderCreationCommandArgs() {
+    return ImmutableList.of(
+        "java",
+        "-jar",
+        "scalardb-schema-loader.jar",
+        "--config",
+        CONFIG_FILE,
+        "--schema-file",
+        SCHEMA_FILE,
+        "--coordinator",
+        "--no-scaling",
+        "--no-backup");
+  }
+
+  @Override
   protected List<String> getStorageSpecificCreationCommandArgs() {
     return ImmutableList.of(
         "java",
@@ -40,6 +55,10 @@ public class SchemaLoaderIntegrationTestDynamo extends SchemaLoaderIntegrationTe
         "-u",
         config.getUsername().get(),
         "-p",
-        config.getPassword().get());
+        config.getPassword().get(),
+        "--endpoint-override",
+        config.getEndpointOverride().get(),
+        "--no-scaling",
+        "--no-backup");
   }
 }
