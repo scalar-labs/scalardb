@@ -1,6 +1,7 @@
 package com.scalar.db.graphql.schema;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
@@ -113,6 +114,27 @@ public class TableGraphQLModelTest {
     assertThat(model.getNamespaceName()).isEqualTo(NAMESPACE_NAME);
     assertThat(model.getTableName()).isEqualTo(TABLE_NAME);
     assertThat(model.getTableMetadata()).isEqualTo(tableMetadata);
+  }
+
+  @Test
+  public void constructor_NullNamespaceNameGiven_ShouldThrowNullPointerException() {
+    // Act Assert
+    assertThatThrownBy(() -> new TableGraphQLModel(null, TABLE_NAME, createTableMetadata()))
+        .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_NullTableNameGiven_ShouldThrowNullPointerException() {
+    // Act Assert
+    assertThatThrownBy(() -> new TableGraphQLModel(NAMESPACE_NAME, null, createTableMetadata()))
+        .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_NullTableMetadataGiven_ShouldThrowNullPointerException() {
+    // Act Assert
+    assertThatThrownBy(() -> new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, null))
+        .isInstanceOf(NullPointerException.class);
   }
 
   @Test
