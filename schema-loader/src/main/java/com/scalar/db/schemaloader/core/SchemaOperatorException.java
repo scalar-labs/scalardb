@@ -1,8 +1,6 @@
 package com.scalar.db.schemaloader.core;
 
-import com.scalar.db.exception.storage.ExecutionException;
-
-public class SchemaOperatorException extends ExecutionException {
+public class SchemaOperatorException extends Exception {
   public SchemaOperatorException(String message) {
     super(message);
   }

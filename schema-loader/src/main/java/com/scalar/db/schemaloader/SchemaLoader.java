@@ -54,7 +54,7 @@ public class SchemaLoader {
     if (command != null) {
       status = new CommandLine(command).execute(commandArgs);
     } else {
-      System.err.println(
+      LOGGER.error(
           "Need to specify either --config <configPath> or --cassandra or --cosmos or --dynamo or --jdbc");
       status = 1;
     }

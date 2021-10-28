@@ -7,10 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
-import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -37,8 +35,7 @@ public class SchemaOperatorTest {
   }
 
   @Test
-  public void createTables_WithProperTableList_ShouldCallAdminCreateNameSpace()
-      throws ExecutionException {
+  public void createTables_WithProperTableList_ShouldCallAdminCreateNameSpace() throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -55,7 +52,7 @@ public class SchemaOperatorTest {
   @Test
   public void
       createTables_WithTableListContainTransactionalTable_ShouldCallConsensusCommitAdminCreateTransactionalTable()
-          throws ExecutionException {
+          throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -72,11 +69,12 @@ public class SchemaOperatorTest {
     // Assert
     verify(consensusCommitAdmin, times(3))
         .createTransactionalTable("ns", "tb", tableMetadata, Collections.emptyMap());
+    verify(admin, times(3)).tableExists("ns", "tb");
   }
 
   @Test
   public void createTables_WithTableListContainNonTransactionalTable_ShouldCallAdminCreateTable()
-      throws ExecutionException {
+      throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -92,12 +90,13 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(admin, times(3)).createTable("ns", "tb", tableMetadata, Collections.emptyMap());
+    verify(admin, times(3)).tableExists("ns", "tb");
   }
 
   @Test
   public void
       createTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminCreateCoordinatorTable()
-          throws ExecutionException {
+          throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -107,18 +106,20 @@ public class SchemaOperatorTest {
     when(table.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(table.getTableMetadata()).thenReturn(tableMetadata);
+    when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(false);
 
     // Act
     operator.createTables(tableList, Collections.emptyMap());
 
     // Assert
     verify(consensusCommitAdmin).createCoordinatorTable(Collections.emptyMap());
+    verify(consensusCommitAdmin).coordinatorTableExists();
   }
 
   @Test
   public void
       deleteTables_WithTableListAndNamespaceContainsProvidedTables_ShouldCallAdminDropTableAndDropNamespace()
-          throws ExecutionException {
+          throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -128,7 +129,6 @@ public class SchemaOperatorTest {
     when(table.getTable()).thenReturn("tb");
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(table.getTableMetadata()).thenReturn(tableMetadata);
-    when(admin.namespaceExists("ns")).thenReturn(true);
     when(admin.tableExists("ns", "tb")).thenReturn(true);
 
     // Act
@@ -136,13 +136,14 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(admin, times(3)).dropTable("ns", "tb");
-    verify(admin).dropNamespace("ns");
+    verify(admin).dropNamespace("ns", true);
+    verify(admin, times(3)).tableExists("ns", "tb");
   }
 
   @Test
   public void
       deleteTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminDropCoordinatorTable()
-          throws ExecutionException {
+          throws Exception {
     // Arrange
     operator = new SchemaOperator(admin, consensusCommitAdmin, true);
     List<Table> tableList = Arrays.asList(table, table, table);
@@ -153,7 +154,6 @@ public class SchemaOperatorTest {
     TableMetadata tableMetadata = mock(TableMetadata.class);
     when(table.getTableMetadata()).thenReturn(tableMetadata);
 
-    when(admin.namespaceExists(Coordinator.NAMESPACE)).thenReturn(true);
     when(consensusCommitAdmin.coordinatorTableExists()).thenReturn(true);
 
     // Act
@@ -161,5 +161,6 @@ public class SchemaOperatorTest {
 
     // Assert
     verify(consensusCommitAdmin).dropCoordinatorTable();
+    verify(consensusCommitAdmin).coordinatorTableExists();
   }
 }
