@@ -74,8 +74,7 @@ public class DatabaseConfig {
   }
 
   public DatabaseConfig(Properties properties) {
-    props = new Properties();
-    props.putAll(properties);
+    props = new Properties(properties);
     load();
   }
 
