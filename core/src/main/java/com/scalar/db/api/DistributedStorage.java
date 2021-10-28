@@ -119,6 +119,14 @@ public interface DistributedStorage {
    */
   void put(Put put) throws ExecutionException;
 
+  default void insert(Put put) throws ExecutionException {
+    put(put);
+  }
+
+  default void update(Put put) throws ExecutionException {
+    put(put);
+  }
+
   /**
    * Inserts/Updates multiple entries within the same partition to the storage with the specified
    * list of {@link Put} commands. When entries spanning multiple partitions are inserted, this will

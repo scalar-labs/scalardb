@@ -127,6 +127,36 @@ public class JdbcDatabase implements DistributedStorage {
   }
 
   @Override
+  public void insert(Put put) throws ExecutionException {
+    Connection connection = null;
+    try {
+      connection = dataSource.getConnection();
+      if (!jdbcService.insert(put, connection, namespace, tableName)) {
+        throw new NoMutationException("no mutation was applied");
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("put operation failed", e);
+    } finally {
+      close(connection);
+    }
+  }
+
+  @Override
+  public void update(Put put) throws ExecutionException {
+    Connection connection = null;
+    try {
+      connection = dataSource.getConnection();
+      if (!jdbcService.update(put, connection, namespace, tableName)) {
+        throw new NoMutationException("no mutation was applied");
+      }
+    } catch (SQLException e) {
+      throw new ExecutionException("put operation failed", e);
+    } finally {
+      close(connection);
+    }
+  }
+
+  @Override
   public void put(List<Put> puts) throws ExecutionException {
     mutate(puts);
   }

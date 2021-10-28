@@ -155,6 +155,49 @@ public class JdbcService {
     }
   }
 
+  public boolean insert(
+      Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(put, namespace, tableName);
+    operationChecker.check(put);
+
+    if (!put.getCondition().isPresent()) {
+      try (PreparedStatement preparedStatement =
+          queryBuilder
+              .insertInto(put.forNamespace().get(), put.forTable().get())
+              .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
+              .build()
+              .prepareAndBind(connection)) {
+        preparedStatement.executeUpdate();
+        return true;
+      }
+    } else {
+      return new ConditionalMutator(put, connection, queryBuilder).mutate();
+    }
+  }
+
+  public boolean update(
+      Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
+      throws SQLException, ExecutionException {
+    Utility.setTargetToIfNot(put, namespace, tableName);
+    operationChecker.check(put);
+
+    if (!put.getCondition().isPresent()) {
+      try (PreparedStatement preparedStatement =
+          queryBuilder
+              .update(put.forNamespace().get(), put.forTable().get())
+              .where(put.getPartitionKey(), put.getClusteringKey())
+              .set(put.getValues())
+              .build()
+              .prepareAndBind(connection)) {
+        preparedStatement.executeUpdate();
+        return true;
+      }
+    } else {
+      return new ConditionalMutator(put, connection, queryBuilder).mutate();
+    }
+  }
+
   public boolean delete(
       Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {

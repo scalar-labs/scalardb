@@ -127,6 +127,40 @@ public class JdbcTransaction implements DistributedTransaction {
   }
 
   @Override
+  public void insert(Put put) throws CrudException {
+    // Ignore the condition in the put
+    if (put.getCondition().isPresent()) {
+      LOGGER.warn("ignoring the condition of the mutation: " + put);
+      put.withCondition(null);
+    }
+
+    try {
+      jdbcService.insert(put, connection, namespace, tableName);
+    } catch (SQLException e) {
+      throw createCrudException(e, "put operation failed");
+    } catch (ExecutionException e) {
+      throw new CrudException("put operation failed", e);
+    }
+  }
+
+  @Override
+  public void update(Put put) throws CrudException {
+    // Ignore the condition in the put
+    if (put.getCondition().isPresent()) {
+      LOGGER.warn("ignoring the condition of the mutation: " + put);
+      put.withCondition(null);
+    }
+
+    try {
+      jdbcService.update(put, connection, namespace, tableName);
+    } catch (SQLException e) {
+      throw createCrudException(e, "put operation failed");
+    } catch (ExecutionException e) {
+      throw new CrudException("put operation failed", e);
+    }
+  }
+
+  @Override
   public void put(List<Put> puts) throws CrudException {
     checkArgument(puts.size() != 0);
     for (Put put : puts) {

@@ -88,6 +88,14 @@ public interface DistributedTransaction {
    */
   void put(Put put) throws CrudException;
 
+  default void insert(Put put) throws CrudException {
+    put(put);
+  }
+
+  default void update(Put put) throws CrudException {
+    put(put);
+  }
+
   /**
    * Inserts/Updates multiple entries to the storage through a transaction with the specified list
    * of {@link Put} commands. Note that the conditions set in Put will be ignored. Please program
