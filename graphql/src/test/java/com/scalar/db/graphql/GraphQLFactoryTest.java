@@ -19,6 +19,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
 import graphql.schema.GraphQLNamedInputType;
+import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import org.junit.Before;
 import org.junit.Test;
@@ -185,5 +186,36 @@ public class GraphQLFactoryTest {
     GraphQLSchema schema = graphql.getGraphQLSchema();
     assertThat(schema.containsType(TABLE_NAME_1)).isEqualTo(true);
     assertThat(schema.containsType(TABLE_NAME_2)).isEqualTo(true);
+  }
+
+  @Test
+  public void
+      createGraphQL_TableWithoutClusteringKeysGiven_ShouldReturnGraphQLWithoutScanOperation()
+          throws Exception {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(COLUMN_NAME_1, DataType.INT)
+            .addColumn(COLUMN_NAME_2, DataType.INT)
+            .addPartitionKey(COLUMN_NAME_1)
+            .addPartitionKey(COLUMN_NAME_2)
+            .build();
+    when(storageAdmin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME_1)).thenReturn(tableMetadata);
+
+    // Act
+    GraphQLFactory factory =
+        GraphQLFactory.newBuilder()
+            .storageFactory(storageFactory)
+            .table(NAMESPACE_NAME, TABLE_NAME_1)
+            .build();
+    GraphQL graphql = factory.createGraphQL();
+
+    // Assert
+    GraphQLSchema schema = graphql.getGraphQLSchema();
+    assertThat(schema.containsType(TABLE_NAME_1)).isEqualTo(true);
+    GraphQLObjectType query = (GraphQLObjectType) schema.getType("Query");
+    assertThat(query).isNotNull();
+    assertThat(query.getFieldDefinition(TABLE_NAME_1 + "_get")).isNotNull();
+    assertThat(query.getFieldDefinition(TABLE_NAME_1 + "_scan")).isNull();
   }
 }

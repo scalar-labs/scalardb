@@ -42,7 +42,10 @@ public class GraphQLFactory {
     GraphQLObjectType.Builder builder = GraphQLObjectType.newObject().name("Query");
     for (TableGraphQLModel tableModel : tableModels) {
       builder.field(tableModel.getQueryGetField());
-      builder.field(tableModel.getQueryScanField());
+      GraphQLFieldDefinition queryScanField = tableModel.getQueryScanField();
+      if (queryScanField != null) {
+        builder.field(queryScanField);
+      }
     }
     return builder.build();
   }
