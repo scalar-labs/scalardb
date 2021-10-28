@@ -264,26 +264,32 @@ public class TableGraphQLModel {
   }
 
   private GraphQLInputObjectType createPutValuesObjectType() {
-    GraphQLInputObjectType.Builder inputValues =
-        newInputObject().name(objectType.getName() + "_PutValues");
-
     LinkedHashSet<String> keyNames = new LinkedHashSet<>();
     keyNames.addAll(getPartitionKeyNames());
     keyNames.addAll(getClusteringKeyNames());
 
-    fieldNames.stream()
-        .filter(name -> !keyNames.contains(name))
+    List<String> nonKeyColumns =
+        fieldNames.stream().filter(name -> !keyNames.contains(name)).collect(toList());
+    if (nonKeyColumns.isEmpty()) {
+      return null;
+    }
+    GraphQLInputObjectType.Builder inputValues =
+        newInputObject().name(objectType.getName() + "_PutValues");
+    nonKeyColumns.stream()
         .map(name -> newInputObjectField().name(name).type(fieldNameGraphQLScalarTypeMap.get(name)))
         .forEach(inputValues::field);
-
     return inputValues.build();
   }
 
   private GraphQLInputObjectType createPutInputObjectType() {
-    return newInputObject()
-        .name(objectType.getName() + "_PutInput")
-        .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
-        .field(newInputObjectField().name("values").type(nonNull(putValuesObjectType)))
+    GraphQLInputObjectType.Builder builder =
+        newInputObject()
+            .name(objectType.getName() + "_PutInput")
+            .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)));
+    if (putValuesObjectType != null) {
+      builder.field(newInputObjectField().name("values").type(nonNull(putValuesObjectType)));
+    }
+    return builder
         .field(newInputObjectField().name("condition").type(typeRef("PutCondition")))
         .build();
   }

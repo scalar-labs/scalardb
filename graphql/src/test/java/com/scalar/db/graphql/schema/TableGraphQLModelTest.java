@@ -632,4 +632,23 @@ public class TableGraphQLModelTest {
     // Assert
     assertThat(model.getQueryScanField()).isNull();
   }
+
+  @Test
+  public void
+      constructor_TableMetadataWithOnlyKeyColumnGiven_ShouldNotCreatePutValuesObjectType() {
+    // Arrange
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(COLUMN_NAME_1, DataType.TEXT)
+            .addColumn(COLUMN_NAME_2, DataType.INT)
+            .addPartitionKey(COLUMN_NAME_1)
+            .addClusteringKey(COLUMN_NAME_2)
+            .build();
+
+    // Act
+    TableGraphQLModel model = new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, tableMetadata);
+
+    // Assert
+    assertThat(model.getPutValuesObjectType()).isNull();
+  }
 }
