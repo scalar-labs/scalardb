@@ -24,10 +24,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
   protected static final String SCHEMA_FILE =
       System.getProperty("user.dir") + "/schema-loader/sample_data/schema_sample.json";
   protected static final String CONFIG_FILE = "config.properties";
-  static DistributedStorageAdmin admin;
-  static ConsensusCommitAdmin consensusCommitAdmin;
-  static List<Table> tables;
-  private static boolean initialized;
+  DistributedStorageAdmin admin;
+  ConsensusCommitAdmin consensusCommitAdmin;
+  List<Table> tables;
+  private boolean initialized;
 
   @Before
   public void setUp() throws Exception {

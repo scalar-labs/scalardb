@@ -118,15 +118,16 @@ jobs:
           command: gradle integrationTestCassandra
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderCassandra
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderCassandra /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderCassandra
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -162,15 +163,16 @@ jobs:
           command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderCosmos /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderCosmos
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -206,15 +208,16 @@ jobs:
           command: gradle integrationTestDynamo
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderDynamo
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderDynamo /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderDynamo
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -250,17 +253,18 @@ jobs:
       - run:
           name: Run integration test
           command: gradle integrationTestJdbc
-
+          
+      - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderJdbc
+          
       - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderJdbc
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -299,15 +303,16 @@ jobs:
           command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:postgresql://localhost:5432/ -Dscalardb.jdbc.username=postgres -Dscalardb.jdbc.password=postgres
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -354,15 +359,16 @@ jobs:
           command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports
@@ -402,15 +408,16 @@ jobs:
           command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
 
       - run:
+          name: Run integration test for schema-loader
+          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
+
+      - run:
           name: Save Gradle integration test reports
           command: |
             mkdir -p /tmp/gradle_integration_test_reports
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/
           when: always
-
-      - run:
-          name: Run integration test for schema-loader
-          command: gradle schema-loader:integrationTestSchemaLoaderJdbc -Dscalardb.jdbc.url=jdbc:sqlserver://localhost:1433 -Dscalardb.jdbc.username=sa -Dscalardb.jdbc.password=SqlServer19
 
       - store_artifacts:
           path: /tmp/gradle_integration_test_reports

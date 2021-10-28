@@ -15,7 +15,9 @@ public class SchemaLoaderIntegrationTestCassandra extends SchemaLoaderIntegratio
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Properties properties = config.getProperties();
-    properties.store(new FileOutputStream(CONFIG_FILE), null);
+    try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
+      properties.store(fileOutputStream, null);
+    }
   }
 
   @Override
