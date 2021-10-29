@@ -21,14 +21,14 @@ WORKDIR /scalardb
 
 # The path should be relative from build/docker. Running `gradle docker`
 # (provided by com.palantir.docker plugin) will copy this Dockerfile and
-# server.tar and log4j.properties to build/docker.
+# server.tar and log4j2.properties to build/docker.
 ADD server.tar .
 
 WORKDIR /scalardb/server
 
-COPY log4j.properties .
+COPY log4j2.properties .
 
-ENV SCALARDB_SERVER_OPTS -Dlog4j.configuration=file:log4j.properties
+ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
 
 ENTRYPOINT ["./bin/scalardb-server"]
 CMD ["--config", "database.properties"]
