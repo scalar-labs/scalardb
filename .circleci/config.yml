@@ -47,22 +47,23 @@ jobs:
       - run:
           name: Save Gradle test reports
           command: |
-            mkdir -p /tmp/gradle_test_reports
-            cp -a core/build/reports/tests/test /tmp/gradle_test_reports/
+            mkdir -p /tmp/gradle_test_reports/core
+            mkdir -p /tmp/gradle_test_reports/server
+            mkdir -p /tmp/gradle_test_reports/schema-loader
+            cp -a core/build/reports/tests/test /tmp/gradle_test_reports/core/
+            cp -a server/build/reports/tests/test /tmp/gradle_test_reports/server/
+            cp -a schema-loader/build/reports/tests/test /tmp/gradle_test_reports/schema-loader/
           when: always
 
       - run:
-          name: Save SpotBugs reports for core
+          name: Save SpotBugs reports
           command: |
-            mkdir -p /tmp/gradle_spotbugs_reports_for_core
-            cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports_for_core/
-          when: always
-
-      - run:
-          name: Save SpotBugs reports for server
-          command: |
-            mkdir -p /tmp/gradle_spotbugs_reports_for_server
-            cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports_for_server/
+            mkdir -p /tmp/gradle_spotbugs_reports/core
+            mkdir -p /tmp/gradle_spotbugs_reports/server
+            mkdir -p /tmp/gradle_spotbugs_reports/schema-loader
+            cp -a core/build/reports/spotbugs /tmp/gradle_spotbugs_reports/core/
+            cp -a server/build/reports/spotbugs /tmp/gradle_spotbugs_reports/server/
+            cp -a schema-loader/build/reports/spotbugs /tmp/gradle_spotbugs_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -70,12 +71,8 @@ jobs:
           destination: gradle_test_reports
 
       - store_artifacts:
-          path: /tmp/gradle_spotbugs_reports_for_core
-          destination: gradle_spotbugs_reports_for_core
-
-      - store_artifacts:
-          path: /tmp/gradle_spotbugs_reports_for_server
-          destination: gradle_spotbugs_reports_for_server
+          path: /tmp/gradle_spotbugs_reports
+          destination: gradle_spotbugs_reports
 
   integration-test-for-cassandra:
     docker:
