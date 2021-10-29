@@ -43,7 +43,8 @@ public class ServerConfig {
   }
 
   public ServerConfig(Properties properties) {
-    props = new Properties(properties);
+    props = new Properties();
+    props.putAll(properties);
     load();
   }
 
