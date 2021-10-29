@@ -28,11 +28,13 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
     implementation group: 'com.google.inject', name: 'guice', version: "${guiceVersion}"
     implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
-    implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: "${slf4jVersion}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4jVersion}"
     implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
     implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
     implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: "${scalarAdminVersion}") {
         exclude group: 'io.grpc'
+        exclude group: 'org.slf4j'
     }
     implementation group: 'io.dropwizard.metrics', name: 'metrics-core', version: "${dropwizardMetricsVersion}"
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: "${dropwizardMetricsVersion}"
@@ -59,7 +61,7 @@ application {
 
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
-    files tasks.distTar.outputs, 'conf/log4j.properties'
+    files tasks.distTar.outputs, 'conf/log4j2.properties'
 }
 
 task integrationTestScalarDbServer(type: Test) {
