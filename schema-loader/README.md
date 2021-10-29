@@ -26,11 +26,10 @@ docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-
 with
 `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`
 
-You can build the docker image as follows.
+You can also build the docker image as follows.
 ```console
 $ ./gradlew schema-loader:docker
 ```
-- You can also use the released docker image from [Scalar's container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader)
 
 ## Run
 ### Available commands
