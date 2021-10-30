@@ -111,9 +111,9 @@ jobs:
           # We need to edit DEFAULT_CQLVER defined in the cqlsh script
           # to connect to the server without --cqlversion command line option
           command: |
-            curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
-            sudo python get-pip.py
-            sudo pip install cqlsh
+            sudo apt-get update
+            sudo apt-get install python3-pip
+            sudo pip3 install cqlsh
             sudo sed -i "s/^DEFAULT_CQLVER = .*/DEFAULT_CQLVER = '3.4.4'/" /usr/local/bin/cqlsh
 
       # https://support.circleci.com/hc/en-us/articles/360006773953-Race-Conditions-Wait-For-Database
@@ -437,9 +437,9 @@ jobs:
           # We need to edit DEFAULT_CQLVER defined in the cqlsh script
           # to connect to the server without --cqlversion command line option
           command: |
-            curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
-            sudo python get-pip.py
-            sudo pip install cqlsh
+            sudo apt-get update
+            sudo apt-get install python3-pip
+            sudo pip3 install cqlsh
             sudo sed -i "s/^DEFAULT_CQLVER = .*/DEFAULT_CQLVER = '3.4.4'/" /usr/local/bin/cqlsh
 
       # https://support.circleci.com/hc/en-us/articles/360006773953-Race-Conditions-Wait-For-Database
