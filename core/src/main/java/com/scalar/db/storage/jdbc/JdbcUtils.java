@@ -47,7 +47,8 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
-      dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      //dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      //dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
     }
 
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
@@ -55,6 +56,11 @@ public final class JdbcUtils {
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
+
+    // TODO
+    //dataSource.setPoolPreparedStatements(true);
+    dataSource.setTestOnBorrow(false);
+    dataSource.setRollbackOnReturn(false);
 
     return dataSource;
   }

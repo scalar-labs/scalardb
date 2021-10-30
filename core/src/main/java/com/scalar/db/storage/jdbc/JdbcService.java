@@ -53,7 +53,7 @@ public class JdbcService {
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(get, namespace, tableName);
-    operationChecker.check(get);
+    //operationChecker.check(get);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
     Utility.addProjectionsForKeys(get, tableMetadata);
 
@@ -83,7 +83,7 @@ public class JdbcService {
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(scan, namespace, tableName);
-    operationChecker.check(scan);
+    //operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
@@ -102,7 +102,7 @@ public class JdbcService {
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(scan, namespace, tableName);
-    operationChecker.check(scan);
+    //operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     Utility.addProjectionsForKeys(scan, tableMetadata);
 
@@ -138,7 +138,7 @@ public class JdbcService {
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(put, namespace, tableName);
-    operationChecker.check(put);
+    //operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
@@ -159,7 +159,7 @@ public class JdbcService {
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(put, namespace, tableName);
-    operationChecker.check(put);
+    //operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
@@ -180,7 +180,7 @@ public class JdbcService {
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
     Utility.setTargetToIfNot(put, namespace, tableName);
-    operationChecker.check(put);
+    //operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
       try (PreparedStatement preparedStatement =
