@@ -24,7 +24,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
@@ -64,8 +63,8 @@ public class PutStatementHandlerTest {
   @Captor ArgumentCaptor<List<Object>> captor;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new PutStatementHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);

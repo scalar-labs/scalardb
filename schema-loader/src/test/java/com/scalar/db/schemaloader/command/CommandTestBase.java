@@ -21,12 +21,13 @@ public abstract class CommandTestBase {
   protected CommandLine commandLine;
   protected StringWriter stringWriter;
 
+  private AutoCloseable closeable;
   private MockedStatic<SchemaParser> schemaParserMockedStatic;
   private MockedStatic<SchemaOperatorFactory> schemaOperatorFactoryMockedStatic;
 
   @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this);
+  public void setUp() {
+    closeable = MockitoAnnotations.openMocks(this);
     schemaParserMockedStatic = Mockito.mockStatic(SchemaParser.class);
     schemaParserMockedStatic
         .when(() -> SchemaParser.parse(Mockito.anyString(), Mockito.anyMap()))
@@ -42,9 +43,10 @@ public abstract class CommandTestBase {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     schemaParserMockedStatic.close();
     schemaOperatorFactoryMockedStatic.close();
+    closeable.close();
   }
 
   protected void setCommandLineOutput() {

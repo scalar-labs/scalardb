@@ -37,8 +37,8 @@ public class DistributedTransactionServiceTest {
   private DistributedTransactionService transactionService;
 
   @Before
-  public void setUp() throws TransactionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     transactionService = new DistributedTransactionService(manager, gateKeeper, new Metrics());

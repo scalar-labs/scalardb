@@ -56,8 +56,8 @@ public class BatchHandlerTest {
   @Mock private ResultSet results;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handlers =
         StatementHandlerManager.builder()
