@@ -28,9 +28,9 @@ public class JdbcConfig extends DatabaseConfig {
       PREFIX + "prepared_statements_pool.max_open";
   public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
 
-  public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 5;
-  public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 10;
-  public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 25;
+  public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
+  public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
+  public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
   public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
   public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
 

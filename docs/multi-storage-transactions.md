@@ -1,9 +1,9 @@
-# Multi-storage in Scalar DB
+# Multi-storage Transactions
 
 Scalar DB transactions can span multiple storages/databases while preserving ACID property with a
-feature called `multi-storage`. This documentation explains the feature briefly.
+feature called *Multi-storage Transactions*. This documentation explains the feature briefly.
 
-## How Multi-storage works
+## How Multi-storage Transactions works
 
 Internally, the `multi-storage` implementation holds multiple storage instances and has mappings
 from a table name/a namespace name to a proper storage instance. When an operation is executed, it
@@ -12,9 +12,9 @@ table-storage/namespace-storage mappings and uses it.
 
 ## Configuration
 
-You can use `multi-storage` in the same way as the other storages/databases at the code level as
-long as the configuration is properly set for `multi-storage`. An example of the configuration is
-shown as follows:
+You can use Multi-storage transactions in the same way as the other storages/databases at the code
+level as long as the configuration is properly set for `multi-storage`. An example of the
+configuration is shown as follows:
 
 ```
 # The storage is "multi-storage"

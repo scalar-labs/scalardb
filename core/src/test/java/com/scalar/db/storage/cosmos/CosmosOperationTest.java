@@ -33,8 +33,8 @@ public class CosmosOperationTest {
   @Mock private TableMetadata metadata;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

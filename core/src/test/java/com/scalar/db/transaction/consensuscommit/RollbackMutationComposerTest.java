@@ -57,9 +57,9 @@ public class RollbackMutationComposerTest {
   @Mock private DistributedStorage storage;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     mutations = new ArrayList<>();
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this).close();
   }
 
   private Get prepareGet() {

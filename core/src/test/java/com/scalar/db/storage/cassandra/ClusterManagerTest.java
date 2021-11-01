@@ -26,8 +26,8 @@ public class ClusterManagerTest {
   private ClusterManager manager;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     manager = Mockito.spy(new ClusterManager(cluster, session));
