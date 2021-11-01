@@ -3,8 +3,8 @@
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
 The major features of Scalar DB are as follows:
-- Make non-ACID distributed databases/storages ACID-compliant. It not only supports strongly-consistent ACID transactions, but also scales linearly and achieves high availability when it is deployed with distributed databases/storages such as Cassandra.
-- Execute strongly-consistent ACID transactions that span multiple databases/storages ([Multi-storage Transactions](multi-storage-transactions.md)) and services/processes ([Two-phase Commit Transactions](two-phase-commit-transactions.md)).
+- Provide a universal transaction manager that achieves database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
+- Provide a two-phase commit based transaction manager that achieves ACID transactions spanning multiple (possibly different) databases/storages and services.
 
 ## Install
 The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). 
