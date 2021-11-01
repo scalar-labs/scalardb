@@ -49,8 +49,8 @@ public class CassandraAdminTest {
   @Mock private KeyspaceMetadata keyspaceMetadata;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     when(clusterManager.getSession()).thenReturn(cassandraSession);
     cassandraAdmin = new CassandraAdmin(clusterManager, config);
   }

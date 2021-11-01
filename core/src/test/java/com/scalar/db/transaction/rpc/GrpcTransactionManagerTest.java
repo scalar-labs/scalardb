@@ -32,8 +32,8 @@ public class GrpcTransactionManagerTest {
   private GrpcTransactionManager manager;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     manager = new GrpcTransactionManager(config, stub, blockingStub, metadataManager);

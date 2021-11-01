@@ -31,8 +31,8 @@ public class ConditionalQueryBuilderTest {
   @Mock private SelectConditionStep<org.jooq.Record> select;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

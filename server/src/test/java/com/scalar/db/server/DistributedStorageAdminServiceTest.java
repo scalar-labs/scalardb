@@ -36,8 +36,8 @@ public class DistributedStorageAdminServiceTest {
   private DistributedStorageAdminService adminService;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     adminService = new DistributedStorageAdminService(admin, new Metrics());

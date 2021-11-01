@@ -38,8 +38,8 @@ public class ResultInterpreterTest {
   @Mock private TableMetadata tableMetadata;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

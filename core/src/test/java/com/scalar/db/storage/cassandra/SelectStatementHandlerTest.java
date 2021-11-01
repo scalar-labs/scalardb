@@ -50,8 +50,8 @@ public class SelectStatementHandlerTest {
   @Mock private BoundStatement bound;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new SelectStatementHandler(session);
   }

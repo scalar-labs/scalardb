@@ -37,8 +37,8 @@ public class TwoPhaseCommitTransactionServiceTest {
   private TwoPhaseCommitTransactionService service;
 
   @Before
-  public void setUp() throws TransactionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     service = new TwoPhaseCommitTransactionService(manager, gateKeeper, new Metrics());
