@@ -2,9 +2,9 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-The major features of Scalar DB are as follows:
-- Provide a universal transaction manager that achieves database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
-- Provide a two-phase commit based transaction manager that achieves ACID transactions spanning multiple (possibly different) databases/storages and services.
+Scalar DB is a universal transaction manager that achieves:
+- database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
+- multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
 
 ## Install
 The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). 
