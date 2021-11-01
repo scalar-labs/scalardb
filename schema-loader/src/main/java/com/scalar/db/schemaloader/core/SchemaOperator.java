@@ -41,39 +41,20 @@ public class SchemaOperator {
     this.consensusCommitAdmin = consensusCommitAdmin;
   }
 
-  public void createTables(List<Table> tableList, Map<String, String> metaOptions) {
+  public void createTables(List<Table> tableList, Map<String, String> metaOptions)
+      throws SchemaOperatorException {
     boolean hasTransactionTable = false;
-
     for (Table table : tableList) {
-      try {
-        admin.createNamespace(table.getNamespace(), true, table.getOptions());
-      } catch (ExecutionException e) {
-        LOGGER.warn("Creating the namespace " + table.getNamespace() + " failed.", e);
-      }
+      String tableNamespace = table.getNamespace();
+      String tableName = table.getTable();
 
-      try {
-        if (table.isTransactionTable()) {
-          hasTransactionTable = true;
-          consensusCommitAdmin.createTransactionalTable(
-              table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
-        } else {
-          admin.createTable(
-              table.getNamespace(), table.getTable(), table.getTableMetadata(), table.getOptions());
-        }
-        LOGGER.info(
-            "Creating the table "
-                + table.getTable()
-                + " in the namespace "
-                + table.getNamespace()
-                + " succeeded.");
-      } catch (ExecutionException e) {
+      createNamespace(tableNamespace, table.getOptions());
+      if (tableExists(tableNamespace, tableName)) {
         LOGGER.warn(
-            "Creating the table "
-                + table.getTable()
-                + " in the namespace "
-                + table.getNamespace()
-                + " failed.",
-            e);
+            "Table " + tableName + " in the namespace " + tableNamespace + " already exists.");
+      } else {
+        hasTransactionTable |= table.isTransactionTable();
+        createTable(table);
       }
     }
 
@@ -82,60 +63,137 @@ public class SchemaOperator {
     }
   }
 
-  public void createCoordinatorTable(Map<String, String> options) {
+  public void createCoordinatorTable(Map<String, String> options) throws SchemaOperatorException {
+    if (coordinatorTableExists()) {
+      LOGGER.warn("The coordinator table already exists.");
+      return;
+    }
     try {
       consensusCommitAdmin.createCoordinatorTable(options);
       LOGGER.info("Creating the coordinator table succeeded.");
     } catch (ExecutionException e) {
-      LOGGER.warn("Creating the coordinator table failed.", e);
+      throw new SchemaOperatorException("Creating the coordinator table failed.", e);
     }
   }
 
-  public void deleteTables(List<Table> tableList) {
+  public void deleteTables(List<Table> tableList) throws SchemaOperatorException {
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
       if (table.isTransactionTable()) {
         hasTransactionTable = true;
       }
-      try {
-        admin.dropTable(table.getNamespace(), table.getTable());
-        LOGGER.info(
-            "Deleting the table "
-                + table.getTable()
-                + " in the namespace "
-                + table.getNamespace()
-                + " succeeded.");
-        namespaces.add(table.getNamespace());
-      } catch (ExecutionException e) {
-        LOGGER.warn("Deleting the table " + table.getTable() + " failed.", e);
+      String tableNamespace = table.getNamespace();
+      String tableName = table.getTable();
+
+      if (!tableExists(tableNamespace, tableName)) {
+        LOGGER.warn(
+            "Table " + tableName + " in the namespace " + tableNamespace + " doesn't exist.");
+      } else {
+        dropTable(tableNamespace, tableName);
+        namespaces.add(tableNamespace);
       }
     }
+
     if (hasTransactionTable && isStorageSpecificCommand) {
       dropCoordinatorTable();
     }
 
-    for (String namespace : namespaces) {
-      try {
-        if (admin.getNamespaceTableNames(namespace).isEmpty()) {
-          try {
-            admin.dropNamespace(namespace);
-          } catch (ExecutionException e) {
-            LOGGER.warn("Deleting the namespace " + namespace + " failed.", e);
-          }
-        }
-      } catch (ExecutionException e) {
-        LOGGER.warn("Getting the tables from namespace " + namespace + " failed.", e);
-      }
-    }
+    dropNamespaces(namespaces);
   }
 
-  public void dropCoordinatorTable() {
+  public void dropCoordinatorTable() throws SchemaOperatorException {
+    if (!coordinatorTableExists()) {
+      LOGGER.warn("The coordinator table doesn't exist.");
+      return;
+    }
     try {
       consensusCommitAdmin.dropCoordinatorTable();
       LOGGER.info("Deleting the coordinator table succeeded.");
     } catch (ExecutionException e) {
-      LOGGER.warn("Deleting the coordinator table failed.", e);
+      throw new SchemaOperatorException("Deleting the coordinator table failed.", e);
+    }
+  }
+
+  private boolean coordinatorTableExists() throws SchemaOperatorException {
+    try {
+      return consensusCommitAdmin.coordinatorTableExists();
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Checking the existence of the coordinator table failed.", e);
+    }
+  }
+
+  private boolean tableExists(String tableNamespace, String tableName)
+      throws SchemaOperatorException {
+    try {
+      return admin.tableExists(tableNamespace, tableName);
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Checking the existence of the table "
+              + tableName
+              + " in the namespace "
+              + tableNamespace
+              + " failed.",
+          e);
+    }
+  }
+
+  private void createNamespace(String tableNamespace, Map<String, String> options)
+      throws SchemaOperatorException {
+    try {
+      admin.createNamespace(tableNamespace, true, options);
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException("Creating the namespace " + tableNamespace + " failed.", e);
+    }
+  }
+
+  private void createTable(Table table) throws SchemaOperatorException {
+    String tableNamespace = table.getNamespace();
+    String tableName = table.getTable();
+    try {
+      if (table.isTransactionTable()) {
+        consensusCommitAdmin.createTransactionalTable(
+            tableNamespace, tableName, table.getTableMetadata(), table.getOptions());
+      } else {
+        admin.createTable(tableNamespace, tableName, table.getTableMetadata(), table.getOptions());
+      }
+      LOGGER.info(
+          "Creating the table "
+              + tableName
+              + " in the namespace "
+              + tableNamespace
+              + " succeeded.");
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Creating the table " + tableName + " in the namespace " + tableNamespace + " failed.",
+          e);
+    }
+  }
+
+  private void dropTable(String tableNamespace, String tableName) throws SchemaOperatorException {
+    try {
+      admin.dropTable(tableNamespace, tableName);
+      LOGGER.info(
+          "Deleting the table "
+              + tableName
+              + " in the namespace "
+              + tableNamespace
+              + " succeeded.");
+    } catch (ExecutionException e) {
+      throw new SchemaOperatorException(
+          "Deleting the table " + tableName + " in the namespace " + tableNamespace + " failed.",
+          e);
+    }
+  }
+
+  private void dropNamespaces(Set<String> namespaces) throws SchemaOperatorException {
+    for (String namespace : namespaces) {
+      try {
+        admin.dropNamespace(namespace, true);
+      } catch (ExecutionException e) {
+        throw new SchemaOperatorException("Deleting the namespace " + namespace + " failed.", e);
+      }
     }
   }
 
