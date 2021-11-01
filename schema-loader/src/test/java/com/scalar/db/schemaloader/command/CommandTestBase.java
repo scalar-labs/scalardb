@@ -18,11 +18,11 @@ import picocli.CommandLine;
 
 public abstract class CommandTestBase {
   @Mock protected SchemaOperator operator;
-  CommandLine commandLine;
-  StringWriter stringWriter;
+  protected CommandLine commandLine;
+  protected StringWriter stringWriter;
 
-  MockedStatic<SchemaParser> schemaParserMockedStatic;
-  MockedStatic<SchemaOperatorFactory> schemaOperatorFactoryMockedStatic;
+  private MockedStatic<SchemaParser> schemaParserMockedStatic;
+  private MockedStatic<SchemaOperatorFactory> schemaOperatorFactoryMockedStatic;
 
   @Before
   public void setUp() throws Exception {

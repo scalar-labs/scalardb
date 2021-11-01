@@ -88,7 +88,10 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+<<<<<<< HEAD
     testImplementation project(':core').sourceSets.integrationTestAll.output
+=======
+>>>>>>> d6011d67a550e1b6e61edd4796a5a66c66f24166
 
     // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
