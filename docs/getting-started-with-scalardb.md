@@ -53,7 +53,7 @@ To apply the schema, download the Schema loader that matches with the version yo
 ```
 $ java -jar scalardb-schema-loader-<version>.jar --config <path_to_database.properties_file> -f emoney-storage.json
 ```
-- The **database.properties** file contains the configurations for Scalar DB which was mentioned in **Getting Started with Scalar DB on X** documents.
+- The **database.properties** file contains the configurations for Scalar DB which was mentioned in **Getting Started with Scalar DB on X** documents, for example [Getting Started with Scalar DB on Cassandra](https://github.com/scalar-labs/scalardb/blob/master/docs/getting-started-with-scalardb-on-cassandra.md).
 
 ## Store & retrieve data with storage API
 
