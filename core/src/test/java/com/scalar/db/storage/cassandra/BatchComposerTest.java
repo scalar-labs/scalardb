@@ -34,8 +34,8 @@ public class BatchComposerTest {
   @Mock private Delete del;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     spy = Mockito.spy(new BatchComposer(batch, handlers));
     doNothing().when(spy).composeWith(any(StatementHandler.class), any(Operation.class));

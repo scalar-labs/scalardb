@@ -30,8 +30,8 @@ public class RecoveryHandlerTest {
   @Mock private Selection selection;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     handler = Mockito.spy(new RecoveryHandler(storage, coordinator));
   }
 

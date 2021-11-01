@@ -39,8 +39,8 @@ public class JdbcDatabaseAdminTest {
   @Mock private JdbcConfig config;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

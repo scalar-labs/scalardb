@@ -52,8 +52,8 @@ public class PutStatementHandlerTest {
   @Mock private UpdateItemResponse updateResponse;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new PutStatementHandler(client, metadataManager);
 
