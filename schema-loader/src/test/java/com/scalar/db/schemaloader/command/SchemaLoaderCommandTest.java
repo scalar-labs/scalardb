@@ -27,7 +27,7 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   private static final String configFile = "path_to_config_file";
 
   @Override
-  public void setUp() throws Exception {
+  public void setUp() {
     super.setUp();
     commandLine = new CommandLine(new SchemaLoaderCommand());
     setCommandLineOutput();

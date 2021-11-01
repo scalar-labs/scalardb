@@ -65,8 +65,8 @@ public class BatchHandlerTest {
   @Captor ArgumentCaptor<List<Object>> captor;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new BatchHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);

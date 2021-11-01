@@ -37,8 +37,8 @@ public class ResultInterpreterTest {
   @Mock private ResultSet resultSet;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

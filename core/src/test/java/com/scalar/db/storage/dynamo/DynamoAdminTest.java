@@ -62,8 +62,8 @@ public class DynamoAdminTest {
   private DynamoAdmin admin;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     admin = new DynamoAdmin(client, applicationAutoScalingClient, config);
   }
 

@@ -28,8 +28,8 @@ public class ConsensusCommitAdminTest {
   private ConsensusCommitAdmin admin;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     admin = new ConsensusCommitAdmin(distributedStorageAdmin, config);
   }
 
