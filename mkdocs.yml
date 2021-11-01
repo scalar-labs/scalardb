@@ -5,10 +5,10 @@ nav:
 - How to use:
     - Getting started: getting-started.md
     - Database schema: schema.md
-    - Schema loader: schema-loader.md
+    - Schema Loader: https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md
 - Design: design.md
+- Multi-storage Transactions: multi-storage-transactions.md
+- Two-phase Commit Transactions: two-phase-commit-transactions.md
 - Jepsen: https://github.com/scalar-labs/scalar-jepsen
-  #- Release notes:
-  #- Overview: release_notes/index.md
-  #- "Version 0.9.10": release_notes/0_9_10.md
+- Releases: https://github.com/scalar-labs/scalardb/releases
 theme: readthedocs
