@@ -267,7 +267,7 @@ These are just simple examples of how Scalar DB is used. For more information, p
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
 * [Requirements in the underlining databases](requirements.md)
 * [Database schema in Scalar DB](schema.md)
-* [Schema loader](../schema-loader/README.md)
+* [Schema loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader/README.md)
 * [How to Back up and Restore](backup-restore.md)
 * [Multi-storage](multi-storage.md)
 * [Scalar DB server](scalardb-server.md)
