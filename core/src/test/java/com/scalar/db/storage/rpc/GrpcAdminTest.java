@@ -29,8 +29,8 @@ public class GrpcAdminTest {
   private GrpcAdmin admin;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     admin = new GrpcAdmin(stub, config);

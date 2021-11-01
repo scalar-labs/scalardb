@@ -29,8 +29,8 @@ public class MultiStorageAdminTest {
   private MultiStorageAdmin multiStorageAdmin;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     Map<String, DistributedStorageAdmin> tableAdminMap = new HashMap<>();

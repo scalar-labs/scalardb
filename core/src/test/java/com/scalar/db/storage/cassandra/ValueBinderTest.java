@@ -34,8 +34,8 @@ public class ValueBinderTest {
   @Mock private BoundStatement bound;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   @Test

@@ -52,8 +52,8 @@ public class OperationCheckerTest {
   private OperationChecker operationChecker;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Dummy metadata
     when(metadataManager.getTableMetadata(any()))
