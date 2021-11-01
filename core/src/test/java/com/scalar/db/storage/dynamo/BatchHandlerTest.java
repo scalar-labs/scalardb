@@ -59,8 +59,8 @@ public class BatchHandlerTest {
   @Mock private TransactWriteItemsResponse transactWriteResponse;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new BatchHandler(client, metadataManager);
 

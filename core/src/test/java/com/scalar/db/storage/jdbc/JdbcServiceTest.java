@@ -20,7 +20,6 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -73,8 +72,8 @@ public class JdbcServiceTest {
   private JdbcService jdbcService;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
 
     // Arrange

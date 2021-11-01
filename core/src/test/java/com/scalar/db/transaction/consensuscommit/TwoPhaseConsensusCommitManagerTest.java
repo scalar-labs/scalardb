@@ -30,8 +30,8 @@ public class TwoPhaseConsensusCommitManagerTest {
   private TwoPhaseConsensusCommitManager manager;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);

@@ -39,7 +39,7 @@ public class JdbcTransactionManagerTest {
 
   @Before
   public void setUp() throws Exception {
-    MockitoAnnotations.initMocks(this);
+    MockitoAnnotations.openMocks(this).close();
     manager = new JdbcTransactionManager(dataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);

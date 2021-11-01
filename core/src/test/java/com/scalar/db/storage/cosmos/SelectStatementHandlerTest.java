@@ -61,8 +61,8 @@ public class SelectStatementHandlerTest {
   @Mock private CosmosPagedIterable<Record> responseIterable;
 
   @Before
-  public void setUp() throws ExecutionException {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new SelectStatementHandler(client, metadataManager);
     when(client.getDatabase(anyString())).thenReturn(database);
