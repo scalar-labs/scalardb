@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgnutls30=3.6.7-4+deb10u7 \
     libhogweed4=3.4.1-1+deb10u1 \
     libnettle6=3.4.1-1+deb10u1 \
-    libssl1.1=1.1.1d-0+deb10u6 \
-    openssl=1.1.1d-0+deb10u6 \
+    libssl1.1=1.1.1d-0+deb10u7 \
+    openssl=1.1.1d-0+deb10u7 \
     && rm -rf /var/lib/apt/lists/* \
 
 WORKDIR /app
