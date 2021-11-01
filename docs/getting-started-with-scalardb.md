@@ -48,7 +48,7 @@ You can create a JSON file `emoney-storage.json` with the JSON below.
 }
 ```
 
-To apply the schema, download the **scalardb-schema-loader** that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
+To apply the schema, download the Schema loader that matches with the version you use from [scalardb releases](https://github.com/scalar-labs/scalardb/releases), and run the following command to load the schema.
 
 ```
 $ java -jar scalardb-schema-loader-<version>.jar --config <path_to_database.properties_file> -f emoney-storage.json
