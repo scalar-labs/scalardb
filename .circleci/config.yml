@@ -120,7 +120,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderCassandra /tmp/gradle_integration_test_reports/schema-loader
+            cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader
           when: always
 
       - store_artifacts:
@@ -162,7 +162,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderCosmos /tmp/gradle_integration_test_reports/schema-loader
+            cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader
           when: always
 
       - store_artifacts:
@@ -204,7 +204,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderDynamo /tmp/gradle_integration_test_reports/schema-loader/
+            cp -a schema-loader/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -248,7 +248,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/schema-loader/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -293,7 +293,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/schema-loader/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -346,7 +346,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/schema-loader/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -392,7 +392,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestSchemaLoaderJdbc /tmp/gradle_integration_test_reports/schema-loader/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
