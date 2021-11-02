@@ -1,33 +1,33 @@
 plugins {
     id 'java'
     id 'com.palantir.docker' version '0.25.0'
-    id 'com.github.spotbugs' version '4.7.1'
     id 'net.ltgt.errorprone' version '2.0.2'
     id 'com.github.johnrengelman.shadow' version '7.1.0'
+    id 'com.github.spotbugs-base' version '4.7.1'
 }
 
 archivesBaseName = "scalardb-schema-loader"
 
 configurations {
-    integrationTestSchemaLoaderImplementation.extendsFrom testImplementation
-    integrationTestSchemaLoaderRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestSchemaLoaderCompileOnly.extendsFrom testCompileOnly
-    integrationTestSchemaLoaderCassandraImplementation.extendsFrom testImplementation
-    integrationTestSchemaLoaderCassandraRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestSchemaLoaderCassandraCompileOnly.extendsFrom testCompileOnly
-    integrationTestSchemaLoaderCosmosImplementation.extendsFrom testImplementation
-    integrationTestSchemaLoaderCosmosRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestSchemaLoaderCosmosCompileOnly.extendsFrom testCompileOnly
-    integrationTestSchemaLoaderDynamoImplementation.extendsFrom testImplementation
-    integrationTestSchemaLoaderDynamoRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestSchemaLoaderDynamoCompileOnly.extendsFrom testCompileOnly
-    integrationTestSchemaLoaderJdbcImplementation.extendsFrom testImplementation
-    integrationTestSchemaLoaderJdbcRuntimeOnly.extendsFrom testRuntimeOnly
-    integrationTestSchemaLoaderJdbcCompileOnly.extendsFrom testCompileOnly
+    integrationTestAllImplementation.extendsFrom testImplementation
+    integrationTestAllRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestAllCompileOnly.extendsFrom testCompileOnly
+    integrationTestCassandraImplementation.extendsFrom testImplementation
+    integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraCompileOnly.extendsFrom testCompileOnly
+    integrationTestCosmosImplementation.extendsFrom testImplementation
+    integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosCompileOnly.extendsFrom testCompileOnly
+    integrationTestDynamoImplementation.extendsFrom testImplementation
+    integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoCompileOnly.extendsFrom testCompileOnly
+    integrationTestJdbcImplementation.extendsFrom testImplementation
+    integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcCompileOnly.extendsFrom testCompileOnly
 }
 
 sourceSets {
-    integrationTestSchemaLoader {
+    integrationTestAll {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -35,7 +35,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestSchemaLoaderCassandra {
+    integrationTestCassandra {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -45,7 +45,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestSchemaLoaderCosmos {
+    integrationTestCosmos {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -55,7 +55,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestSchemaLoaderDynamo {
+    integrationTestDynamo {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -65,7 +65,7 @@ sourceSets {
         }
         resources.srcDir file('src/integration-test/resources')
     }
-    integrationTestSchemaLoaderJdbc {
+    integrationTestJdbc {
         java {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
@@ -89,10 +89,7 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
-<<<<<<< HEAD
     testImplementation project(':core').sourceSets.integrationTestAll.output
-=======
->>>>>>> d6011d67a550e1b6e61edd4796a5a66c66f24166
 
     // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
@@ -124,48 +121,48 @@ task shadowJarUnversioning(type: Copy) {
     }
 }
 
-task integrationTestSchemaLoaderCassandra(type: Test) {
+task integrationTestCassandra(type: Test) {
     dependsOn(shadowJarUnversioning)
     description = 'Runs the schema loader integration tests for Cassandra.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestSchemaLoaderCassandra.output.classesDirs
-    classpath = sourceSets.integrationTestSchemaLoaderCassandra.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
+    classpath = sourceSets.integrationTestCassandra.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
     }
 }
 
-task integrationTestSchemaLoaderCosmos(type: Test) {
+task integrationTestCosmos(type: Test) {
     dependsOn(shadowJarUnversioning)
     description = 'Runs the schema loader integration tests for Cosmos DB.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestSchemaLoaderCosmos.output.classesDirs
-    classpath = sourceSets.integrationTestSchemaLoaderCosmos.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
+    classpath = sourceSets.integrationTestCosmos.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
     }
 }
 
-task integrationTestSchemaLoaderDynamo(type: Test) {
+task integrationTestDynamo(type: Test) {
     dependsOn(shadowJarUnversioning)
     description = 'Runs the schema loader integration tests for DynamoDB.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestSchemaLoaderDynamo.output.classesDirs
-    classpath = sourceSets.integrationTestSchemaLoaderDynamo.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
+    classpath = sourceSets.integrationTestDynamo.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
     }
 }
 
-task integrationTestSchemaLoaderJdbc(type: Test) {
+task integrationTestJdbc(type: Test) {
     dependsOn(shadowJarUnversioning)
     description = 'Runs the schema loader integration tests for a JDBC database.'
     group = 'verification'
-    testClassesDirs = sourceSets.integrationTestSchemaLoaderJdbc.output.classesDirs
-    classpath = sourceSets.integrationTestSchemaLoaderJdbc.runtimeClasspath
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
@@ -181,10 +178,32 @@ spotless {
     }
 }
 
-spotbugsMain.reports {
-    html.enabled = true
+import com.github.spotbugs.snom.SpotBugsTask
+
+task spotbugsMain(type: SpotBugsTask) {
+    dependsOn 'classes'
+    classDirs = sourceSets.main.output
+    sourceDirs = sourceSets.main.allSource.sourceDirectories
+    auxClassPaths = sourceSets.main.compileClasspath
+    reports { html.enabled = true }
 }
 
-spotbugsTest.reports {
-    html.enabled = true
+task spotbugsTest(type: SpotBugsTask) {
+    dependsOn 'testClasses'
+    classDirs = sourceSets.test.output
+    sourceDirs = sourceSets.test.allSource.sourceDirectories
+    auxClassPaths = sourceSets.test.compileClasspath
+    reports { html.enabled = true }
 }
+
+task spotbugsIntegrationTest(type: SpotBugsTask) {
+    dependsOn 'integrationTestAllClasses'
+    classDirs = sourceSets.integrationTestAll.output
+    sourceDirs = sourceSets.integrationTestAll.allSource.sourceDirectories
+    auxClassPaths = sourceSets.integrationTestAll.compileClasspath
+    reports { html.enabled = true }
+}
+
+check.dependsOn += spotbugsMain
+check.dependsOn += spotbugsTest
+check.dependsOn += spotbugsIntegrationTest

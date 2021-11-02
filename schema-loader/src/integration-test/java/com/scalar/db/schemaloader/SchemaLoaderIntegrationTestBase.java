@@ -22,16 +22,11 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressFBWarnings(value = {"OS_OPEN_STREAM"})
 public abstract class SchemaLoaderIntegrationTestBase {
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(SchemaLoaderIntegrationTestBase.class);
-
   protected static final String SCHEMA_FILE =
-      System.getProperty("user.dir") + "/schema-loader/sample_data/schema_sample.json";
+      System.getProperty("user.dir") + "/schema-loader/src/integration-test/resources/schema.json";
   protected static final String CONFIG_FILE = "config.properties";
   DistributedStorageAdmin admin;
   ConsensusCommitAdmin consensusCommitAdmin;
@@ -122,10 +117,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
               new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()));
       String line;
       while ((line = input.readLine()) != null) {
-        LOGGER.info(line);
+        System.out.println(line);
       }
     } catch (Exception e) {
-      LOGGER.error(e.toString());
+      System.err.println(e.toString());
     }
     int exitCode = process.waitFor();
 
@@ -158,10 +153,10 @@ public abstract class SchemaLoaderIntegrationTestBase {
               new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()));
       String line;
       while ((line = input.readLine()) != null) {
-        LOGGER.info(line);
+        System.out.println(line);
       }
     } catch (Exception e) {
-      LOGGER.error(e.toString());
+      System.err.println(e.toString());
     }
     int exitCode = process.waitFor();
 

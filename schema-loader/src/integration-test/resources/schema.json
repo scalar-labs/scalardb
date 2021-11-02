@@ -1,0 +1,48 @@
+{
+  "schema_loader_test_ns.test_table": {
+    "transaction": true,
+    "partition-key": [
+      "pk1"
+    ],
+    "clustering-key": [
+      "ck1 DESC",
+      "ck2 ASC"
+    ],
+    "columns": {
+      "pk1": "INT",
+      "ck1": "INT",
+      "ck2": "TEXT",
+      "col1": "INT",
+      "col2": "BIGINT",
+      "col3": "FLOAT",
+      "col4": "DOUBLE",
+      "col5": "TEXT",
+      "col6": "BLOB",
+      "col7": "BOOLEAN"
+    },
+    "secondary-index": [
+      "col1",
+      "col5"
+    ],
+    "compaction-strategy": "LCS",
+    "network-strategy": "NetworkTopologyStrategy",
+    "replication-factor": "1",
+    "ru": 5000
+  },
+  "schema_loader_test_ns2.test_table2": {
+    "partition-key": [
+      "pk1"
+    ],
+    "clustering-key": [
+      "ck1"
+    ],
+    "columns": {
+      "pk1": "INT",
+      "ck1": "INT",
+      "col1": "INT",
+      "col2": "BIGINT",
+      "col3": "FLOAT"
+    },
+    "replication-strategy": "NetworkTopologyStrategy"
+  }
+}

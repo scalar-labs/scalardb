@@ -1,48 +1,59 @@
 {
-  "schema_loader_test_ns.test_table": {
+  "sample_db.sample_table": {
+    "transaction": false,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c4 ASC",
+      "c6 DESC"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "BLOB",
+      "c4": "INT",
+      "c5": "BOOLEAN",
+      "c6": "INT"
+    },
+    "ru": 5000,
+    "compaction-strategy": "LCS",
+    "secondary-index": [
+      "c2",
+      "c4"
+    ]
+  },
+  "sample_db.sample_table1": {
     "transaction": true,
     "partition-key": [
-      "pk1"
+      "c1"
     ],
     "clustering-key": [
-      "ck1 DESC",
-      "ck2 ASC"
+      "c4"
     ],
     "columns": {
-      "pk1": "INT",
-      "ck1": "INT",
-      "ck2": "TEXT",
-      "col1": "INT",
-      "col2": "BIGINT",
-      "col3": "FLOAT",
-      "col4": "DOUBLE",
-      "col5": "TEXT",
-      "col6": "BLOB",
-      "col7": "BOOLEAN"
-    },
-    "secondary-index": [
-      "col1",
-      "col5"
-    ],
-    "compaction-strategy": "LCS",
-    "network-strategy": "NetworkTopologyStrategy",
-    "replication-factor": "1",
-    "ru": 5000
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN"
+    }
   },
-  "schema_loader_test_ns2.test_table2": {
+  "sample_db.sample_table2": {
+    "transaction": false,
     "partition-key": [
-      "pk1"
+      "c1"
     ],
     "clustering-key": [
-      "ck1"
+      "c4",
+      "c3"
     ],
     "columns": {
-      "pk1": "INT",
-      "ck1": "INT",
-      "col1": "INT",
-      "col2": "BIGINT",
-      "col3": "FLOAT"
-    },
-    "replication-strategy": "NetworkTopologyStrategy"
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN"
+    }
   }
 }
