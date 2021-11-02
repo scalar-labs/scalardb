@@ -23,7 +23,7 @@ scalar.db.storage=multi-storage
 # Define storage names, comma-separated format. In this case, "cassandra" and "mysql"
 scalar.db.multi_storage.storages=cassandra,mysql
 
-# Define the "cassandra" storage. You can set the storage properties (storage, contact_points, username, etc.) with the property name "scalar.db.multi_storage.storages.<storage name>.<property name>"
+# Define the "cassandra" storage. You can set the storage properties (storage, contact_points, username, etc.) with the property name "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". For example, if you want to specify the "scalar.db.contact_points" property for the "cassandra" storage, you can specify "scalar.db.multi_storage.storages.cassandra.contact_points"
 scalar.db.multi_storage.storages.cassandra.storage=cassandra
 scalar.db.multi_storage.storages.cassandra.contact_points=localhost
 scalar.db.multi_storage.storages.cassandra.username=cassandra
@@ -34,9 +34,10 @@ scalar.db.multi_storage.storages.mysql.storage=jdbc
 scalar.db.multi_storage.storages.mysql.contact_points=jdbc:mysql://localhost:3306/
 scalar.db.multi_storage.storages.mysql.username=root
 scalar.db.multi_storage.storages.mysql.password=mysql
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.min_idle=5
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.max_idle=10
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.max_total=25
+# JDBC specific configurations for the "mysql" storage. As mentioned before, the format is "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". So for example, if you want to specify the "scalar.db.jdbc.connection_pool.min_idle" property for the "mysql" storage, you can specify "scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle"
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle=5
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_idle=10
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_total=25
 
 # Define table mappings from a table name to a storage. The format is "<table name>:<storage name>,..."
 scalar.db.multi_storage.table_mapping=user.ORDER:cassandra,user.CUSTOMER:mysql,coordinator.state:cassandra
