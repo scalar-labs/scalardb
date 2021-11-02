@@ -34,8 +34,8 @@ public class GrpcStorageTest {
   private GrpcStorage storage;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     storage = new GrpcStorage(config, stub, blockingStub, metadataManager);

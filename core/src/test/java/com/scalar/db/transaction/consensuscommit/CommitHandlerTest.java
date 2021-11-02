@@ -48,8 +48,8 @@ public class CommitHandlerTest {
   @Mock private RecoveryHandler recovery;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   private Put preparePut1() {

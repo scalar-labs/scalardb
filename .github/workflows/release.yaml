@@ -46,6 +46,7 @@ jobs:
       - name: Push containers
         run: |
           docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
+          docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
 
       - name: Upload scalardb, scalardb-server, and scalardb-rpc to Maven Central Repository
         run: |
@@ -80,6 +81,19 @@ jobs:
           asset_path: server/build/distributions/scalardb-server-${{ steps.version.outputs.version }}.zip
           asset_name: scalardb-server-${{ steps.version.outputs.version }}.zip
           asset_content_type: application/zip
+
+      - name: Build scalardb-schema-loader jar
+        run: gradle :schema-loader:shadowJar
+
+      - name: Upload scalardb-schema-loader jar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: schema-loader/build/libs/scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
+          asset_name: scalardb-schema-loader-${{ steps.version.outputs.version }}.jar
+          asset_content_type: application/java-archive
 
       - name: Cleanup Gradle cache
         # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.

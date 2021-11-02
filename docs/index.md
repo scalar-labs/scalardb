@@ -2,10 +2,35 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-A library that makes non-ACID distributed databases/storages ACID-compliant. It not only supports strongly-consistent ACID transactions, but also scales linearly and achieves high availability when it is deployed with distributed databases/storages such as Cassandra.
+Scalar DB is a universal transaction manager that achieves:
+- database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
+- multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
+
+## Install
+The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). 
+You can install it in your application using your build tool such as Gradle and Maven. 
+
+To add a dependency on Scalar DB using Gradle, use the following:
+```
+dependencies {
+    implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.3.0'
+}
+```
+
+To add a dependency using Maven:
+```
+<dependency>
+  <groupId>com.scalar-labs</groupId>
+  <artifactId>scalardb</artifactId>
+  <version>3.3.0</version>
+</dependency>
+```
 
 ## Docs
 * [Getting started](getting-started.md)
+* [Scalar DB supported databases](scalardb-supported-databases.md)
+* [Multi-storage Transactions](multi-storage-transactions.md)
+* [Two-phase Commit Transactions](two-phase-commit-transactions.md)
 * [Design document](design.md)
 * Slides
     * [Making Cassandra more capable, faster, and more reliable](https://www.slideshare.net/scalar-inc/making-cassandra-more-capable-faster-and-more-reliable-at-apacheconhome-2020) at ApacheCon@Home 2020
@@ -32,4 +57,3 @@ Here are the contributors we are especially thankful for:
 
 ## License
 Scalar DB is dual-licensed under both the Apache 2.0 License (found in the LICENSE file in the root directory) and a commercial license. You may select, at your option, one of the above-listed licenses. The commercial license includes enterprise-grade tools, such as a multi-table consistent backup/restore tool for Cassandra. Regarding the commercial license, please [contact us](https://scalar-labs.com/contact_us/) for more information.
-

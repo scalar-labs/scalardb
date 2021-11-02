@@ -22,7 +22,7 @@ public class CosmosCommandTest extends CommandTestBase {
   private static final String schemaFile = "path_to_file";
 
   @Override
-  public void setUp() throws Exception {
+  public void setUp() {
     super.setUp();
     commandLine = new CommandLine(new CosmosCommand());
     setCommandLineOutput();
