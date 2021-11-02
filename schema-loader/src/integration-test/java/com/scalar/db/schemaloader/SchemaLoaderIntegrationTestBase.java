@@ -13,7 +13,6 @@ import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
@@ -23,7 +22,6 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"OS_OPEN_STREAM"})
 public abstract class SchemaLoaderIntegrationTestBase {
   protected static final String SCHEMA_FILE =
       System.getProperty("user.dir") + "/schema-loader/src/integration-test/resources/schema.json";
@@ -112,13 +110,15 @@ public abstract class SchemaLoaderIntegrationTestBase {
     // Act
     Process process = processBuilder.start();
     try {
-      BufferedReader input =
+      try (final BufferedReader input =
           new BufferedReader(
-              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()));
-      String line;
-      while ((line = input.readLine()) != null) {
-        System.out.println(line);
+              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
+        String line;
+        while ((line = input.readLine()) != null) {
+          System.out.println(line);
+        }
       }
+
     } catch (Exception e) {
       System.err.println(e.toString());
     }
@@ -148,13 +148,15 @@ public abstract class SchemaLoaderIntegrationTestBase {
     // Act
     Process process = processBuilder.start();
     try {
-      BufferedReader input =
+      try (final BufferedReader input =
           new BufferedReader(
-              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()));
-      String line;
-      while ((line = input.readLine()) != null) {
-        System.out.println(line);
+              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
+        String line;
+        while ((line = input.readLine()) != null) {
+          System.out.println(line);
+        }
       }
+
     } catch (Exception e) {
       System.err.println(e.toString());
     }
