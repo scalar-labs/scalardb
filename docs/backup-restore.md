@@ -10,7 +10,7 @@ Since Cassandra has a built-in replication mechanism, we don't always need a tra
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, we don't need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-The easiest way to take a transactionally-consistent backup for Scalar DB on Cassandra is to stop a cluster, take the snapshots of all the nodes of the cluster, and start the cluster. If you implement [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing on-going transactions.
+The easiest way to take a transactionally-consistent backup for Scalar DB on Cassandra is to stop a cluster, take the snapshots of all the nodes of the cluster, and start the cluster. If you implement [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing ongoing transactions.
 
 To minimize mistakes when doing backup and restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 Cassy is also integrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
@@ -23,6 +23,34 @@ One requirement for backup in Scalar DB on JDBC databases is that backups for al
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
 For example, you can use `mysqldump` command with `--single-transaction` option in MySQL and `pg_dump` command in PostgreSQL to achieve that.
 Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
+
+## Cosmos DB
+
+You can create Cosmos DB account using `Continuous` backup policy to create continuous backups.
+
+The easiest way to take a transactionally-consistent backup for Scalar DB on Cosmos DB is to implement [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing ongoing transactions.
+You can use the middle value of the pause time as a restore point.
+
+You can restore the backup based on the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and you must change the default consistency to `STRONG` after restoring the data.
+
+## DynamoDB
+
+ScalarDB schema loader enables Point-in-time recovery (PITR) for each table in a DynamoDB while creating the schema. It will help you to create continuous backups.
+
+The easiest way to take a transactionally-consistent backup for Scalar DB on DynamoDB is to implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing ongoing transactions.
+You can use the middle value of the pause time as a restore point.
+
+You can restore the tables one by one using the following steps from the Amazon DynamoDB console,
+
+    A. Restore the PITR (Point-in-time recovery) backup of tables except `scalardb.metadata` on the basis of [AWS official guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html#restoretabletopointintime_console).
+        
+    B. Create the backup of previously restored tables (A) using the [AWS official guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Backup.Tutorial.html#backup_console).
+        
+    C. Delete all tables except `scalardb.metadata` table and previously restored tables (B).
+        
+    D. Restore the previously created backup (B) using the actual table name (previously deleted tables (C)) on the basis of [AWS official guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Restore.Tutorial.html#restoretable_console).
+
+You must enable continuous backup and auto-scaling using the scalardb schema loader or Amazon DynamoDB console. The schema tool doesn't remake the existing tables.
 
 ## Scalar DB server
 
