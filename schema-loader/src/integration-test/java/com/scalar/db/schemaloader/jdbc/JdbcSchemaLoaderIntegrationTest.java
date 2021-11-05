@@ -8,13 +8,12 @@ import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Properties;
-import org.junit.BeforeClass;
 
-public class SchemaLoaderIntegrationTestJdbc extends SchemaLoaderIntegrationTestBase {
+public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
   private static final JdbcConfig config = JdbcEnv.getJdbcConfig();
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Override
+  protected void initialize() throws Exception {
     Properties properties = config.getProperties();
     try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
       properties.store(fileOutputStream, null);

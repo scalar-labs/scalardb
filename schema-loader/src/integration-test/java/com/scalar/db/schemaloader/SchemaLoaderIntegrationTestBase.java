@@ -46,7 +46,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
     }
   }
 
-  void initialize() throws Exception {}
+  protected void initialize() throws Exception {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 

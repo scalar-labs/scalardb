@@ -8,13 +8,12 @@ import com.scalar.db.storage.dynamo.DynamoEnv;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Properties;
-import org.junit.BeforeClass;
 
-public class SchemaLoaderIntegrationTestDynamo extends SchemaLoaderIntegrationTestBase {
+public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
   private static final DynamoConfig config = DynamoEnv.getDynamoConfig();
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Override
+  protected void initialize() throws Exception {
     Properties properties = config.getProperties();
     try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
       properties.store(fileOutputStream, null);
