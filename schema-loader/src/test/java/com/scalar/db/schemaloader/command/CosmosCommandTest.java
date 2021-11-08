@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
