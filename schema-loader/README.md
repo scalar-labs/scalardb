@@ -345,11 +345,11 @@ public class SchemaLoaderSample {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath, true);
 
     // Create tables
-    operator.createTables(schemaFile, metaOptions);
+    operator.createTables(Paths.get(schemaFile), metaOptions);
     operator.createCoordinatorTable(metaOptions);
 
     // Delete tables
-    operator.deleteTables(schemaFile, metaOptions);
+    operator.deleteTables(Paths.get(schemaFile), metaOptions);
     operator.dropCoordinatorTable();
 
     operator.close();
