@@ -106,7 +106,7 @@ public class CommonSchema {
                 .name(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME)
                 .type(Scalars.GraphQLString)
                 .build())
-        .validLocation(DirectiveLocation.MUTATION)
+        .validLocations(DirectiveLocation.MUTATION, DirectiveLocation.QUERY)
         .build();
   }
 }
