@@ -19,8 +19,8 @@ import org.slf4j.LoggerFactory;
 
 public class Table {
 
+  public static final String NAMESPACE_PREFIX = "namespace_prefix";
   private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
-
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
   private static final String PARTITION_KEY = "partition-key";
@@ -63,8 +63,14 @@ public class Table {
     if (fullName.length < 2) {
       throw new SchemaException("Table full name must contains table name and namespace");
     }
-    namespace = fullName[0];
+
+    if (metaOptions.containsKey(NAMESPACE_PREFIX)) {
+      namespace = metaOptions.get(NAMESPACE_PREFIX) + fullName[0];
+    } else {
+      namespace = fullName[0];
+    }
     tableName = fullName[1];
+
     tableMetadata = buildTableMetadata(tableDefinition);
     options = buildOptions(tableDefinition, metaOptions);
   }

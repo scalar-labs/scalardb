@@ -5,7 +5,7 @@ There are two ways to specify general CLI options in schema-loader.
   - Pass a Scalar DB configuration file and database-specific options additionally.
   - Pass the options without a Scalar DB configuration.
 
-# Usage
+# Using Schema Loader CLI Application
 ## Install
 The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
@@ -38,7 +38,7 @@ For using config file
 Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
        [--no-backup] [--no-scaling] -c=<configPath>
        [--compaction-strategy=<compactionStrategy>] [-f=<schemaFile>]
-       [--replication-factor=<replicaFactor>]
+       [--prefix=<namespacePrefix>] [--replication-factor=<replicaFactor>]
        [--replication-strategy=<replicationStrategy>] [--ru=<ru>]
 Create/Delete schemas in the storage defined in the config file
   -c, --config=<configPath>
@@ -52,6 +52,8 @@ Create/Delete schemas in the storage defined in the config file
                       Path to the schema json file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
+      --prefix=<namespacePrefix>
+                      Namespace prefix for all the tables
       --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
       --replication-strategy=<replicationStrategy>
@@ -62,7 +64,8 @@ Create/Delete schemas in the storage defined in the config file
 For Cosmos DB
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
-       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
+       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key>
+       [--prefix=<namespacePrefix>] [-r=<ru>]
 Create/Delete Cosmos DB schemas
   -D, --delete-all       Delete tables
   -f, --schema-file=<schemaFile>
@@ -70,14 +73,16 @@ Create/Delete Cosmos DB schemas
   -h, --host=<uri>       Cosmos DB account URI
       --no-scaling       Disable auto-scaling for Cosmos DB
   -p, --password=<key>   Cosmos DB key
+      --prefix=<namespacePrefix>
+                         Namespace prefix for all the tables
   -r, --ru=<ru>          Base resource unit
 ```
 For DynamoDB
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
        [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
-       -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
-       -u=<awsKeyId>
+       -f=<schemaFile> -p=<awsSecKey> [--prefix=<namespacePrefix>] [-r=<ru>]
+       --region=<awsRegion> -u=<awsKeyId>
 Create/Delete DynamoDB schemas
   -D, --delete-all           Delete tables
       --endpoint-override=<endpointOverride>
@@ -88,6 +93,8 @@ Create/Delete DynamoDB schemas
       --no-backup            Disable continuous backup for DynamoDB
       --no-scaling           Disable auto-scaling for DynamoDB
   -p, --password=<awsSecKey> AWS access secret key
+      --prefix=<namespacePrefix>
+                             Namespace prefix for all the tables
   -r, --ru=<ru>              Base resource unit
       --region=<awsRegion>   AWS region
   -u, --user=<awsKeyId>      AWS access key ID
@@ -97,7 +104,7 @@ For Cassandra
 Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
        [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
        [-n=<replicationStrategy>] [-p=<password>] [-P=<port>]
-       [-R=<replicationFactor>] [-u=<user>]
+       [--prefix=<namespacePrefix>] [-R=<replicationFactor>] [-u=<user>]
 Create/Delete Cassandra schemas
   -c, --compaction-strategy=<compactionStrategy>
                         Cassandra compaction strategy, must be LCS, STCS or TWCS
@@ -111,6 +118,8 @@ Create/Delete Cassandra schemas
   -p, --password=<password>
                         Cassandra password
   -P, --port=<port>     Cassandra Port
+      --prefix=<namespacePrefix>
+                        Namespace prefix for all the tables
   -R, --replication-factor=<replicationFactor>
                         Cassandra replication factor
   -u, --user=<user>     Cassandra user
@@ -118,7 +127,8 @@ Create/Delete Cassandra schemas
 For a JDBC database
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
-       -f=<schemaFile> -j=<url> -p=<password> -u=<user>
+       -f=<schemaFile> -j=<url> -p=<password> [--prefix=<namespacePrefix>]
+       -u=<user>
 Create/Delete JDBC schemas
   -D, --delete-all       Delete tables
   -f, --schema-file=<schemaFile>
@@ -126,6 +136,8 @@ Create/Delete JDBC schemas
   -j, --jdbc-url=<url>   JDBC URL
   -p, --password=<password>
                          JDBC password
+      --prefix=<namespacePrefix>
+                         Namespace prefix for all the tables
   -u, --user=<user>      JDBC user
 ```
 ### Create namespaces and tables
@@ -294,3 +306,63 @@ However, the following types are converted differently when they are used as a p
 | BLOB | VARBINARY(64) | | RAW(64) | |
 
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
+
+
+## Using Schema Loader in your program
+You can check `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
+For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
+```
+dependencies {
+    implementation group: 'com.scalar-labs', name: 'scalardb-schema-loader', version: '<version>'
+}
+```
+
+### Create/Delete tables:
+The main component of `schema-loader` is `SchemaOperator`, we will use an instance of this class for creating/deleting schema.
+There are several ways to create `SchemaOperator` instance using [`SchemaOperatorFactory`](https://github.com/scalar-labs/scalardb/blob/master/schema-loader/src/main/java/com/scalar/db/schemaloader/core/SchemaOperatorFactory.java)
+
+The typical way is passing a path to the Scalar DB configuration file `database.properties`
+
+```java
+public class SchemaLoaderSample {
+  public static int main(String... args) throws IOException, SchemaOperatorException {
+    String configPath = "database.properties";
+    String schemaFile = "sample_schema.json";
+
+    Map<String, String> metaOptions = new HashMap<>();
+
+    metaOptions.put(
+        CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
+    metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, "1");
+
+    metaOptions.put(DynamoAdmin.REQUEST_UNIT, "1");
+    metaOptions.put(DynamoAdmin.NO_SCALING, "true");
+    metaOptions.put(DynamoAdmin.NO_BACKUP, "true");
+
+    metaOptions.put(Table.NAMESPACE_PREFIX, "prefix_");
+
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath, true);
+
+    // Create tables
+    operator.createTables(schemaFile, metaOptions);
+    operator.createCoordinatorTable(metaOptions);
+
+    // Delete tables
+    operator.deleteTables(schemaFile, metaOptions);
+    operator.dropCoordinatorTable();
+
+    operator.close();
+    return 0;
+  }
+}
+```
+
+You can also create/delete a schema by passing a serialized schema json string (raw string value from schema file) to schema operator
+```
+// Create tables
+operator.createTables(serializedSchemaJson, metaOptions);
+
+// Delete tables
+operator.deleteTables(serializedSchemaJson, metaOptions);
+```

@@ -5,7 +5,6 @@ import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Properties;
 import org.junit.After;
@@ -35,10 +34,15 @@ public abstract class CommandTestBase {
 
     schemaOperatorFactoryMockedStatic = Mockito.mockStatic(SchemaOperatorFactory.class);
     schemaOperatorFactoryMockedStatic
-        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Path.class)))
+        .when(
+            () ->
+                SchemaOperatorFactory.getSchemaOperator(Mockito.anyString(), Mockito.anyBoolean()))
         .thenReturn(operator);
     schemaOperatorFactoryMockedStatic
-        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Properties.class)))
+        .when(
+            () ->
+                SchemaOperatorFactory.getSchemaOperator(
+                    Mockito.any(Properties.class), Mockito.anyBoolean()))
         .thenReturn(operator);
   }
 

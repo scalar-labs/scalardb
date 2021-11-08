@@ -3,14 +3,12 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -71,6 +69,9 @@ public class CassandraCommand implements Callable<Integer> {
       required = true)
   private Path schemaFile;
 
+  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
+  private String namespacePrefix;
+
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -98,14 +99,16 @@ public class CassandraCommand implements Callable<Integer> {
     if (replicationFactor != null) {
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
+    if (namespacePrefix != null) {
+      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
+    }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
-    List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
 
     if (deleteTables) {
-      operator.deleteTables(tableList);
+      operator.deleteTables(schemaFile, metaOptions);
     } else {
-      operator.createTables(tableList, metaOptions);
+      operator.createTables(schemaFile, metaOptions);
     }
 
     operator.close();

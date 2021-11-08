@@ -1,13 +1,16 @@
 package com.scalar.db.schemaloader.core;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.schemaloader.schema.SchemaException;
+import com.scalar.db.schemaloader.schema.SchemaParser;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,24 +24,45 @@ public class SchemaOperator {
 
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitAdmin consensusCommitAdmin;
-  private final boolean isStorageSpecificCommand;
+  private final boolean separateCoordinatorTable;
 
-  public SchemaOperator(DatabaseConfig dbConfig, boolean isStorageSpecificCommand) {
-    this.isStorageSpecificCommand = isStorageSpecificCommand;
+  public SchemaOperator(DatabaseConfig dbConfig, boolean separateCoordinatorTable) {
+    this.separateCoordinatorTable = separateCoordinatorTable;
     StorageFactory storageFactory = new StorageFactory(dbConfig);
     admin = storageFactory.getAdmin();
     consensusCommitAdmin =
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(dbConfig.getProperties()));
   }
 
-  @VisibleForTesting
   public SchemaOperator(
       DistributedStorageAdmin admin,
       ConsensusCommitAdmin consensusCommitAdmin,
-      boolean isStorageSpecificCommand) {
-    this.isStorageSpecificCommand = isStorageSpecificCommand;
+      boolean separateCoordinatorTable) {
+    this.separateCoordinatorTable = separateCoordinatorTable;
     this.admin = admin;
     this.consensusCommitAdmin = consensusCommitAdmin;
+  }
+
+  public void createTables(Path schemaFile, Map<String, String> metaOptions)
+      throws SchemaOperatorException {
+    List<Table> tableList;
+    try {
+      tableList = SchemaParser.parse(schemaFile, metaOptions);
+    } catch (SchemaException | IOException e) {
+      throw new SchemaOperatorException("Parsing the schema file failed.", e);
+    }
+    createTables(tableList, metaOptions);
+  }
+
+  public void createTables(String serializedSchemaJson, Map<String, String> metaOptions)
+      throws SchemaOperatorException {
+    List<Table> tableList;
+    try {
+      tableList = SchemaParser.parse(serializedSchemaJson, metaOptions);
+    } catch (SchemaException e) {
+      throw new SchemaOperatorException("Parsing the serialized schema json failed.", e);
+    }
+    createTables(tableList, metaOptions);
   }
 
   public void createTables(List<Table> tableList, Map<String, String> metaOptions)
@@ -58,7 +82,7 @@ public class SchemaOperator {
       }
     }
 
-    if (hasTransactionTable && isStorageSpecificCommand) {
+    if (hasTransactionTable && !separateCoordinatorTable) {
       createCoordinatorTable(metaOptions);
     }
   }
@@ -74,6 +98,28 @@ public class SchemaOperator {
     } catch (ExecutionException e) {
       throw new SchemaOperatorException("Creating the coordinator table failed.", e);
     }
+  }
+
+  public void deleteTables(Path schemaFile, Map<String, String> metaOptions)
+      throws SchemaOperatorException {
+    List<Table> tableList;
+    try {
+      tableList = SchemaParser.parse(schemaFile, metaOptions);
+    } catch (SchemaException | IOException e) {
+      throw new SchemaOperatorException("Parsing the schema file failed.", e);
+    }
+    deleteTables(tableList);
+  }
+
+  public void deleteTables(String serializedSchemaJson, Map<String, String> metaOptions)
+      throws SchemaOperatorException {
+    List<Table> tableList;
+    try {
+      tableList = SchemaParser.parse(serializedSchemaJson, metaOptions);
+    } catch (SchemaException e) {
+      throw new SchemaOperatorException("Parsing the serialized schema json failed.", e);
+    }
+    deleteTables(tableList);
   }
 
   public void deleteTables(List<Table> tableList) throws SchemaOperatorException {
@@ -95,7 +141,7 @@ public class SchemaOperator {
       }
     }
 
-    if (hasTransactionTable && isStorageSpecificCommand) {
+    if (hasTransactionTable && !separateCoordinatorTable) {
       dropCoordinatorTable();
     }
 

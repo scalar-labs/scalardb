@@ -2,7 +2,6 @@ package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
 import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
@@ -10,7 +9,6 @@ import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -69,6 +67,9 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       description = "Path to the schema json file")
   private Path schemaFile;
 
+  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
+  private String namespacePrefix;
+
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -99,19 +100,21 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     if (noBackup != null) {
       metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
+    if (namespacePrefix != null) {
+      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
+    }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath);
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath.toString(), true);
 
     if (coordinator) {
       operator.createCoordinatorTable(metaOptions);
     }
 
     if (schemaFile != null) {
-      List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
       if (deleteTables) {
-        operator.deleteTables(tableList);
+        operator.deleteTables(schemaFile, metaOptions);
       } else {
-        operator.createTables(tableList, metaOptions);
+        operator.createTables(schemaFile, metaOptions);
       }
     }
 
