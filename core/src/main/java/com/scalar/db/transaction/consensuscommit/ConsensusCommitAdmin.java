@@ -6,8 +6,10 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -167,20 +169,35 @@ public class ConsensusCommitAdmin {
    * @return a transactional table metadata
    */
   private TableMetadata convertToTransactionalTable(TableMetadata tableMetadata) {
-    List<String> nonPrimaryKeyColumns =
-        tableMetadata.getColumnNames().stream()
-            .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
-            .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
-            .collect(Collectors.toList());
+    return buildTransactionalTableMetadata(tableMetadata);
+  }
+
+  private static List<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+    return tableMetadata.getColumnNames().stream()
+        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
+        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Builds a transactional table metadata based on the specified table metadata
+   *
+   * @param tableMetadata the base table metadata to build a transactional table metadata
+   * @return a transactional table metadata based on the table metadata
+   */
+  public static TableMetadata buildTransactionalTableMetadata(TableMetadata tableMetadata) {
+    List<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
 
     // Check if the table metadata already has the transactional columns
-    TRANSACTION_META_COLUMNS.forEach(
-        (c, t) -> {
-          if (tableMetadata.getColumnNames().contains(c)) {
-            throw new IllegalArgumentException(
-                "column \"" + c + "\" is reserved as transaction metadata");
-          }
-        });
+    TRANSACTION_META_COLUMNS
+        .keySet()
+        .forEach(
+            c -> {
+              if (tableMetadata.getColumnNames().contains(c)) {
+                throw new IllegalArgumentException(
+                    "column \"" + c + "\" is reserved as transaction metadata");
+              }
+            });
     nonPrimaryKeyColumns.forEach(
         c -> {
           String beforePrefixed = Attribute.BEFORE_PREFIX + c;
@@ -199,6 +216,65 @@ public class ConsensusCommitAdmin {
     TRANSACTION_META_COLUMNS.forEach(builder::addColumn);
     nonPrimaryKeyColumns.forEach(
         c -> builder.addColumn(Attribute.BEFORE_PREFIX + c, tableMetadata.getColumnDataType(c)));
+    return builder.build();
+  }
+
+  /**
+   * Returns whether the specified table metadata is transactional
+   *
+   * @param tableMetadata a table metadata
+   * @return whether the table metadata is transactional
+   */
+  public static boolean isTransactionalTableMetadata(TableMetadata tableMetadata) {
+    for (String column : TRANSACTION_META_COLUMNS.keySet()) {
+      if (!tableMetadata.getColumnNames().contains(column)) {
+        return false;
+      }
+    }
+
+    List<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
+    for (String nonPrimaryKeyColumn : nonPrimaryKeyColumns) {
+      if (TRANSACTION_META_COLUMNS.containsKey(nonPrimaryKeyColumn)) {
+        continue;
+      }
+      if (!tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + nonPrimaryKeyColumn)
+          && (nonPrimaryKeyColumn.length() < Attribute.BEFORE_PREFIX.length()
+              || !tableMetadata
+                  .getColumnNames()
+                  .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length())))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Removes transactional meta columns from the specified table metadata
+   *
+   * @param tableMetadata a transactional table metadata
+   * @return a table metadata without transactional meta columns
+   */
+  public static TableMetadata removeTransactionalMetaColumns(TableMetadata tableMetadata) {
+    Set<String> transactionMetaColumns = new HashSet<>(TRANSACTION_META_COLUMNS.keySet());
+    transactionMetaColumns.addAll(
+        tableMetadata.getColumnNames().stream()
+            .filter(c -> c.startsWith(Attribute.BEFORE_PREFIX))
+            .filter(
+                c ->
+                    tableMetadata
+                        .getColumnNames()
+                        .contains(c.substring(Attribute.BEFORE_PREFIX.length())))
+            .collect(Collectors.toSet()));
+
+    TableMetadata.Builder builder = TableMetadata.newBuilder();
+    tableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKey);
+    tableMetadata
+        .getClusteringKeyNames()
+        .forEach(c -> builder.addClusteringKey(c, tableMetadata.getClusteringOrder(c)));
+    tableMetadata.getColumnNames().stream()
+        .filter(c -> !transactionMetaColumns.contains(c))
+        .forEach(c -> builder.addColumn(c, tableMetadata.getColumnDataType(c)));
+    tableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndex);
     return builder.build();
   }
 }
