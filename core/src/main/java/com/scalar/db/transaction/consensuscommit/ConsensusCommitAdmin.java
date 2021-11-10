@@ -226,22 +226,27 @@ public class ConsensusCommitAdmin {
    * @return whether the table metadata is transactional
    */
   public static boolean isTransactionalTableMetadata(TableMetadata tableMetadata) {
+    // if the table metadata doesn't have the transactional meta columns, it's not transactional
     for (String column : TRANSACTION_META_COLUMNS.keySet()) {
       if (!tableMetadata.getColumnNames().contains(column)) {
         return false;
       }
     }
 
-    List<String> nonPrimaryKeyColumns = getNonPrimaryKeyColumns(tableMetadata);
-    for (String nonPrimaryKeyColumn : nonPrimaryKeyColumns) {
+    // if the table metadata doesn't have the before prefixed columns, it's not transactional
+    for (String nonPrimaryKeyColumn : getNonPrimaryKeyColumns(tableMetadata)) {
       if (TRANSACTION_META_COLUMNS.containsKey(nonPrimaryKeyColumn)) {
         continue;
       }
+      // check if a column that has either the following name exists or not:
+      //   - "before_" + the column name
+      //   - the column name without the "before_" prefix
+      // if both columns don't exist, the table metadata is not transactional
       if (!tableMetadata.getColumnNames().contains(Attribute.BEFORE_PREFIX + nonPrimaryKeyColumn)
-          && (nonPrimaryKeyColumn.length() < Attribute.BEFORE_PREFIX.length()
-              || !tableMetadata
-                  .getColumnNames()
-                  .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length())))) {
+          && !nonPrimaryKeyColumn.startsWith(Attribute.BEFORE_PREFIX)
+          && !tableMetadata
+              .getColumnNames()
+              .contains(nonPrimaryKeyColumn.substring(Attribute.BEFORE_PREFIX.length()))) {
         return false;
       }
     }
