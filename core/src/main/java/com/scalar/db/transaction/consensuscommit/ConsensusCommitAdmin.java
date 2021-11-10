@@ -101,7 +101,7 @@ public class ConsensusCommitAdmin {
   public void createTransactionalTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    admin.createTable(namespace, table, convertToTransactionalTable(metadata), options);
+    admin.createTable(namespace, table, buildTransactionalTableMetadata(metadata), options);
   }
 
   /**
@@ -163,24 +163,7 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Converts a table metadata to a transactional one
-   *
-   * @param tableMetadata a table metadata to be converted
-   * @return a transactional table metadata
-   */
-  private TableMetadata convertToTransactionalTable(TableMetadata tableMetadata) {
-    return buildTransactionalTableMetadata(tableMetadata);
-  }
-
-  private static List<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
-    return tableMetadata.getColumnNames().stream()
-        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
-        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Builds a transactional table metadata based on the specified table metadata
+   * Builds a transactional table metadata based on the specified table metadata.
    *
    * @param tableMetadata the base table metadata to build a transactional table metadata
    * @return a transactional table metadata based on the table metadata
@@ -220,7 +203,10 @@ public class ConsensusCommitAdmin {
   }
 
   /**
-   * Returns whether the specified table metadata is transactional
+   * Returns whether the specified table metadata is transactional.
+   *
+   * <p>This method checks all the transactional meta columns including the before prefix column,
+   * and if any of them is missing, it returns false.
    *
    * @param tableMetadata a table metadata
    * @return whether the table metadata is transactional
@@ -233,7 +219,7 @@ public class ConsensusCommitAdmin {
       }
     }
 
-    // if the table metadata doesn't have the before prefixed columns, it's not transactional
+    // if the table metadata doesn't have the before prefix columns, it's not transactional
     for (String nonPrimaryKeyColumn : getNonPrimaryKeyColumns(tableMetadata)) {
       if (TRANSACTION_META_COLUMNS.containsKey(nonPrimaryKeyColumn)) {
         continue;
@@ -253,8 +239,15 @@ public class ConsensusCommitAdmin {
     return true;
   }
 
+  private static List<String> getNonPrimaryKeyColumns(TableMetadata tableMetadata) {
+    return tableMetadata.getColumnNames().stream()
+        .filter(c -> !tableMetadata.getPartitionKeyNames().contains(c))
+        .filter(c -> !tableMetadata.getClusteringKeyNames().contains(c))
+        .collect(Collectors.toList());
+  }
+
   /**
-   * Removes transactional meta columns from the specified table metadata
+   * Removes transactional meta columns from the specified table metadata.
    *
    * @param tableMetadata a transactional table metadata
    * @return a table metadata without transactional meta columns
