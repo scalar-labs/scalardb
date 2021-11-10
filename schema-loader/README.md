@@ -1,14 +1,14 @@
 # Scalar DB Schema Loader
 
-This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file.
-Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter `true` in the schema file.
+Scalar DB Schema Loader creates and deletes Scalar DB schemas (namespaces and tables) on the basis of a provided schema file.
+Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter to `true` in the schema file.
 
-There are two ways to specify general CLI options in schema-loader:
-  - Pass a Scalar DB configuration file and database-specific options additionally.
+There are two ways to specify general CLI options in Schema Loader:
+  - Pass a Scalar DB configuration file and database/storage-specific options additionally.
   - Pass the options without a Scalar DB configuration.
 
 Note that this tool supports only basic options to create/delete a table.
-If you want to use advanced feature of the database, please alter your table after creating it with this tool.
+If you want to use advanced features of the database, please alter your table after creating it with this tool.
 
 # Usage
 
@@ -30,7 +30,7 @@ You can pull the docker image from [Scalar's container registry](https://github.
 ```console
 docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version> <command_arguments>
 ```
-- You can specify the same command arguments as bellow by simply replacing `java -jar scalardb-schema-loader-<version>.jar` with `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`
+- Note that you can specify the same command arguments even if you use the fat jar or the container. The example commands in the next section are shown with a jar, but you can run the commands with the container in the same way by replacing `java -jar scalardb-schema-loader-<version>.jar` with `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`.
 
 You can also build the docker image as follows.
 ```console
@@ -270,7 +270,7 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 }
 ```
 
-You can also specify storage-specific options in the table definition as follows:
+You can also specify database/storage-specific options in the table definition as follows:
 ```json
 {
   "sample_db.sample_table3": {
@@ -288,7 +288,7 @@ You can also specify storage-specific options in the table definition as follows
 }
 ```
 
-The storage-specific options you can specify are as follows:
+The database/storage-specific options you can specify are as follows:
 
 For Cassandra:
 - `compaction-strategy`, a compaction strategy. It should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy) or `TWCS` (TimeWindowCompactionStrategy).
