@@ -3,9 +3,8 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.Table;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -45,9 +44,6 @@ public class JdbcCommand implements Callable<Integer> {
       required = true)
   private Path schemaFile;
 
-  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
-  private String namespacePrefix;
-
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -64,10 +60,7 @@ public class JdbcCommand implements Callable<Integer> {
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
-    Map<String, String> metaOptions = new HashMap<>();
-    if (namespacePrefix != null) {
-      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
-    }
+    Map<String, String> metaOptions = Collections.emptyMap();
 
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
 

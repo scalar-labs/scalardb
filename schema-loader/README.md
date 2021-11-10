@@ -38,7 +38,7 @@ For using config file
 Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
        [--no-backup] [--no-scaling] -c=<configPath>
        [--compaction-strategy=<compactionStrategy>] [-f=<schemaFile>]
-       [--prefix=<namespacePrefix>] [--replication-factor=<replicaFactor>]
+       [--replication-factor=<replicaFactor>]
        [--replication-strategy=<replicationStrategy>] [--ru=<ru>]
 Create/Delete schemas in the storage defined in the config file
   -c, --config=<configPath>
@@ -52,8 +52,6 @@ Create/Delete schemas in the storage defined in the config file
                       Path to the schema json file
       --no-backup     Disable continuous backup (supported in DynamoDB)
       --no-scaling    Disable auto-scaling (supported in DynamoDB, Cosmos DB)
-      --prefix=<namespacePrefix>
-                      Namespace prefix for all the tables
       --replication-factor=<replicaFactor>
                       The replication factor (supported in Cassandra)
       --replication-strategy=<replicationStrategy>
@@ -64,8 +62,7 @@ Create/Delete schemas in the storage defined in the config file
 For Cosmos DB
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
-       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key>
-       [--prefix=<namespacePrefix>] [-r=<ru>]
+       [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
 Create/Delete Cosmos DB schemas
   -D, --delete-all       Delete tables
   -f, --schema-file=<schemaFile>
@@ -73,16 +70,14 @@ Create/Delete Cosmos DB schemas
   -h, --host=<uri>       Cosmos DB account URI
       --no-scaling       Disable auto-scaling for Cosmos DB
   -p, --password=<key>   Cosmos DB key
-      --prefix=<namespacePrefix>
-                         Namespace prefix for all the tables
   -r, --ru=<ru>          Base resource unit
 ```
 For DynamoDB
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
        [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
-       -f=<schemaFile> -p=<awsSecKey> [--prefix=<namespacePrefix>] [-r=<ru>]
-       --region=<awsRegion> -u=<awsKeyId>
+       -f=<schemaFile> -p=<awsSecKey> [-r=<ru>] --region=<awsRegion>
+       -u=<awsKeyId>
 Create/Delete DynamoDB schemas
   -D, --delete-all           Delete tables
       --endpoint-override=<endpointOverride>
@@ -93,8 +88,6 @@ Create/Delete DynamoDB schemas
       --no-backup            Disable continuous backup for DynamoDB
       --no-scaling           Disable auto-scaling for DynamoDB
   -p, --password=<awsSecKey> AWS access secret key
-      --prefix=<namespacePrefix>
-                             Namespace prefix for all the tables
   -r, --ru=<ru>              Base resource unit
       --region=<awsRegion>   AWS region
   -u, --user=<awsKeyId>      AWS access key ID
@@ -104,7 +97,7 @@ For Cassandra
 Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
        [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
        [-n=<replicationStrategy>] [-p=<password>] [-P=<port>]
-       [--prefix=<namespacePrefix>] [-R=<replicationFactor>] [-u=<user>]
+       [-R=<replicationFactor>] [-u=<user>]
 Create/Delete Cassandra schemas
   -c, --compaction-strategy=<compactionStrategy>
                         Cassandra compaction strategy, must be LCS, STCS or TWCS
@@ -118,8 +111,6 @@ Create/Delete Cassandra schemas
   -p, --password=<password>
                         Cassandra password
   -P, --port=<port>     Cassandra Port
-      --prefix=<namespacePrefix>
-                        Namespace prefix for all the tables
   -R, --replication-factor=<replicationFactor>
                         Cassandra replication factor
   -u, --user=<user>     Cassandra user
@@ -127,8 +118,7 @@ Create/Delete Cassandra schemas
 For a JDBC database
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
-       -f=<schemaFile> -j=<url> -p=<password> [--prefix=<namespacePrefix>]
-       -u=<user>
+       -f=<schemaFile> -j=<url> -p=<password> -u=<user>
 Create/Delete JDBC schemas
   -D, --delete-all       Delete tables
   -f, --schema-file=<schemaFile>
@@ -136,8 +126,6 @@ Create/Delete JDBC schemas
   -j, --jdbc-url=<url>   JDBC URL
   -p, --password=<password>
                          JDBC password
-      --prefix=<namespacePrefix>
-                         Namespace prefix for all the tables
   -u, --user=<user>      JDBC user
 ```
 ### Create namespaces and tables
@@ -339,8 +327,6 @@ public class SchemaLoaderSample {
     metaOptions.put(DynamoAdmin.REQUEST_UNIT, "1");
     metaOptions.put(DynamoAdmin.NO_SCALING, "true");
     metaOptions.put(DynamoAdmin.NO_BACKUP, "true");
-
-    metaOptions.put(Table.NAMESPACE_PREFIX, "prefix_");
 
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath, true);
 

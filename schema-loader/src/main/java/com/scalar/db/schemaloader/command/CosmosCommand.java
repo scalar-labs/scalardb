@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -49,9 +48,6 @@ public class CosmosCommand implements Callable<Integer> {
       required = true)
   private Path schemaFile;
 
-  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
-  private String namespacePrefix;
-
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -73,9 +69,6 @@ public class CosmosCommand implements Callable<Integer> {
     }
     if (noScaling != null) {
       metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (namespacePrefix != null) {
-      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
     }
 
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);

@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
@@ -69,9 +68,6 @@ public class CassandraCommand implements Callable<Integer> {
       required = true)
   private Path schemaFile;
 
-  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
-  private String namespacePrefix;
-
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -98,9 +94,6 @@ public class CassandraCommand implements Callable<Integer> {
     }
     if (replicationFactor != null) {
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
-    }
-    if (namespacePrefix != null) {
-      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
     }
 
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);

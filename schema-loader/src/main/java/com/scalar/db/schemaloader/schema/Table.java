@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 public class Table {
 
-  public static final String NAMESPACE_PREFIX = "namespace_prefix";
   private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
@@ -64,11 +63,7 @@ public class Table {
       throw new SchemaException("Table full name must contains table name and namespace");
     }
 
-    if (metaOptions.containsKey(NAMESPACE_PREFIX)) {
-      namespace = metaOptions.get(NAMESPACE_PREFIX) + fullName[0];
-    } else {
-      namespace = fullName[0];
-    }
+    namespace = fullName[0];
     tableName = fullName[1];
 
     tableMetadata = buildTableMetadata(tableDefinition);

@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader.command;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.nio.file.Path;
@@ -60,9 +59,6 @@ public class DynamoCommand implements Callable<Integer> {
       required = true)
   private Path schemaFile;
 
-  @Option(names = "--prefix", description = "Namespace prefix for all the tables")
-  private String namespacePrefix;
-
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
@@ -91,9 +87,6 @@ public class DynamoCommand implements Callable<Integer> {
     }
     if (endpointOverride != null) {
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
-    }
-    if (namespacePrefix != null) {
-      metaOptions.put(Table.NAMESPACE_PREFIX, namespacePrefix);
     }
 
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
