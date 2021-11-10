@@ -128,6 +128,14 @@ jobs:
   integration-test-for-cosmos:
     docker:
       - image: circleci/openjdk:8-jdk
+        name: primary
+      - image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
+        name: emulator
+        environment:
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 11
+          AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: true
+          #AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: emulator
+          AZURE_COSMOS_EMULATOR_ARGS: '/Consistency=Strong'
 
     working_directory: ~/repo
 
@@ -137,6 +145,7 @@ jobs:
 
     steps:
       - checkout
+
 
       - restore_cache:
           keys:
@@ -150,10 +159,23 @@ jobs:
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
 
       - run:
+          name: Start Cosmos DB Emulator
+          command: |
+            dockerize -wait tcp://emulator:8081 -timeout 1m
+            sleep 10
+
+      - run:
+          command: |
+            curl -k https://emulator:8081/_explorer/emulator.pem > emulatorcert.crt
+            cat emulatorcert.crt
+            sudo cp emulatorcert.crt /usr/local/share/ca-certificates/
+            sudo update-ca-certificates
+            echo y | sudo /usr/local/openjdk-8/bin/keytool -keystore /usr/local/openjdk-8/jre/lib/security/cacerts -importcert -alias  emulator_cert -file emulatorcert.crt -storepass changeit
+      - run:
           name: Run integration test
           no_output_timeout: 20m
-          command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
-
+          command: |
+            gradle integrationTestCosmos -Dscalardb.cosmos.uri=https://emulator:8081 -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Djavax.net.ssl.trustStore=/usr/local/openjdk-8/jre/lib/security/cacerts -Djavax.net.ssl.trustStorePassword="changeit"
       - run:
           name: Save Gradle integration test reports
           command: |
