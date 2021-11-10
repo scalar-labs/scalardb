@@ -25,7 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
-public class GraphQLFactoryTest {
+public class GraphQlFactoryTest {
   private static final String NAMESPACE_NAME = "namespace_1";
   private static final String TABLE_NAME_1 = "table_1";
   private static final String TABLE_NAME_2 = "table_2";
@@ -56,8 +56,8 @@ public class GraphQLFactoryTest {
         .thenReturn(mock(TableMetadata.class));
 
     // Act
-    GraphQLFactory factory =
-        GraphQLFactory.newBuilder()
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
             .storageFactory(storageFactory)
             .transactionFactory(transactionFactory)
             .table(NAMESPACE_NAME, TABLE_NAME_1)
@@ -74,14 +74,14 @@ public class GraphQLFactoryTest {
   public void build_StorageFactoryNotGiven_ShouldThrowIllegalStateException() {
     // Act Assert
     assertThatThrownBy(
-            () -> GraphQLFactory.newBuilder().table(NAMESPACE_NAME, TABLE_NAME_1).build())
+            () -> GraphQlFactory.newBuilder().table(NAMESPACE_NAME, TABLE_NAME_1).build())
         .isInstanceOf(IllegalStateException.class);
   }
 
   @Test
   public void build_NoTableGiven_ShouldThrowIllegalStateException() {
     // Act Assert
-    assertThatThrownBy(() -> GraphQLFactory.newBuilder().storageFactory(storageFactory).build())
+    assertThatThrownBy(() -> GraphQlFactory.newBuilder().storageFactory(storageFactory).build())
         .isInstanceOf(IllegalStateException.class);
   }
 
@@ -95,7 +95,7 @@ public class GraphQLFactoryTest {
     // Act Assert
     assertThatThrownBy(
             () ->
-                GraphQLFactory.newBuilder()
+                GraphQlFactory.newBuilder()
                     .storageFactory(storageFactory)
                     .table(NAMESPACE_NAME, TABLE_NAME_1)
                     .build())
@@ -120,8 +120,8 @@ public class GraphQLFactoryTest {
     configureTableMetadata();
 
     // Act
-    GraphQLFactory factory =
-        GraphQLFactory.newBuilder()
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
             .storageFactory(storageFactory)
             .transactionFactory(transactionFactory)
             .table(NAMESPACE_NAME, TABLE_NAME_1)
@@ -147,8 +147,8 @@ public class GraphQLFactoryTest {
     configureTableMetadata();
 
     // Act
-    GraphQLFactory factory =
-        GraphQLFactory.newBuilder()
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
             .storageFactory(storageFactory)
             .table(NAMESPACE_NAME, TABLE_NAME_1)
             .build();
@@ -174,8 +174,8 @@ public class GraphQLFactoryTest {
         .thenReturn(secondTableMetadata);
 
     // Act
-    GraphQLFactory factory =
-        GraphQLFactory.newBuilder()
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
             .storageFactory(storageFactory)
             .table(NAMESPACE_NAME, TABLE_NAME_1)
             .table(NAMESPACE_NAME, TABLE_NAME_2)
@@ -203,8 +203,8 @@ public class GraphQLFactoryTest {
     when(storageAdmin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME_1)).thenReturn(tableMetadata);
 
     // Act
-    GraphQLFactory factory =
-        GraphQLFactory.newBuilder()
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
             .storageFactory(storageFactory)
             .table(NAMESPACE_NAME, TABLE_NAME_1)
             .build();

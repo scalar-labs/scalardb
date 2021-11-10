@@ -6,7 +6,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.CommonSchema;
-import com.scalar.db.graphql.schema.TableGraphQLModel;
+import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
@@ -19,16 +19,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class GraphQLFactory {
+public class GraphQlFactory {
 
   private final DistributedStorage storage;
   private final DistributedTransactionManager transactionManager;
-  private final List<TableGraphQLModel> tableModels;
+  private final List<TableGraphQlModel> tableModels;
 
-  private GraphQLFactory(
+  private GraphQlFactory(
       DistributedStorage storage,
       DistributedTransactionManager transactionManager,
-      List<TableGraphQLModel> tableModels) {
+      List<TableGraphQlModel> tableModels) {
     this.storage = Objects.requireNonNull(storage);
     this.transactionManager = transactionManager;
     this.tableModels = tableModels;
@@ -40,7 +40,7 @@ public class GraphQLFactory {
 
   private GraphQLObjectType createQueryObjectType() {
     GraphQLObjectType.Builder builder = GraphQLObjectType.newObject().name("Query");
-    for (TableGraphQLModel tableModel : tableModels) {
+    for (TableGraphQlModel tableModel : tableModels) {
       builder.field(tableModel.getQueryGetField());
       GraphQLFieldDefinition queryScanField = tableModel.getQueryScanField();
       if (queryScanField != null) {
@@ -52,7 +52,7 @@ public class GraphQLFactory {
 
   private GraphQLObjectType createMutationObjectType() {
     GraphQLObjectType.Builder builder = GraphQLObjectType.newObject().name("Mutation");
-    for (TableGraphQLModel tableModel : tableModels) {
+    for (TableGraphQlModel tableModel : tableModels) {
       builder.field(tableModel.getMutationPutField());
       builder.field(tableModel.getMutationDeleteField());
     }
@@ -112,7 +112,7 @@ public class GraphQLFactory {
       return this;
     }
 
-    public GraphQLFactory build() throws ExecutionException {
+    public GraphQlFactory build() throws ExecutionException {
       if (storageFactory == null) {
         throw new IllegalArgumentException("Need to specify storageFactory");
       }
@@ -121,16 +121,16 @@ public class GraphQLFactory {
       }
 
       DistributedStorageAdmin storageAdmin = storageFactory.getAdmin();
-      ImmutableList.Builder<TableGraphQLModel> tableModelListBuilder = ImmutableList.builder();
+      ImmutableList.Builder<TableGraphQlModel> tableModelListBuilder = ImmutableList.builder();
       for (int i = 0; i < tables.size(); i++) {
         String namespace = namespaces.get(i);
         String table = tables.get(i);
         tableModelListBuilder.add(
-            new TableGraphQLModel(
+            new TableGraphQlModel(
                 namespace, table, storageAdmin.getTableMetadata(namespace, table)));
       }
 
-      return new GraphQLFactory(
+      return new GraphQlFactory(
           storageFactory.getStorage(),
           transactionFactory != null ? transactionFactory.getTransactionManager() : null,
           tableModelListBuilder.build());

@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class TableGraphQLModel {
+public class TableGraphQlModel {
   private static final Set<String> CONSENSUSCOMMIT_ATTRIBUTES =
       ImmutableSet.of(ID, STATE, VERSION, PREPARED_AT, COMMITTED_AT, CREATED_AT);
 
@@ -67,7 +67,7 @@ public class TableGraphQLModel {
   private final GraphQLInputObjectType deleteInputObjectType;
   private final GraphQLObjectType deletePayloadObjectType;
 
-  public TableGraphQLModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
+  public TableGraphQlModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
     this.tableName = Objects.requireNonNull(tableName);
     this.tableMetadata = Objects.requireNonNull(tableMetadata);

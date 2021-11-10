@@ -22,7 +22,7 @@ import graphql.schema.GraphQLTypeReference;
 import java.util.List;
 import org.junit.Test;
 
-public class TableGraphQLModelTest {
+public class TableGraphQlModelTest {
   private static final String NAMESPACE_NAME = "namespace_1";
   private static final String TABLE_NAME = "table_1";
   private static final String COLUMN_NAME_1 = "column_1";
@@ -108,7 +108,7 @@ public class TableGraphQLModelTest {
   public void constructor_NonNullArgumentsGiven_ShouldSetFields() {
     // Act
     TableMetadata tableMetadata = createTableMetadata();
-    TableGraphQLModel model = new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, tableMetadata);
+    TableGraphQlModel model = new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, tableMetadata);
 
     // Assert
     assertThat(model.getNamespaceName()).isEqualTo(NAMESPACE_NAME);
@@ -119,29 +119,29 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NullNamespaceNameGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new TableGraphQLModel(null, TABLE_NAME, createTableMetadata()))
+    assertThatThrownBy(() -> new TableGraphQlModel(null, TABLE_NAME, createTableMetadata()))
         .isInstanceOf(NullPointerException.class);
   }
 
   @Test
   public void constructor_NullTableNameGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new TableGraphQLModel(NAMESPACE_NAME, null, createTableMetadata()))
+    assertThatThrownBy(() -> new TableGraphQlModel(NAMESPACE_NAME, null, createTableMetadata()))
         .isInstanceOf(NullPointerException.class);
   }
 
   @Test
   public void constructor_NullTableMetadataGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, null))
+    assertThatThrownBy(() -> new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, null))
         .isInstanceOf(NullPointerException.class);
   }
 
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateObjectTypeForTable() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     GraphQLObjectType objectType = model.getObjectType();
@@ -158,8 +158,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePrimaryKeyInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_key {
@@ -181,8 +181,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePartitionKeyInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_PartitionKey {
@@ -200,8 +200,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateGetInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_GetInput {
@@ -222,8 +222,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateGetPayloadObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type table_1_GetPayload {
@@ -239,8 +239,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateQueryGetField() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Query {
@@ -257,8 +257,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateClusteringKeyEnum() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // enum table_1_ClusteringKeyName {
@@ -279,8 +279,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateScanInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_ScanInput {
@@ -349,8 +349,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateClusteringKeyInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_ScanBoundary {
@@ -375,8 +375,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateOrderingInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_Ordering {
@@ -400,8 +400,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateScanPayloadObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type table_1_ScanPayload {
@@ -417,8 +417,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateQueryScanField() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Query {
@@ -433,8 +433,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePutValuesObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_PutValues {
@@ -450,8 +450,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePutInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_PutInput {
@@ -473,8 +473,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePutPayloadObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type table_1_PutPayload {
@@ -490,8 +490,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateMutationPutField() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Mutation {
@@ -508,8 +508,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateDeleteInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // input table_1_DeleteInput {
@@ -529,8 +529,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateDeletePayloadObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type table_1_DeletePayload {
@@ -546,8 +546,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateMutationDeleteField() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Mutation {
@@ -566,8 +566,8 @@ public class TableGraphQLModelTest {
   public void
       constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateClusteringKeyEnum() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -578,8 +578,8 @@ public class TableGraphQLModelTest {
   public void
       constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateClusteringKeyInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -590,8 +590,8 @@ public class TableGraphQLModelTest {
   public void
       constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateOrderingInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -602,8 +602,8 @@ public class TableGraphQLModelTest {
   public void
       constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanInputObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -614,8 +614,8 @@ public class TableGraphQLModelTest {
   public void
       constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateScanPayloadObjectType() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -625,8 +625,8 @@ public class TableGraphQLModelTest {
   @Test
   public void constructor_TableMetadataWithoutClusteringKeyGiven_ShouldNotCreateQueryScanField() {
     // Act
-    TableGraphQLModel model =
-        new TableGraphQLModel(
+    TableGraphQlModel model =
+        new TableGraphQlModel(
             NAMESPACE_NAME, TABLE_NAME, createTableMetadataWithoutClusteringKey());
 
     // Assert
@@ -646,7 +646,7 @@ public class TableGraphQLModelTest {
             .build();
 
     // Act
-    TableGraphQLModel model = new TableGraphQLModel(NAMESPACE_NAME, TABLE_NAME, tableMetadata);
+    TableGraphQlModel model = new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, tableMetadata);
 
     // Assert
     assertThat(model.getPutValuesObjectType()).isNull();
