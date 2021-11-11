@@ -1,30 +1,36 @@
 # Scalar DB Schema Loader
-This tool creates/deletes Scalar DB schemas (namespaces and tables) based on a provided schema file. Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter `true` in the schema file.
 
-There are two ways to specify general CLI options in schema-loader.
-  - Pass a Scalar DB configuration file and database-specific options additionally.
+Scalar DB Schema Loader creates and deletes Scalar DB schemas (namespaces and tables) on the basis of a provided schema file.
+Also, it automatically adds the Scalar DB transaction metadata (used in the Consensus Commit protocol) to the tables when you set the `transaction` parameter to `true` in the schema file.
+
+There are two ways to specify general CLI options in Schema Loader:
+  - Pass a Scalar DB configuration file and database/storage-specific options additionally.
   - Pass the options without a Scalar DB configuration.
 
+Note that this tool supports only basic options to create/delete a table.
+If you want to use advanced features of the database, please alter your table after creating it with this tool.
+
 # Usage
+
 ## Install
+
 The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
 
 ## Build
+
 In case you want to build `schema-loader` from the source:
 ```console
 $ ./gradlew schema-loader:shadowJar
 ```
->The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
+- The built fat jar file is `schema-loader/build/libs/scalardb-schema-loader-<version>.jar`
 
 ## Docker
+
 You can pull the docker image from [Scalar's container registry](https://github.com/orgs/scalar-labs/packages/container/package/scalardb-schema-loader).
 ```console
 docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version> <command_arguments>
 ```
-- You can specify the same command arguments as bellow by simply replacing 
-`java -jar scalardb-schema-loader-<version>.jar`
-with
-`docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`
+- Note that you can specify the same command arguments even if you use the fat jar or the container. The example commands in the next section are shown with a jar, but you can run the commands with the container in the same way by replacing `java -jar scalardb-schema-loader-<version>.jar` with `docker run --rm -v <your_local_schema_file_path>:<schema_file_path_in_docker> [-v <your_local_config_file_path>:<config_file_path_in_docker>] ghcr.io/scalar-labs/scalardb-schema-loader:<version>`.
 
 You can also build the docker image as follows.
 ```console
@@ -32,8 +38,10 @@ $ ./gradlew schema-loader:docker
 ```
 
 ## Run
+
 ### Available commands
-For using config file
+
+For using config file:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
        [--no-backup] [--no-scaling] -c=<configPath>
@@ -59,7 +67,8 @@ Create/Delete schemas in the storage defined in the config file
                         NetworkTopologyStrategy (supported in Cassandra)
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
 ```
-For Cosmos DB
+
+For Cosmos DB:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
        [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
@@ -72,7 +81,8 @@ Create/Delete Cosmos DB schemas
   -p, --password=<key>   Cosmos DB key
   -r, --ru=<ru>          Base resource unit
 ```
-For DynamoDB
+
+For DynamoDB:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
        [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
@@ -92,7 +102,8 @@ Create/Delete DynamoDB schemas
       --region=<awsRegion>   AWS region
   -u, --user=<awsKeyId>      AWS access key ID
 ```
-For Cassandra
+
+For Cassandra:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
        [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
@@ -115,7 +126,8 @@ Create/Delete Cassandra schemas
                         Cassandra replication factor
   -u, --user=<user>     Cassandra user
 ```
-For a JDBC database
+
+For a JDBC database:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
        -f=<schemaFile> -j=<url> -p=<password> -u=<user>
@@ -128,14 +140,16 @@ Create/Delete JDBC schemas
                          JDBC password
   -u, --user=<user>      JDBC user
 ```
+
 ### Create namespaces and tables
-Using config file based from Scalar DB. Sample config file can be found [here](../conf/database.properties)
+
+For using config file based from Scalar DB (Sample config file can be found [here](../conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
 ```
   - if `--coordinator` is specified, the coordinator table will be created.
-  
-Using CLI arguments fully for configuration
+
+For using CLI arguments fully for configuration:
 ```console
 # For Cosmos DB
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
@@ -154,7 +168,6 @@ $ java -jar scalardb-schema-loader-<version>.jar --dynamo -u <AWS_ACCESS_KEY_ID>
 # For Cassandra
 $ java -jar scalardb-schema-loader-<version>.jar --cassandra -h <CASSANDRA_IP> [-P <CASSANDRA_PORT>] [-u <CASSANDRA_USER>] [-p <CASSANDRA_PASSWORD>] -f schema.json [-n <NETWORK_STRATEGY>] [-R <REPLICATION_FACTOR>]
 ```
-
   - If `-P <CASSANDRA_PORT>` is not supplied, it defaults to `9042`.
   - If `-u <CASSANDRA_USER>` is not supplied, it defaults to `cassandra`.
   - If `-p <CASSANDRA_PASSWORD>` is not supplied, it defaults to `cassandra`.
@@ -166,14 +179,14 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 ```
 
 ### Delete tables
-Using config file
+
+For using config file:
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
 ```
   - if `--coordinator` is specified, the coordinator table will be deleted.
   
-Using CLI arguments
-
+For using CLI arguments:
 ```console
 # For Cosmos DB
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
@@ -214,8 +227,6 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
       "c5": "BOOLEAN",
       "c6": "INT"
     },
-    "ru": 5000,
-    "compaction-strategy": "LCS",
     "secondary-index": [
       "c2",
       "c4"
@@ -258,18 +269,44 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
   }
 }
 ```
-- `compaction-strategy` should be `STCS`, `LCS` or `TWCS`. This is ignored in Cosmos DB and DynamoDB.
-- This `ru` value is set for all tables on this database even if `-r BASE_RESOURCE_UNIT` is set when Cosmos DB and DynamoDB. `ru` is ignored in Cassandra.
+
+You can also specify database/storage-specific options in the table definition as follows:
+```json
+{
+  "sample_db.sample_table3": {
+    "partition-key": [
+      "c1"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "BLOB"
+    },
+    "compaction-strategy": "LCS",
+    "ru": 5000
+  }
+}
+```
+
+The database/storage-specific options you can specify are as follows:
+
+For Cassandra:
+- `compaction-strategy`, a compaction strategy. It should be `STCS` (SizeTieredCompaction), `LCS` (LeveledCompactionStrategy) or `TWCS` (TimeWindowCompactionStrategy).
+
+For DynamoDB and Cosmos DB:
+- `ru`, a request unit. Please see [RU](#RU) for the details.
 
 ## Scaling Performance
 
 ### RU
-You can scale the throughput of Cosmos DB and DynamoDB by specifying `-r` option (which applies to all the tables) or `ru` parameter for each table. Those configurations are ignored in Cassandra. The default values are `400` for Cosmos DB and `10` for DynamoDB respectively, which are set without `-r` option.
+
+You can scale the throughput of Cosmos DB and DynamoDB by specifying `--ru` option (which applies to all the tables) or `ru` parameter for each table. The default values are `400` for Cosmos DB and `10` for DynamoDB respectively, which are set without `--ru` option.
 
 Note that the schema loader abstracts [Request Unit](https://docs.microsoft.com/azure/cosmos-db/request-units) of Cosmos DB and [Capacity Unit](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html#HowItWorks.ProvisionedThroughput.Manual) of DynamoDB with `RU`.
 So, please set an appropriate value depending on the database implementations. Please also note that the schema loader sets the same value to both Read Capacity Unit and Write Capacity Unit for DynamoDB.
 
 ### Auto-scaling
+
 By default, the schema loader enables auto-scaling of RU for all tables: RU is scaled in or out between 10% and 100% of a specified RU depending on a workload. For example, if you specify `-r 10000`, RU of each table is scaled in or out between 1000 and 10000. Note that auto-scaling of Cosmos DB is enabled only when you set more than or equal to 4000 RU.
 
 ## Data type mapping for JDBC databases
