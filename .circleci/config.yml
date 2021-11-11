@@ -146,7 +146,6 @@ jobs:
     steps:
       - checkout
 
-
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "core/build.gradle" }}
@@ -157,6 +156,12 @@ jobs:
           paths:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "core/build.gradle" }}
+
+      - run:
+          name: Install network utils
+          command: |
+            sudo apt-get update
+            sudo apt-get install dnsutils
 
       - run:
           name: Start Cosmos DB Emulator
@@ -175,7 +180,10 @@ jobs:
           name: Run integration test
           no_output_timeout: 20m
           command: |
-            gradle integrationTestCosmos -Dscalardb.cosmos.uri=https://emulator:8081 -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Djavax.net.ssl.trustStore=/usr/local/openjdk-8/jre/lib/security/cacerts -Djavax.net.ssl.trustStorePassword="changeit"
+            ipaddr=`dig emulator +short`
+            echo $ipaddr
+            gradle integrationTestCosmos -Dscalardb.cosmos.uri=https://$ipaddr:8081 -Dscalardb.cosmos.password=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== -Djavax.net.ssl.trustStore=/usr/local/openjdk-8/jre/lib/security/cacerts -Djavax.net.ssl.trustStorePassword="changeit"
+
       - run:
           name: Save Gradle integration test reports
           command: |
