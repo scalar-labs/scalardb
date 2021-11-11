@@ -23,7 +23,6 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLScalarType;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +33,7 @@ public class TableGraphQlModel {
   private final String tableName;
   private final TableMetadata tableMetadata;
   private final boolean transactionEnabled;
-  private final List<String> fieldNames;
+  private final LinkedHashSet<String> fieldNames;
   private final Map<String, GraphQLScalarType> fieldNameGraphQLScalarTypeMap;
 
   private final GraphQLObjectType objectType;
@@ -64,8 +63,7 @@ public class TableGraphQlModel {
 
     this.transactionEnabled = ConsensusCommitUtils.isTransactionalTableMetadata(tableMetadata);
     this.fieldNames =
-        new ArrayList<>(
-            ConsensusCommitUtils.removeTransactionalMetaColumns(tableMetadata).getColumnNames());
+        ConsensusCommitUtils.removeTransactionalMetaColumns(tableMetadata).getColumnNames();
     this.fieldNameGraphQLScalarTypeMap =
         fieldNames.stream()
             .collect(
@@ -340,7 +338,7 @@ public class TableGraphQlModel {
     return transactionEnabled;
   }
 
-  public List<String> getFieldNames() {
+  public LinkedHashSet<String> getFieldNames() {
     return fieldNames;
   }
 
