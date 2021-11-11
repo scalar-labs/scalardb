@@ -32,8 +32,8 @@ public class ConsensusCommitManagerTest {
   @InjectMocks private ConsensusCommitManager manager;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);

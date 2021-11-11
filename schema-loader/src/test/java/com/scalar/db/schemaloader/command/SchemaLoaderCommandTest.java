@@ -5,21 +5,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
-import java.io.FileInputStream;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest({SchemaLoaderCommand.class})
 public class SchemaLoaderCommandTest extends CommandTestBase {
 
   private static final String replicationStrategy = "SimpleStrategy";
@@ -30,22 +25,18 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   private static final Boolean noBackup = true;
   private static final String schemaFile = "path_to_file";
   private static final String configFile = "path_to_config_file";
-  @Mock private FileInputStream fileInputStream;
-  @Mock private DatabaseConfig databaseConfig;
 
   @Override
-  public void setUp() throws Exception {
+  public void setUp() {
     super.setUp();
-    PowerMockito.whenNew(FileInputStream.class).withAnyArguments().thenReturn(fileInputStream);
-    PowerMockito.whenNew(DatabaseConfig.class).withAnyArguments().thenReturn(databaseConfig);
-
     commandLine = new CommandLine(new SchemaLoaderCommand());
     setCommandLineOutput();
   }
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
+          throws SchemaOperatorException {
     // Arrange
 
     Map<String, String> metaOptions =
@@ -132,7 +123,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables() {
+  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
+      throws SchemaOperatorException {
     // Arrange
     String schemaFile = "path_to_file";
     String configFile = "path_to_config_file";
@@ -145,7 +137,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithCoordinatorAndDeleteTable_ShouldCallDropCoordinatorTable() {
+  public void call_WithCoordinatorAndDeleteTable_ShouldCallDropCoordinatorTable()
+      throws SchemaOperatorException {
     // Arrange
 
     // Act
@@ -156,8 +149,8 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void
-      call_WithDeleteTableButNotHaveCoordinatorArgument_ShouldNotCallDropCoordinatorTable() {
+  public void call_WithDeleteTableButNotHaveCoordinatorArgument_ShouldNotCallDropCoordinatorTable()
+      throws SchemaOperatorException {
     // Arrange
 
     // Act

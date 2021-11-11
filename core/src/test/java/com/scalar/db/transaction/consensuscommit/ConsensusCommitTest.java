@@ -43,8 +43,8 @@ public class ConsensusCommitTest {
   @InjectMocks private ConsensusCommit consensus;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     when(get.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
     when(get.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));

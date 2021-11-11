@@ -66,8 +66,8 @@ public class SnapshotTest {
   @Mock private TransactionResult result;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   private Snapshot prepareSnapshot(Isolation isolation) {

@@ -2,20 +2,34 @@
 
 [![CircleCI](https://circleci.com/gh/scalar-labs/scalardb/tree/master.svg?style=svg&circle-token=672f70ce7f2c4f8d9e71f7c9db8ae824e2cfaeca)](https://circleci.com/gh/scalar-labs/scalardb/tree/master)
 
-A library that makes non-ACID distributed databases/storages ACID-compliant. It not only supports strongly-consistent ACID transactions, but also scales linearly and achieves high availability when it is deployed with distributed databases/storages such as Cassandra.
+Scalar DB is a universal transaction manager that achieves:
+- database/storage-agnostic ACID transactions in a scalable manner even if an underlying database or storage is not ACID-compliant.
+- multi-storage/database/service ACID transactions that can span multiple (possibly different) databases, storages, and services.
 
 ## Install
-The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb). You can install it in your application using your build tool such as Gradle. For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
+The library is available on [Maven Central](https://search.maven.org/search?q=a:scalardb).
+You can install it in your application using your build tool such as Gradle and Maven.
 
+To add a dependency on Scalar DB using Gradle, use the following:
 ```
 dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb', version: '<version>'
+    implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.3.0'
 }
+```
+
+To add a dependency using Maven:
+```
+<dependency>
+  <groupId>com.scalar-labs</groupId>
+  <artifactId>scalardb</artifactId>
+  <version>3.3.0</version>
+</dependency>
 ```
 
 ## Docs
 * [Getting started](docs/getting-started.md)
-* [Scalar DB supported databases](docs/scalar-db-supported-databases.md)
+* [Scalar DB supported databases](docs/scalardb-supported-databases.md)
+* [Multi-storage Transactions](docs/multi-storage-transactions.md)
 * [Two-phase Commit Transactions](docs/two-phase-commit-transactions.md)
 * [Design document](docs/design.md)
 * Slides

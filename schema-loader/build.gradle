@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'com.palantir.docker' version '0.25.0'
     id 'com.github.spotbugs' version '4.7.1'
     id 'net.ltgt.errorprone' version '2.0.2'
     id 'com.github.johnrengelman.shadow' version '7.1.0'
@@ -19,8 +20,6 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
-    testImplementation group: 'org.powermock', name: 'powermock-module-junit4', version: "${powerMockitoVersion}"
-    testImplementation group: 'org.powermock', name: 'powermock-api-mockito2', version: "${powerMockitoVersion}"
 
     // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
@@ -28,6 +27,12 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+docker {
+    dependsOn(shadowJar)
+    name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
+    files tasks.shadowJar.outputs
 }
 
 // Build a fat jar
@@ -53,9 +58,4 @@ spotbugsMain.reports {
 
 spotbugsTest.reports {
     html.enabled = true
-}
-
-// for docker
-distTar {
-    archiveFileName = "${project.name}.tar"
 }

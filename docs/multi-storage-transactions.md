@@ -1,9 +1,9 @@
-# Multi-storage in Scalar DB
+# Multi-storage Transactions
 
 Scalar DB transactions can span multiple storages/databases while preserving ACID property with a
-feature called `multi-storage`. This documentation explains the feature briefly.
+feature called *Multi-storage Transactions*. This documentation explains the feature briefly.
 
-## How Multi-storage works
+## How Multi-storage Transactions works
 
 Internally, the `multi-storage` implementation holds multiple storage instances and has mappings
 from a table name/a namespace name to a proper storage instance. When an operation is executed, it
@@ -12,9 +12,9 @@ table-storage/namespace-storage mappings and uses it.
 
 ## Configuration
 
-You can use `multi-storage` in the same way as the other storages/databases at the code level as
-long as the configuration is properly set for `multi-storage`. An example of the configuration is
-shown as follows:
+You can use Multi-storage transactions in the same way as the other storages/databases at the code
+level as long as the configuration is properly set for `multi-storage`. An example of the
+configuration is shown as follows:
 
 ```
 # The storage is "multi-storage"
@@ -23,7 +23,7 @@ scalar.db.storage=multi-storage
 # Define storage names, comma-separated format. In this case, "cassandra" and "mysql"
 scalar.db.multi_storage.storages=cassandra,mysql
 
-# Define the "cassandra" storage. You can set the storage properties (storage, contact_points, username, etc.) with the property name "scalar.db.multi_storage.storages.<storage name>.<property name>"
+# Define the "cassandra" storage. You can set the storage properties (storage, contact_points, username, etc.) with the property name "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". For example, if you want to specify the "scalar.db.contact_points" property for the "cassandra" storage, you can specify "scalar.db.multi_storage.storages.cassandra.contact_points"
 scalar.db.multi_storage.storages.cassandra.storage=cassandra
 scalar.db.multi_storage.storages.cassandra.contact_points=localhost
 scalar.db.multi_storage.storages.cassandra.username=cassandra
@@ -34,9 +34,10 @@ scalar.db.multi_storage.storages.mysql.storage=jdbc
 scalar.db.multi_storage.storages.mysql.contact_points=jdbc:mysql://localhost:3306/
 scalar.db.multi_storage.storages.mysql.username=root
 scalar.db.multi_storage.storages.mysql.password=mysql
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.min_idle=5
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.max_idle=10
-scalar.db.multi_storage.storages.mysql.jdbc.connection.pool.max_total=25
+# JDBC specific configurations for the "mysql" storage. As mentioned before, the format is "scalar.db.multi_storage.storages.<storage name>.<property name without the prefix 'scalar.db.'>". So for example, if you want to specify the "scalar.db.jdbc.connection_pool.min_idle" property for the "mysql" storage, you can specify "scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle"
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.min_idle=5
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_idle=10
+scalar.db.multi_storage.storages.mysql.jdbc.connection_pool.max_total=25
 
 # Define table mappings from a table name to a storage. The format is "<table name>:<storage name>,..."
 scalar.db.multi_storage.table_mapping=user.ORDER:cassandra,user.CUSTOMER:mysql,coordinator.state:cassandra

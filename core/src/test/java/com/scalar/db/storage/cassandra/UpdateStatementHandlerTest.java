@@ -47,8 +47,8 @@ public class UpdateStatementHandlerTest {
   @Mock private BoundStatement bound;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     handler = new UpdateStatementHandler(session);
   }

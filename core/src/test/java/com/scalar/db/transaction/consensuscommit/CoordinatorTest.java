@@ -39,8 +39,8 @@ public class CoordinatorTest {
   private Coordinator coordinator;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
     coordinator = new Coordinator(storage, config);
   }
 

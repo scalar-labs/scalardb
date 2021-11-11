@@ -1,32 +1,52 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.schemaloader.core.SchemaOperator;
+import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import com.scalar.db.schemaloader.schema.SchemaParser;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Properties;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.modules.junit4.PowerMockRunner;
 import picocli.CommandLine;
 
-@RunWith(PowerMockRunner.class)
-@PowerMockIgnore("javax.management.*")
 public abstract class CommandTestBase {
   @Mock protected SchemaOperator operator;
-  @Mock protected SchemaParser schemaParser;
   protected CommandLine commandLine;
   protected StringWriter stringWriter;
 
-  @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.initMocks(this);
+  private AutoCloseable closeable;
+  private MockedStatic<SchemaParser> schemaParserMockedStatic;
+  private MockedStatic<SchemaOperatorFactory> schemaOperatorFactoryMockedStatic;
 
-    PowerMockito.whenNew(SchemaOperator.class).withAnyArguments().thenReturn(operator);
-    PowerMockito.whenNew(SchemaParser.class).withAnyArguments().thenReturn(schemaParser);
+  @Before
+  public void setUp() {
+    closeable = MockitoAnnotations.openMocks(this);
+    schemaParserMockedStatic = Mockito.mockStatic(SchemaParser.class);
+    schemaParserMockedStatic
+        .when(() -> SchemaParser.parse(Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(Collections.emptyList());
+
+    schemaOperatorFactoryMockedStatic = Mockito.mockStatic(SchemaOperatorFactory.class);
+    schemaOperatorFactoryMockedStatic
+        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Path.class)))
+        .thenReturn(operator);
+    schemaOperatorFactoryMockedStatic
+        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Properties.class)))
+        .thenReturn(operator);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    schemaParserMockedStatic.close();
+    schemaOperatorFactoryMockedStatic.close();
+    closeable.close();
   }
 
   protected void setCommandLineOutput() {

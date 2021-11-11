@@ -3,15 +3,14 @@ package com.scalar.db.schemaloader.command;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
+import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import java.util.Collections;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 
-@PrepareForTest(JdbcCommand.class)
 public class JdbcCommandTest extends CommandTestBase {
 
   private static final String jdbcUrl = "jdbc_url";
@@ -20,7 +19,7 @@ public class JdbcCommandTest extends CommandTestBase {
   private static final String schemaFile = "path_to_file";
 
   @Override
-  public void setUp() throws Exception {
+  public void setUp() {
     super.setUp();
     commandLine = new CommandLine(new JdbcCommand());
     setCommandLineOutput();
@@ -28,7 +27,8 @@ public class JdbcCommandTest extends CommandTestBase {
 
   @Test
   public void
-      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams() {
+      call_WithProperCommandLineArgumentsForCreatingTables_ShouldCallCreateTableWithProperParams()
+          throws SchemaOperatorException {
     // Arrange
 
     // Act
@@ -39,7 +39,8 @@ public class JdbcCommandTest extends CommandTestBase {
   }
 
   @Test
-  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables() {
+  public void call_WithProperCommandLineArgumentsForDeletingTables_ShouldCallDeleteTables()
+      throws SchemaOperatorException {
     // Arrange
 
     // Act

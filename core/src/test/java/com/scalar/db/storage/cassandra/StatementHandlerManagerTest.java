@@ -31,8 +31,8 @@ public class StatementHandlerManagerTest {
   @Mock private PutIfNotExists putIfNotExists;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
   }
 
   private StatementHandlerManager prepareManager() {

@@ -40,8 +40,8 @@ public class DistributedStorageServiceTest {
   private DistributedStorageService storageService;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     storageService = new DistributedStorageService(storage, gateKeeper, new Metrics());

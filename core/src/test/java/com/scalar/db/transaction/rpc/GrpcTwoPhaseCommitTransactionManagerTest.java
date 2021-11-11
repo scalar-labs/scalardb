@@ -32,8 +32,8 @@ public class GrpcTwoPhaseCommitTransactionManagerTest {
   private GrpcTwoPhaseCommitTransactionManager manager;
 
   @Before
-  public void setUp() {
-    MockitoAnnotations.initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     manager = new GrpcTwoPhaseCommitTransactionManager(config, stub, blockingStub, metadataManager);
