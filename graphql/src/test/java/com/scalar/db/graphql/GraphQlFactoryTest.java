@@ -71,18 +71,18 @@ public class GraphQlFactoryTest {
   }
 
   @Test
-  public void build_StorageFactoryNotGiven_ShouldThrowIllegalArgumentException() {
+  public void build_StorageFactoryNotGiven_ShouldThrowIllegalStateException() {
     // Act Assert
     assertThatThrownBy(
             () -> GraphQlFactory.newBuilder().table(NAMESPACE_NAME, TABLE_NAME_1).build())
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test
-  public void build_NoTableGiven_ShouldThrowIllegalArgumentException() {
+  public void build_NoTableGiven_ShouldThrowIllegalStateException() {
     // Act Assert
     assertThatThrownBy(() -> GraphQlFactory.newBuilder().storageFactory(storageFactory).build())
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test

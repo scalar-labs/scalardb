@@ -114,10 +114,10 @@ public class GraphQlFactory {
 
     public GraphQlFactory build() throws ExecutionException {
       if (storageFactory == null) {
-        throw new IllegalArgumentException("Need to specify storageFactory");
+        throw new IllegalStateException("Need to specify storageFactory");
       }
       if (tables.isEmpty()) {
-        throw new IllegalArgumentException("Need to specify at least one table");
+        throw new IllegalStateException("Need to specify at least one table");
       }
 
       DistributedStorageAdmin storageAdmin = storageFactory.getAdmin();
