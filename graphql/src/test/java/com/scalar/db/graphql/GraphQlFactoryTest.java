@@ -2,7 +2,6 @@ package com.scalar.db.graphql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -52,8 +51,12 @@ public class GraphQlFactoryTest {
   @Test
   public void build_AllParametersGiven_ShouldReturnFactory() throws Exception {
     // Arrange
-    when(storageAdmin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME_1))
-        .thenReturn(mock(TableMetadata.class));
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addColumn(COLUMN_NAME_1, DataType.INT)
+            .addPartitionKey(COLUMN_NAME_1)
+            .build();
+    when(storageAdmin.getTableMetadata(NAMESPACE_NAME, TABLE_NAME_1)).thenReturn(tableMetadata);
 
     // Act
     GraphQlFactory factory =

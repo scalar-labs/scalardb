@@ -1,13 +1,6 @@
 package com.scalar.db.graphql.schema;
 
 import static com.scalar.db.graphql.schema.SchemaUtils.dataTypeToGraphQLScalarType;
-import static com.scalar.db.transaction.consensuscommit.Attribute.BEFORE_PREFIX;
-import static com.scalar.db.transaction.consensuscommit.Attribute.COMMITTED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.CREATED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.ID;
-import static com.scalar.db.transaction.consensuscommit.Attribute.PREPARED_AT;
-import static com.scalar.db.transaction.consensuscommit.Attribute.STATE;
-import static com.scalar.db.transaction.consensuscommit.Attribute.VERSION;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLEnumType.newEnum;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
@@ -20,9 +13,9 @@ import static graphql.schema.GraphQLTypeReference.typeRef;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import graphql.Scalars;
 import graphql.language.BooleanValue;
 import graphql.schema.GraphQLEnumType;
@@ -30,16 +23,13 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLScalarType;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 public class TableGraphQlModel {
-  private static final Set<String> CONSENSUSCOMMIT_ATTRIBUTES =
-      ImmutableSet.of(ID, STATE, VERSION, PREPARED_AT, COMMITTED_AT, CREATED_AT);
-
   private final String namespaceName;
   private final String tableName;
   private final TableMetadata tableMetadata;
@@ -72,14 +62,10 @@ public class TableGraphQlModel {
     this.tableName = Objects.requireNonNull(tableName);
     this.tableMetadata = Objects.requireNonNull(tableMetadata);
 
-    this.transactionEnabled = tableMetadata.getColumnNames().contains(ID);
+    this.transactionEnabled = ConsensusCommitUtils.isTransactionalTableMetadata(tableMetadata);
     this.fieldNames =
-        tableMetadata.getColumnNames().stream()
-            .filter(
-                colName ->
-                    !CONSENSUSCOMMIT_ATTRIBUTES.contains(colName)
-                        && !colName.startsWith(BEFORE_PREFIX))
-            .collect(toList());
+        new ArrayList<>(
+            ConsensusCommitUtils.removeTransactionalMetaColumns(tableMetadata).getColumnNames());
     this.fieldNameGraphQLScalarTypeMap =
         fieldNames.stream()
             .collect(
