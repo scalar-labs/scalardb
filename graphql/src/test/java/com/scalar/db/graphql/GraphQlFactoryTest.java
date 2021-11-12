@@ -138,7 +138,7 @@ public class GraphQlFactoryTest {
     assertThat(schema.containsType("Mutation")).isTrue();
     assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNotNull();
     for (GraphQLNamedInputType type : CommonSchema.createCommonGraphQLTypes()) {
-      schema.containsType(type.getName());
+      assertThat(schema.containsType(type.getName())).isTrue();
     }
   }
 
