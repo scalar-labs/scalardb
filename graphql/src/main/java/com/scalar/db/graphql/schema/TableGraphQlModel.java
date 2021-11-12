@@ -48,13 +48,13 @@ public class TableGraphQlModel {
   private final GraphQLInputObjectType clusteringKeyInputObjectType;
   private final GraphQLInputObjectType orderingInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
+  private final GraphQLObjectType primaryKeyOutputObjectType;
+  private final GraphQLObjectType mutationResultObjectType;
   private final GraphQLFieldDefinition mutationPutField;
   private final GraphQLInputObjectType putInputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
-  private final GraphQLObjectType putPayloadObjectType;
   private final GraphQLFieldDefinition mutationDeleteField;
   private final GraphQLInputObjectType deleteInputObjectType;
-  private final GraphQLObjectType deletePayloadObjectType;
 
   public TableGraphQlModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
@@ -96,13 +96,14 @@ public class TableGraphQlModel {
       this.queryScanField = createQueryScanField();
     }
 
+    this.primaryKeyOutputObjectType = createPrimaryKeyOutputObjectType();
+    this.mutationResultObjectType = createMutationResultObjectType();
+
     this.putValuesObjectType = createPutValuesObjectType();
     this.putInputObjectType = createPutInputObjectType();
-    this.putPayloadObjectType = createPutPayloadObjectType();
     this.mutationPutField = createMutationPutField();
 
     this.deleteInputObjectType = createDeleteInputObjectType();
-    this.deletePayloadObjectType = createDeletePayloadObjectType();
     this.mutationDeleteField = createMutationDeleteField();
   }
 
@@ -247,6 +248,30 @@ public class TableGraphQlModel {
         .build();
   }
 
+  private GraphQLObjectType createPrimaryKeyOutputObjectType() {
+    LinkedHashSet<String> keyNames = new LinkedHashSet<>();
+    keyNames.addAll(tableMetadata.getPartitionKeyNames());
+    keyNames.addAll(tableMetadata.getClusteringKeyNames());
+
+    GraphQLObjectType.Builder builder = newObject().name(objectType.getName() + "_KeyOutput");
+    keyNames.forEach(
+        keyName -> {
+          GraphQLScalarType type =
+              dataTypeToGraphQLScalarType(tableMetadata.getColumnDataType(keyName));
+          builder.field(newFieldDefinition().name(keyName).type(nonNull(type)));
+        });
+
+    return builder.build();
+  }
+
+  private GraphQLObjectType createMutationResultObjectType() {
+    return newObject()
+        .name(objectType.getName() + "_MutationResult")
+        .field(newFieldDefinition().name("applied").type(nonNull(Scalars.GraphQLBoolean)))
+        .field(newFieldDefinition().name("key").type(nonNull(primaryKeyOutputObjectType)))
+        .build();
+  }
+
   private GraphQLInputObjectType createPutValuesObjectType() {
     LinkedHashSet<String> keyNames = new LinkedHashSet<>();
     keyNames.addAll(getPartitionKeyNames());
@@ -291,7 +316,7 @@ public class TableGraphQlModel {
   private GraphQLFieldDefinition createMutationPutField() {
     return newFieldDefinition()
         .name(objectType.getName() + "_put")
-        .type(putPayloadObjectType)
+        .type(nonNull(list(nonNull(mutationResultObjectType))))
         .argument(newArgument().name("put").type(nonNull(list(nonNull(putInputObjectType)))))
         .build();
   }
@@ -317,7 +342,7 @@ public class TableGraphQlModel {
   private GraphQLFieldDefinition createMutationDeleteField() {
     return newFieldDefinition()
         .name(objectType.getName() + "_delete")
-        .type(deletePayloadObjectType)
+        .type(nonNull(list(nonNull(mutationResultObjectType))))
         .argument(newArgument().name("delete").type(nonNull(list(nonNull(deleteInputObjectType)))))
         .build();
   }
@@ -390,6 +415,14 @@ public class TableGraphQlModel {
     return scanPayloadObjectType;
   }
 
+  public GraphQLObjectType getPrimaryKeyOutputObjectType() {
+    return primaryKeyOutputObjectType;
+  }
+
+  public GraphQLObjectType getMutationResultObjectType() {
+    return mutationResultObjectType;
+  }
+
   public GraphQLFieldDefinition getMutationPutField() {
     return mutationPutField;
   }
@@ -402,19 +435,11 @@ public class TableGraphQlModel {
     return putValuesObjectType;
   }
 
-  public GraphQLObjectType getPutPayloadObjectType() {
-    return putPayloadObjectType;
-  }
-
   public GraphQLFieldDefinition getMutationDeleteField() {
     return mutationDeleteField;
   }
 
   public GraphQLInputObjectType getDeleteInputObjectType() {
     return deleteInputObjectType;
-  }
-
-  public GraphQLObjectType getDeletePayloadObjectType() {
-    return deletePayloadObjectType;
   }
 }
