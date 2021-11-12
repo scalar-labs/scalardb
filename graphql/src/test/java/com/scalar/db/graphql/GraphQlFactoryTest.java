@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -23,6 +22,7 @@ import graphql.schema.GraphQLSchema;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class GraphQlFactoryTest {
   private static final String NAMESPACE_NAME = "namespace_1";
@@ -39,8 +39,8 @@ public class GraphQlFactoryTest {
   @Mock private DistributedTransactionManager transactionManager;
 
   @Before
-  public void setUp() {
-    initMocks(this);
+  public void setUp() throws Exception {
+    MockitoAnnotations.openMocks(this).close();
 
     // Arrange
     when(storageFactory.getStorage()).thenReturn(storage);
