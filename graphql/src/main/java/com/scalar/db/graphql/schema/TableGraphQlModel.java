@@ -300,6 +300,7 @@ public class TableGraphQlModel {
     }
     return builder
         .field(newInputObjectField().name("condition").type(typeRef("PutCondition")))
+        .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
         .build();
   }
 
@@ -326,6 +327,7 @@ public class TableGraphQlModel {
         .name(objectType.getName() + "_DeleteInput")
         .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
         .field(newInputObjectField().name("condition").type(typeRef("DeleteCondition")))
+        .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
         .build();
   }
 

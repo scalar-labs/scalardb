@@ -485,16 +485,20 @@ public class TableGraphQlModelTest {
     //   key: table_1_Key!
     //   values: table_1_PutValues!
     //   condition: PutCondition
+    //   consistency: Consistency
     // }
     GraphQLInputObjectType objectType = model.getPutInputObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutInput");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(3);
+    assertThat(fields.size()).isEqualTo(4);
     assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
     assertNonNullInputObjectField(fields.get(1), "values", model.getPutValuesObjectType());
     GraphQLInputType conditionType = fields.get(2).getType();
     assertThat(conditionType).isInstanceOf(GraphQLTypeReference.class);
     assertThat(((GraphQLTypeReference) conditionType).getName()).isEqualTo("PutCondition");
+    GraphQLInputType consistencyType = fields.get(3).getType();
+    assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
   }
 
   @Test
@@ -526,15 +530,19 @@ public class TableGraphQlModelTest {
     // input table_1_DeleteInput {
     //   key: table_1_Key!
     //   condition: DeleteCondition
+    //   consistency: Consistency
     // }
     GraphQLInputObjectType objectType = model.getDeleteInputObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_DeleteInput");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(2);
+    assertThat(fields.size()).isEqualTo(3);
     assertNonNullInputObjectField(fields.get(0), "key", model.getPrimaryKeyInputObjectType());
     GraphQLInputType conditionType = fields.get(1).getType();
     assertThat(conditionType).isInstanceOf(GraphQLTypeReference.class);
     assertThat(((GraphQLTypeReference) conditionType).getName()).isEqualTo("DeleteCondition");
+    GraphQLInputType consistencyType = fields.get(2).getType();
+    assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
+    assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
   }
 
   @Test
