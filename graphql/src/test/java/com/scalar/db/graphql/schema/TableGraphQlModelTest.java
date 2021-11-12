@@ -314,8 +314,7 @@ public class TableGraphQlModelTest {
     field = fields.get(2);
     assertThat(field.getName()).isEqualTo("startInclusive");
     assertThat(field.getType()).isEqualTo(Scalars.GraphQLBoolean);
-    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue())
-        .isEqualTo(true);
+    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue()).isTrue();
 
     field = fields.get(3);
     assertThat(field.getName()).isEqualTo("end");
@@ -327,8 +326,7 @@ public class TableGraphQlModelTest {
     field = fields.get(4);
     assertThat(field.getName()).isEqualTo("endInclusive");
     assertThat(field.getType()).isEqualTo(Scalars.GraphQLBoolean);
-    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue())
-        .isEqualTo(true);
+    assertThat(((BooleanValue) field.getInputFieldDefaultValue().getValue()).isValue()).isTrue();
 
     field = fields.get(5);
     assertThat(field.getName()).isEqualTo("orderings");
@@ -634,8 +632,7 @@ public class TableGraphQlModelTest {
   }
 
   @Test
-  public void
-      constructor_TableMetadataWithOnlyKeyColumnGiven_ShouldNotCreatePutValuesObjectType() {
+  public void constructor_TableMetadataWithOnlyKeyColumnGiven_ShouldNotCreatePutValuesObjectType() {
     // Arrange
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()

@@ -133,9 +133,9 @@ public class GraphQlFactoryTest {
 
     // Assert
     GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.containsType(TABLE_NAME_1)).isEqualTo(true);
-    assertThat(schema.containsType("Query")).isEqualTo(true);
-    assertThat(schema.containsType("Mutation")).isEqualTo(true);
+    assertThat(schema.containsType(TABLE_NAME_1)).isTrue();
+    assertThat(schema.containsType("Query")).isTrue();
+    assertThat(schema.containsType("Mutation")).isTrue();
     assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNotNull();
     for (GraphQLNamedInputType type : CommonSchema.createCommonGraphQLTypes()) {
       schema.containsType(type.getName());
@@ -187,8 +187,8 @@ public class GraphQlFactoryTest {
 
     // Assert
     GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.containsType(TABLE_NAME_1)).isEqualTo(true);
-    assertThat(schema.containsType(TABLE_NAME_2)).isEqualTo(true);
+    assertThat(schema.containsType(TABLE_NAME_1)).isTrue();
+    assertThat(schema.containsType(TABLE_NAME_2)).isTrue();
   }
 
   @Test
@@ -215,7 +215,7 @@ public class GraphQlFactoryTest {
 
     // Assert
     GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.containsType(TABLE_NAME_1)).isEqualTo(true);
+    assertThat(schema.containsType(TABLE_NAME_1)).isTrue();
     GraphQLObjectType query = (GraphQLObjectType) schema.getType("Query");
     assertThat(query).isNotNull();
     assertThat(query.getFieldDefinition(TABLE_NAME_1 + "_get")).isNotNull();
