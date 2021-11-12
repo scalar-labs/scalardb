@@ -39,22 +39,22 @@ public class TableGraphQlModel {
   private final GraphQLObjectType objectType;
   private final GraphQLInputObjectType primaryKeyInputObjectType;
   private final GraphQLInputObjectType partitionKeyInputObjectType;
-  private final GraphQLFieldDefinition queryGetField;
   private final GraphQLInputObjectType getInputObjectType;
   private final GraphQLObjectType getPayloadObjectType;
-  private final GraphQLFieldDefinition queryScanField;
-  private final GraphQLInputObjectType scanInputObjectType;
+  private final GraphQLFieldDefinition queryGetField;
   private final GraphQLEnumType clusteringKeyNameEnum;
   private final GraphQLInputObjectType clusteringKeyInputObjectType;
   private final GraphQLInputObjectType orderingInputObjectType;
+  private final GraphQLInputObjectType scanInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
+  private final GraphQLFieldDefinition queryScanField;
   private final GraphQLObjectType primaryKeyOutputObjectType;
   private final GraphQLObjectType mutationResultObjectType;
-  private final GraphQLFieldDefinition mutationPutField;
-  private final GraphQLInputObjectType putInputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
-  private final GraphQLFieldDefinition mutationDeleteField;
+  private final GraphQLInputObjectType putInputObjectType;
+  private final GraphQLFieldDefinition mutationPutField;
   private final GraphQLInputObjectType deleteInputObjectType;
+  private final GraphQLFieldDefinition mutationDeleteField;
 
   public TableGraphQlModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
