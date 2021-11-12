@@ -2,7 +2,8 @@ package com.scalar.db.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Put;
@@ -52,22 +53,15 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   protected static final String COL_NAME4 = "c4";
   protected static final String COL_NAME5 = "c5";
   protected static final int DATA_NUM = 20;
-  protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
-      ImmutableList.of(
-          DataType.BOOLEAN,
-          DataType.INT,
-          DataType.BIGINT,
-          DataType.FLOAT,
-          DataType.DOUBLE,
-          DataType.TEXT,
-          DataType.BLOB);
-  private static final Random RANDOM_GENERATOR = new Random();
+
+  private static final Random RANDOM = new Random();
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
-  protected static String namespaceBaseName;
-  protected static List<DataType> clusteringKeyTypeList;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
+  private static String namespaceBaseName;
+  // Key: cKeyTypeBefore, Value: cKeyTypeAfter
+  private static ListMultimap<DataType, DataType> clusteringKeyTypes;
   private static long seed;
 
   @Before
@@ -76,7 +70,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       StorageFactory factory = new StorageFactory(getDatabaseConfig());
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
-      clusteringKeyTypeList = getClusteringKeyTypeList();
+      clusteringKeyTypes = getClusteringKeyTypes();
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -92,8 +86,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     return NAMESPACE_BASE_NAME;
   }
 
-  protected List<DataType> getClusteringKeyTypeList() {
-    return CLUSTERING_KEY_TYPE_LIST;
+  protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
+    ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
+    for (DataType cKeyTypeBefore : DataType.values()) {
+      for (DataType cKeyTypeAfter : DataType.values()) {
+        clusteringKeyTypes.put(cKeyTypeBefore, cKeyTypeAfter);
+      }
+    }
+    return clusteringKeyTypes;
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -102,9 +102,9 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       admin.createNamespace(getNamespaceName(cKeyTypeBefore), true, options);
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         createTable(cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, options);
       }
     }
@@ -143,8 +143,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   private static void deleteTables() throws ExecutionException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         admin.dropTable(
             getNamespaceName(cKeyTypeBefore),
             getTableName(cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC));
@@ -186,8 +186,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   @Test
   public void scan_WithoutClusteringKeys_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithoutClusteringKeys_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithoutClusteringKeys_ShouldReturnProperResult(
@@ -205,7 +205,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecords(
@@ -237,13 +237,18 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult(
@@ -256,7 +261,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -305,13 +310,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult(
@@ -324,7 +330,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -373,13 +379,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
@@ -392,7 +399,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -434,13 +441,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
@@ -453,7 +461,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -495,13 +503,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
@@ -514,7 +523,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -556,13 +565,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   @Test
   public void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
       scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
           cKeyTypeBefore, Order.ASC, false);
       scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
@@ -575,7 +585,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -617,7 +627,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
+    assertScanResultWithOrdering(
+        scanRet, COL_NAME2, expected, description(cKeyTypeBefore, cKeyClusteringOrderBefore));
   }
 
   private List<Value<?>> prepareRecordsForScanWithBeforeClusteringKeyRange(
@@ -667,11 +678,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
                 cKeyClusteringOrderBefore));
   }
 
+  private String description(DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore) {
+    return String.format(
+        "failed with cKeyTypeBefore: %s, cKeyClusteringOrderBefore: %s",
+        cKeyTypeBefore, cKeyClusteringOrderBefore);
+  }
+
   @Test
   public void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult(
@@ -689,7 +706,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecords(
@@ -738,14 +755,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult(
@@ -763,7 +785,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
 
     List<Value<?>> valueList =
         prepareRecords(
@@ -812,14 +834,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
@@ -837,7 +864,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
     List<Value<?>> valueList =
         prepareRecords(
             cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
@@ -878,14 +905,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
@@ -903,7 +935,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
     List<Value<?>> valueList =
         prepareRecords(
             cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
@@ -944,14 +976,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
@@ -969,7 +1006,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
     List<Value<?>> valueList =
         prepareRecords(
             cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
@@ -1010,14 +1047,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   @Test
   public void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType cKeyTypeBefore : clusteringKeyTypes.keySet()) {
+      for (DataType cKeyTypeAfter : clusteringKeyTypes.get(cKeyTypeBefore)) {
         scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
             cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
         scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
@@ -1035,7 +1077,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     truncateTable(
         cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
+    RANDOM.setSeed(seed);
     List<Value<?>> valueList =
         prepareRecords(
             cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
@@ -1076,7 +1118,12 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Result> scanRet = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResultWithOrdering(
+        scanRet,
+        COL_NAME3,
+        expected,
+        description(
+            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
   }
 
   private List<Value<?>> prepareRecords(
@@ -1142,6 +1189,16 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
                 cKeyClusteringOrderAfter));
   }
 
+  private String description(
+      DataType cKeyTypeBefore,
+      Order cKeyClusteringOrderBefore,
+      DataType cKeyTypeAfter,
+      Order cKeyClusteringOrderAfter) {
+    return String.format(
+        "failed with cKeyTypeBefore: %s, cKeyClusteringOrderBefore: %s, cKeyTypeAfter: %s, cKeyClusteringOrderAfter: %s",
+        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
+  }
+
   private Order reverseOrder(Order order) {
     switch (order) {
       case ASC:
@@ -1187,30 +1244,32 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   private Value<?> getRandomValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(
-            columnName, nextLongBetween(BigIntValue.MIN_VALUE, BigIntValue.MAX_VALUE));
+        return new BigIntValue(columnName, nextBigIntValue());
       case INT:
-        return new IntValue(columnName, RANDOM_GENERATOR.nextInt());
+        return new IntValue(columnName, RANDOM.nextInt());
       case FLOAT:
-        return new FloatValue(columnName, RANDOM_GENERATOR.nextFloat());
+        return new FloatValue(columnName, RANDOM.nextFloat());
       case DOUBLE:
-        return new DoubleValue(columnName, RANDOM_GENERATOR.nextDouble());
+        return new DoubleValue(columnName, RANDOM.nextDouble());
       case BLOB:
-        byte[] bytes = new byte[20];
-        RANDOM_GENERATOR.nextBytes(bytes);
+        int length = RANDOM.nextInt(30) + 1;
+        byte[] bytes = new byte[length];
+        RANDOM.nextBytes(bytes);
         return new BlobValue(columnName, bytes);
       case TEXT:
+        int count = RANDOM.nextInt(30) + 1;
         return new TextValue(
-            columnName, RandomStringUtils.random(20, 0, 0, true, true, null, RANDOM_GENERATOR));
+            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, RANDOM));
       case BOOLEAN:
-        return new BooleanValue(columnName, RANDOM_GENERATOR.nextBoolean());
+        return new BooleanValue(columnName, RANDOM.nextBoolean());
       default:
-        throw new RuntimeException("Unsupported data type for random generating");
+        throw new AssertionError();
     }
   }
 
-  public long nextLongBetween(long min, long max) {
-    OptionalLong randomLong = RANDOM_GENERATOR.longs(min, (max + 1)).limit(1).findFirst();
+  private long nextBigIntValue() {
+    OptionalLong randomLong =
+        RANDOM.longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1)).limit(1).findFirst();
     return randomLong.orElse(0);
   }
 
@@ -1242,15 +1301,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   private void assertScanResultWithOrdering(
-      List<Result> actual, String checkedColumn, List<Value<?>> expectedValues) {
-    assertThat(actual.size()).isEqualTo(expectedValues.size());
+      List<Result> actual,
+      String checkedColumn,
+      List<Value<?>> expectedValues,
+      String description) {
+    assertThat(actual.size()).describedAs(description).isEqualTo(expectedValues.size());
 
     for (int i = 0; i < actual.size(); i++) {
       Value<?> expectedValue = expectedValues.get(i);
       Result actualResult = actual.get(i);
-      assertThat(actualResult.getValue(checkedColumn).isPresent()).isTrue();
+      assertThat(actualResult.getValue(checkedColumn).isPresent())
+          .describedAs(description)
+          .isTrue();
       Value<?> actualValue = actualResult.getValue(checkedColumn).get();
-      assertThat(actualValue).isEqualTo(expectedValue);
+      assertThat(actualValue).describedAs(description).isEqualTo(expectedValue);
     }
   }
 }

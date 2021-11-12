@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -14,6 +15,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoOperationTest {
@@ -63,8 +65,20 @@ public class DynamoOperationTest {
     Get get = prepareGet();
     DynamoOperation dynamoOperation = new DynamoOperation(get, metadata);
     Map<String, AttributeValue> expected = new HashMap<>();
-    expected.put(DynamoOperation.PARTITION_KEY, AttributeValue.builder().s(ANY_TEXT_1).build());
-    expected.put(DynamoOperation.CLUSTERING_KEY, AttributeValue.builder().s(ANY_TEXT_2).build());
+    expected.put(
+        DynamoOperation.PARTITION_KEY,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder().encode(new Key(ANY_NAME_1, ANY_TEXT_1))))
+            .build());
+    expected.put(
+        DynamoOperation.CLUSTERING_KEY,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder().encode(new Key(ANY_NAME_2, ANY_TEXT_2))))
+            .build());
 
     // Act
     Map<String, AttributeValue> actual = dynamoOperation.getKeyMap();
