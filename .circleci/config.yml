@@ -136,7 +136,7 @@ jobs:
           AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: true
           #AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: emulator
           AZURE_COSMOS_EMULATOR_ARGS: '/Consistency=Strong'
-    resource_class: medium
+    resource_class: large
 
     working_directory: ~/repo
 
