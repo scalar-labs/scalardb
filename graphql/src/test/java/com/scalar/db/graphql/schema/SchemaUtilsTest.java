@@ -37,19 +37,21 @@ public class SchemaUtilsTest {
   }
 
   @Test
+  public void dataTypeToGraphQLScalarType_BigIntGiven_ShouldReturnFloat() {
+    // Act
+    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.BIGINT);
+
+    // Assert
+    assertThat(type).isEqualTo(Scalars.GraphQLFloat);
+  }
+
+  @Test
   public void dataTypeToGraphQLScalarType_TextGiven_ShouldReturnString() {
     // Act
     GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.TEXT);
 
     // Assert
     assertThat(type).isEqualTo(Scalars.GraphQLString);
-  }
-
-  @Test
-  public void dataTypeToGraphQLScalarType_BigIntGiven_ShouldThrowIllegalArgumentException() {
-    // Act Assert
-    assertThatThrownBy(() -> SchemaUtils.dataTypeToGraphQLScalarType(DataType.BIGINT))
-        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

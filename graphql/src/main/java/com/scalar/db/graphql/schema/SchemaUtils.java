@@ -16,13 +16,13 @@ final class SchemaUtils {
         return Scalars.GraphQLInt;
       case FLOAT:
       case DOUBLE:
+      case BIGINT:
         return Scalars.GraphQLFloat;
       case TEXT:
         return Scalars.GraphQLString;
-      case BIGINT:
       case BLOB:
       default:
-        throw new IllegalArgumentException(dataType.name() + "type is not supported");
+        throw new IllegalArgumentException(dataType.name() + " type is not supported");
     }
   }
 }
