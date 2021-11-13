@@ -16,13 +16,13 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 class ColumnChecker implements ValueVisitor {
   private final TableMetadata tableMetadata;
-  private final boolean notNullOrEmpty;
+  private final boolean neitherNullNorEmpty;
   private String name;
   private boolean isValid;
 
-  public ColumnChecker(TableMetadata tableMetadata, boolean notNullOrEmpty) {
+  public ColumnChecker(TableMetadata tableMetadata, boolean neitherNullNorEmpty) {
     this.tableMetadata = tableMetadata;
-    this.notNullOrEmpty = notNullOrEmpty;
+    this.neitherNullNorEmpty = neitherNullNorEmpty;
   }
 
   public boolean check(Value<?> value) {
@@ -72,7 +72,7 @@ class ColumnChecker implements ValueVisitor {
 
   @Override
   public void visit(TextValue value) {
-    if (notNullOrEmpty) {
+    if (neitherNullNorEmpty) {
       if (!value.getAsString().isPresent() || value.getAsString().get().isEmpty()) {
         isValid = false;
         return;
@@ -83,7 +83,7 @@ class ColumnChecker implements ValueVisitor {
 
   @Override
   public void visit(BlobValue value) {
-    if (notNullOrEmpty) {
+    if (neitherNullNorEmpty) {
       if (!value.getAsBytes().isPresent() || value.getAsBytes().get().length == 0) {
         isValid = false;
         return;
