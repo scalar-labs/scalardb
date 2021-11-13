@@ -26,7 +26,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,6 +37,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -344,11 +344,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private TableMetadata convertToTableMetadata(CosmosTableMetadata cosmosTableMetadata) {
+  private TableMetadata convertToTableMetadata(CosmosTableMetadata cosmosTableMetadata)
+      throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    cosmosTableMetadata
-        .getColumns()
-        .forEach((name, type) -> builder.addColumn(name, convertDataType(type)));
+
+    for (Entry<String, String> entry : cosmosTableMetadata.getColumns().entrySet()) {
+      builder.addColumn(entry.getKey(), convertDataType(entry.getValue()));
+    }
     cosmosTableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKey);
     cosmosTableMetadata
         .getClusteringKeyNames()
@@ -360,7 +362,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  private DataType convertDataType(String columnType) {
+  private DataType convertDataType(String columnType) throws ExecutionException {
     switch (columnType) {
       case "int":
         return DataType.INT;
@@ -370,15 +372,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         return DataType.FLOAT;
       case "double":
         return DataType.DOUBLE;
-      case "text": // for backwards compatibility
-      case "varchar":
+      case "text":
         return DataType.TEXT;
       case "boolean":
         return DataType.BOOLEAN;
       case "blob":
         return DataType.BLOB;
       default:
-        throw new UnsupportedTypeException(columnType);
+        throw new ExecutionException("unknown column type: " + columnType);
     }
   }
 
