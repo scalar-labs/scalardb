@@ -1,6 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
+import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -10,14 +13,10 @@ import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class JdbcConfig extends DatabaseConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcConfig.class);
-
   public static final String PREFIX = DatabaseConfig.PREFIX + "jdbc.";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
   public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
@@ -62,41 +61,24 @@ public class JdbcConfig extends DatabaseConfig {
 
     super.load();
 
-    connectionPoolMinIdle = getInt(CONNECTION_POOL_MIN_IDLE, DEFAULT_CONNECTION_POOL_MIN_IDLE);
-    connectionPoolMaxIdle = getInt(CONNECTION_POOL_MAX_IDLE, DEFAULT_CONNECTION_POOL_MAX_IDLE);
-    connectionPoolMaxTotal = getInt(CONNECTION_POOL_MAX_TOTAL, DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+    connectionPoolMinIdle =
+        getInt(getProperties(), CONNECTION_POOL_MIN_IDLE, DEFAULT_CONNECTION_POOL_MIN_IDLE);
+    connectionPoolMaxIdle =
+        getInt(getProperties(), CONNECTION_POOL_MAX_IDLE, DEFAULT_CONNECTION_POOL_MAX_IDLE);
+    connectionPoolMaxTotal =
+        getInt(getProperties(), CONNECTION_POOL_MAX_TOTAL, DEFAULT_CONNECTION_POOL_MAX_TOTAL);
     preparedStatementsPoolEnabled =
-        getBoolean(PREPARED_STATEMENTS_POOL_ENABLED, DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
+        getBoolean(
+            getProperties(),
+            PREPARED_STATEMENTS_POOL_ENABLED,
+            DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     preparedStatementsPoolMaxOpen =
-        getInt(PREPARED_STATEMENTS_POOL_MAX_OPEN, DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+        getInt(
+            getProperties(),
+            PREPARED_STATEMENTS_POOL_MAX_OPEN,
+            DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_SCHEMA))) {
-      tableMetadataSchema = getProperties().getProperty(TABLE_METADATA_SCHEMA);
-    }
-  }
-
-  private int getInt(String name, int defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException ignored) {
-      LOGGER.warn(
-          "the specified value of '{}' is not a number. using the default value: {}",
-          name,
-          defaultValue);
-      return defaultValue;
-    }
-  }
-
-  private boolean getBoolean(String name, boolean defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    return Boolean.parseBoolean(value);
+    tableMetadataSchema = getString(getProperties(), TABLE_METADATA_SCHEMA, null);
   }
 
   public int getConnectionPoolMinIdle() {
