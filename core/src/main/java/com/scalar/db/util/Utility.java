@@ -1,6 +1,5 @@
 package com.scalar.db.util;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Selection;
@@ -72,11 +71,6 @@ public final class Utility {
         Thread.currentThread().interrupt();
       }
     }
-  }
-
-  public static boolean isBooleanString(String s) {
-    return !Strings.isNullOrEmpty(s)
-        && (Boolean.TRUE.toString().equals(s) || Boolean.FALSE.toString().equals(s));
   }
 
   /**
