@@ -2,7 +2,6 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
@@ -45,8 +44,7 @@ public class ResultInterpreter {
     values.put(name, convert(itemValue, name, metadata.getColumnDataType(name)));
   }
 
-  private Value<?> convert(AttributeValue itemValue, String name, DataType dataType)
-      throws UnsupportedTypeException {
+  private Value<?> convert(AttributeValue itemValue, String name, DataType dataType) {
     // When itemValue is NULL, the value will be the default value.
     // It is the same behavior as the datastax C* driver
     boolean isNull = itemValue == null || (itemValue.nul() != null && itemValue.nul());
