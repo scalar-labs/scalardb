@@ -1,6 +1,7 @@
 package com.scalar.db.storage.dynamo;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -19,7 +20,7 @@ public class DynamoConfig extends DatabaseConfig {
   public static final String ENDPOINT_OVERRIDE = PREFIX + "endpoint-override";
   public static final String TABLE_METADATA_NAMESPACE = PREFIX + "table_metadata.namespace";
 
-  private Optional<String> endpointOverride;
+  @Nullable private String endpointOverride;
   @Nullable private String tableMetadataNamespace;
 
   public DynamoConfig(File propertiesFile) throws IOException {
@@ -43,19 +44,12 @@ public class DynamoConfig extends DatabaseConfig {
 
     super.load();
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(ENDPOINT_OVERRIDE))) {
-      endpointOverride = Optional.of(getProperties().getProperty(ENDPOINT_OVERRIDE));
-    } else {
-      endpointOverride = Optional.empty();
-    }
-
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_NAMESPACE))) {
-      tableMetadataNamespace = getProperties().getProperty(TABLE_METADATA_NAMESPACE);
-    }
+    endpointOverride = getString(getProperties(), ENDPOINT_OVERRIDE, null);
+    tableMetadataNamespace = getString(getProperties(), TABLE_METADATA_NAMESPACE, null);
   }
 
   public Optional<String> getEndpointOverride() {
-    return endpointOverride;
+    return Optional.ofNullable(endpointOverride);
   }
 
   public Optional<String> getTableMetadataNamespace() {

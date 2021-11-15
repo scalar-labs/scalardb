@@ -1,6 +1,8 @@
 package com.scalar.db.server.config;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.server.GateKeeper;
 import com.scalar.db.server.LockFreeGateKeeper;
 import com.scalar.db.server.SynchronizedGateKeeper;
@@ -11,13 +13,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class ServerConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ServerConfig.class);
 
   public static final String PREFIX = "scalar.db.server.";
   public static final String PORT = PREFIX + "port";
@@ -53,38 +52,21 @@ public class ServerConfig {
   }
 
   private void load() {
-    port = getInt(PORT, DEFAULT_PORT);
-    prometheusExporterPort = getInt(PROMETHEUS_EXPORTER_PORT, DEFAULT_PROMETHEUS_EXPORTER_PORT);
+    port = getInt(getProperties(), PORT, DEFAULT_PORT);
+    prometheusExporterPort =
+        getInt(getProperties(), PROMETHEUS_EXPORTER_PORT, DEFAULT_PROMETHEUS_EXPORTER_PORT);
 
-    gateKeeperClass = LockFreeGateKeeper.class;
-    if (!Strings.isNullOrEmpty(props.getProperty(GATE_KEEPER_TYPE))) {
-      switch (props.getProperty(GATE_KEEPER_TYPE).toLowerCase()) {
-        case "lock-free":
-          gateKeeperClass = LockFreeGateKeeper.class;
-          break;
-        case "synchronized":
-          gateKeeperClass = SynchronizedGateKeeper.class;
-          break;
-        default:
-          throw new IllegalArgumentException(
-              "the gate keeper type '" + props.getProperty(GATE_KEEPER_TYPE) + "' isn't supported");
-      }
-    }
-  }
-
-  private int getInt(String name, int defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException ignored) {
-      LOGGER.warn(
-          "the specified value of '{}' is not a number. using the default value: {}",
-          name,
-          defaultValue);
-      return defaultValue;
+    String gateKeeperType = getString(getProperties(), GATE_KEEPER_TYPE, "lock-free");
+    switch (gateKeeperType.toLowerCase()) {
+      case "lock-free":
+        gateKeeperClass = LockFreeGateKeeper.class;
+        break;
+      case "synchronized":
+        gateKeeperClass = SynchronizedGateKeeper.class;
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "the gate keeper type '" + gateKeeperType + "' isn't supported");
     }
   }
 

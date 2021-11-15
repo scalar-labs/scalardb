@@ -1,8 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
@@ -51,26 +52,16 @@ public class ConsensusCommitConfig extends DatabaseConfig {
 
     super.load();
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(SERIALIZABLE_STRATEGY))) {
-      strategy =
-          SerializableStrategy.valueOf(
-              getProperties().getProperty(SERIALIZABLE_STRATEGY).toUpperCase());
-    } else {
-      strategy = SerializableStrategy.EXTRA_READ;
-    }
-
-    String activeTransactionsManagementEnabledValue =
-        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED);
-    if (Utility.isBooleanString(activeTransactionsManagementEnabledValue)) {
-      activeTransactionsManagementEnabled =
-          Boolean.parseBoolean(activeTransactionsManagementEnabledValue);
-    } else {
-      activeTransactionsManagementEnabled = true;
-    }
-
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(COORDINATOR_NAMESPACE))) {
-      coordinatorNamespace = getProperties().getProperty(COORDINATOR_NAMESPACE);
-    }
+    strategy =
+        SerializableStrategy.valueOf(
+            getString(
+                    getProperties(),
+                    SERIALIZABLE_STRATEGY,
+                    SerializableStrategy.EXTRA_READ.toString())
+                .toUpperCase());
+    activeTransactionsManagementEnabled =
+        getBoolean(getProperties(), ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, true);
+    coordinatorNamespace = getString(getProperties(), COORDINATOR_NAMESPACE, null);
   }
 
   public SerializableStrategy getSerializableStrategy() {
