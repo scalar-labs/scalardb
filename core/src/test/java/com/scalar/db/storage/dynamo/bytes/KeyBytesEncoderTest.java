@@ -30,6 +30,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class KeyBytesEncoderTest {
@@ -51,9 +52,17 @@ public class KeyBytesEncoderTest {
           DataType.DOUBLE,
           DataType.TEXT,
           DataType.BLOB);
+  private static long seed;
+
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in KeyBytesEncoderTest is " + seed);
+  }
 
   @Test
   public void encode_SingleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
+    RANDOM.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -70,7 +79,7 @@ public class KeyBytesEncoderTest {
     // Arrange
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
     for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
-      target.add(new Key(getRandomValue(COL1, col1Type)));
+      target.add(new Key(getRandomValue(COL1, col1Type, col1Order)));
     }
 
     Map<String, Order> keyOrders = new HashMap<>();
@@ -87,6 +96,7 @@ public class KeyBytesEncoderTest {
 
   @Test
   public void encode_DoubleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
+    RANDOM.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -111,7 +121,10 @@ public class KeyBytesEncoderTest {
     // Arrange
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
     for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
-      target.add(new Key(getRandomValue(COL1, col1Type), getRandomValue(COL2, col2Type)));
+      target.add(
+          new Key(
+              getRandomValue(COL1, col1Type, col1Order),
+              getRandomValue(COL2, col2Type, col2Order)));
     }
 
     Map<String, Order> keyOrders = new HashMap<>();
@@ -129,6 +142,7 @@ public class KeyBytesEncoderTest {
 
   @Test
   public void encode_TripleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder() {
+    RANDOM.setSeed(seed);
     runTest(
         () -> {
           for (DataType col1Type : KEY_TYPES) {
@@ -168,9 +182,9 @@ public class KeyBytesEncoderTest {
     for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
       target.add(
           new Key(
-              getRandomValue(COL1, col1Type),
-              getRandomValue(COL2, col2Type),
-              getRandomValue(COL3, col3Type)));
+              getRandomValue(COL1, col1Type, col1Order),
+              getRandomValue(COL2, col2Type, col2Order),
+              getRandomValue(COL3, col3Type, col3Order)));
     }
 
     Map<String, Order> keyOrders = new HashMap<>();
@@ -191,7 +205,7 @@ public class KeyBytesEncoderTest {
     IntStream.range(0, ATTEMPT_COUNT).forEach(i -> test.run());
   }
 
-  private static Value<?> getRandomValue(String columnName, DataType dataType) {
+  private static Value<?> getRandomValue(String columnName, DataType dataType, Order order) {
     switch (dataType) {
       case BIGINT:
         return new BigIntValue(columnName, nextBigIntValue());
@@ -202,12 +216,22 @@ public class KeyBytesEncoderTest {
       case DOUBLE:
         return new DoubleValue(columnName, RANDOM.nextDouble());
       case BLOB:
-        int length = RANDOM.nextInt(100) + 1;
+        int length = RANDOM.nextInt(100);
         byte[] bytes = new byte[length];
         RANDOM.nextBytes(bytes);
+
+        // 0x00 bytes not accepted in blob values in DESC order
+        if (order == Order.DESC) {
+          for (int i = 0; i < bytes.length; i++) {
+            if (bytes[i] == 0x00) {
+              bytes[i]++;
+            }
+          }
+        }
+
         return new BlobValue(columnName, bytes);
       case TEXT:
-        int count = RANDOM.nextInt(100) + 1;
+        int count = RANDOM.nextInt(100);
         return new TextValue(
             columnName, RandomStringUtils.random(count, 0, 0, true, true, null, RANDOM));
       case BOOLEAN:
