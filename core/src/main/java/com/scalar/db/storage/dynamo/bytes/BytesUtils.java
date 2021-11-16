@@ -16,8 +16,10 @@ public final class BytesUtils {
    */
   public static byte mask(byte b, Order order) {
     if (order == Order.ASC) {
+      // do nothing, just return the specified byte
       return b;
     } else {
+      // mask the specified byte to make it descending order
       return (byte) (b ^ MASK);
     }
   }

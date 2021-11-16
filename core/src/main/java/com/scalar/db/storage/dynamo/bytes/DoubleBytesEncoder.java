@@ -17,8 +17,22 @@ public class DoubleBytesEncoder implements BytesEncoder<DoubleValue> {
 
   @Override
   public void encode(DoubleValue value, Order order, ByteBuffer dst) {
+    /*
+     * The IEE754 floating point format already preserves sort ordering for positive floating point
+     * numbers when the raw bytes are compared in most significant byte order.
+     * Thus, we need only ensure that negative numbers sort in the exact opposite order as positive
+     * numbers (so that say, negative infinity is less than negative 1), and that all negative
+     * numbers compare less than any positive number. To accomplish this, we invert the sign bit of
+     * all floating point numbers, and we also invert the exponent and significand bits if the
+     * floating point number was negative.
+     */
+
+    // store the floating point bits into a 64-bit long
     long l = Double.doubleToLongBits(value.getAsDouble());
+
+    // invert the sign bit and XOR's all other bits with the sign bit itself
     l ^= ((l >> (Long.SIZE - 1)) | Long.MIN_VALUE);
+
     dst.put(mask((byte) (l >> 56), order))
         .put(mask((byte) (l >> 48), order))
         .put(mask((byte) (l >> 40), order))
