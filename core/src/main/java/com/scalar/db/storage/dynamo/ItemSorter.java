@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.util.Comparator;
 import java.util.List;
@@ -61,8 +60,7 @@ public class ItemSorter {
     };
   }
 
-  private int compareAttributeValues(DataType dataType, AttributeValue a1, AttributeValue a2)
-      throws UnsupportedTypeException {
+  private int compareAttributeValues(DataType dataType, AttributeValue a1, AttributeValue a2) {
     if (a1 == null && a2 == null) {
       return 0;
     } else if (a1 == null) {

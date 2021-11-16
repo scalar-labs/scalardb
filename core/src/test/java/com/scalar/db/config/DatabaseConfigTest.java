@@ -129,16 +129,16 @@ public class DatabaseConfigTest {
   }
 
   @Test
-  public void constructor_NonQualifiedPropertiesGiven_ShouldThrowRuntimeException() {
+  public void constructor_NonQualifiedPropertiesGiven_ShouldThrowNullPointerException() {
     // Arrange
     Properties props = new Properties();
 
     // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(NullPointerException.class);
   }
 
   @Test
-  public void constructor_PropertiesWithNegativePortGiven_ShouldThrowRuntimeException() {
+  public void constructor_PropertiesWithNegativePortGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
@@ -147,7 +147,8 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
 
     // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

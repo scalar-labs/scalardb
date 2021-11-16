@@ -36,7 +36,7 @@ public class OperationChecker {
     checkProjections(get, metadata);
 
     if (Utility.isSecondaryIndexSpecified(get, metadata)) {
-      if (!new ColumnChecker(metadata).check(get.getPartitionKey().get().get(0))) {
+      if (!new ColumnChecker(metadata, true).check(get.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
       }
@@ -57,7 +57,7 @@ public class OperationChecker {
     checkProjections(scan, metadata);
 
     if (Utility.isSecondaryIndexSpecified(scan, metadata)) {
-      if (!new ColumnChecker(metadata).check(scan.getPartitionKey().get().get(0))) {
+      if (!new ColumnChecker(metadata, true).check(scan.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
       }
@@ -78,7 +78,7 @@ public class OperationChecker {
     checkClusteringKeys(scan, metadata);
 
     if (scan.getLimit() < 0) {
-      throw new IllegalArgumentException("The limit cannot be negative Operation: " + scan);
+      throw new IllegalArgumentException("The limit cannot be negative. Operation: " + scan);
     }
 
     checkOrderings(scan, metadata);
@@ -204,7 +204,7 @@ public class OperationChecker {
 
   private void checkValues(Put put, TableMetadata metadata) {
     for (Map.Entry<String, Value<?>> entry : put.getValues().entrySet()) {
-      if (!new ColumnChecker(metadata).check(entry.getValue())) {
+      if (!new ColumnChecker(metadata, false).check(entry.getValue())) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
       }
@@ -290,7 +290,7 @@ public class OperationChecker {
         return false;
       }
 
-      if (!new ColumnChecker(metadata).check(value)) {
+      if (!new ColumnChecker(metadata, true).check(value)) {
         return false;
       }
     }

@@ -75,18 +75,15 @@ public class ConsensusCommitConfigTest {
 
   @Test
   public void
-      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldLoadAsDefaultValue() {
+      constructor_PropertiesWithInvalidActiveTransactionsManagementEnabledGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(ConsensusCommitConfig.ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, "aaa");
 
-    // Act
-    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
-
-    // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
+    // Act Assert
+    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

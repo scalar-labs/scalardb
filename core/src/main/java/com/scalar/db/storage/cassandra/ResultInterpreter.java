@@ -1,15 +1,12 @@
 package com.scalar.db.storage.cassandra;
 
-import com.datastax.driver.core.ColumnDefinitions.Definition;
-import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
-import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
@@ -18,39 +15,36 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.ResultImpl;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
 public class ResultInterpreter {
 
+  private final List<String> projections;
   private final TableMetadata metadata;
 
-  public ResultInterpreter(TableMetadata metadata) {
+  public ResultInterpreter(List<String> projections, TableMetadata metadata) {
+    this.projections = Objects.requireNonNull(projections);
     this.metadata = Objects.requireNonNull(metadata);
   }
 
   public Result interpret(Row row) {
     Map<String, Value<?>> ret = new HashMap<>();
-    getColumnDefinitions(row)
-        .forEach(
-            (name, type) -> {
-              Value<?> value = convert(row, name, type.getName());
-              ret.put(name, value);
-            });
+    if (projections.isEmpty()) {
+      metadata
+          .getColumnNames()
+          .forEach(name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
+    } else {
+      projections.forEach(
+          name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
+    }
     return new ResultImpl(ret, metadata);
   }
 
-  @VisibleForTesting
-  Map<String, DataType> getColumnDefinitions(Row row) {
-    return row.getColumnDefinitions().asList().stream()
-        .collect(Collectors.toMap(Definition::getName, Definition::getType, (d1, d2) -> d1));
-  }
-
-  private Value<?> convert(Row row, String name, DataType.Name type)
-      throws UnsupportedTypeException {
+  private Value<?> convert(Row row, String name, DataType type) {
     switch (type) {
       case BOOLEAN:
         return new BooleanValue(name, row.getBool(name));
@@ -62,8 +56,7 @@ public class ResultInterpreter {
         return new FloatValue(name, row.getFloat(name));
       case DOUBLE:
         return new DoubleValue(name, row.getDouble(name));
-      case TEXT: // for backwards compatibility
-      case VARCHAR:
+      case TEXT:
         return new TextValue(name, row.getString(name));
       case BLOB:
         ByteBuffer buffer = row.getBytes(name);
@@ -74,7 +67,7 @@ public class ResultInterpreter {
         buffer.get(bytes);
         return new BlobValue(name, bytes);
       default:
-        throw new UnsupportedTypeException(type.toString());
+        throw new AssertionError();
     }
   }
 }

@@ -11,7 +11,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.net.URI;
 import java.util.ArrayList;
@@ -19,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -494,12 +494,12 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return getFullTableName(metadataNamespace, METADATA_TABLE);
   }
 
-  private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata) {
+  private TableMetadata createTableMetadata(Map<String, AttributeValue> metadata)
+      throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    metadata
-        .get(METADATA_ATTR_COLUMNS)
-        .m()
-        .forEach((name, type) -> builder.addColumn(name, convertDataType(type.s())));
+    for (Entry<String, AttributeValue> entry : metadata.get(METADATA_ATTR_COLUMNS).m().entrySet()) {
+      builder.addColumn(entry.getKey(), convertDataType(entry.getValue().s()));
+    }
     metadata.get(METADATA_ATTR_PARTITION_KEY).l().stream()
         .map(AttributeValue::s)
         .forEach(builder::addPartitionKey);
@@ -515,7 +515,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  private DataType convertDataType(String columnType) {
+  private DataType convertDataType(String columnType) throws ExecutionException {
     switch (columnType) {
       case "int":
         return DataType.INT;
@@ -533,7 +533,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       case "blob":
         return DataType.BLOB;
       default:
-        throw new UnsupportedTypeException(columnType);
+        throw new ExecutionException("unknown column type: " + columnType);
     }
   }
 
