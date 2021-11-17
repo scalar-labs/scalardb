@@ -724,40 +724,6 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingPutOperationWithPartitionKeyWithEmptyTextValue_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
-    List<Value<?>> values =
-        Arrays.asList(
-            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      whenCheckingPutOperationWithClusteringKeyWithEmptyTextValue_shouldThrowIllegalArgumentException() {
-    // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "").build();
-    List<Value<?>> values =
-        Arrays.asList(
-            new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
       whenCheckingPutOperationWithPartitionKeyWithNullBlobValue_shouldThrowIllegalArgumentException()
           throws ExecutionException {
     // Arrange
@@ -840,33 +806,6 @@ public class OperationCheckerTest {
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void
-      whenCheckingPutOperationWithClusteringKeyWithEmptyBlobValue_shouldThrowIllegalArgumentException()
-          throws ExecutionException {
-    // Arrange
-    when(metadataManager.getTableMetadata(any()))
-        .thenReturn(
-            TableMetadata.newBuilder()
-                .addColumn(PKEY1, DataType.BLOB)
-                .addColumn(CKEY1, DataType.BLOB)
-                .addColumn(COL1, DataType.INT)
-                .addPartitionKey(PKEY1)
-                .addClusteringKey(CKEY1)
-                .build());
-
-    operationChecker = new OperationChecker(metadataManager);
-
-    Key partitionKey = new Key(PKEY1, new byte[] {1, 1, 1});
-    Key clusteringKey = new Key(CKEY1, new byte[0]);
-    Get get = new Get(partitionKey, clusteringKey);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
-
-    // Act Assert
-    assertThatThrownBy(() -> operationChecker.check(get))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
