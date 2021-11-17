@@ -10,7 +10,7 @@ You can use paused duration and choose one of the following ways depending on th
 * Take backups of your databases during the paused duration.
 * Restore to a point in the paused duration with point-in-time-restore (PITR) feature.
 
-## How To Create Transactionally-Consistent Backup
+## How to create transactionally-consistent backup
 
 The easiest way to take a transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application, you can easily pause the application without losing ongoing transactions.
 
