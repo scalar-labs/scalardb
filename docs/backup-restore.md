@@ -25,7 +25,7 @@ Since Cassandra has a built-in replication mechanism, we don't always need a tra
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, we don't need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-Follow [How To Create Transactionally-Consistent Backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
+Follow [How to create transactionally-consistent backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
 
 Another way to take a transactionally-consistent backup for Scalar DB on Cassandra is to stop a cluster, take the snapshots of all the nodes of the cluster, and start the cluster. 
 
@@ -37,7 +37,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 You should create Cosmos DB account using `Continuous` backup policy to create continuous backups.
 
-Follow [How To Create Transactionally-Consistent Backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
+Follow [How to create transactionally-consistent backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
 
 You can restore the backup based on the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and you must change the default consistency to `STRONG` after restoring the data.
 
@@ -45,7 +45,7 @@ You can restore the backup based on the [azure official guide](https://docs.micr
 
 You should create the schema using the scalardb schema loader, which enables Point-In-Time-Recovery (PITR) for each table in DynamoDB. It will create continuous backups.
 
-Follow [How To Create Transactionally-Consistent Backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
+Follow [How to create transactionally-consistent backup](#how-to-create-transactionally-consistent-backup) to create a transactionally-consistent backup.
 
 You can restore tables one by one from the Amazon DynamoDB console using the following steps,
 
