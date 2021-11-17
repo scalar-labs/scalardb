@@ -1,6 +1,7 @@
 FROM docker.io/busybox:1.32 AS tools
 
 ENV GRPC_HEALTH_PROBE_VERSION v0.3.2
+ENV DOCKERIZE_VERSION v0.6.1
 
 # Install grpc_health_probe for kubernetes.
 # https://kubernetes.io/blog/2018/10/01/health-checking-grpc-servers-on-kubernetes/
@@ -8,8 +9,16 @@ RUN set -x && \
     wget -q -O grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" && \
     chmod +x grpc_health_probe
 
+# Install dockerize
+# Support for use cases where environment variables are used to configure the database
+RUN set -x && \
+    wget -q "https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz" && \
+    tar -xzvf "dockerize-linux-amd64-${DOCKERIZE_VERSION}.tar.gz" && \
+    ./dockerize --version
+
 FROM openjdk:8u292-jre-slim
 
+COPY --from=tools dockerize /usr/local/bin/
 COPY --from=tools grpc_health_probe /usr/local/bin/
 
 # Fix CVE-2021-3520, CVE-2021-33560, CVE-2021-20231, CVE-2021-20232, CVE-2020-24659, CVE-2021-20305, and CVE-2021-3711
@@ -21,16 +30,26 @@ WORKDIR /scalardb
 
 # The path should be relative from build/docker. Running `gradle docker`
 # (provided by com.palantir.docker plugin) will copy this Dockerfile and
-# server.tar and log4j2.properties to build/docker.
+# server.tar, log4j2.properties and database.properties.tmpl to build/docker.
 ADD server.tar .
+
+ENV SCALAR_DB_CONTACT_POINTS 'cassandra'
+ENV SCALAR_DB_CONTACT_PORT '9042'
+ENV SCALAR_DB_USERNAME ''
+ENV SCALAR_DB_PASSWORD ''
+ENV SCALAR_DB_STORAGE 'cassandra'
+ENV SCALAR_DB_TRANSACTION_MANAGER 'consensus-commit'
+ENV SCALAR_DB_ISOLATION_LEVEL ''
+ENV SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY ''
 
 WORKDIR /scalardb/server
 
 COPY log4j2.properties .
+# Support for use cases where environment variables are used to configure the database
+COPY database.properties.tmpl .
 
 ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
 
-ENTRYPOINT ["./bin/scalardb-server"]
-CMD ["--config", "database.properties"]
+CMD ["./bin/scalardb-server", "--config", "database.properties"]
 
 EXPOSE 60051 8080
