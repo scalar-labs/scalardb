@@ -277,7 +277,7 @@ public class SelectStatementHandler extends StatementHandler {
     } else {
       // if exclusive scan for the start clustering key, we use the closest next Bytes of the start
       // clustering key bytes
-      return BytesUtils.getTheClosestNextBytes(startKeyBytes);
+      return BytesUtils.getClosestNextBytes(startKeyBytes);
     }
   }
 
@@ -295,14 +295,14 @@ public class SelectStatementHandler extends StatementHandler {
         // if full end clustering key specified, and it's an exclusive scan for the end clustering
         // key, we use the closest previous bytes of the end clustering key bytes for the between
         // condition
-        return BytesUtils.getTheClosestPreviousBytes(endKeyBytes);
+        return BytesUtils.getClosestPreviousBytes(endKeyBytes);
       }
     } else {
       if (scan.getEndInclusive()) {
         // if partial end clustering key specified, and it's an inclusive scan for the end
         // clustering key, we use the closest next bytes of the end clustering key bytes for the
         // between condition
-        return BytesUtils.getTheClosestNextBytes(endKeyBytes);
+        return BytesUtils.getClosestNextBytes(endKeyBytes);
       } else {
         return Optional.of(endKeyBytes);
       }
@@ -339,7 +339,7 @@ public class SelectStatementHandler extends StatementHandler {
         // if partial start clustering key specified, and it's an exclusive scan for the start
         // clustering key, we use the closest next bytes of the start clustering key bytes for the
         // grater than or equal condition
-        BytesUtils.getTheClosestNextBytes(startKeyBytes)
+        BytesUtils.getClosestNextBytes(startKeyBytes)
             .ifPresent(
                 k -> {
                   conditions.add(
@@ -378,7 +378,7 @@ public class SelectStatementHandler extends StatementHandler {
         // if partial end clustering key specified, and it's an inclusive scan for the end
         // clustering key, we use the closest next bytes of the start clustering key bytes for the
         // less than condition
-        BytesUtils.getTheClosestNextBytes(endKeyBytes)
+        BytesUtils.getClosestNextBytes(endKeyBytes)
             .ifPresent(
                 k -> {
                   conditions.add(

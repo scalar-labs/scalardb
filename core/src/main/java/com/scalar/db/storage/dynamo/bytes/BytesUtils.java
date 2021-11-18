@@ -32,7 +32,7 @@ public final class BytesUtils {
    * @param bytes bytes
    * @return the closest next bytes of the bytes
    */
-  public static Optional<ByteBuffer> getTheClosestNextBytes(ByteBuffer bytes) {
+  public static Optional<ByteBuffer> getClosestNextBytes(ByteBuffer bytes) {
     int offset = bytes.remaining();
 
     if (offset == 0) {
@@ -68,7 +68,7 @@ public final class BytesUtils {
    * @param bytes bytes
    * @return the closest previous bytes of the bytes
    */
-  public static Optional<ByteBuffer> getTheClosestPreviousBytes(ByteBuffer bytes) {
+  public static Optional<ByteBuffer> getClosestPreviousBytes(ByteBuffer bytes) {
     int length = bytes.remaining();
 
     if (length == 0) {

@@ -8,12 +8,12 @@ import org.junit.Test;
 public class BytesUtilsTest {
 
   @Test
-  public void getTheClosestNextBytes_EmptyBytesGiven_ShouldReturnTheClosestNextBytesCorrectly() {
+  public void getClosestNextBytes_EmptyBytesGiven_ShouldReturnClosestNextBytesCorrectly() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestNextBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestNextBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isPresent();
@@ -21,12 +21,12 @@ public class BytesUtilsTest {
   }
 
   @Test
-  public void getTheClosestNextBytes_All00sBytesGiven_ShouldReturnTheClosestNextBytesCorrectly() {
+  public void getClosestNextBytes_All00sBytesGiven_ShouldReturnClosestNextBytesCorrectly() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {0, 0, 0});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestNextBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestNextBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isPresent();
@@ -35,12 +35,12 @@ public class BytesUtilsTest {
 
   @Test
   public void
-      getTheClosestNextBytes_BytesWithFFsBytesInTheTailGiven_ShouldReturnTheClosestNextBytesCorrectly() {
+      getClosestNextBytes_BytesWithFFsBytesInTheTailGiven_ShouldReturnClosestNextBytesCorrectly() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {0, 0, (byte) 0xff});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestNextBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestNextBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isPresent();
@@ -48,37 +48,36 @@ public class BytesUtilsTest {
   }
 
   @Test
-  public void getTheClosestNextBytes_AllFFsBytesGiven_ShouldReturnEmpty() {
+  public void getClosestNextBytes_AllFFsBytesGiven_ShouldReturnEmpty() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {(byte) 0xff, (byte) 0xff, (byte) 0xff});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestNextBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestNextBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isNotPresent();
   }
 
   @Test
-  public void getTheClosestPreviousBytes_EmptyBytesGiven_ShouldReturnEmpty() {
+  public void getClosestPreviousBytes_EmptyBytesGiven_ShouldReturnEmpty() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestPreviousBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestPreviousBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isNotPresent();
   }
 
   @Test
-  public void
-      getTheClosestPreviousBytes_All00sBytesGiven_ShouldReturnTheClosestNextBytesCorrectly() {
+  public void getClosestPreviousBytes_All00sBytesGiven_ShouldReturnClosestNextBytesCorrectly() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {0, 0, 0});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestPreviousBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestPreviousBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isPresent();
@@ -87,12 +86,12 @@ public class BytesUtilsTest {
 
   @Test
   public void
-      getTheClosestPreviousBytes_BytesWithFFsBytesInTheTailGiven_ShouldReturnTheClosestNextBytesCorrectly() {
+      getClosestPreviousBytes_BytesWithFFsBytesInTheTailGiven_ShouldReturnClosestNextBytesCorrectly() {
     // Arrange
     ByteBuffer bytes = ByteBuffer.wrap(new byte[] {0, 0, (byte) 0xff});
 
     // Act
-    Optional<ByteBuffer> actual = BytesUtils.getTheClosestPreviousBytes(bytes);
+    Optional<ByteBuffer> actual = BytesUtils.getClosestPreviousBytes(bytes);
 
     // Assert
     Assertions.assertThat(actual).isPresent();

@@ -325,7 +325,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_2),
@@ -337,7 +337,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestPreviousBytes(
+                    BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_3),
@@ -495,7 +495,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     Key.newBuilder()
@@ -510,7 +510,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestPreviousBytes(
+                    BytesUtils.getClosestPreviousBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     Key.newBuilder()
@@ -583,7 +583,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_3),
@@ -645,7 +645,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_2),
@@ -1203,7 +1203,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_2),
@@ -1260,7 +1260,7 @@ public class SelectStatementHandlerTest {
         AttributeValue.builder()
             .b(
                 SdkBytes.fromByteBuffer(
-                    BytesUtils.getTheClosestNextBytes(
+                    BytesUtils.getClosestNextBytes(
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_2),
