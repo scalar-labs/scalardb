@@ -6,6 +6,7 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -37,7 +38,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 /**
  * A handler class for select statement
  *
- * @author Yuji Ito
+ * @author Yuji Ito, Toshihiro Suzuki
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
@@ -189,30 +190,43 @@ public class SelectStatementHandler extends StatementHandler {
 
     setConditionForPartitionKey(scan, tableMetadata, conditions, bindMap);
 
-    if (scan.getStartClusteringKey().isPresent() && scan.getEndClusteringKey().isPresent()) {
+    // If the scan is for DESC clustering order, use the end clustering key as a start key and the
+    // start clustering key as an end key
+    boolean scanForDescClusteringOrder = isScanForDescClusteringOrder(scan, tableMetadata);
+    Optional<Key> startKey =
+        scanForDescClusteringOrder ? scan.getEndClusteringKey() : scan.getStartClusteringKey();
+    boolean startInclusive =
+        scanForDescClusteringOrder ? scan.getEndInclusive() : scan.getStartInclusive();
+    Optional<Key> endKey =
+        scanForDescClusteringOrder ? scan.getStartClusteringKey() : scan.getEndClusteringKey();
+    boolean endInclusive =
+        scanForDescClusteringOrder ? scan.getStartInclusive() : scan.getEndInclusive();
+
+    if (startKey.isPresent() && endKey.isPresent()) {
       if (!setBetweenCondition(
-          scan.getStartClusteringKey().get(),
-          scan.getStartInclusive(),
-          scan.getEndClusteringKey().get(),
-          scan.getEndInclusive(),
+          startKey.get(),
+          startInclusive,
+          endKey.get(),
+          endInclusive,
           tableMetadata,
           conditions,
           bindMap)) {
         return false;
       }
     } else {
-      if (scan.getStartClusteringKey().isPresent()) {
-        Key startKey = scan.getStartClusteringKey().get();
-        if (startKey.size() == 1) {
-          setStartCondition(startKey, scan.getStartInclusive(), tableMetadata, conditions, bindMap);
+      if (startKey.isPresent()) {
+        if (startKey.get().size() == 1) {
+          if (!setStartCondition(
+              startKey.get(), startInclusive, tableMetadata, conditions, bindMap)) {
+            return false;
+          }
         } else {
           // if a start key with multiple values specified and no end key specified, use between
           // condition and use a key based on the start key without the last value as an end key
-          Key endKey = getKeyWithoutLastValue(startKey);
           if (!setBetweenCondition(
-              startKey,
-              scan.getStartInclusive(),
-              endKey,
+              startKey.get(),
+              startInclusive,
+              getKeyWithoutLastValue(startKey.get()),
               true,
               tableMetadata,
               conditions,
@@ -222,16 +236,20 @@ public class SelectStatementHandler extends StatementHandler {
         }
       }
 
-      if (scan.getEndClusteringKey().isPresent()) {
-        Key endKey = scan.getEndClusteringKey().get();
-        if (endKey.size() == 1) {
-          setEndCondition(endKey, scan.getEndInclusive(), tableMetadata, conditions, bindMap);
+      if (endKey.isPresent()) {
+        if (endKey.get().size() == 1) {
+          setEndCondition(endKey.get(), endInclusive, tableMetadata, conditions, bindMap);
         } else {
           // if an end key with multiple values specified and no start key specified, use between
           // condition and use a key based on the end key without the last value as a start key
-          Key startKey = getKeyWithoutLastValue(endKey);
           if (!setBetweenCondition(
-              startKey, true, endKey, scan.getEndInclusive(), tableMetadata, conditions, bindMap)) {
+              getKeyWithoutLastValue(endKey.get()),
+              true,
+              endKey.get(),
+              endInclusive,
+              tableMetadata,
+              conditions,
+              bindMap)) {
             return false;
           }
         }
@@ -275,26 +293,53 @@ public class SelectStatementHandler extends StatementHandler {
       List<String> conditions,
       Map<String, AttributeValue> bindMap) {
 
-    Optional<ByteBuffer> startKeyBytes =
-        getStartKeyBytesForBetweenCondition(startKey, startInclusive, tableMetadata);
-    Optional<ByteBuffer> endKeyBytes =
-        getEndKeyBytesForBetweenCondition(endKey, endInclusive, tableMetadata);
-
-    if (!startKeyBytes.isPresent() || !endKeyBytes.isPresent()) {
-      if (startKeyBytes.isPresent()) {
-        setStartCondition(startKey, startInclusive, tableMetadata, conditions, bindMap);
+    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
+    if (!startInclusive) {
+      // if exclusive scan for the start key, we use the closest next bytes of the start key bytes
+      Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(startKeyBytes);
+      if (!closestNextBytes.isPresent()) {
+        // if we can't find the closest next bytes of the start key bytes, return false. That means
+        // we should return empty results in this case
+        return false;
       }
-      if (endKeyBytes.isPresent()) {
-        setEndCondition(endKey, endInclusive, tableMetadata, conditions, bindMap);
-      }
-      return true;
+      startKeyBytes = closestNextBytes.get();
     }
 
-    byte[] start = BytesUtils.toBytes(startKeyBytes.get());
-    byte[] end = BytesUtils.toBytes(endKeyBytes.get());
+    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
+    boolean fullClusteringKeySpecified =
+        endKey.size() == tableMetadata.getClusteringKeyNames().size();
+    if (fullClusteringKeySpecified) {
+      if (!endInclusive) {
+        // if full end key specified, and it's an exclusive scan for the end key, we use the closest
+        // previous bytes of the end key bytes for the between condition
+        Optional<ByteBuffer> closestPreviousBytes = BytesUtils.getClosestPreviousBytes(endKeyBytes);
+        if (!closestPreviousBytes.isPresent()) {
+          // if we can't find the closest previous bytes of the end key bytes, return false. That
+          // means we should return empty results in this case
+          return false;
+        }
+        endKeyBytes = closestPreviousBytes.get();
+      }
+    } else {
+      if (endInclusive) {
+        // if partial end key specified, and it's an inclusive scan for the end key, we use the
+        // closest next bytes of the end key bytes for the between condition
+        Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(endKeyBytes);
+        if (!closestNextBytes.isPresent()) {
+          // if we can't find the closest next bytes of the end key bytes, set start condition with
+          // the start key
+          return setStartCondition(startKey, startInclusive, tableMetadata, conditions, bindMap);
+        }
+        endKeyBytes = closestNextBytes.get();
+      }
+    }
+
+    byte[] start = BytesUtils.toBytes(startKeyBytes);
+    byte[] end = BytesUtils.toBytes(endKeyBytes);
     if (UnsignedBytes.lexicographicalComparator().compare(start, end) > 0) {
-      // if the start key bytes are greater than the end key bytes, return false. This situation
-      // could happen when full clustering keys specified and scanning exclusively
+      // if the start key bytes are greater than the end key bytes, return false. That means we
+      // should return empty results in this case. This situation could happen when full clustering
+      // keys specified and scanning exclusively
       return false;
     }
 
@@ -315,44 +360,7 @@ public class SelectStatementHandler extends StatementHandler {
     return true;
   }
 
-  private Optional<ByteBuffer> getStartKeyBytesForBetweenCondition(
-      Key startKey, boolean startInclusive, TableMetadata tableMetadata) {
-    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
-    if (startInclusive) {
-      return Optional.of(startKeyBytes);
-    } else {
-      // if exclusive scan for the start clustering key, we use the closest next Bytes of the
-      // start clustering key bytes
-      return BytesUtils.getClosestNextBytes(startKeyBytes);
-    }
-  }
-
-  private Optional<ByteBuffer> getEndKeyBytesForBetweenCondition(
-      Key endKey, boolean endInclusive, TableMetadata tableMetadata) {
-    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
-
-    boolean fullEndClusteringKeySpecified =
-        endKey.size() == tableMetadata.getClusteringKeyNames().size();
-    if (fullEndClusteringKeySpecified) {
-      if (endInclusive) {
-        return Optional.of(endKeyBytes);
-      } else {
-        // if full end key specified, and it's an exclusive scan for the end key, we use the closest
-        // previous bytes of the end key bytes for the between condition
-        return BytesUtils.getClosestPreviousBytes(endKeyBytes);
-      }
-    } else {
-      if (endInclusive) {
-        // if partial end key specified, and it's an inclusive scan for the end key, we use the
-        // closest next bytes of the end key bytes for the between condition
-        return BytesUtils.getClosestNextBytes(endKeyBytes);
-      } else {
-        return Optional.of(endKeyBytes);
-      }
-    }
-  }
-
-  private void setStartCondition(
+  private boolean setStartCondition(
       Key startKey,
       boolean startInclusive,
       TableMetadata tableMetadata,
@@ -380,19 +388,21 @@ public class SelectStatementHandler extends StatementHandler {
       } else {
         // if partial start key specified, and it's an exclusive scan for the start key, we use
         // the closest next bytes of the start key bytes for the grater than or equal condition
-        BytesUtils.getClosestNextBytes(startKeyBytes)
-            .ifPresent(
-                k -> {
-                  conditions.add(
-                      DynamoOperation.CLUSTERING_KEY
-                          + " >= "
-                          + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
-                  bindMap.put(
-                      DynamoOperation.START_CLUSTERING_KEY_ALIAS,
-                      AttributeValue.builder().b(SdkBytes.fromByteBuffer(k)).build());
-                });
+        Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(startKeyBytes);
+        if (closestNextBytes.isPresent()) {
+          conditions.add(
+              DynamoOperation.CLUSTERING_KEY + " >= " + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
+          bindMap.put(
+              DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+              AttributeValue.builder().b(SdkBytes.fromByteBuffer(closestNextBytes.get())).build());
+        } else {
+          // TODO comment
+
+          return false;
+        }
       }
     }
+    return true;
   }
 
   private void setEndCondition(
@@ -440,5 +450,19 @@ public class SelectStatementHandler extends StatementHandler {
 
   private ByteBuffer getKeyBytes(Key key, TableMetadata tableMetadata) {
     return new KeyBytesEncoder().encode(key, tableMetadata.getClusteringOrders());
+  }
+
+  private boolean isScanForDescClusteringOrder(Scan scan, TableMetadata tableMetadata) {
+    if (scan.getStartClusteringKey().isPresent()) {
+      Key startClusteringKey = scan.getStartClusteringKey().get();
+      String lastValueName = startClusteringKey.get().get(startClusteringKey.size() - 1).getName();
+      return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
+    }
+    if (scan.getEndClusteringKey().isPresent()) {
+      Key endClusteringKey = scan.getEndClusteringKey().get();
+      String lastValueName = endClusteringKey.get().get(endClusteringKey.size() - 1).getName();
+      return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
+    }
+    return false;
   }
 }
