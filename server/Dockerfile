@@ -45,7 +45,7 @@ ENV SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY ''
 WORKDIR /scalardb/server
 
 COPY log4j2.properties .
-# Support for use cases where environment variables are used to configure the database
+# Support use cases where environment variables are used to configure the database
 COPY database.properties.tmpl .
 
 ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
