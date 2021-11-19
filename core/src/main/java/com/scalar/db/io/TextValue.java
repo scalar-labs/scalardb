@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -134,7 +135,7 @@ public final class TextValue implements Value<Optional<String>> {
 
   @Override
   public int hashCode() {
-    return value.hashCode();
+    return Objects.hash(name, value);
   }
 
   /**
