@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
@@ -72,7 +73,7 @@ public final class FloatValue implements Value<Float> {
 
   @Override
   public int hashCode() {
-    return Float.hashCode(value);
+    return Objects.hash(name, value);
   }
 
   /**
