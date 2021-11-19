@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -137,7 +138,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
   @Override
   public int hashCode() {
-    return values.hashCode();
+    return Objects.hash(values);
   }
 
   /**
