@@ -1,10 +1,10 @@
 package com.scalar.db.storage.cosmos;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,15 +23,21 @@ public class CosmosMultipleClusteringKeysIntegrationTest
   }
 
   @Override
-  protected List<DataType> getClusteringKeyTypeList() {
-    // Return types without BLOB because blob is not supported for clustering key in Cosmos
-    return ImmutableList.of(
-        DataType.BOOLEAN,
-        DataType.INT,
-        DataType.BIGINT,
-        DataType.FLOAT,
-        DataType.DOUBLE,
-        DataType.TEXT);
+  protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
+    // Return types without BLOB because blob is not supported for clustering key
+    ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
+    for (DataType firstClusteringKeyType : DataType.values()) {
+      if (firstClusteringKeyType == DataType.BLOB) {
+        continue;
+      }
+      for (DataType secondClusteringKeyType : DataType.values()) {
+        if (secondClusteringKeyType == DataType.BLOB) {
+          continue;
+        }
+        clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
+      }
+    }
+    return clusteringKeyTypes;
   }
 
   @Override
