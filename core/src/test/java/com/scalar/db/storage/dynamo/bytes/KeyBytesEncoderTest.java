@@ -18,6 +18,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -38,6 +40,9 @@ public class KeyBytesEncoderTest {
   private static final String COL1 = "c1";
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
+
+  private static final int TEXT_MAX_COUNT = 100;
+  private static final int BLOB_MAX_LENGTH = 100;
 
   private static final int ATTEMPT_COUNT = 50;
   private static final int KEY_ELEMENT_COUNT = 30;
@@ -77,8 +82,12 @@ public class KeyBytesEncoderTest {
   private void encode_SingleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder(
       DataType col1Type, Order col1Order) {
     // Arrange
+
+    // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
-    for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
+    target.add(new Key(getMinValue(COL1, col1Type)));
+    target.add(new Key(getMaxValue(COL1, col1Type)));
+    for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
       target.add(new Key(getRandomValue(COL1, col1Type, col1Order)));
     }
 
@@ -119,8 +128,12 @@ public class KeyBytesEncoderTest {
   private void encode_DoubleKeysGiven_ShouldEncodeProperlyWithPreservingSortOrder(
       DataType col1Type, DataType col2Type, Order col1Order, Order col2Order) {
     // Arrange
+
+    // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
-    for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
+    target.add(new Key(getMinValue(COL1, col1Type), getMinValue(COL2, col2Type)));
+    target.add(new Key(getMaxValue(COL1, col1Type), getMaxValue(COL2, col2Type)));
+    for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
       target.add(
           new Key(
               getRandomValue(COL1, col1Type, col1Order),
@@ -178,8 +191,16 @@ public class KeyBytesEncoderTest {
       Order col2Order,
       Order col3Order) {
     // Arrange
+
+    // Add min and max values and random values
     List<Key> target = new ArrayList<>(KEY_ELEMENT_COUNT);
-    for (int i = 0; i < KEY_ELEMENT_COUNT; i++) {
+    target.add(
+        new Key(
+            getMinValue(COL1, col1Type), getMinValue(COL2, col2Type), getMinValue(COL3, col3Type)));
+    target.add(
+        new Key(
+            getMaxValue(COL1, col1Type), getMaxValue(COL2, col2Type), getMaxValue(COL3, col3Type)));
+    for (int i = 0; i < KEY_ELEMENT_COUNT - 2; i++) {
       target.add(
           new Key(
               getRandomValue(COL1, col1Type, col1Order),
@@ -205,18 +226,64 @@ public class KeyBytesEncoderTest {
     IntStream.range(0, ATTEMPT_COUNT).forEach(i -> test.run());
   }
 
+  private Value<?> getMinValue(String columnName, DataType dataType) {
+    switch (dataType) {
+      case BIGINT:
+        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
+      case INT:
+        return new IntValue(columnName, Integer.MIN_VALUE);
+      case FLOAT:
+        return new FloatValue(columnName, Float.MIN_VALUE);
+      case DOUBLE:
+        return new DoubleValue(columnName, Double.MIN_VALUE);
+      case BLOB:
+        return new BlobValue(columnName, new byte[0]);
+      case TEXT:
+        return new TextValue(columnName, "");
+      case BOOLEAN:
+        return new BooleanValue(columnName, false);
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  private Value<?> getMaxValue(String columnName, DataType dataType) {
+    switch (dataType) {
+      case BIGINT:
+        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
+      case INT:
+        return new IntValue(columnName, Integer.MAX_VALUE);
+      case FLOAT:
+        return new FloatValue(columnName, Float.MAX_VALUE);
+      case DOUBLE:
+        return new DoubleValue(columnName, Double.MAX_VALUE);
+      case BLOB:
+        byte[] blobBytes = new byte[BLOB_MAX_LENGTH];
+        Arrays.fill(blobBytes, (byte) 0xff);
+        return new BlobValue(columnName, blobBytes);
+      case TEXT:
+        byte[] textBytes = new byte[TEXT_MAX_COUNT];
+        Arrays.fill(textBytes, (byte) 0xff);
+        return new TextValue(columnName, new String(textBytes, StandardCharsets.UTF_8));
+      case BOOLEAN:
+        return new BooleanValue(columnName, true);
+      default:
+        throw new AssertionError();
+    }
+  }
+
   private static Value<?> getRandomValue(String columnName, DataType dataType, Order order) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, nextBigIntValue());
+        return new BigIntValue(columnName, nextBigInt());
       case INT:
         return new IntValue(columnName, RANDOM.nextInt());
       case FLOAT:
-        return new FloatValue(columnName, RANDOM.nextFloat());
+        return new FloatValue(columnName, nextFloat());
       case DOUBLE:
-        return new DoubleValue(columnName, RANDOM.nextDouble());
+        return new DoubleValue(columnName, nextDouble());
       case BLOB:
-        int length = RANDOM.nextInt(100);
+        int length = RANDOM.nextInt(BLOB_MAX_LENGTH);
         byte[] bytes = new byte[length];
         RANDOM.nextBytes(bytes);
 
@@ -231,7 +298,7 @@ public class KeyBytesEncoderTest {
 
         return new BlobValue(columnName, bytes);
       case TEXT:
-        int count = RANDOM.nextInt(100);
+        int count = RANDOM.nextInt(TEXT_MAX_COUNT);
         return new TextValue(
             columnName, RandomStringUtils.random(count, 0, 0, true, true, null, RANDOM));
       case BOOLEAN:
@@ -241,10 +308,22 @@ public class KeyBytesEncoderTest {
     }
   }
 
-  private static long nextBigIntValue() {
+  private static long nextBigInt() {
     OptionalLong randomLong =
         RANDOM.longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1)).limit(1).findFirst();
     return randomLong.orElse(0);
+  }
+
+  private static float nextFloat() {
+    OptionalDouble randomDouble =
+        RANDOM.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst();
+    return (float) randomDouble.orElse(0.0d);
+  }
+
+  private static double nextDouble() {
+    OptionalDouble randomDouble =
+        RANDOM.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst();
+    return randomDouble.orElse(0.0d);
   }
 
   private static List<Key> sortWithKeyBytesEncoder(List<Key> target, Map<String, Order> keyOrders) {
