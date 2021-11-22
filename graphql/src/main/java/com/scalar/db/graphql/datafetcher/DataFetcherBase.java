@@ -4,6 +4,7 @@ import static java.util.stream.Collectors.toList;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
@@ -92,6 +93,16 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
       transaction.put(put);
     } else {
       storage.put(put);
+    }
+  }
+
+  protected void performDelete(DataFetchingEnvironment environment, Delete delete)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      transaction.delete(delete.withConsistency(Consistency.LINEARIZABLE));
+    } else {
+      storage.delete(delete);
     }
   }
 
