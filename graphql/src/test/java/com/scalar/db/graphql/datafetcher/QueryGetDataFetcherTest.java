@@ -13,12 +13,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
@@ -26,35 +23,19 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import graphql.GraphQLContext;
-import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 import java.util.Optional;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-public class QueryGetDataFetcherTest {
-  private static final String ANY_NAMESPACE = "namespace1";
-  private static final String ANY_TABLE = "table1";
-
-  @Mock private DistributedStorage storage;
-  @Mock private DataFetchingEnvironment environment;
-  @Mock private GraphQLContext graphQlContext;
-  @Mock private DistributedTransaction transaction;
+public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private TableGraphQlModel storageTableGraphQlModel;
   private TableGraphQlModel transactionalTableGraphQlModel;
   private Get expectedGetCommand;
 
-  @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-
+  @Override
+  public void doSetUp() {
     // Arrange
-    when(environment.getGraphQlContext()).thenReturn(graphQlContext);
-    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
     TableMetadata storageTableMetadata =
         TableMetadata.newBuilder()
             .addColumn("c1", DataType.INT)

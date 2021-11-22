@@ -16,51 +16,32 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Consistency;
-import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import graphql.GraphQLContext;
-import graphql.schema.DataFetchingEnvironment;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-public class MutationPutDataFetcherTest {
-  private static final String ANY_NAMESPACE = "namespace1";
-  private static final String ANY_TABLE = "table1";
-
-  @Mock private DistributedStorage storage;
-  @Mock private DataFetchingEnvironment environment;
-  @Mock private GraphQLContext graphQlContext;
-  @Mock private DistributedTransaction transaction;
+public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   private TableGraphQlModel storageTableGraphQlModel;
   private TableGraphQlModel transactionalTableGraphQlModel;
   private Map<String, Object> simplePutArgument;
   private Put simpleExpectedPut;
 
-  @Before
-  public void setUp() throws Exception {
-    MockitoAnnotations.openMocks(this).close();
-
+  @Override
+  public void doSetUp() {
     // Arrange
-    when(environment.getGraphQlContext()).thenReturn(graphQlContext);
-    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
     TableMetadata storageTableMetadata =
         TableMetadata.newBuilder()
             .addColumn("c1", DataType.INT)
