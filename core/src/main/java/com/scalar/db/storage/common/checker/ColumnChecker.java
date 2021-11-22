@@ -72,7 +72,7 @@ class ColumnChecker implements ValueVisitor {
 
   @Override
   public void visit(TextValue value) {
-    if (notNull && !value.getAsString().isPresent()) {
+    if (notNull && (!value.getAsString().isPresent() || value.getAsString().get().isEmpty())) {
       isValid = false;
       return;
     }
@@ -81,7 +81,7 @@ class ColumnChecker implements ValueVisitor {
 
   @Override
   public void visit(BlobValue value) {
-    if (notNull && !value.getAsBytes().isPresent()) {
+    if (notNull && (!value.getAsBytes().isPresent() || value.getAsBytes().get().length == 0)) {
       isValid = false;
       return;
     }
