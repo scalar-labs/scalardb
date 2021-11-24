@@ -402,7 +402,7 @@ public class CosmosAdminTest {
   }
 
   @Test
-  public void createTable_WithBlobClusteringKey_ShouldThrowExecutionException() {
+  public void createTable_WithBlobClusteringKey_ShouldThrowIllegalArgumentException() {
     // Arrange
     String namespace = "ns";
     String table = "sample_table";
@@ -417,7 +417,7 @@ public class CosmosAdminTest {
 
     // Act Assert
     assertThatThrownBy(() -> admin.createTable(namespace, table, metadata))
-        .isInstanceOf(ExecutionException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
