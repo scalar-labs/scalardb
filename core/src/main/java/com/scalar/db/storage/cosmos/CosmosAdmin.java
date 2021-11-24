@@ -74,9 +74,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
             .connectionSharingAcrossClientsEnabled(true)
-            .contentResponseOnWriteEnabled(true)
-            .multipleWriteRegionsEnabled(true)
-            .readRequestsFallbackEnabled(true)
             .buildClient();
     metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
   }

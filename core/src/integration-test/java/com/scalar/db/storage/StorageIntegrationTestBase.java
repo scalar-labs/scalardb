@@ -64,16 +64,20 @@ public abstract class StorageIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
-      admin = factory.getAdmin();
       namespace = getNamespace();
-      createTable();
-      storage = factory.getStorage();
+      tearUp();
       initialized = true;
     }
 
     truncateTable();
     storage.with(namespace, TABLE);
+  }
+
+  protected void tearUp() throws Exception {
+    StorageFactory factory = new StorageFactory(getDatabaseConfig());
+    admin = factory.getAdmin();
+    createTable();
+    storage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -84,7 +88,7 @@ public abstract class StorageIntegrationTestBase {
     return NAMESPACE;
   }
 
-  private void createTable() throws ExecutionException {
+  protected void createTable() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(
@@ -119,7 +123,7 @@ public abstract class StorageIntegrationTestBase {
     storage.close();
   }
 
-  private static void deleteTable() throws ExecutionException {
+  protected static void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }

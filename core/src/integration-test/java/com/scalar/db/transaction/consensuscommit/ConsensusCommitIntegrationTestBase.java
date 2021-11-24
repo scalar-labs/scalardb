@@ -85,15 +85,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      DatabaseConfig config = getDatabaseConfig();
-      StorageFactory factory = new StorageFactory(config);
-      admin = factory.getAdmin();
-      consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-      consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
-      namespace1 = getNamespace1();
-      namespace2 = getNamespace2();
-      createTables();
-      originalStorage = factory.getStorage();
+      tearUp();
       initialized = true;
     }
 
@@ -104,6 +96,18 @@ public abstract class ConsensusCommitIntegrationTestBase {
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     manager =
         new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
+  }
+
+  protected void tearUp() throws ExecutionException, Exception {
+    DatabaseConfig config = getDatabaseConfig();
+    StorageFactory factory = new StorageFactory(config);
+    admin = factory.getAdmin();
+    consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
+    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
+    namespace1 = getNamespace1();
+    namespace2 = getNamespace2();
+    createTables();
+    originalStorage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -118,7 +122,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     return NAMESPACE_2;
   }
 
-  private void createTables() throws ExecutionException {
+  protected void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
@@ -154,7 +158,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     originalStorage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  protected static void deleteTables() throws ExecutionException {
     admin.dropTable(namespace1, TABLE_1);
     admin.dropNamespace(namespace1);
     admin.dropTable(namespace2, TABLE_2);

@@ -53,6 +53,7 @@ public class Cosmos implements DistributedStorage {
             .key(config.getPassword().orElse(null))
             .directMode()
             .consistencyLevel(ConsistencyLevel.STRONG)
+            .connectionSharingAcrossClientsEnabled(true)
             .buildClient();
 
     namespace = Optional.empty();
@@ -67,6 +68,10 @@ public class Cosmos implements DistributedStorage {
     batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
+  }
+
+  public CosmosClient getCosmosClient() {
+    return client;
   }
 
   @Override

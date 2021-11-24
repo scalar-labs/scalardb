@@ -124,6 +124,7 @@ dependencies {
     implementation group: 'com.oracle.database.jdbc', name: 'ojdbc8-production', version: "${oracleDriverVersion}"
     implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: "${sqlserverDriverVersion}"
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
+    testImplementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"

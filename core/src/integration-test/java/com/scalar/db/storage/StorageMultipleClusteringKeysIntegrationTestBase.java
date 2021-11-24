@@ -67,27 +67,30 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
   protected static DistributedStorage storage;
-  private static String namespaceBaseName;
+  protected static String namespaceBaseName;
 
   // Key: firstClusteringKeyType, Value: secondClusteringKeyType
   protected static ListMultimap<DataType, DataType> clusteringKeyTypes;
 
-  private static long seed;
+  protected static long seed;
 
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
-      admin = factory.getAdmin();
-      namespaceBaseName = getNamespaceBaseName();
-      clusteringKeyTypes = getClusteringKeyTypes();
-      createTables();
-      storage = factory.getStorage();
-      seed = System.currentTimeMillis();
-      System.out.println(
-          "The seed used in the multiple clustering keys integration test is " + seed);
+      tearUp();
       initialized = true;
     }
+  }
+
+  protected void tearUp() throws ExecutionException {
+    StorageFactory factory = new StorageFactory(getDatabaseConfig());
+    admin = factory.getAdmin();
+    namespaceBaseName = getNamespaceBaseName();
+    clusteringKeyTypes = getClusteringKeyTypes();
+    createTables();
+    storage = factory.getStorage();
+    seed = System.currentTimeMillis();
+    System.out.println("The seed used in the multiple clustering keys integration test is " + seed);
   }
 
   protected abstract DatabaseConfig getDatabaseConfig();
@@ -110,7 +113,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  private void createTables() throws ExecutionException {
+  protected void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
@@ -154,7 +157,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     storage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  protected static void deleteTables() throws ExecutionException {
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
         admin.dropTable(
