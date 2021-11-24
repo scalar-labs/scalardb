@@ -25,7 +25,7 @@ You must pause for a long enough time (e.g., 10 seconds) to create a backup and 
 
 #### Database specific strategies to create a transactionally-consistent backup
 
-##### Cassandra
+**Cassandra**
 
 Cassandra has a built-in replication mechanism, so you do not always have to create a transactionally-consistent backup.
 
@@ -38,20 +38,20 @@ To minimize mistakes when doing backup operations, it is recommended to use [Cas
 Cassy is also integrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
-##### Cosmos DB
+**Cosmos DB**
 
 You must create a Cosmos DB account with a Continuous backup policy to create point-in-time recovery (PITR). Please follow the [General strategy to create a transactionally-consistent backup](#general-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
-##### DynamoDB
+**DynamoDB**
 
 You must create tables with point-in-time recovery (PITR) and autoscaling in DynamoDB, scalardb schema Loader enables PITR and autoscaling by default. Please follow the [General strategy to create a transactionally-consistent backup](#general-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 
 ## Restore Backup
 
-This section shows how to restore transactionally-consistent backup for Scalar DL. You must restore Scalar Ledger and Auditor tables with the same restore point if you use Ledger and Auditor.
+This section shows how to restore transactionally-consistent backup. You must restore Scalar Ledger and Auditor tables with the same restore point if you use Ledger and Auditor.
 
-### JDBC Databases
+### JDBC databases
 
 You can restore the backup with your favorite way for JDBC databases.
 You can use `mysql` command in MySQL and `psql` command in PostgreSQL to achieve that. 
