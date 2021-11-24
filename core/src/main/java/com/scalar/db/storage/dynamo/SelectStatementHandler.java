@@ -187,19 +187,54 @@ public class SelectStatementHandler extends StatementHandler {
     List<String> conditions = new ArrayList<>();
     Map<String, AttributeValue> bindMap = new HashMap<>();
 
-    setForPartitionKey(scan, tableMetadata, conditions, bindMap);
+    setConditionForPartitionKey(scan, tableMetadata, conditions, bindMap);
 
     if (scan.getStartClusteringKey().isPresent() && scan.getEndClusteringKey().isPresent()) {
-      if (!setForBetween(scan, tableMetadata, conditions, bindMap)) {
-        // setForBetween() fails, then return false
+      if (!setBetweenCondition(
+          scan.getStartClusteringKey().get(),
+          scan.getStartInclusive(),
+          scan.getEndClusteringKey().get(),
+          scan.getEndInclusive(),
+          tableMetadata,
+          conditions,
+          bindMap)) {
         return false;
       }
     } else {
       if (scan.getStartClusteringKey().isPresent()) {
-        setForStart(scan, tableMetadata, conditions, bindMap);
+        Key startKey = scan.getStartClusteringKey().get();
+        if (startKey.size() == 1) {
+          setStartCondition(startKey, scan.getStartInclusive(), tableMetadata, conditions, bindMap);
+        } else {
+          // if a start key with multiple values specified and no end key specified, use between
+          // condition and use a key based on the start key without the last value as an end key
+          Key endKey = getKeyWithoutLastValue(startKey);
+          if (!setBetweenCondition(
+              startKey,
+              scan.getStartInclusive(),
+              endKey,
+              true,
+              tableMetadata,
+              conditions,
+              bindMap)) {
+            return false;
+          }
+        }
       }
+
       if (scan.getEndClusteringKey().isPresent()) {
-        setForEnd(scan, tableMetadata, conditions, bindMap);
+        Key endKey = scan.getEndClusteringKey().get();
+        if (endKey.size() == 1) {
+          setEndCondition(endKey, scan.getEndInclusive(), tableMetadata, conditions, bindMap);
+        } else {
+          // if an end key with multiple values specified and no start key specified, use between
+          // condition and use a key based on the end key without the last value as a start key
+          Key startKey = getKeyWithoutLastValue(endKey);
+          if (!setBetweenCondition(
+              startKey, true, endKey, scan.getEndInclusive(), tableMetadata, conditions, bindMap)) {
+            return false;
+          }
+        }
       }
     }
 
@@ -209,7 +244,15 @@ public class SelectStatementHandler extends StatementHandler {
     return true;
   }
 
-  private void setForPartitionKey(
+  private Key getKeyWithoutLastValue(Key originalKey) {
+    Key.Builder keyBuilder = Key.newBuilder();
+    for (int i = 0; i < originalKey.get().size() - 1; i++) {
+      keyBuilder.add(originalKey.get().get(i));
+    }
+    return keyBuilder.build();
+  }
+
+  private void setConditionForPartitionKey(
       Scan scan,
       TableMetadata tableMetadata,
       List<String> conditions,
@@ -223,22 +266,26 @@ public class SelectStatementHandler extends StatementHandler {
         AttributeValue.builder().b(SdkBytes.fromByteBuffer(concatenatedPartitionKey)).build());
   }
 
-  private boolean setForBetween(
-      Scan scan,
+  private boolean setBetweenCondition(
+      Key startKey,
+      boolean startInclusive,
+      Key endKey,
+      boolean endInclusive,
       TableMetadata tableMetadata,
       List<String> conditions,
       Map<String, AttributeValue> bindMap) {
-    assert scan.getStartClusteringKey().isPresent() && scan.getEndClusteringKey().isPresent();
 
-    Optional<ByteBuffer> startKeyBytes = getStartKeyBytesForBetween(scan, tableMetadata);
-    Optional<ByteBuffer> endKeyBytes = getEndKeyBytesForBetween(scan, tableMetadata);
+    Optional<ByteBuffer> startKeyBytes =
+        getStartKeyBytesForBetweenCondition(startKey, startInclusive, tableMetadata);
+    Optional<ByteBuffer> endKeyBytes =
+        getEndKeyBytesForBetweenCondition(endKey, endInclusive, tableMetadata);
 
     if (!startKeyBytes.isPresent() || !endKeyBytes.isPresent()) {
       if (startKeyBytes.isPresent()) {
-        setForStart(scan, tableMetadata, conditions, bindMap);
+        setStartCondition(startKey, startInclusive, tableMetadata, conditions, bindMap);
       }
       if (endKeyBytes.isPresent()) {
-        setForEnd(scan, tableMetadata, conditions, bindMap);
+        setEndCondition(endKey, endInclusive, tableMetadata, conditions, bindMap);
       }
       return true;
     }
@@ -268,40 +315,36 @@ public class SelectStatementHandler extends StatementHandler {
     return true;
   }
 
-  private Optional<ByteBuffer> getStartKeyBytesForBetween(Scan scan, TableMetadata tableMetadata) {
-    assert scan.getStartClusteringKey().isPresent();
-
-    ByteBuffer startKeyBytes = getKeyBytes(scan.getStartClusteringKey().get(), tableMetadata);
-    if (scan.getStartInclusive()) {
+  private Optional<ByteBuffer> getStartKeyBytesForBetweenCondition(
+      Key startKey, boolean startInclusive, TableMetadata tableMetadata) {
+    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
+    if (startInclusive) {
       return Optional.of(startKeyBytes);
     } else {
-      // if exclusive scan for the start clustering key, we use the closest next Bytes of the start
-      // clustering key bytes
+      // if exclusive scan for the start clustering key, we use the closest next Bytes of the
+      // start clustering key bytes
       return BytesUtils.getClosestNextBytes(startKeyBytes);
     }
   }
 
-  private Optional<ByteBuffer> getEndKeyBytesForBetween(Scan scan, TableMetadata tableMetadata) {
-    assert scan.getEndClusteringKey().isPresent();
-
-    ByteBuffer endKeyBytes = getKeyBytes(scan.getEndClusteringKey().get(), tableMetadata);
+  private Optional<ByteBuffer> getEndKeyBytesForBetweenCondition(
+      Key endKey, boolean endInclusive, TableMetadata tableMetadata) {
+    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
 
     boolean fullEndClusteringKeySpecified =
-        scan.getEndClusteringKey().get().size() == tableMetadata.getClusteringKeyNames().size();
+        endKey.size() == tableMetadata.getClusteringKeyNames().size();
     if (fullEndClusteringKeySpecified) {
-      if (scan.getEndInclusive()) {
+      if (endInclusive) {
         return Optional.of(endKeyBytes);
       } else {
-        // if full end clustering key specified, and it's an exclusive scan for the end clustering
-        // key, we use the closest previous bytes of the end clustering key bytes for the between
-        // condition
+        // if full end key specified, and it's an exclusive scan for the end key, we use the closest
+        // previous bytes of the end key bytes for the between condition
         return BytesUtils.getClosestPreviousBytes(endKeyBytes);
       }
     } else {
-      if (scan.getEndInclusive()) {
-        // if partial end clustering key specified, and it's an inclusive scan for the end
-        // clustering key, we use the closest next bytes of the end clustering key bytes for the
-        // between condition
+      if (endInclusive) {
+        // if partial end key specified, and it's an inclusive scan for the end key, we use the
+        // closest next bytes of the end key bytes for the between condition
         return BytesUtils.getClosestNextBytes(endKeyBytes);
       } else {
         return Optional.of(endKeyBytes);
@@ -309,36 +352,34 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private void setForStart(
-      Scan scan,
+  private void setStartCondition(
+      Key startKey,
+      boolean startInclusive,
       TableMetadata tableMetadata,
       List<String> conditions,
       Map<String, AttributeValue> bindMap) {
-    assert scan.getStartClusteringKey().isPresent();
-
-    ByteBuffer startKeyBytes = getKeyBytes(scan.getStartClusteringKey().get(), tableMetadata);
+    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
 
     boolean fullClusteringKeySpecified =
-        scan.getStartClusteringKey().get().size() == tableMetadata.getClusteringKeyNames().size();
+        startKey.size() == tableMetadata.getClusteringKeyNames().size();
     if (fullClusteringKeySpecified) {
       conditions.add(
           DynamoOperation.CLUSTERING_KEY
-              + (scan.getStartInclusive() ? " >= " : " > ")
+              + (startInclusive ? " >= " : " > ")
               + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
       bindMap.put(
           DynamoOperation.START_CLUSTERING_KEY_ALIAS,
           AttributeValue.builder().b(SdkBytes.fromByteBuffer(startKeyBytes)).build());
     } else {
-      if (scan.getStartInclusive()) {
+      if (startInclusive) {
         conditions.add(
             DynamoOperation.CLUSTERING_KEY + " >= " + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
         bindMap.put(
             DynamoOperation.START_CLUSTERING_KEY_ALIAS,
             AttributeValue.builder().b(SdkBytes.fromByteBuffer(startKeyBytes)).build());
       } else {
-        // if partial start clustering key specified, and it's an exclusive scan for the start
-        // clustering key, we use the closest next bytes of the start clustering key bytes for the
-        // grater than or equal condition
+        // if partial start key specified, and it's an exclusive scan for the start key, we use
+        // the closest next bytes of the start key bytes for the grater than or equal condition
         BytesUtils.getClosestNextBytes(startKeyBytes)
             .ifPresent(
                 k -> {
@@ -354,30 +395,28 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private void setForEnd(
-      Scan scan,
+  private void setEndCondition(
+      Key endKey,
+      boolean endInclusive,
       TableMetadata tableMetadata,
       List<String> conditions,
       Map<String, AttributeValue> bindMap) {
-    assert scan.getEndClusteringKey().isPresent();
-
-    ByteBuffer endKeyBytes = getKeyBytes(scan.getEndClusteringKey().get(), tableMetadata);
+    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
 
     boolean fullClusteringKeySpecified =
-        scan.getEndClusteringKey().get().size() == tableMetadata.getClusteringKeyNames().size();
+        endKey.size() == tableMetadata.getClusteringKeyNames().size();
     if (fullClusteringKeySpecified) {
       conditions.add(
           DynamoOperation.CLUSTERING_KEY
-              + (scan.getEndInclusive() ? " <= " : " < ")
+              + (endInclusive ? " <= " : " < ")
               + DynamoOperation.END_CLUSTERING_KEY_ALIAS);
       bindMap.put(
           DynamoOperation.END_CLUSTERING_KEY_ALIAS,
           AttributeValue.builder().b(SdkBytes.fromByteBuffer(endKeyBytes)).build());
     } else {
-      if (scan.getEndInclusive()) {
-        // if partial end clustering key specified, and it's an inclusive scan for the end
-        // clustering key, we use the closest next bytes of the start clustering key bytes for the
-        // less than condition
+      if (endInclusive) {
+        // if partial end key specified, and it's an inclusive scan for the end key, we use the
+        // closest next bytes of the end key bytes for the less than condition
         BytesUtils.getClosestNextBytes(endKeyBytes)
             .ifPresent(
                 k -> {

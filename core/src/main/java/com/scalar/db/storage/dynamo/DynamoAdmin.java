@@ -235,30 +235,32 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   }
 
   private void checkMetadata(TableMetadata metadata) {
-    checkBlobTypeSupport(metadata.getPartitionKeyNames().iterator(), metadata, true);
-    checkBlobTypeSupport(metadata.getClusteringKeyNames().iterator(), metadata, false);
-
-    for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
-      if (metadata.getColumnDataType(secondaryIndex) == DataType.BOOLEAN) {
-        throw new IllegalArgumentException(
-            "BOOLEAN type is not supported for a secondary index: " + secondaryIndex);
-      }
-    }
-  }
-
-  private void checkBlobTypeSupport(
-      Iterator<String> keys, TableMetadata metadata, boolean isPartitionKey) {
-    while (keys.hasNext()) {
-      String key = keys.next();
-      if (!keys.hasNext()) {
+    Iterator<String> partitionKeyNameIterator = metadata.getPartitionKeyNames().iterator();
+    while (partitionKeyNameIterator.hasNext()) {
+      String partitionKeyName = partitionKeyNameIterator.next();
+      if (!partitionKeyNameIterator.hasNext()) {
         break;
       }
-      if (metadata.getColumnDataType(key) == DataType.BLOB) {
+      if (metadata.getColumnDataType(partitionKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "BLOB type is supported only for the last value in "
-                + (isPartitionKey ? "partition" : "clustering")
-                + " key: "
-                + key);
+            "BLOB type is supported only for the last value in partition key in DynamoDB: "
+                + partitionKeyName);
+      }
+    }
+
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
+        throw new IllegalArgumentException(
+            "Currently, BLOB type is not supported for clustering keys in DynamoDB: "
+                + clusteringKeyName);
+      }
+    }
+
+    for (String secondaryIndexName : metadata.getSecondaryIndexNames()) {
+      if (metadata.getColumnDataType(secondaryIndexName) == DataType.BOOLEAN) {
+        throw new IllegalArgumentException(
+            "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
+                + secondaryIndexName);
       }
     }
   }

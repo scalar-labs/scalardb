@@ -596,7 +596,7 @@ public class DynamoAdminTest {
 
   @Test
   public void
-      createTable_tableMetadataWithClusteringKeyWithNonLastBlobValueGiven_ShouldThrowIllegalArgumentException() {
+      createTable_tableMetadataWithClusteringKeyWithBlobValueGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     TableMetadata metadata =
         TableMetadata.newBuilder()
@@ -604,8 +604,8 @@ public class DynamoAdminTest {
             .addClusteringKey("c2")
             .addClusteringKey("c3")
             .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.BLOB)
-            .addColumn("c3", DataType.INT)
+            .addColumn("c2", DataType.INT)
+            .addColumn("c3", DataType.BLOB)
             .addColumn("c4", DataType.TEXT)
             .build();
 
