@@ -49,8 +49,6 @@ You must create tables with point-in-time recovery (PITR) and autoscaling in Dyn
 
 ## Restore Backup
 
-This section shows how to restore transactionally-consistent backup. You must restore Scalar Ledger and Auditor tables with the same restore point if you use Ledger and Auditor.
-
 ### JDBC databases
 
 You can restore the backup with your favorite way for JDBC databases.
