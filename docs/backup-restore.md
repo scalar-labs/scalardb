@@ -1,4 +1,4 @@
-# A Guide on How to Back up and Restore Databases Integrated with Scalar DB
+# How to Backup and Restore Databases Integrated with Scalar DB
 
 Since Scalar DB provides transaction capability on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care of backing up and restoring the databases in a transactionally-consistent way. 
 This document sets out some guidelines for backing up and restoring the databases that Scalar DB supports.
@@ -29,7 +29,7 @@ Cassandra has a built-in replication mechanism, so you do not always have to cre
 
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism. However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, please follow the **General strategy to create a transactionally-consistent backup** section or 
+If you want to create a transactionally-consistent cluster-wide backup, please follow the [General strategy to create a transactionally-consistent backup](#general-strategy-to-create-a-transactionally-consistent-backup) section, or 
 stop the Cassandra cluster and take the snapshots of all the nodes of the cluster, and start the cluster. 
 
 To minimize mistakes when doing backup and restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
@@ -38,13 +38,13 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 #### Cosmos DB
 
-You must create a Cosmos DB account with a Continuous backup policy to create point-in-time recovery (PITR). Please follow the **General strategy to create a transactionally-consistent backup** section to create a backup.
+You must create a Cosmos DB account with a Continuous backup policy to create point-in-time recovery (PITR). Please follow the [General strategy to create a transactionally-consistent backup](#general-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 To restore a backup, you must follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
 
 #### DynamoDB
 
-You must create tables with point-in-time recovery (PITR) and autoscaling in DynamoDB, scalardb schema Loader enables PITR and autoscaling by default. Please follow the **General strategy to create a transactionally-consistent backup** section to create a backup.
+You must create tables with point-in-time recovery (PITR) and autoscaling in DynamoDB, scalardb schema Loader enables PITR and autoscaling by default. Please follow the [General strategy to create a transactionally-consistent backup](#general-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 You must restore tables one by one from the Amazon DynamoDB console using the following steps,
 
