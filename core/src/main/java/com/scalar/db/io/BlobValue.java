@@ -89,7 +89,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, value);
+    return Objects.hash(name, Arrays.hashCode(value.orElse(null)));
   }
 
   /**
