@@ -1,7 +1,7 @@
 # A Guide on How to Back up and Restore Databases Integrated with Scalar DB
 
-Scalar DB provides transaction capabilities on top of non-traditional (possibly transactional) databases, you need to take special attention to creating and restoring a transactionally-consistent database backup.
-This document provides some guidelines for creating and restoring backups for databases supported by Scalar DB.
+Since Scalar DB provides transaction capability on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care of backing up and restoring the databases in a transactionally-consistent way. 
+This document sets out some guidelines for backing up and restoring the databases that Scalar DB supports.
 
 ## For Transactional Databases
 
@@ -26,7 +26,8 @@ You must pause for a long enough time (e.g., 10 seconds) to create a backup and 
 #### Cassandra
 
 Cassandra has a built-in replication mechanism, so you do not always have to create a transactionally-consistent backup.
-For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism. However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point. Please follow [this](#how-to-create-transactionally-consistent-backup) for how to create a transactionally-consistent backup.
+
+For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism. However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
 If you want to create a transactionally-consistent cluster-wide backup, please follow the **General strategy to create a transactionally-consistent backup** section or 
 stop the Cassandra cluster and take the snapshots of all the nodes of the cluster, and start the cluster. 
