@@ -48,9 +48,14 @@ public class CosmosMultipleClusteringKeysIntegrationTest
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
     // Return types without BLOB because blob is not supported for clustering key for now
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
-    DataType[] dataTypes = new DataType[] {DataType.INT, DataType.TEXT};
-    for (DataType firstClusteringKeyType : dataTypes) {
-      for (DataType secondClusteringKeyType : dataTypes) {
+    for (DataType firstClusteringKeyType : DataType.values()) {
+      if (firstClusteringKeyType == DataType.BLOB) {
+        continue;
+      }
+      for (DataType secondClusteringKeyType : DataType.values()) {
+        if (secondClusteringKeyType == DataType.BLOB) {
+          continue;
+        }
         clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
       }
     }
