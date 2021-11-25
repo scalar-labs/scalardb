@@ -10,6 +10,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
+import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -75,16 +76,20 @@ public class GraphQlFactory {
       GraphQLObjectType queryObjectType, GraphQLObjectType mutationObjectType) {
     GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
     for (TableGraphQlModel tableModel : tableModels) {
-      builder
-          .dataFetcher(
-              coordinates(queryObjectType, tableModel.getQueryGetField()),
-              new QueryGetDataFetcher(storage, tableModel))
-          .dataFetcher(
-              coordinates(mutationObjectType, tableModel.getMutationPutField()),
-              new MutationPutDataFetcher(storage, tableModel))
-          .dataFetcher(
-              coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
-              new MutationDeleteDataFetcher(storage, tableModel));
+      builder.dataFetcher(
+          coordinates(queryObjectType, tableModel.getQueryGetField()),
+          new QueryGetDataFetcher(storage, tableModel));
+      if (tableModel.getQueryScanField() != null) {
+        builder.dataFetcher(
+            coordinates(queryObjectType, tableModel.getQueryScanField()),
+            new QueryScanDataFetcher(storage, tableModel));
+      }
+      builder.dataFetcher(
+          coordinates(mutationObjectType, tableModel.getMutationPutField()),
+          new MutationPutDataFetcher(storage, tableModel));
+      builder.dataFetcher(
+          coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
+          new MutationDeleteDataFetcher(storage, tableModel));
     }
     return builder.build();
   }

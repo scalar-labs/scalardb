@@ -2,6 +2,7 @@ package com.scalar.db.graphql.datafetcher;
 
 import static java.util.stream.Collectors.toList;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -10,6 +11,7 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.Constants;
@@ -86,6 +88,16 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
     }
   }
 
+  protected List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      return transaction.scan(scan.withConsistency(Consistency.LINEARIZABLE));
+    } else {
+      return ImmutableList.copyOf(storage.scan(scan));
+    }
+  }
+
   protected void performPut(DataFetchingEnvironment environment, Put put)
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = getTransactionIfEnabled(environment);
@@ -125,43 +137,71 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
       List<Map<String, Object>> graphQlConditionalExpressions) {
     return graphQlConditionalExpressions.stream()
         .map(
-            ex -> {
-              List<?> expressionValues =
-                  Stream.of(
-                          (Integer) ex.get("intValue"),
-                          (Long) ex.get("bigIntValue"),
-                          (Float) ex.get("floatValue"),
-                          (Double) ex.get("doubleValue"),
-                          (String) ex.get("stringValue"),
-                          (Boolean) ex.get("booleanValue"))
-                      .filter(Objects::nonNull)
-                      .collect(toList());
-              if (expressionValues.size() != 1) {
-                throw new IllegalArgumentException(
-                    "One and only one of intValue, bigIntValue, floatValue, doubleValue, stringValue, and booleanValue must be specified.");
-              }
-              Object v = expressionValues.get(0);
-              Value<?> value;
-              if (v instanceof Integer) {
-                value = new IntValue((Integer) v);
-              } else if (v instanceof Long) {
-                value = new BigIntValue((Long) v);
-              } else if (v instanceof Float) {
-                value = new FloatValue((Float) v);
-              } else if (v instanceof Double) {
-                value = new DoubleValue((Double) v);
-              } else if (v instanceof String) {
-                value = new TextValue((String) v);
-              } else if (v instanceof Boolean) {
-                value = new BooleanValue((Boolean) v);
-              } else {
-                value = null;
-              }
-              return new ConditionalExpression(
-                  (String) ex.get("name"),
-                  value,
-                  ConditionalExpression.Operator.valueOf((String) ex.get("operator")));
-            })
+            ex ->
+                new ConditionalExpression(
+                    (String) ex.get("name"),
+                    createAnonymousValueFromMap(ex),
+                    ConditionalExpression.Operator.valueOf((String) ex.get("operator"))))
         .collect(toList());
+  }
+
+  protected Value<?> createAnonymousValueFromMap(Map<String, Object> map) {
+    Object v = getOneScalarValue(map);
+    Value<?> value;
+    if (v instanceof Integer) {
+      value = new IntValue((Integer) v);
+    } else if (v instanceof Long) {
+      value = new BigIntValue((Long) v);
+    } else if (v instanceof Float) {
+      value = new FloatValue((Float) v);
+    } else if (v instanceof Double) {
+      value = new DoubleValue((Double) v);
+    } else if (v instanceof String) {
+      value = new TextValue((String) v);
+    } else if (v instanceof Boolean) {
+      value = new BooleanValue((Boolean) v);
+    } else {
+      throw new IllegalArgumentException("Unexpected value: " + v.getClass());
+    }
+    return value;
+  }
+
+  protected Value<?> createNamedValueFromMap(String name, Map<String, Object> map) {
+    Object v = getOneScalarValue(map);
+    Value<?> value;
+    if (v instanceof Integer) {
+      value = new IntValue(name, (Integer) v);
+    } else if (v instanceof Long) {
+      value = new BigIntValue(name, (Long) v);
+    } else if (v instanceof Float) {
+      value = new FloatValue(name, (Float) v);
+    } else if (v instanceof Double) {
+      value = new DoubleValue(name, (Double) v);
+    } else if (v instanceof String) {
+      value = new TextValue(name, (String) v);
+    } else if (v instanceof Boolean) {
+      value = new BooleanValue(name, (Boolean) v);
+    } else {
+      throw new IllegalArgumentException("Unexpected value: " + v.getClass());
+    }
+    return value;
+  }
+
+  private Object getOneScalarValue(Map<String, Object> map) {
+    List<?> values =
+        Stream.of(
+                (Integer) map.get("intValue"),
+                (Long) map.get("bigIntValue"),
+                (Float) map.get("floatValue"),
+                (Double) map.get("doubleValue"),
+                (String) map.get("stringValue"),
+                (Boolean) map.get("booleanValue"))
+            .filter(Objects::nonNull)
+            .collect(toList());
+    if (values.size() != 1) {
+      throw new IllegalArgumentException(
+          "One and only one of intValue, bigIntValue, floatValue, doubleValue, stringValue, and booleanValue must be specified.");
+    }
+    return values.get(0);
   }
 }
