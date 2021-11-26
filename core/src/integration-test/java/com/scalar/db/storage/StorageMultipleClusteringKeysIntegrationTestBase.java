@@ -2,7 +2,9 @@ package com.scalar.db.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ListMultimap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Put;
@@ -25,16 +27,20 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalLong;
+import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,28 +52,26 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
   protected static final String TABLE_BASE_NAME = "test_table_mul_key_";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
-  protected static final int DATA_NUM = 20;
-  protected static final ImmutableList<DataType> CLUSTERING_KEY_TYPE_LIST =
-      ImmutableList.of(
-          DataType.BOOLEAN,
-          DataType.INT,
-          DataType.BIGINT,
-          DataType.FLOAT,
-          DataType.DOUBLE,
-          DataType.TEXT,
-          DataType.BLOB);
-  private static final Random RANDOM_GENERATOR = new Random();
+  protected static final String PARTITION_KEY = "pkey";
+  protected static final String FIRST_CLUSTERING_KEY = "ckey1";
+  protected static final String SECOND_CLUSTERING_KEY = "ckey2";
+  protected static final String COL_NAME = "col";
+
+  private static final int FIRST_CLUSTERING_KEY_NUM = 5;
+  private static final int SECOND_CLUSTERING_KEY_NUM = 30;
+  protected static final int TEXT_MAX_COUNT = 20;
+  protected static final int BLOB_MAX_LENGTH = 20;
+
+  private static final Random RANDOM = new Random();
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
   protected static DistributedStorage storage;
-  protected static String namespaceBaseName;
-  protected static List<DataType> clusteringKeyTypeList;
+  private static String namespaceBaseName;
+
+  // Key: firstClusteringKeyType, Value: secondClusteringKeyType
+  protected static ListMultimap<DataType, DataType> clusteringKeyTypes;
+
   private static long seed;
 
   @Before
@@ -76,7 +80,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       StorageFactory factory = new StorageFactory(getDatabaseConfig());
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
-      clusteringKeyTypeList = getClusteringKeyTypeList();
+      clusteringKeyTypes = getClusteringKeyTypes();
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -92,8 +96,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     return NAMESPACE_BASE_NAME;
   }
 
-  protected List<DataType> getClusteringKeyTypeList() {
-    return CLUSTERING_KEY_TYPE_LIST;
+  protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
+    ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
+    for (DataType firstClusteringKeyType : DataType.values()) {
+      for (DataType secondClusteringKeyType : DataType.values()) {
+        clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
+      }
+    }
+    return clusteringKeyTypes;
   }
 
   protected Map<String, String> getCreateOptions() {
@@ -102,34 +112,36 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      admin.createNamespace(getNamespaceName(cKeyTypeBefore), true, options);
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        createTable(cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, options);
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        createTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC, options);
       }
     }
   }
 
   private void createTable(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
       Map<String, String> options)
       throws ExecutionException {
     admin.createTable(
-        getNamespaceName(cKeyTypeBefore),
+        getNamespaceName(firstClusteringKeyType),
         getTableName(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter),
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder),
         TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.INT)
-            .addColumn(COL_NAME2, cKeyTypeBefore)
-            .addColumn(COL_NAME3, cKeyTypeAfter)
-            .addColumn(COL_NAME4, DataType.INT)
-            .addColumn(COL_NAME5, DataType.TEXT)
-            .addPartitionKey(COL_NAME1)
-            .addClusteringKey(COL_NAME2, cKeyClusteringOrderBefore)
-            .addClusteringKey(COL_NAME3, cKeyClusteringOrderAfter)
+            .addColumn(PARTITION_KEY, DataType.INT)
+            .addColumn(FIRST_CLUSTERING_KEY, firstClusteringKeyType)
+            .addColumn(SECOND_CLUSTERING_KEY, secondClusteringKeyType)
+            .addColumn(COL_NAME, DataType.INT)
+            .addPartitionKey(PARTITION_KEY)
+            .addClusteringKey(FIRST_CLUSTERING_KEY, firstClusteringOrder)
+            .addClusteringKey(SECOND_CLUSTERING_KEY, secondClusteringOrder)
             .build(),
         true,
         options);
@@ -143,1003 +155,1570 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   private static void deleteTables() throws ExecutionException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
         admin.dropTable(
-            getNamespaceName(cKeyTypeBefore),
-            getTableName(cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC));
+            getNamespaceName(firstClusteringKeyType),
+            getTableName(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC));
       }
-      admin.dropNamespace(getNamespaceName(cKeyTypeBefore));
+      admin.dropNamespace(getNamespaceName(firstClusteringKeyType));
     }
   }
 
   private void truncateTable(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter)
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder)
       throws ExecutionException {
     admin.truncateTable(
-        getNamespaceName(cKeyTypeBefore),
+        getNamespaceName(firstClusteringKeyType),
         getTableName(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter));
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder));
   }
 
   private static String getTableName(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter) {
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder) {
     return TABLE_BASE_NAME
         + String.join(
             "_",
-            cKeyTypeBefore.toString(),
-            cKeyClusteringOrderBefore.toString(),
-            cKeyTypeAfter.toString(),
-            cKeyClusteringOrderAfter.toString());
+            firstClusteringKeyType.toString(),
+            firstClusteringOrder.toString(),
+            secondClusteringKeyType.toString(),
+            secondClusteringOrder.toString());
   }
 
-  private static String getNamespaceName(DataType cKeyTypeBefore) {
-    return namespaceBaseName + cKeyTypeBefore;
+  private static String getNamespaceName(DataType firstClusteringKeyType) {
+    return namespaceBaseName + firstClusteringKeyType;
   }
 
   @Test
-  public void scan_WithoutClusteringKeys_ShouldReturnProperResult()
+  public void scan_WithoutClusteringKeyRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithoutClusteringKeys_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithoutClusteringKeys_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean reverse : Arrays.asList(false, true)) {
+          scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+              clusteringKeys,
+              firstClusteringKeyType,
+              Order.ASC,
+              secondClusteringKeyType,
+              Order.ASC,
+              reverse);
+        }
       }
     }
   }
 
-  private void scan_WithoutClusteringKeys_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
+  protected void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
       boolean reverse)
       throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
+    // Arrange
     Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
+        new Scan(new Key(getPartitionKeyValue()))
             .withOrdering(
                 new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList;
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected = getExpected(clusteringKeys, null, null, null, null, reverse);
 
     // Act
-    List<Result> scanRet = scanAll(scan);
+    List<Result> actual = scanAll(scan);
 
     // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            null,
+            reverse));
   }
 
   @Test
-  public void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult()
+  public void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult()
       throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
 
-  private void scan_WithBeforeClusteringKeyInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanStartIndex;
-    int scanEndIndex;
-    Value<?> scanStartValue;
-    Value<?> endStartValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanEndIndex = valueList.size();
-      scanStartValue = new BooleanValue(COL_NAME2, false);
-      endStartValue = new BooleanValue(COL_NAME2, true);
-    } else {
-      scanStartIndex = 5;
-      scanEndIndex = 15;
-      scanStartValue = valueList.get(scanStartIndex);
-      endStartValue = valueList.get(scanEndIndex - 1);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(scanStartValue), true)
-            .withEnd(new Key(endStartValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(scanStartIndex, scanEndIndex);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
-
-  private void scan_WithBeforeClusteringKeyExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanStartIndex;
-    int scanEndIndex;
-    Value<?> scanStartValue;
-    Value<?> endStartValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanEndIndex = valueList.size();
-      scanStartValue = new BooleanValue(COL_NAME2, false);
-      endStartValue = new BooleanValue(COL_NAME2, true);
-    } else {
-      scanStartIndex = 5;
-      scanEndIndex = 15;
-      scanStartValue = valueList.get(scanStartIndex);
-      endStartValue = valueList.get(scanEndIndex - 1);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(scanStartValue), false)
-            .withEnd(new Key(endStartValue), false)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(scanStartIndex + 1, scanEndIndex - 1);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
-
-  private void scan_WithBeforeClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanStartIndex;
-    Value<?> scanStartValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanStartValue = new BooleanValue(COL_NAME2, false);
-    } else {
-      scanStartIndex = 10;
-      scanStartValue = valueList.get(scanStartIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(scanStartValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(scanStartIndex, valueList.size());
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
-
-  private void scan_WithBeforeClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanStartIndex;
-    Value<?> scanStartValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanStartValue = new BooleanValue(COL_NAME2, false);
-    } else {
-      scanStartIndex = 10;
-      scanStartValue = valueList.get(scanStartIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(scanStartValue), false)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(scanStartIndex + 1, valueList.size());
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
-
-  private void scan_WithBeforeClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanEndIndex;
-    Value<?> scanEndValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanEndIndex = valueList.size() - 1;
-      scanEndValue = new BooleanValue(COL_NAME2, true);
-    } else {
-      scanEndIndex = 10;
-      scanEndValue = valueList.get(scanEndIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withEnd(new Key(scanEndValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(0, scanEndIndex + 1);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  @Test
-  public void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, false);
-      scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-          cKeyTypeBefore, Order.ASC, true);
-    }
-  }
-
-  private void scan_WithBeforeClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, DataType.INT, cKeyClusteringOrderBefore);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecordsForScanWithBeforeClusteringKeyRange(
-            cKeyTypeBefore, cKeyClusteringOrderBefore);
-
-    int scanEndIndex;
-    Value<?> scanEndValue;
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      scanEndIndex = 1;
-      scanEndValue = new BooleanValue(COL_NAME2, true);
-    } else {
-      scanEndIndex = 10;
-      scanEndValue = valueList.get(scanEndIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withEnd(new Key(scanEndValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    DataType.INT,
-                    cKeyClusteringOrderBefore));
-    List<Value<?>> expected = valueList.subList(0, scanEndIndex + 1);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME2, expected);
-  }
-
-  private List<Value<?>> prepareRecordsForScanWithBeforeClusteringKeyRange(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore) throws ExecutionException {
-    List<Value<?>> ret = new ArrayList<>();
-    List<Put> puts = new ArrayList<>();
-    if (cKeyTypeBefore == DataType.BOOLEAN) {
-      Arrays.asList(new BooleanValue(COL_NAME2, true), new BooleanValue(COL_NAME2, false))
-          .forEach(
-              v -> {
-                ret.add(v);
-                puts.add(
-                    preparePutForScanWithBeforeClusteringKeyRange(
-                        cKeyTypeBefore, cKeyClusteringOrderBefore, v));
-              });
-    } else {
-      for (int i = 0; i < DATA_NUM; i++) {
-        Value<?> cKeyValueBefore = getRandomValue(COL_NAME2, cKeyTypeBefore);
-        ret.add(cKeyValueBefore);
-        puts.add(
-            preparePutForScanWithBeforeClusteringKeyRange(
-                cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyValueBefore));
+      for (Boolean startInclusive : Arrays.asList(true, false)) {
+        for (Boolean endInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                startInclusive,
+                endInclusive,
+                reverse);
+          }
+        }
       }
     }
+  }
+
+  protected void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey startClusteringKey;
+    ClusteringKey endClusteringKey;
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
+              firstClusteringOrder);
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
+              firstClusteringOrder);
+    } else {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
+              firstClusteringOrder);
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first,
+              firstClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first), startInclusive)
+            .withEnd(new Key(endClusteringKey.first), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean startInclusive : Arrays.asList(true, false)) {
+        for (Boolean endInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                startInclusive,
+                endInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey startAndEndClusteringKey;
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      startAndEndClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
+              firstClusteringOrder);
+    } else {
+      startAndEndClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(2, DataType.INT)).first,
+              firstClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startAndEndClusteringKey.first), startInclusive)
+            .withEnd(new Key(startAndEndClusteringKey.first), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startAndEndClusteringKey,
+            startInclusive,
+            startAndEndClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean startInclusive : Arrays.asList(true, false)) {
+        for (Boolean endInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                startInclusive,
+                endInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey startClusteringKey =
+        new ClusteringKey(
+            getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+    ClusteringKey endClusteringKey =
+        new ClusteringKey(
+            getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first), startInclusive)
+            .withEnd(new Key(endClusteringKey.first), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean startInclusive : Arrays.asList(true, false)) {
+        for (Boolean reverse : Arrays.asList(false, true)) {
+          scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
+              clusteringKeys, firstClusteringKeyType, Order.ASC, startInclusive, reverse);
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean startInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey startClusteringKey;
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
+              firstClusteringOrder);
+    } else {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
+              firstClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first), startInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            startInclusive,
+            null,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean startInclusive : Arrays.asList(true, false)) {
+        for (Boolean reverse : Arrays.asList(false, true)) {
+          scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+              clusteringKeys, firstClusteringKeyType, Order.ASC, startInclusive, reverse);
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean startInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey startClusteringKey =
+        new ClusteringKey(
+            getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first), startInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            startInclusive,
+            null,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean endInclusive : Arrays.asList(true, false)) {
+        for (Boolean reverse : Arrays.asList(false, true)) {
+          scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
+              clusteringKeys, firstClusteringKeyType, Order.ASC, endInclusive, reverse);
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey endClusteringKey;
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
+              firstClusteringOrder);
+    } else {
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first,
+              firstClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withEnd(new Key(endClusteringKey.first), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType, firstClusteringOrder, null, null, null, endInclusive, reverse));
+  }
+
+  @Test
+  public void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      List<ClusteringKey> clusteringKeys =
+          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+
+      for (Boolean endInclusive : Arrays.asList(true, false)) {
+        for (Boolean reverse : Arrays.asList(false, true)) {
+          scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+              clusteringKeys, firstClusteringKeyType, Order.ASC, endInclusive, reverse);
+        }
+      }
+    }
+  }
+
+  protected void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    ClusteringKey endClusteringKey =
+        new ClusteringKey(
+            getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withEnd(new Key(endClusteringKey.first), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType, firstClusteringOrder, null, null, null, endInclusive, reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean startInclusive : Arrays.asList(true, false)) {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  Order.ASC,
+                  secondClusteringKeyType,
+                  Order.ASC,
+                  startInclusive,
+                  endInclusive,
+                  reverse);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    } else {
+      Value<?> firstClusteringKeyValue =
+          clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    }
+
+    ClusteringKey startClusteringKey;
+    ClusteringKey endClusteringKey;
+    if (secondClusteringKeyType == DataType.BOOLEAN) {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(0).first,
+              firstClusteringOrder,
+              clusteringKeys.get(0).second,
+              secondClusteringOrder);
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(1).first,
+              firstClusteringOrder,
+              clusteringKeys.get(1).second,
+              secondClusteringOrder);
+    } else {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(4).first,
+              firstClusteringOrder,
+              clusteringKeys.get(4).second,
+              secondClusteringOrder);
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(14).first,
+              firstClusteringOrder,
+              clusteringKeys.get(14).second,
+              secondClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
+            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean startInclusive : Arrays.asList(true, false)) {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  Order.ASC,
+                  secondClusteringKeyType,
+                  Order.ASC,
+                  startInclusive,
+                  endInclusive,
+                  reverse);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    } else {
+      Value<?> firstClusteringKeyValue =
+          clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    }
+
+    ClusteringKey startAndEndClusteringKey;
+    if (secondClusteringKeyType == DataType.BOOLEAN) {
+      startAndEndClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(0).first,
+              firstClusteringOrder,
+              clusteringKeys.get(0).second,
+              secondClusteringOrder);
+    } else {
+      startAndEndClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(9).first,
+              firstClusteringOrder,
+              clusteringKeys.get(9).second,
+              secondClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(
+                new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
+                startInclusive)
+            .withEnd(
+                new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
+                endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startAndEndClusteringKey,
+            startInclusive,
+            startAndEndClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean useMinValueForFirstClusteringKeyValue : Arrays.asList(true, false)) {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    Order.ASC,
+                    useMinValueForFirstClusteringKeyValue,
+                    secondClusteringKeyType,
+                    Order.ASC,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      boolean useMinValueForFirstClusteringKeyValue,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean startInclusive,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    Value<?> firstClusteringKeyValue =
+        useMinValueForFirstClusteringKeyValue
+            ? getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType)
+            : getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+    clusteringKeys =
+        clusteringKeys.stream()
+            .filter(c -> c.first.equals(firstClusteringKeyValue))
+            .collect(Collectors.toList());
+
+    ClusteringKey startClusteringKey =
+        new ClusteringKey(
+            firstClusteringKeyValue,
+            firstClusteringOrder,
+            getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+            secondClusteringOrder);
+    ClusteringKey endClusteringKey =
+        new ClusteringKey(
+            firstClusteringKeyValue,
+            firstClusteringOrder,
+            getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+            secondClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
+            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(
+            clusteringKeys,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startInclusive,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean startInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                secondClusteringKeyType,
+                Order.ASC,
+                startInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean startInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    } else {
+
+      Value<?> firstClusteringKeyValue =
+          clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    }
+
+    ClusteringKey startClusteringKey;
+    if (secondClusteringKeyType == DataType.BOOLEAN) {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(0).first,
+              firstClusteringOrder,
+              clusteringKeys.get(0).second,
+              secondClusteringOrder);
+    } else {
+      startClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(4).first,
+              firstClusteringOrder,
+              clusteringKeys.get(4).second,
+              secondClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startInclusive,
+            null,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean startInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                secondClusteringKeyType,
+                Order.ASC,
+                startInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean startInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    Value<?> firstClusteringKeyValue = getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+    clusteringKeys =
+        clusteringKeys.stream()
+            .filter(c -> c.first.equals(firstClusteringKeyValue))
+            .collect(Collectors.toList());
+
+    ClusteringKey startClusteringKey =
+        new ClusteringKey(
+            firstClusteringKeyValue,
+            firstClusteringOrder,
+            getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+            secondClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startInclusive,
+            null,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean endInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                secondClusteringKeyType,
+                Order.ASC,
+                endInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      Value<?> firstClusteringKeyValue = clusteringKeys.get(0).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    } else {
+      Value<?> firstClusteringKeyValue =
+          clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
+      clusteringKeys =
+          clusteringKeys.stream()
+              .filter(c -> c.first.equals(firstClusteringKeyValue))
+              .collect(Collectors.toList());
+    }
+
+    ClusteringKey endClusteringKey;
+    if (secondClusteringKeyType == DataType.BOOLEAN) {
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(1).first,
+              firstClusteringOrder,
+              clusteringKeys.get(1).second,
+              secondClusteringOrder);
+    } else {
+      endClusteringKey =
+          new ClusteringKey(
+              clusteringKeys.get(14).first,
+              firstClusteringOrder,
+              clusteringKeys.get(14).second,
+              secondClusteringOrder);
+    }
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            endInclusive,
+            reverse));
+  }
+
+  @Test
+  public void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        List<ClusteringKey> clusteringKeys =
+            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+
+        for (Boolean endInclusive : Arrays.asList(true, false)) {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                Order.ASC,
+                secondClusteringKeyType,
+                Order.ASC,
+                endInclusive,
+                reverse);
+          }
+        }
+      }
+    }
+  }
+
+  protected void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+      List<ClusteringKey> clusteringKeys,
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      boolean endInclusive,
+      boolean reverse)
+      throws ExecutionException, IOException {
+    // Arrange
+    Value<?> firstClusteringKeyValue = getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
+    clusteringKeys =
+        clusteringKeys.stream()
+            .filter(c -> c.first.equals(firstClusteringKeyValue))
+            .collect(Collectors.toList());
+
+    ClusteringKey endClusteringKey =
+        new ClusteringKey(
+            firstClusteringKeyValue,
+            firstClusteringOrder,
+            getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+            secondClusteringOrder);
+
+    Scan scan =
+        new Scan(new Key(getPartitionKeyValue()))
+            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
+            .withOrdering(
+                new Ordering(
+                    FIRST_CLUSTERING_KEY,
+                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+            .withOrdering(
+                new Ordering(
+                    SECOND_CLUSTERING_KEY,
+                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertScanResult(
+        actual,
+        expected,
+        description(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            endInclusive,
+            reverse));
+  }
+
+  private List<ClusteringKey> prepareRecords(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder)
+      throws ExecutionException {
+    RANDOM.setSeed(seed);
+
+    List<ClusteringKey> ret = new ArrayList<>();
+    List<Put> puts = new ArrayList<>();
+
+    if (firstClusteringKeyType == DataType.BOOLEAN) {
+      booleanValues(FIRST_CLUSTERING_KEY)
+          .forEach(
+              firstClusteringKeyValue ->
+                  prepareRecords(
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      firstClusteringKeyValue,
+                      secondClusteringKeyType,
+                      secondClusteringOrder,
+                      puts,
+                      ret));
+    } else {
+      Set<Value<?>> valueSet = new HashSet<>();
+
+      // Add min and max first clustering key values
+      Arrays.asList(
+              getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType),
+              getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType))
+          .forEach(
+              firstClusteringKeyValue -> {
+                valueSet.add(firstClusteringKeyValue);
+                prepareRecords(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    firstClusteringKeyValue,
+                    secondClusteringKeyType,
+                    secondClusteringOrder,
+                    puts,
+                    ret);
+              });
+
+      IntStream.range(0, FIRST_CLUSTERING_KEY_NUM - 2)
+          .forEach(
+              i -> {
+                Value<?> firstClusteringKeyValue;
+                while (true) {
+                  firstClusteringKeyValue = getFirstClusteringKeyValue(firstClusteringKeyType);
+                  // reject duplication
+                  if (!valueSet.contains(firstClusteringKeyValue)) {
+                    valueSet.add(firstClusteringKeyValue);
+                    break;
+                  }
+                }
+
+                prepareRecords(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    firstClusteringKeyValue,
+                    secondClusteringKeyType,
+                    secondClusteringOrder,
+                    puts,
+                    ret);
+              });
+    }
     try {
-      storage.mutate(puts);
+      List<Put> buffer = new ArrayList<>();
+      for (Put put : puts) {
+        buffer.add(put);
+        if (buffer.size() == 20) {
+          storage.mutate(buffer);
+          buffer.clear();
+        }
+      }
+      if (!buffer.isEmpty()) {
+        storage.mutate(buffer);
+      }
     } catch (ExecutionException e) {
       throw new ExecutionException("put data to database failed", e);
     }
-    ret.sort(comparator());
+    Collections.sort(ret);
     return ret;
   }
 
-  private Put preparePutForScanWithBeforeClusteringKeyRange(
-      DataType cKeyTypeBefore, Order cKeyClusteringOrderBefore, Value<?> cKeyValueBefore) {
-    return new Put(
-            new Key(getFixedValue(COL_NAME1, DataType.INT)),
-            new Key(cKeyValueBefore, getFixedValue(COL_NAME3, DataType.INT)))
-        .withValue(getRandomValue(COL_NAME4, DataType.INT))
-        .withValue(getRandomValue(COL_NAME5, DataType.TEXT))
-        .forNamespace(getNamespaceName(cKeyTypeBefore))
-        .forTable(
-            getTableName(
-                cKeyTypeBefore,
-                cKeyClusteringOrderBefore,
-                DataType.INT,
-                cKeyClusteringOrderBefore));
-  }
-
-  @Test
-  public void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanStartIndex;
-    int scanEndIndex;
-    Value<?> scanStartValue;
-    Value<?> endStartValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanEndIndex = valueList.size();
-      scanStartValue = new BooleanValue(COL_NAME3, false);
-      endStartValue = new BooleanValue(COL_NAME3, true);
-    } else {
-      scanStartIndex = 5;
-      scanEndIndex = 15;
-      scanStartValue = valueList.get(scanStartIndex);
-      endStartValue = valueList.get(scanEndIndex - 1);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanStartValue), true)
-            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), endStartValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(scanStartIndex, scanEndIndex);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  @Test
-  public void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanStartIndex;
-    int scanEndIndex;
-    Value<?> scanStartValue;
-    Value<?> endStartValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanEndIndex = valueList.size();
-      scanStartValue = new BooleanValue(COL_NAME3, false);
-      endStartValue = new BooleanValue(COL_NAME3, true);
-    } else {
-      scanStartIndex = 5;
-      scanEndIndex = 15;
-      scanStartValue = valueList.get(scanStartIndex);
-      endStartValue = valueList.get(scanEndIndex - 1);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanStartValue), false)
-            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), endStartValue), false)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(scanStartIndex + 1, scanEndIndex - 1);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyStartInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanStartIndex;
-    Value<?> scanStartValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanStartValue = new BooleanValue(COL_NAME3, false);
-    } else {
-      scanStartIndex = 10;
-      scanStartValue = valueList.get(scanStartIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanStartValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(scanStartIndex, valueList.size());
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  @Test
-  public void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyStartExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanStartIndex;
-    Value<?> scanStartValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanStartIndex = 0;
-      scanStartValue = new BooleanValue(COL_NAME3, false);
-    } else {
-      scanStartIndex = 10;
-      scanStartValue = valueList.get(scanStartIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withStart(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanStartValue), false)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(scanStartIndex + 1, valueList.size());
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyEndInclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanEndIndex;
-    Value<?> scanEndValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanEndIndex = valueList.size() - 1;
-      scanEndValue = new BooleanValue(COL_NAME3, true);
-    } else {
-      scanEndIndex = 10;
-      scanEndValue = valueList.get(scanEndIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanEndValue), true)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(0, scanEndIndex + 1);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  @Test
-  public void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType cKeyTypeBefore : clusteringKeyTypeList) {
-      for (DataType cKeyTypeAfter : clusteringKeyTypeList) {
-        scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, false);
-        scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-            cKeyTypeBefore, Order.ASC, cKeyTypeAfter, Order.ASC, true);
-      }
-    }
-  }
-
-  private void scan_WithClusteringKeyEndExclusiveRange_ShouldReturnProperResult(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      boolean reverse)
-      throws ExecutionException, IOException {
-    truncateTable(
-        cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-    RANDOM_GENERATOR.setSeed(seed);
-    List<Value<?>> valueList =
-        prepareRecords(
-            cKeyTypeBefore, cKeyClusteringOrderBefore, cKeyTypeAfter, cKeyClusteringOrderAfter);
-
-    int scanEndIndex;
-    Value<?> scanEndValue;
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      scanEndIndex = 1;
-      scanEndValue = new BooleanValue(COL_NAME3, true);
-    } else {
-      scanEndIndex = 10;
-      scanEndValue = valueList.get(scanEndIndex);
-    }
-    Scan scan =
-        new Scan(new Key(getFixedValue(COL_NAME1, DataType.INT)))
-            .withEnd(new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), scanEndValue), false)
-            .withOrdering(
-                new Ordering(
-                    COL_NAME2,
-                    reverse ? reverseOrder(cKeyClusteringOrderBefore) : cKeyClusteringOrderBefore))
-            .withOrdering(
-                new Ordering(
-                    COL_NAME3,
-                    reverse ? reverseOrder(cKeyClusteringOrderAfter) : cKeyClusteringOrderAfter))
-            .forNamespace(getNamespaceName(cKeyTypeBefore))
-            .forTable(
-                getTableName(
-                    cKeyTypeBefore,
-                    cKeyClusteringOrderBefore,
-                    cKeyTypeAfter,
-                    cKeyClusteringOrderAfter));
-    List<Value<?>> expected = valueList.subList(0, scanEndIndex);
-    if (reverse) {
-      expected.sort(reverseComparator());
-    }
-
-    // Act
-    List<Result> scanRet = scanAll(scan);
-
-    // Assert
-    assertScanResultWithOrdering(scanRet, COL_NAME3, expected);
-  }
-
-  private List<Value<?>> prepareRecords(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter)
-      throws ExecutionException {
-    List<Value<?>> ret = new ArrayList<>();
-    List<Put> puts = new ArrayList<>();
-    if (cKeyTypeAfter == DataType.BOOLEAN) {
-      Arrays.asList(new BooleanValue(COL_NAME3, true), new BooleanValue(COL_NAME3, false))
+  private void prepareRecords(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      Value<?> firstClusteringKeyValue,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      List<Put> puts,
+      List<ClusteringKey> ret) {
+    if (secondClusteringKeyType == DataType.BOOLEAN) {
+      booleanValues(SECOND_CLUSTERING_KEY)
           .forEach(
-              v -> {
-                ret.add(v);
+              secondClusteringKeyValue -> {
+                ret.add(
+                    new ClusteringKey(
+                        firstClusteringKeyValue,
+                        firstClusteringOrder,
+                        secondClusteringKeyValue,
+                        secondClusteringOrder));
                 puts.add(
                     preparePut(
-                        cKeyTypeBefore,
-                        cKeyClusteringOrderBefore,
-                        cKeyTypeAfter,
-                        cKeyClusteringOrderAfter,
-                        v));
+                        firstClusteringKeyType,
+                        firstClusteringOrder,
+                        firstClusteringKeyValue,
+                        secondClusteringKeyType,
+                        secondClusteringOrder,
+                        secondClusteringKeyValue));
               });
     } else {
-      for (int i = 0; i < DATA_NUM; i++) {
-        Value<?> cKeyValueAfter = getRandomValue(COL_NAME3, cKeyTypeAfter);
-        ret.add(cKeyValueAfter);
+      List<Value<?>> secondClusteringKeyValues =
+          getSecondClusteringKeyValues(secondClusteringKeyType);
+      for (Value<?> secondClusteringKeyValue : secondClusteringKeyValues) {
+        ret.add(
+            new ClusteringKey(
+                firstClusteringKeyValue,
+                firstClusteringOrder,
+                secondClusteringKeyValue,
+                secondClusteringOrder));
         puts.add(
             preparePut(
-                cKeyTypeBefore,
-                cKeyClusteringOrderBefore,
-                cKeyTypeAfter,
-                cKeyClusteringOrderAfter,
-                cKeyValueAfter));
+                firstClusteringKeyType,
+                firstClusteringOrder,
+                firstClusteringKeyValue,
+                secondClusteringKeyType,
+                secondClusteringOrder,
+                secondClusteringKeyValue));
       }
     }
-    try {
-      storage.mutate(puts);
-    } catch (ExecutionException e) {
-      throw new ExecutionException("put data to database failed", e);
-    }
-    ret.sort(comparator());
-    return ret;
   }
 
   private Put preparePut(
-      DataType cKeyTypeBefore,
-      Order cKeyClusteringOrderBefore,
-      DataType cKeyTypeAfter,
-      Order cKeyClusteringOrderAfter,
-      Value<?> cKeyValueAfter) {
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      Value<?> firstClusteringKeyValue,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      Value<?> secondClusteringKeyValue) {
     return new Put(
-            new Key(getFixedValue(COL_NAME1, DataType.INT)),
-            new Key(getFixedValue(COL_NAME2, cKeyTypeBefore), cKeyValueAfter))
-        .withValue(getRandomValue(COL_NAME4, DataType.INT))
-        .withValue(getRandomValue(COL_NAME5, DataType.TEXT))
-        .forNamespace(getNamespaceName(cKeyTypeBefore))
+            new Key(getPartitionKeyValue()),
+            new Key(firstClusteringKeyValue, secondClusteringKeyValue))
+        .withValue(new IntValue(COL_NAME, 1))
+        .forNamespace(getNamespaceName(firstClusteringKeyType))
         .forTable(
             getTableName(
-                cKeyTypeBefore,
-                cKeyClusteringOrderBefore,
-                cKeyTypeAfter,
-                cKeyClusteringOrderAfter));
+                firstClusteringKeyType,
+                firstClusteringOrder,
+                secondClusteringKeyType,
+                secondClusteringOrder));
+  }
+
+  private List<BooleanValue> booleanValues(String name) {
+    return Arrays.asList(new BooleanValue(name, false), new BooleanValue(name, true));
+  }
+
+  private int getFirstClusteringKeyIndex(int i, DataType secondClusteringKeyType) {
+    return i * (secondClusteringKeyType == DataType.BOOLEAN ? 2 : SECOND_CLUSTERING_KEY_NUM);
+  }
+
+  private String description(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      @Nullable DataType secondClusteringKeyType,
+      @Nullable Order secondClusteringOrder,
+      @Nullable Boolean startInclusive,
+      @Nullable Boolean endInclusive,
+      boolean reverse) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(
+        String.format(
+            "failed with firstClusteringKeyType: %s, firstClusteringOrder: %s",
+            firstClusteringKeyType, firstClusteringOrder));
+    if (secondClusteringKeyType != null) {
+      builder.append(String.format(", secondClusteringKeyType: %s", secondClusteringKeyType));
+    }
+    if (secondClusteringOrder != null) {
+      builder.append(String.format(", secondClusteringOrder: %s", secondClusteringOrder));
+    }
+    if (startInclusive != null) {
+      builder.append(String.format(", startInclusive: %s", startInclusive));
+    }
+    if (endInclusive != null) {
+      builder.append(String.format(", endInclusive: %s", endInclusive));
+    }
+    builder.append(String.format(", reverse: %s", reverse));
+    return builder.toString();
   }
 
   private Order reverseOrder(Order order) {
@@ -1153,85 +1732,129 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
   }
 
-  private Comparator<Value<?>> comparator() {
-    return this::compareTo;
+  private IntValue getPartitionKeyValue() {
+    return new IntValue(PARTITION_KEY, 1);
   }
 
-  private Comparator<Value<?>> reverseComparator() {
-    return (l, r) -> -1 * compareTo(l, r);
+  private Value<?> getFirstClusteringKeyValue(DataType dataType) {
+    return getRandomValue(RANDOM, FIRST_CLUSTERING_KEY, dataType);
   }
 
-  private int compareTo(Value<?> l, Value<?> r) {
-    if (l.getClass() != r.getClass()) {
-      throw new IllegalArgumentException("the types of the values are different");
+  private List<Value<?>> getSecondClusteringKeyValues(DataType dataType) {
+    Set<Value<?>> valueSet = new HashSet<>();
+    List<Value<?>> ret = new ArrayList<>();
+
+    // min and max second clustering key values
+    Arrays.asList(
+            getMinValue(SECOND_CLUSTERING_KEY, dataType),
+            getMaxValue(SECOND_CLUSTERING_KEY, dataType))
+        .forEach(
+            value -> {
+              ret.add(value);
+              valueSet.add(value);
+            });
+
+    for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
+      while (true) {
+        Value<?> value = getRandomValue(RANDOM, SECOND_CLUSTERING_KEY, dataType);
+        // reject duplication
+        if (!valueSet.contains(value)) {
+          ret.add(value);
+          valueSet.add(value);
+          break;
+        }
+      }
     }
-    if (l instanceof BooleanValue) {
-      return ((BooleanValue) l).compareTo((BooleanValue) r);
-    } else if (l instanceof IntValue) {
-      return ((IntValue) l).compareTo((IntValue) r);
-    } else if (l instanceof BigIntValue) {
-      return ((BigIntValue) l).compareTo((BigIntValue) r);
-    } else if (l instanceof FloatValue) {
-      return ((FloatValue) l).compareTo((FloatValue) r);
-    } else if (l instanceof DoubleValue) {
-      return ((DoubleValue) l).compareTo((DoubleValue) r);
-    } else if (l instanceof TextValue) {
-      return ((TextValue) l).compareTo((TextValue) r);
-    } else if (l instanceof BlobValue) {
-      return ((BlobValue) l).compareTo((BlobValue) r);
-    } else {
-      throw new AssertionError();
-    }
+
+    return ret;
   }
 
-  private Value<?> getRandomValue(String columnName, DataType dataType) {
+  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(
-            columnName, nextLongBetween(BigIntValue.MIN_VALUE, BigIntValue.MAX_VALUE));
+        return new BigIntValue(columnName, nextBigInt(random));
       case INT:
-        return new IntValue(columnName, RANDOM_GENERATOR.nextInt());
+        return new IntValue(columnName, random.nextInt());
       case FLOAT:
-        return new FloatValue(columnName, RANDOM_GENERATOR.nextFloat());
+        return new FloatValue(columnName, nextFloat(random));
       case DOUBLE:
-        return new DoubleValue(columnName, RANDOM_GENERATOR.nextDouble());
+        return new DoubleValue(columnName, nextDouble(random));
       case BLOB:
-        byte[] bytes = new byte[20];
-        RANDOM_GENERATOR.nextBytes(bytes);
+        int length = random.nextInt(BLOB_MAX_LENGTH - 1) + 1;
+        byte[] bytes = new byte[length];
+        random.nextBytes(bytes);
         return new BlobValue(columnName, bytes);
       case TEXT:
+        int count = random.nextInt(TEXT_MAX_COUNT - 1) + 1;
         return new TextValue(
-            columnName, RandomStringUtils.random(20, 0, 0, true, true, null, RANDOM_GENERATOR));
+            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
       case BOOLEAN:
-        return new BooleanValue(columnName, RANDOM_GENERATOR.nextBoolean());
+        return new BooleanValue(columnName, random.nextBoolean());
       default:
-        throw new RuntimeException("Unsupported data type for random generating");
+        throw new AssertionError();
     }
   }
 
-  public long nextLongBetween(long min, long max) {
-    OptionalLong randomLong = RANDOM_GENERATOR.longs(min, (max + 1)).limit(1).findFirst();
-    return randomLong.orElse(0);
+  protected long nextBigInt(Random random) {
+    return random
+        .longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1))
+        .limit(1)
+        .findFirst()
+        .orElse(0);
   }
 
-  private Value<?> getFixedValue(String columnName, DataType dataType) {
+  protected float nextFloat(Random random) {
+    return (float)
+        random.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+  }
+
+  protected double nextDouble(Random random) {
+    return random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+  }
+
+  protected Value<?> getMinValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BIGINT:
-        return new BigIntValue(columnName, 1);
+        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
       case INT:
-        return new IntValue(columnName, 1);
+        return new IntValue(columnName, Integer.MIN_VALUE);
       case FLOAT:
-        return new FloatValue(columnName, 1);
+        return new FloatValue(columnName, Float.MIN_VALUE);
       case DOUBLE:
-        return new DoubleValue(columnName, 1);
+        return new DoubleValue(columnName, Double.MIN_VALUE);
       case BLOB:
-        return new BlobValue(columnName, new byte[] {1, 1, 1, 1, 1});
+        return new BlobValue(columnName, new byte[] {0x00});
       case TEXT:
-        return new TextValue(columnName, "fixed_text");
+        return new TextValue(columnName, "\u0001");
+      case BOOLEAN:
+        return new BooleanValue(columnName, false);
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+    switch (dataType) {
+      case BIGINT:
+        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
+      case INT:
+        return new IntValue(columnName, Integer.MAX_VALUE);
+      case FLOAT:
+        return new FloatValue(columnName, Float.MAX_VALUE);
+      case DOUBLE:
+        return new DoubleValue(columnName, Double.MAX_VALUE);
+      case BLOB:
+        byte[] blobBytes = new byte[BLOB_MAX_LENGTH];
+        Arrays.fill(blobBytes, (byte) 0xff);
+        return new BlobValue(columnName, blobBytes);
+      case TEXT:
+        StringBuilder builder = new StringBuilder();
+        IntStream.range(0, TEXT_MAX_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
+        return new TextValue(columnName, builder.toString());
       case BOOLEAN:
         return new BooleanValue(columnName, true);
       default:
-        throw new RuntimeException("Unsupported data type");
+        throw new AssertionError();
     }
   }
 
@@ -1241,16 +1864,124 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
   }
 
-  private void assertScanResultWithOrdering(
-      List<Result> actual, String checkedColumn, List<Value<?>> expectedValues) {
-    assertThat(actual.size()).isEqualTo(expectedValues.size());
+  private List<ClusteringKey> getExpected(
+      List<ClusteringKey> clusteringKeys,
+      @Nullable ClusteringKey startClusteringKey,
+      @Nullable Boolean startInclusive,
+      @Nullable ClusteringKey endClusteringKey,
+      @Nullable Boolean endInclusive,
+      boolean reverse) {
+    List<ClusteringKey> ret = new ArrayList<>();
+    for (ClusteringKey clusteringKey : clusteringKeys) {
+      if (startClusteringKey != null && startInclusive != null) {
+        int compare = clusteringKey.compareTo(startClusteringKey);
+        if (!(startInclusive ? compare >= 0 : compare > 0)) {
+          continue;
+        }
+      }
+      if (endClusteringKey != null && endInclusive != null) {
+        int compare = clusteringKey.compareTo(endClusteringKey);
+        if (!(endInclusive ? compare <= 0 : compare < 0)) {
+          continue;
+        }
+      }
+      ret.add(clusteringKey);
+    }
 
-    for (int i = 0; i < actual.size(); i++) {
-      Value<?> expectedValue = expectedValues.get(i);
-      Result actualResult = actual.get(i);
-      assertThat(actualResult.getValue(checkedColumn).isPresent()).isTrue();
-      Value<?> actualValue = actualResult.getValue(checkedColumn).get();
-      assertThat(actualValue).isEqualTo(expectedValue);
+    if (reverse) {
+      Collections.reverse(ret);
+    }
+    return ret;
+  }
+
+  private void assertScanResult(
+      List<Result> actualResults, List<ClusteringKey> expected, String description) {
+    List<ClusteringKey> actual = new ArrayList<>();
+    for (Result actualResult : actualResults) {
+      assertThat(actualResult.getValue(FIRST_CLUSTERING_KEY).isPresent()).isTrue();
+      assertThat(actualResult.getValue(SECOND_CLUSTERING_KEY).isPresent()).isTrue();
+      actual.add(
+          new ClusteringKey(
+              actualResult.getValue(FIRST_CLUSTERING_KEY).get(),
+              actualResult.getValue(SECOND_CLUSTERING_KEY).get()));
+    }
+    assertThat(actual).describedAs(description).isEqualTo(expected);
+  }
+
+  private static class ClusteringKey implements Comparable<ClusteringKey> {
+    public final Value<?> first;
+    private final Order firstClusteringOrder;
+    @Nullable public final Value<?> second;
+    @Nullable private final Order secondClusteringOrder;
+
+    public ClusteringKey(
+        Value<?> first,
+        Order firstClusteringOrder,
+        @Nullable Value<?> second,
+        @Nullable Order secondClusteringOrder) {
+      this.first = first;
+      this.firstClusteringOrder = firstClusteringOrder;
+      this.second = second;
+      this.secondClusteringOrder = secondClusteringOrder;
+    }
+
+    public ClusteringKey(Value<?> first, Order firstClusteringOrder) {
+      this(first, firstClusteringOrder, null, null);
+    }
+
+    public ClusteringKey(Value<?> first, Value<?> second) {
+      this(first, Order.ASC, second, Order.ASC);
+    }
+
+    @Override
+    public int compareTo(ClusteringKey o) {
+      if (firstClusteringOrder != o.firstClusteringOrder) {
+        throw new IllegalStateException("different clustering order for the first clustering key");
+      }
+      ComparisonChain chain =
+          ComparisonChain.start()
+              .compare(
+                  first,
+                  o.first,
+                  firstClusteringOrder == Order.ASC
+                      ? com.google.common.collect.Ordering.natural()
+                      : com.google.common.collect.Ordering.natural().reverse());
+      if (second != null && o.second != null) {
+        if (secondClusteringOrder != o.secondClusteringOrder) {
+          throw new IllegalStateException(
+              "different clustering order for the second clustering key");
+        }
+        chain =
+            chain.compare(
+                second,
+                o.second,
+                secondClusteringOrder == Order.ASC
+                    ? com.google.common.collect.Ordering.natural()
+                    : com.google.common.collect.Ordering.natural().reverse());
+      }
+      return chain.result();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ClusteringKey)) {
+        return false;
+      }
+      ClusteringKey that = (ClusteringKey) o;
+      return first.equals(that.first) && Objects.equals(second, that.second);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(first, second);
+    }
+
+    @Override
+    public String toString() {
+      return "ClusteringKey{" + "first=" + first + ", second=" + second + '}';
     }
   }
 }

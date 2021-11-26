@@ -72,7 +72,7 @@ public class PutStatementHandler extends StatementHandler {
       bindMap = dynamoMutation.getValueBindMap();
     } else {
       expression = dynamoMutation.getUpdateExpression();
-      condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
+      condition = dynamoMutation.getCondition();
       columnMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());

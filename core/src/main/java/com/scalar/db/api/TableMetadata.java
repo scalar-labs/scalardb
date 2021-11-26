@@ -108,6 +108,15 @@ public class TableMetadata {
   }
 
   /**
+   * Returns the map of the clustering key names and the clustering orders
+   *
+   * @return the map of the clustering key names and the clustering orders
+   */
+  public Map<String, Scan.Ordering.Order> getClusteringOrders() {
+    return clusteringOrders;
+  }
+
+  /**
    * Returns the secondary index names
    *
    * @return an {@code Set} of secondary index names

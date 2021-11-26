@@ -110,7 +110,7 @@ public class Cassandra implements DistributedStorage {
     if (next != null) {
       throw new IllegalArgumentException("please use scan() for non-exact match selection");
     }
-    return Optional.of(new ResultInterpreter(metadata).interpret(row));
+    return Optional.of(new ResultInterpreter(get.getProjections(), metadata).interpret(row));
   }
 
   @Override
@@ -124,7 +124,7 @@ public class Cassandra implements DistributedStorage {
 
     ResultSet results = handlers.select().handle(scan);
 
-    return new ScannerImpl(results, new ResultInterpreter(metadata));
+    return new ScannerImpl(results, new ResultInterpreter(scan.getProjections(), metadata));
   }
 
   @Override

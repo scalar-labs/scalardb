@@ -1,6 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -41,9 +42,7 @@ public class CosmosConfig extends DatabaseConfig {
 
     super.load();
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_DATABASE))) {
-      tableMetadataDatabase = getProperties().getProperty(TABLE_METADATA_DATABASE);
-    }
+    tableMetadataDatabase = getString(getProperties(), TABLE_METADATA_DATABASE, null);
   }
 
   public Optional<String> getTableMetadataDatabase() {

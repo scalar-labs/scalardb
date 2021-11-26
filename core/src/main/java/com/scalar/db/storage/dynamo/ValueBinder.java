@@ -49,7 +49,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BooleanValue value) {
-    values.put(alias + i, AttributeValue.builder().bool(value.get()).build());
+    values.put(alias + i, AttributeValue.builder().bool(value.getAsBoolean()).build());
     i++;
   }
 
@@ -60,7 +60,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(IntValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.get())).build());
+    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsInt())).build());
     i++;
   }
 
@@ -71,7 +71,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BigIntValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.get())).build());
+    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsLong())).build());
     i++;
   }
 
@@ -82,7 +82,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(FloatValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.get())).build());
+    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsFloat())).build());
     i++;
   }
 
@@ -93,7 +93,7 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(DoubleValue value) {
-    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.get())).build());
+    values.put(alias + i, AttributeValue.builder().n(String.valueOf(value.getAsDouble())).build());
     i++;
   }
 

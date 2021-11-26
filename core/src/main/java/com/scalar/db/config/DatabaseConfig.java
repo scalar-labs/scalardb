@@ -1,9 +1,10 @@
 package com.scalar.db.config;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getLong;
+import static com.scalar.db.config.ConfigUtils.getString;
 
-import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -33,8 +34,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
@@ -43,14 +46,14 @@ public class DatabaseConfig {
   private final Properties props;
   private List<String> contactPoints;
   private int contactPort;
-  private Optional<String> username;
-  private Optional<String> password;
+  @Nullable private String username;
+  @Nullable private String password;
   private Class<? extends DistributedStorage> storageClass;
   private Class<? extends DistributedStorageAdmin> adminClass;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
-  private Isolation isolation = Isolation.SNAPSHOT;
-  private long tableMetadataCacheExpirationTimeSecs = -1;
+  private Isolation isolation;
+  private long tableMetadataCacheExpirationTimeSecs;
 
   public static final String PREFIX = "scalar.db.";
   public static final String CONTACT_POINTS = PREFIX + "contact_points";
@@ -84,105 +87,88 @@ public class DatabaseConfig {
   }
 
   protected void load() {
-    storageClass = Cassandra.class;
-    adminClass = CassandraAdmin.class;
-    if (!Strings.isNullOrEmpty(props.getProperty(STORAGE))) {
-      switch (props.getProperty(STORAGE).toLowerCase()) {
-        case "cassandra":
-          storageClass = Cassandra.class;
-          adminClass = CassandraAdmin.class;
-          break;
-        case "cosmos":
-          storageClass = Cosmos.class;
-          adminClass = CosmosAdmin.class;
-          break;
-        case "dynamo":
-          storageClass = Dynamo.class;
-          adminClass = DynamoAdmin.class;
-          break;
-        case "jdbc":
-          storageClass = JdbcDatabase.class;
-          adminClass = JdbcDatabaseAdmin.class;
-          break;
-        case "multi-storage":
-          storageClass = MultiStorage.class;
-          adminClass = MultiStorageAdmin.class;
-          break;
-        case "grpc":
-          storageClass = GrpcStorage.class;
-          adminClass = GrpcAdmin.class;
-          break;
-        default:
-          throw new IllegalArgumentException(
-              "storage '" + props.getProperty(STORAGE) + "' isn't supported");
-      }
+    String storage = getString(getProperties(), STORAGE, "cassandra");
+    switch (storage.toLowerCase()) {
+      case "cassandra":
+        storageClass = Cassandra.class;
+        adminClass = CassandraAdmin.class;
+        break;
+      case "cosmos":
+        storageClass = Cosmos.class;
+        adminClass = CosmosAdmin.class;
+        break;
+      case "dynamo":
+        storageClass = Dynamo.class;
+        adminClass = DynamoAdmin.class;
+        break;
+      case "jdbc":
+        storageClass = JdbcDatabase.class;
+        adminClass = JdbcDatabaseAdmin.class;
+        break;
+      case "multi-storage":
+        storageClass = MultiStorage.class;
+        adminClass = MultiStorageAdmin.class;
+        break;
+      case "grpc":
+        storageClass = GrpcStorage.class;
+        adminClass = GrpcAdmin.class;
+        break;
+      default:
+        throw new IllegalArgumentException("storage '" + storage + "' isn't supported");
     }
 
     if (storageClass != MultiStorage.class) {
-      checkNotNull(props.getProperty(CONTACT_POINTS));
-
-      contactPoints = Arrays.asList(props.getProperty(CONTACT_POINTS).split(","));
-      if (Strings.isNullOrEmpty(props.getProperty(CONTACT_PORT))) {
-        contactPort = 0;
-      } else {
-        contactPort = Integer.parseInt(props.getProperty(CONTACT_PORT));
-        checkArgument(contactPort > 0);
-      }
-      username = Optional.ofNullable(props.getProperty(USERNAME));
-      password = Optional.ofNullable(props.getProperty(PASSWORD));
-    } else {
-      username = Optional.empty();
-      password = Optional.empty();
+      contactPoints =
+          Arrays.asList(
+              Objects.requireNonNull(getString(getProperties(), CONTACT_POINTS, null)).split(","));
+      contactPort = getInt(getProperties(), CONTACT_PORT, 0);
+      checkArgument(contactPort >= 0);
+      username = getString(getProperties(), USERNAME, null);
+      password = getString(getProperties(), PASSWORD, null);
     }
 
-    transactionManagerClass = ConsensusCommitManager.class;
-    twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
-    if (!Strings.isNullOrEmpty(props.getProperty(TRANSACTION_MANAGER))) {
-      switch (props.getProperty(TRANSACTION_MANAGER).toLowerCase()) {
-        case "consensus-commit":
-          transactionManagerClass = ConsensusCommitManager.class;
-          twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
-          break;
-        case "jdbc":
-          if (storageClass != JdbcDatabase.class) {
-            throw new IllegalArgumentException(
-                "'jdbc' transaction manager ("
-                    + TRANSACTION_MANAGER
-                    + ") is supported only for 'jdbc' storage ("
-                    + STORAGE
-                    + ")");
-          }
-          transactionManagerClass = JdbcTransactionManager.class;
-          twoPhaseCommitTransactionManagerClass = null;
-          break;
-        case "grpc":
-          if (storageClass != GrpcStorage.class) {
-            throw new IllegalArgumentException(
-                "'grpc' transaction manager ("
-                    + TRANSACTION_MANAGER
-                    + ") is supported only for 'grpc' storage ("
-                    + STORAGE
-                    + ")");
-          }
-          transactionManagerClass = GrpcTransactionManager.class;
-          twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
-          break;
-        default:
+    String transactionManager = getString(getProperties(), TRANSACTION_MANAGER, "consensus-commit");
+    switch (transactionManager.toLowerCase()) {
+      case "consensus-commit":
+        transactionManagerClass = ConsensusCommitManager.class;
+        twoPhaseCommitTransactionManagerClass = TwoPhaseConsensusCommitManager.class;
+        break;
+      case "jdbc":
+        if (storageClass != JdbcDatabase.class) {
           throw new IllegalArgumentException(
-              "transaction manager '"
-                  + props.getProperty(TRANSACTION_MANAGER)
-                  + "' isn't supported");
-      }
+              "'jdbc' transaction manager ("
+                  + TRANSACTION_MANAGER
+                  + ") is supported only for 'jdbc' storage ("
+                  + STORAGE
+                  + ")");
+        }
+        transactionManagerClass = JdbcTransactionManager.class;
+        twoPhaseCommitTransactionManagerClass = null;
+        break;
+      case "grpc":
+        if (storageClass != GrpcStorage.class) {
+          throw new IllegalArgumentException(
+              "'grpc' transaction manager ("
+                  + TRANSACTION_MANAGER
+                  + ") is supported only for 'grpc' storage ("
+                  + STORAGE
+                  + ")");
+        }
+        transactionManagerClass = GrpcTransactionManager.class;
+        twoPhaseCommitTransactionManagerClass = GrpcTwoPhaseCommitTransactionManager.class;
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "transaction manager '" + transactionManager + "' isn't supported");
     }
 
-    if (!Strings.isNullOrEmpty(props.getProperty(ISOLATION_LEVEL))) {
-      isolation = Isolation.valueOf(props.getProperty(ISOLATION_LEVEL).toUpperCase());
-    }
+    isolation =
+        Isolation.valueOf(
+            getString(getProperties(), ISOLATION_LEVEL, Isolation.SNAPSHOT.toString())
+                .toUpperCase());
 
-    if (!Strings.isNullOrEmpty(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS))) {
-      tableMetadataCacheExpirationTimeSecs =
-          Long.parseLong(props.getProperty(TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS));
-    }
+    tableMetadataCacheExpirationTimeSecs =
+        getLong(getProperties(), TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
   }
 
   public List<String> getContactPoints() {
@@ -194,11 +180,11 @@ public class DatabaseConfig {
   }
 
   public Optional<String> getUsername() {
-    return username;
+    return Optional.ofNullable(username);
   }
 
   public Optional<String> getPassword() {
-    return password;
+    return Optional.ofNullable(password);
   }
 
   public Class<? extends DistributedStorage> getStorageClass() {

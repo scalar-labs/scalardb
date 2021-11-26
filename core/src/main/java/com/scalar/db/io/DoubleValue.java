@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
@@ -67,7 +68,7 @@ public final class DoubleValue implements Value<Double> {
 
   @Override
   public int hashCode() {
-    return Double.hashCode(value);
+    return Objects.hash(name, value);
   }
 
   /**
