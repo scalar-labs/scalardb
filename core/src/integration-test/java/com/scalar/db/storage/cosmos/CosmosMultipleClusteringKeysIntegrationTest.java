@@ -24,7 +24,7 @@ public class CosmosMultipleClusteringKeysIntegrationTest
 
   @Override
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
-    // Return types without BLOB because blob is not supported for clustering key
+    // Return types without BLOB because blob is not supported for clustering key for now
     ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
     for (DataType firstClusteringKeyType : DataType.values()) {
       if (firstClusteringKeyType == DataType.BLOB) {
