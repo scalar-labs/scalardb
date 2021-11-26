@@ -16,6 +16,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,7 +32,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClient;
 import software.amazon.awssdk.services.applicationautoscaling.ApplicationAutoScalingClientBuilder;
-import software.amazon.awssdk.services.applicationautoscaling.model.ApplicationAutoScalingException;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeleteScalingPolicyRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.DeregisterScalableTargetRequest;
 import software.amazon.awssdk.services.applicationautoscaling.model.MetricType;
@@ -61,7 +61,6 @@ import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
-import software.amazon.awssdk.services.dynamodb.model.LocalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.Projection;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
@@ -90,8 +89,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String DEFAULT_NO_BACKUP = "false";
   public static final String DEFAULT_REQUEST_UNIT = "10";
 
-  private static final String PARTITION_KEY = "concatenatedPartitionKey";
-  private static final String CLUSTERING_KEY = "concatenatedClusteringKey";
+  @VisibleForTesting static final String PARTITION_KEY = "concatenatedPartitionKey";
+  @VisibleForTesting static final String CLUSTERING_KEY = "concatenatedClusteringKey";
   private static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
   private static final int WAITING_DURATION_SECS = 3;
   private static final int COOL_DOWN_DURATION_SECS = 60;
@@ -111,7 +110,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_ATTR_TABLE = "table";
   private static final long METADATA_TABLE_REQUEST_UNIT = 1;
 
-  private static final ImmutableMap<DataType, ScalarAttributeType> DATATYPE_MAP =
+  private static final ImmutableMap<DataType, ScalarAttributeType> SECONDARY_INDEX_DATATYPE_MAP =
       ImmutableMap.<DataType, ScalarAttributeType>builder()
           .put(DataType.INT, ScalarAttributeType.N)
           .put(DataType.BIGINT, ScalarAttributeType.N)
@@ -203,73 +202,150 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
+    checkMetadata(metadata);
 
-    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
-    makeAttribute(PARTITION_KEY, metadata, columnsToAttributeDefinitions);
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      makeAttribute(CLUSTERING_KEY, metadata, columnsToAttributeDefinitions);
-      for (String clusteringKey : metadata.getClusteringKeyNames()) {
-        makeAttribute(clusteringKey, metadata, columnsToAttributeDefinitions);
-      }
-    }
-    if (!metadata.getSecondaryIndexNames().isEmpty()) {
-      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
-        makeAttribute(secondaryIndex, metadata, columnsToAttributeDefinitions);
-      }
-    }
-    requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
-
-    // build keys
-    buildPrimaryKey(requestBuilder, metadata);
-
-    // build local indexes that corresponding to clustering keys
-    buildLocalIndexes(namespace, table, requestBuilder, metadata);
-
-    // build secondary indexes
     long ru = Long.parseLong(options.getOrDefault(REQUEST_UNIT, DEFAULT_REQUEST_UNIT));
-    buildGlobalIndexes(namespace, table, requestBuilder, metadata, ru);
 
-    // ru
+    CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
+    buildAttributeDefinitions(requestBuilder, metadata);
+    buildPrimaryKey(requestBuilder, metadata);
+    buildSecondaryIndexes(namespace, table, requestBuilder, metadata, ru);
     requestBuilder.provisionedThroughput(
         ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
-
-    // table name
     requestBuilder.tableName(getFullTableName(namespace, table));
 
-    // create table
     try {
       client.createTable(requestBuilder.build());
-      addTableMetadata(namespace, table, metadata);
     } catch (Exception e) {
-      throw new ExecutionException("creating table failed", e);
+      throw new ExecutionException("creating the table failed", e);
     }
+    waitForTableCreation(getFullTableName(namespace, table));
 
-    try {
-      waitForTableCreation(getFullTableName(namespace, table));
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("getting table description failed", e);
-    }
+    addTableMetadata(namespace, table, metadata);
 
-    // scaling control
     boolean noScaling = Boolean.parseBoolean(options.getOrDefault(NO_SCALING, DEFAULT_NO_SCALING));
     if (!noScaling) {
       enableAutoScaling(namespace, table, metadata.getSecondaryIndexNames(), ru);
     }
 
-    // backup control
     boolean noBackup = Boolean.parseBoolean(options.getOrDefault(NO_BACKUP, DEFAULT_NO_BACKUP));
     if (!noBackup) {
       enableContinuousBackup(namespace, table);
     }
   }
 
+  private void checkMetadata(TableMetadata metadata) {
+    Iterator<String> partitionKeyNameIterator = metadata.getPartitionKeyNames().iterator();
+    while (partitionKeyNameIterator.hasNext()) {
+      String partitionKeyName = partitionKeyNameIterator.next();
+      if (!partitionKeyNameIterator.hasNext()) {
+        break;
+      }
+      if (metadata.getColumnDataType(partitionKeyName) == DataType.BLOB) {
+        throw new IllegalArgumentException(
+            "BLOB type is supported only for the last value in partition key in DynamoDB: "
+                + partitionKeyName);
+      }
+    }
+
+    for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+      if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
+        throw new IllegalArgumentException(
+            "Currently, BLOB type is not supported for clustering keys in DynamoDB: "
+                + clusteringKeyName);
+      }
+    }
+
+    for (String secondaryIndexName : metadata.getSecondaryIndexNames()) {
+      if (metadata.getColumnDataType(secondaryIndexName) == DataType.BOOLEAN) {
+        throw new IllegalArgumentException(
+            "Currently, BOOLEAN type is not supported for a secondary index in DynamoDB: "
+                + secondaryIndexName);
+      }
+    }
+  }
+
+  private void buildAttributeDefinitions(
+      CreateTableRequest.Builder requestBuilder, TableMetadata metadata) {
+    List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
+    // for partition key
+    columnsToAttributeDefinitions.add(
+        AttributeDefinition.builder()
+            .attributeName(PARTITION_KEY)
+            .attributeType(ScalarAttributeType.B)
+            .build());
+    // for clustering key
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      columnsToAttributeDefinitions.add(
+          AttributeDefinition.builder()
+              .attributeName(CLUSTERING_KEY)
+              .attributeType(ScalarAttributeType.B)
+              .build());
+    }
+    // for secondary indexes
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
+        columnsToAttributeDefinitions.add(
+            AttributeDefinition.builder()
+                .attributeName(secondaryIndex)
+                .attributeType(
+                    SECONDARY_INDEX_DATATYPE_MAP.get(metadata.getColumnDataType(secondaryIndex)))
+                .build());
+      }
+    }
+    requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
+  }
+
+  private void buildPrimaryKey(CreateTableRequest.Builder requestBuilder, TableMetadata metadata) {
+    List<KeySchemaElement> keySchemaElementList = new ArrayList<>();
+    keySchemaElementList.add(
+        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
+    if (!metadata.getClusteringKeyNames().isEmpty()) {
+      keySchemaElementList.add(
+          KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
+    }
+    requestBuilder.keySchema(keySchemaElementList);
+  }
+
+  private void buildSecondaryIndexes(
+      String namespace,
+      String table,
+      CreateTableRequest.Builder requestBuilder,
+      TableMetadata metadata,
+      long ru) {
+    if (!metadata.getSecondaryIndexNames().isEmpty()) {
+      List<GlobalSecondaryIndex> globalSecondaryIndexList = new ArrayList<>();
+      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
+        globalSecondaryIndexList.add(
+            GlobalSecondaryIndex.builder()
+                .indexName(getGlobalIndexName(namespace, table, secondaryIndex))
+                .keySchema(
+                    KeySchemaElement.builder()
+                        .attributeName(secondaryIndex)
+                        .keyType(KeyType.HASH)
+                        .build())
+                .projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+                .provisionedThroughput(
+                    ProvisionedThroughput.builder()
+                        .readCapacityUnits(ru)
+                        .writeCapacityUnits(ru)
+                        .build())
+                .build());
+      }
+      requestBuilder.globalSecondaryIndexes(globalSecondaryIndexList);
+    }
+  }
+
+  private String getGlobalIndexName(String namespace, String tableName, String keyName) {
+    return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
+  }
+
   private void addTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
-    createMetadataTableIfNotExist();
-    Map<String, AttributeValue> itemValues = new HashMap<>();
+    createMetadataTableIfNotExists();
 
     // Add metadata
+    Map<String, AttributeValue> itemValues = new HashMap<>();
     itemValues.put(
         METADATA_ATTR_TABLE,
         AttributeValue.builder().s(getFullTableName(namespace, table)).build());
@@ -305,86 +381,315 @@ public class DynamoAdmin implements DistributedStorageAdmin {
           METADATA_ATTR_SECONDARY_INDEX,
           AttributeValue.builder().ss(metadata.getSecondaryIndexNames()).build());
     }
-    PutItemRequest request =
-        PutItemRequest.builder().tableName(getMetadataTable()).item(itemValues).build();
-
     try {
-      client.putItem(request);
-    } catch (DynamoDbException e) {
+      client.putItem(
+          PutItemRequest.builder().tableName(getMetadataTable()).item(itemValues).build());
+    } catch (Exception e) {
       throw new ExecutionException(
-          "adding meta data for table " + getFullTableName(namespace, table) + " failed", e);
+          "adding the meta data for table " + getFullTableName(namespace, table) + " failed", e);
     }
   }
 
-  private void createMetadataTableIfNotExist() throws ExecutionException {
+  private void createMetadataTableIfNotExists() throws ExecutionException {
     if (metadataTableExists()) {
       return;
     }
 
-    CreateTableRequest.Builder requestBuilder = CreateTableRequest.builder();
     List<AttributeDefinition> columnsToAttributeDefinitions = new ArrayList<>();
     columnsToAttributeDefinitions.add(
         AttributeDefinition.builder()
             .attributeName(METADATA_ATTR_TABLE)
             .attributeType(ScalarAttributeType.S)
             .build());
-    requestBuilder.attributeDefinitions(columnsToAttributeDefinitions);
-    requestBuilder.keySchema(
-        KeySchemaElement.builder()
-            .attributeName(METADATA_ATTR_TABLE)
-            .keyType(KeyType.HASH)
-            .build());
-    requestBuilder.provisionedThroughput(
-        ProvisionedThroughput.builder()
-            .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
-            .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
-            .build());
-    requestBuilder.tableName(getMetadataTable());
-
     try {
-      client.createTable(requestBuilder.build());
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("creating meta data table failed");
+      client.createTable(
+          CreateTableRequest.builder()
+              .attributeDefinitions(columnsToAttributeDefinitions)
+              .keySchema(
+                  KeySchemaElement.builder()
+                      .attributeName(METADATA_ATTR_TABLE)
+                      .keyType(KeyType.HASH)
+                      .build())
+              .provisionedThroughput(
+                  ProvisionedThroughput.builder()
+                      .readCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+                      .writeCapacityUnits(METADATA_TABLE_REQUEST_UNIT)
+                      .build())
+              .tableName(getMetadataTable())
+              .build());
+    } catch (Exception e) {
+      throw new ExecutionException("creating the metadata table failed", e);
     }
-
-    try {
-      waitForTableCreation(getMetadataTable());
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("getting table description failed", e);
-    }
+    waitForTableCreation(getMetadataTable());
   }
 
   private boolean metadataTableExists() throws ExecutionException {
     try {
-      DescribeTableRequest describeTableRequest =
-          DescribeTableRequest.builder().tableName(getMetadataTable()).build();
-      client.describeTable(describeTableRequest);
+      client.describeTable(DescribeTableRequest.builder().tableName(getMetadataTable()).build());
       return true;
-    } catch (DynamoDbException e) {
+    } catch (Exception e) {
       if (e instanceof ResourceNotFoundException) {
         return false;
       } else {
-        throw new ExecutionException("checking metadata table exist failed");
+        throw new ExecutionException("checking the metadata table existence failed", e);
       }
     }
+  }
+
+  private void waitForTableCreation(String tableFullName) throws ExecutionException {
+    try {
+      while (true) {
+        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        DescribeTableResponse describeTableResponse =
+            client.describeTable(DescribeTableRequest.builder().tableName(tableFullName).build());
+        if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      throw new ExecutionException("waiting for the table creation failed", e);
+    }
+  }
+
+  private void enableAutoScaling(
+      String namespace, String table, Set<String> secondaryIndexes, long ru)
+      throws ExecutionException {
+    List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
+    List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
+
+    // write, read scaling of table
+    for (String scalingType : TABLE_SCALING_TYPE_SET) {
+      registerScalableTargetRequestList.add(
+          buildRegisterScalableTargetRequest(
+              getTableResourceID(namespace, table), scalingType, (int) ru));
+      putScalingPolicyRequestList.add(
+          buildPutScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
+    }
+
+    // write, read scaling of global indexes (secondary indexes)
+    for (String secondaryIndex : secondaryIndexes) {
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+        registerScalableTargetRequestList.add(
+            buildRegisterScalableTargetRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType, (int) ru));
+        putScalingPolicyRequestList.add(
+            buildPutScalingPolicyRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+      }
+    }
+
+    // request
+    for (RegisterScalableTargetRequest registerScalableTargetRequest :
+        registerScalableTargetRequestList) {
+      try {
+        applicationAutoScalingClient.registerScalableTarget(registerScalableTargetRequest);
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Unable to register scalable target for " + registerScalableTargetRequest.resourceId(),
+            e);
+      }
+    }
+
+    for (PutScalingPolicyRequest putScalingPolicyRequest : putScalingPolicyRequestList) {
+      try {
+        applicationAutoScalingClient.putScalingPolicy(putScalingPolicyRequest);
+      } catch (Exception e) {
+        throw new ExecutionException(
+            "Unable to put scaling policy request for " + putScalingPolicyRequest.resourceId(), e);
+      }
+    }
+  }
+
+  private RegisterScalableTargetRequest buildRegisterScalableTargetRequest(
+      String resourceID, String type, int ruValue) {
+    return RegisterScalableTargetRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .minCapacity(ruValue > 10 ? ruValue / 10 : ruValue)
+        .maxCapacity(ruValue)
+        .build();
+  }
+
+  private PutScalingPolicyRequest buildPutScalingPolicyRequest(String resourceID, String type) {
+    return PutScalingPolicyRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .policyName(getPolicyName(resourceID, type))
+        .policyType(PolicyType.TARGET_TRACKING_SCALING)
+        .targetTrackingScalingPolicyConfiguration(getScalingPolicyConfiguration(type))
+        .build();
+  }
+
+  private String getTableResourceID(String namespace, String table) {
+    return "table/" + getFullTableName(namespace, table);
+  }
+
+  private String getGlobalIndexResourceID(String namespace, String table, String globalIndex) {
+    return "table/"
+        + getFullTableName(namespace, table)
+        + "/index/"
+        + getGlobalIndexName(namespace, table, globalIndex);
+  }
+
+  private String getPolicyName(String resourceID, String type) {
+    return resourceID + "-" + type;
+  }
+
+  private TargetTrackingScalingPolicyConfiguration getScalingPolicyConfiguration(String type) {
+    return TargetTrackingScalingPolicyConfiguration.builder()
+        .predefinedMetricSpecification(
+            PredefinedMetricSpecification.builder()
+                .predefinedMetricType(SCALING_POLICY_METRIC_TYPE_MAP.get(type))
+                .build())
+        .scaleInCooldown(COOL_DOWN_DURATION_SECS)
+        .scaleOutCooldown(COOL_DOWN_DURATION_SECS)
+        .targetValue(TARGET_USAGE_RATE)
+        .build();
+  }
+
+  private void enableContinuousBackup(String namespace, String table) throws ExecutionException {
+    waitForTableBackupEnabledAtCreation(namespace, table);
+
+    try {
+      client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
+    } catch (Exception e) {
+      throw new ExecutionException(
+          "Unable to enable continuous backup for " + getFullTableName(namespace, table), e);
+    }
+  }
+
+  private void waitForTableBackupEnabledAtCreation(String namespace, String table)
+      throws ExecutionException {
+    try {
+      while (true) {
+        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
+            client.describeContinuousBackups(
+                DescribeContinuousBackupsRequest.builder()
+                    .tableName(getFullTableName(namespace, table))
+                    .build());
+        if (describeContinuousBackupsResponse
+                .continuousBackupsDescription()
+                .continuousBackupsStatus()
+            == ContinuousBackupsStatus.ENABLED) {
+          break;
+        }
+      }
+    } catch (Exception e) {
+      throw new ExecutionException("waiting for the table backup enabled at creation failed", e);
+    }
+  }
+
+  private PointInTimeRecoverySpecification buildPointInTimeRecoverySpecification() {
+    return PointInTimeRecoverySpecification.builder().pointInTimeRecoveryEnabled(true).build();
+  }
+
+  private UpdateContinuousBackupsRequest buildUpdateContinuousBackupsRequest(
+      String namespace, String table) {
+    return UpdateContinuousBackupsRequest.builder()
+        .tableName(getFullTableName(namespace, table))
+        .pointInTimeRecoverySpecification(buildPointInTimeRecoverySpecification())
+        .build();
   }
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
     disableAutoScaling(namespace, table);
-    DeleteTableRequest request =
-        DeleteTableRequest.builder().tableName(getFullTableName(namespace, table)).build();
+
+    String fullTableName = getFullTableName(namespace, table);
     try {
-      client.deleteTable(request);
-      deleteTableMetadata(namespace, table);
-      waitForTableDeletion(namespace, table);
+      client.deleteTable(DeleteTableRequest.builder().tableName(fullTableName).build());
     } catch (Exception e) {
       if (e instanceof ResourceNotFoundException) {
-        LOGGER.warn("table " + request.tableName() + " not existed for deleting");
+        LOGGER.warn("table " + fullTableName + " does not exist for deleting");
       } else {
-        throw new ExecutionException("deleting table " + request.tableName() + " failed", e);
+        throw new ExecutionException("deleting table " + fullTableName + " failed", e);
       }
     }
+    waitForTableDeletion(namespace, table);
+    deleteTableMetadata(namespace, table);
+  }
+
+  private void disableAutoScaling(String namespace, String table) throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    if (tableMetadata == null) {
+      return;
+    }
+
+    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
+    List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
+
+    // write, read scaling of table
+    for (String scalingType : TABLE_SCALING_TYPE_SET) {
+      deregisterScalableTargetRequestList.add(
+          buildDeregisterScalableTargetRequest(getTableResourceID(namespace, table), scalingType));
+      deleteScalingPolicyRequestList.add(
+          buildDeleteScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
+    }
+
+    // write, read scaling of global indexes (secondary indexes)
+    Set<String> secondaryIndexes = tableMetadata.getSecondaryIndexNames();
+    for (String secondaryIndex : secondaryIndexes) {
+      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
+        deregisterScalableTargetRequestList.add(
+            buildDeregisterScalableTargetRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+        deleteScalingPolicyRequestList.add(
+            buildDeleteScalingPolicyRequest(
+                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
+      }
+    }
+
+    // request
+    for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
+      try {
+        applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
+      } catch (Exception e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "Deleting scaling policy "
+                  + deleteScalingPolicyRequest.policyName()
+                  + " failed. "
+                  + e);
+        }
+      }
+    }
+
+    for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
+        deregisterScalableTargetRequestList) {
+      try {
+        applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
+      } catch (Exception e) {
+        if (!(e instanceof ObjectNotFoundException)) {
+          LOGGER.warn(
+              "Deregistering scalable target "
+                  + deregisterScalableTargetRequest.resourceId()
+                  + " failed. "
+                  + e);
+        }
+      }
+    }
+  }
+
+  private DeregisterScalableTargetRequest buildDeregisterScalableTargetRequest(
+      String resourceID, String type) {
+    return DeregisterScalableTargetRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .build();
+  }
+
+  private DeleteScalingPolicyRequest buildDeleteScalingPolicyRequest(
+      String resourceID, String type) {
+    return DeleteScalingPolicyRequest.builder()
+        .serviceNamespace(ServiceNamespace.DYNAMODB)
+        .resourceId(resourceID)
+        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
+        .policyName(getPolicyName(resourceID, type))
+        .build();
   }
 
   private void deleteTableMetadata(String namespace, String table) throws ExecutionException {
@@ -392,28 +697,42 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     keyToDelete.put(
         METADATA_ATTR_TABLE,
         AttributeValue.builder().s(getFullTableName(namespace, table)).build());
-    DeleteItemRequest deleteReq =
-        DeleteItemRequest.builder().tableName(getMetadataTable()).key(keyToDelete).build();
     try {
-      client.deleteItem(deleteReq);
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("deleting metadata failed");
+      client.deleteItem(
+          DeleteItemRequest.builder().tableName(getMetadataTable()).key(keyToDelete).build());
+    } catch (Exception e) {
+      throw new ExecutionException("deleting the metadata failed", e);
     }
 
+    ScanResponse scanResponse;
     try {
-      ScanRequest scanRequest =
-          ScanRequest.builder().tableName(getMetadataTable()).limit(1).build();
-      ScanResponse scanResponse = client.scan(scanRequest);
-      if (scanResponse.count() == 0) {
-        try {
-          client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
-          waitForTableDeletion(metadataNamespace, METADATA_TABLE);
-        } catch (DynamoDbException e) {
-          throw new ExecutionException("deleting empty metadata table failed");
+      scanResponse =
+          client.scan(ScanRequest.builder().tableName(getMetadataTable()).limit(1).build());
+    } catch (Exception e) {
+      throw new ExecutionException("scanning the metadata table failed", e);
+    }
+
+    if (scanResponse.count() == 0) {
+      try {
+        client.deleteTable(DeleteTableRequest.builder().tableName(getMetadataTable()).build());
+      } catch (Exception e) {
+        throw new ExecutionException("deleting the empty metadata table failed", e);
+      }
+      waitForTableDeletion(metadataNamespace, METADATA_TABLE);
+    }
+  }
+
+  private void waitForTableDeletion(String namespace, String tableName) throws ExecutionException {
+    try {
+      while (true) {
+        Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
+        Set<String> tableSet = getNamespaceTableNames(namespace);
+        if (!tableSet.contains(tableName)) {
+          break;
         }
       }
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("getting metadata table description failed");
+    } catch (Exception e) {
+      throw new ExecutionException("waiting for the table deletion failed", e);
     }
   }
 
@@ -427,31 +746,33 @@ public class DynamoAdmin implements DistributedStorageAdmin {
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
+    String fullTableName = getFullTableName(namespace, table);
     Map<String, AttributeValue> lastKeyEvaluated = null;
     do {
-      ScanRequest scanRequest =
-          ScanRequest.builder()
-              .tableName(getFullTableName(namespace, table))
-              .limit(DELETE_BATCH_SIZE)
-              .exclusiveStartKey(lastKeyEvaluated)
-              .build();
-      ScanResponse scanResponse = client.scan(scanRequest);
+      ScanResponse scanResponse;
+      try {
+        scanResponse =
+            client.scan(
+                ScanRequest.builder()
+                    .tableName(fullTableName)
+                    .limit(DELETE_BATCH_SIZE)
+                    .exclusiveStartKey(lastKeyEvaluated)
+                    .build());
+      } catch (Exception e) {
+        throw new ExecutionException("scanning items from table " + fullTableName + " failed.", e);
+      }
+
       for (Map<String, AttributeValue> item : scanResponse.items()) {
         Map<String, AttributeValue> keyToDelete = new HashMap<>();
         keyToDelete.put(PARTITION_KEY, item.get(PARTITION_KEY));
         if (item.containsKey(CLUSTERING_KEY)) {
           keyToDelete.put(CLUSTERING_KEY, item.get(CLUSTERING_KEY));
         }
-        DeleteItemRequest deleteItemRequest =
-            DeleteItemRequest.builder()
-                .tableName(getFullTableName(namespace, table))
-                .key(keyToDelete)
-                .build();
         try {
-          client.deleteItem(deleteItemRequest);
-        } catch (DynamoDbException e) {
-          throw new ExecutionException(
-              "Delete item from table " + getFullTableName(namespace, table) + " failed.", e);
+          client.deleteItem(
+              DeleteItemRequest.builder().tableName(fullTableName).key(keyToDelete).build());
+        } catch (Exception e) {
+          throw new ExecutionException("deleting item from table " + fullTableName + " failed.", e);
         }
       }
       lastKeyEvaluated = scanResponse.lastEvaluatedKey();
@@ -472,20 +793,22 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     Map<String, AttributeValue> key = new HashMap<>();
     key.put(METADATA_ATTR_TABLE, AttributeValue.builder().s(fullName).build());
 
-    GetItemRequest request =
-        GetItemRequest.builder()
-            .tableName(getMetadataTable())
-            .key(key)
-            .consistentRead(true)
-            .build();
     try {
-      Map<String, AttributeValue> metadata = client.getItem(request).item();
+      Map<String, AttributeValue> metadata =
+          client
+              .getItem(
+                  GetItemRequest.builder()
+                      .tableName(getMetadataTable())
+                      .key(key)
+                      .consistentRead(true)
+                      .build())
+              .item();
       if (metadata.isEmpty()) {
         // The specified table is not found
         return null;
       }
       return createTableMetadata(metadata);
-    } catch (DynamoDbException e) {
+    } catch (Exception e) {
       throw new ExecutionException("Failed to read the table metadata", e);
     }
   }
@@ -525,8 +848,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         return DataType.FLOAT;
       case "double":
         return DataType.DOUBLE;
-      case "text": // for backwards compatibility
-      case "varchar":
+      case "text":
         return DataType.TEXT;
       case "boolean":
         return DataType.BOOLEAN;
@@ -550,8 +872,8 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
       return tableSet;
-    } catch (DynamoDbException e) {
-      throw new ExecutionException("getting list of tables failed");
+    } catch (Exception e) {
+      throw new ExecutionException("getting list of tables failed", e);
     }
   }
 
@@ -568,333 +890,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         }
       }
     } catch (DynamoDbException e) {
-      throw new ExecutionException("getting list of namespaces failed");
+      throw new ExecutionException("getting list of namespaces failed", e);
     }
     return namespaceExists;
-  }
-
-  private void makeAttribute(
-      String column,
-      TableMetadata metadata,
-      List<AttributeDefinition> columnsToAttributeDefinitions)
-      throws ExecutionException {
-    if (metadata.getColumnDataType(column) == DataType.BOOLEAN) {
-      throw new ExecutionException(
-          "BOOLEAN type is not supported for a clustering key or a secondary index in DynamoDB");
-    } else {
-      ScalarAttributeType columnType;
-      if (column.equals(PARTITION_KEY) || column.equals(CLUSTERING_KEY)) {
-        columnType = ScalarAttributeType.S;
-      } else {
-        columnType = DATATYPE_MAP.get(metadata.getColumnDataType(column));
-      }
-      columnsToAttributeDefinitions.add(
-          AttributeDefinition.builder().attributeName(column).attributeType(columnType).build());
-    }
-  }
-
-  private void buildPrimaryKey(CreateTableRequest.Builder requestBuilder, TableMetadata metadata) {
-    List<KeySchemaElement> keySchemaElementList = new ArrayList<>();
-    keySchemaElementList.add(
-        KeySchemaElement.builder().attributeName(PARTITION_KEY).keyType(KeyType.HASH).build());
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      keySchemaElementList.add(
-          KeySchemaElement.builder().attributeName(CLUSTERING_KEY).keyType(KeyType.RANGE).build());
-    }
-    requestBuilder.keySchema(keySchemaElementList);
-  }
-
-  private void buildLocalIndexes(
-      String namespace,
-      String table,
-      CreateTableRequest.Builder requestBuilder,
-      TableMetadata metadata) {
-    if (!metadata.getClusteringKeyNames().isEmpty()) {
-      List<LocalSecondaryIndex> localSecondaryIndexList = new ArrayList<>();
-      for (String clusteringKey : metadata.getClusteringKeyNames()) {
-        LocalSecondaryIndex.Builder localSecondaryIndexBuilder =
-            LocalSecondaryIndex.builder()
-                .indexName(getLocalIndexName(namespace, table, clusteringKey))
-                .keySchema(
-                    KeySchemaElement.builder()
-                        .attributeName(PARTITION_KEY)
-                        .keyType(KeyType.HASH)
-                        .build(),
-                    KeySchemaElement.builder()
-                        .attributeName(clusteringKey)
-                        .keyType(KeyType.RANGE)
-                        .build())
-                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        localSecondaryIndexList.add(localSecondaryIndexBuilder.build());
-      }
-      requestBuilder.localSecondaryIndexes(localSecondaryIndexList);
-    }
-  }
-
-  private void buildGlobalIndexes(
-      String namespace,
-      String table,
-      CreateTableRequest.Builder requestBuilder,
-      TableMetadata metadata,
-      long ru) {
-    if (!metadata.getSecondaryIndexNames().isEmpty()) {
-      List<GlobalSecondaryIndex> globalSecondaryIndexList = new ArrayList<>();
-      for (String secondaryIndex : metadata.getSecondaryIndexNames()) {
-        GlobalSecondaryIndex.Builder globalSecondaryIndexBuilder =
-            GlobalSecondaryIndex.builder()
-                .indexName(getGlobalIndexName(namespace, table, secondaryIndex))
-                .keySchema(
-                    KeySchemaElement.builder()
-                        .attributeName(secondaryIndex)
-                        .keyType(KeyType.HASH)
-                        .build())
-                .projection(Projection.builder().projectionType(ProjectionType.ALL).build());
-        globalSecondaryIndexBuilder.provisionedThroughput(
-            ProvisionedThroughput.builder().readCapacityUnits(ru).writeCapacityUnits(ru).build());
-        globalSecondaryIndexList.add(globalSecondaryIndexBuilder.build());
-      }
-      requestBuilder.globalSecondaryIndexes(globalSecondaryIndexList);
-    }
-  }
-
-  private void enableContinuousBackup(String namespace, String table) throws ExecutionException {
-    try {
-      waitForTableBackupEnabledAtCreation(getFullTableName(namespace, table));
-      client.updateContinuousBackups(buildUpdateContinuousBackupsRequest(namespace, table));
-    } catch (Exception e) {
-      throw new ExecutionException(
-          "Unable to enable continuous backup for " + getFullTableName(namespace, table), e);
-    }
-  }
-
-  private PointInTimeRecoverySpecification buildPointInTimeRecoverySpecification() {
-    return PointInTimeRecoverySpecification.builder().pointInTimeRecoveryEnabled(true).build();
-  }
-
-  private UpdateContinuousBackupsRequest buildUpdateContinuousBackupsRequest(
-      String namespace, String table) {
-    return UpdateContinuousBackupsRequest.builder()
-        .tableName(getFullTableName(namespace, table))
-        .pointInTimeRecoverySpecification(buildPointInTimeRecoverySpecification())
-        .build();
-  }
-
-  private void enableAutoScaling(
-      String namespace, String table, Set<String> secondaryIndexes, long ru)
-      throws ExecutionException {
-    List<RegisterScalableTargetRequest> registerScalableTargetRequestList = new ArrayList<>();
-    List<PutScalingPolicyRequest> putScalingPolicyRequestList = new ArrayList<>();
-
-    // write, read scaling of table
-    for (String scalingType : TABLE_SCALING_TYPE_SET) {
-      registerScalableTargetRequestList.add(
-          buildRegisterScalableTargetRequest(
-              getTableResourceID(namespace, table), scalingType, (int) ru));
-      putScalingPolicyRequestList.add(
-          buildPutScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
-    }
-
-    // write, read scaling of global indexes (secondary indexes)
-    for (String secondaryIndex : secondaryIndexes) {
-      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
-        registerScalableTargetRequestList.add(
-            buildRegisterScalableTargetRequest(
-                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType, (int) ru));
-        putScalingPolicyRequestList.add(
-            buildPutScalingPolicyRequest(
-                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
-      }
-    }
-
-    // request
-    for (RegisterScalableTargetRequest registerScalableTargetRequest :
-        registerScalableTargetRequestList) {
-      try {
-        applicationAutoScalingClient.registerScalableTarget(registerScalableTargetRequest);
-      } catch (ApplicationAutoScalingException e) {
-        throw new ExecutionException(
-            "Unable to register scalable target for " + registerScalableTargetRequest.resourceId(),
-            e);
-      }
-    }
-
-    for (PutScalingPolicyRequest putScalingPolicyRequest : putScalingPolicyRequestList) {
-      try {
-        applicationAutoScalingClient.putScalingPolicy(putScalingPolicyRequest);
-      } catch (ApplicationAutoScalingException e) {
-        throw new ExecutionException(
-            "Unable to put scaling policy request for " + putScalingPolicyRequest.resourceId(), e);
-      }
-    }
-  }
-
-  private void disableAutoScaling(String namespace, String table) throws ExecutionException {
-    TableMetadata tableMetadata = getTableMetadata(namespace, table);
-    if (tableMetadata == null) {
-      return;
-    }
-    Set<String> secondaryIndexes = tableMetadata.getSecondaryIndexNames();
-    List<DeregisterScalableTargetRequest> deregisterScalableTargetRequestList = new ArrayList<>();
-    List<DeleteScalingPolicyRequest> deleteScalingPolicyRequestList = new ArrayList<>();
-
-    // write, read scaling of table
-    for (String scalingType : TABLE_SCALING_TYPE_SET) {
-      deregisterScalableTargetRequestList.add(
-          buildDeregisterScalableTargetRequest(getTableResourceID(namespace, table), scalingType));
-      deleteScalingPolicyRequestList.add(
-          buildDeleteScalingPolicyRequest(getTableResourceID(namespace, table), scalingType));
-    }
-
-    // write, read scaling of global indexes (secondary indexes)
-    for (String secondaryIndex : secondaryIndexes) {
-      for (String scalingType : SECONDARY_INDEX_SCALING_TYPE_SET) {
-        deregisterScalableTargetRequestList.add(
-            buildDeregisterScalableTargetRequest(
-                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
-        deleteScalingPolicyRequestList.add(
-            buildDeleteScalingPolicyRequest(
-                getGlobalIndexResourceID(namespace, table, secondaryIndex), scalingType));
-      }
-    }
-
-    // request
-    for (DeleteScalingPolicyRequest deleteScalingPolicyRequest : deleteScalingPolicyRequestList) {
-      try {
-        applicationAutoScalingClient.deleteScalingPolicy(deleteScalingPolicyRequest);
-      } catch (ApplicationAutoScalingException e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
-              "Delete scaling policy " + deleteScalingPolicyRequest.policyName() + " failed. " + e);
-        }
-      }
-    }
-
-    for (DeregisterScalableTargetRequest deregisterScalableTargetRequest :
-        deregisterScalableTargetRequestList) {
-      try {
-        applicationAutoScalingClient.deregisterScalableTarget(deregisterScalableTargetRequest);
-      } catch (ApplicationAutoScalingException e) {
-        if (!(e instanceof ObjectNotFoundException)) {
-          LOGGER.warn(
-              "Deregister scalable target "
-                  + deregisterScalableTargetRequest.resourceId()
-                  + " failed. "
-                  + e);
-        }
-      }
-    }
-  }
-
-  private RegisterScalableTargetRequest buildRegisterScalableTargetRequest(
-      String resourceID, String type, int ruValue) {
-    return RegisterScalableTargetRequest.builder()
-        .serviceNamespace(ServiceNamespace.DYNAMODB)
-        .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
-        .minCapacity(ruValue > 10 ? ruValue / 10 : ruValue)
-        .maxCapacity(ruValue)
-        .build();
-  }
-
-  private DeregisterScalableTargetRequest buildDeregisterScalableTargetRequest(
-      String resourceID, String type) {
-    return DeregisterScalableTargetRequest.builder()
-        .serviceNamespace(ServiceNamespace.DYNAMODB)
-        .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
-        .build();
-  }
-
-  private PutScalingPolicyRequest buildPutScalingPolicyRequest(String resourceID, String type) {
-    return PutScalingPolicyRequest.builder()
-        .serviceNamespace(ServiceNamespace.DYNAMODB)
-        .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
-        .policyName(getPolicyName(resourceID, type))
-        .policyType(PolicyType.TARGET_TRACKING_SCALING)
-        .targetTrackingScalingPolicyConfiguration(getScalingPolicyConfiguration(type))
-        .build();
-  }
-
-  private DeleteScalingPolicyRequest buildDeleteScalingPolicyRequest(
-      String resourceID, String type) {
-    return DeleteScalingPolicyRequest.builder()
-        .serviceNamespace(ServiceNamespace.DYNAMODB)
-        .resourceId(resourceID)
-        .scalableDimension(SCALABLE_DIMENSION_MAP.get(type))
-        .policyName(getPolicyName(resourceID, type))
-        .build();
-  }
-
-  private void waitForTableCreation(String tableFullName) {
-    while (true) {
-      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
-      DescribeTableRequest describeTableRequest =
-          DescribeTableRequest.builder().tableName(tableFullName).build();
-      DescribeTableResponse describeTableResponse = client.describeTable(describeTableRequest);
-      if (describeTableResponse.table().tableStatus() == TableStatus.ACTIVE) {
-        break;
-      }
-    }
-  }
-
-  private void waitForTableBackupEnabledAtCreation(String tableFullName) {
-    while (true) {
-      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
-      DescribeContinuousBackupsRequest describeContinuousBackupsRequest =
-          DescribeContinuousBackupsRequest.builder().tableName(tableFullName).build();
-      DescribeContinuousBackupsResponse describeContinuousBackupsResponse =
-          client.describeContinuousBackups(describeContinuousBackupsRequest);
-      if (describeContinuousBackupsResponse.continuousBackupsDescription().continuousBackupsStatus()
-          == ContinuousBackupsStatus.ENABLED) {
-        break;
-      }
-    }
-  }
-
-  private void waitForTableDeletion(String namespace, String tableName) throws ExecutionException {
-    while (true) {
-      Uninterruptibles.sleepUninterruptibly(WAITING_DURATION_SECS, TimeUnit.SECONDS);
-      Set<String> tableSet = getNamespaceTableNames(namespace);
-      if (!tableSet.contains(tableName)) {
-        break;
-      }
-    }
-  }
-
-  private String getPolicyName(String resourceID, String type) {
-    return resourceID + "-" + type;
-  }
-
-  private String getTableResourceID(String namespace, String table) {
-    return "table/" + getFullTableName(namespace, table);
-  }
-
-  private String getGlobalIndexResourceID(String namespace, String table, String globalIndex) {
-    return "table/"
-        + getFullTableName(namespace, table)
-        + "/index/"
-        + getGlobalIndexName(namespace, table, globalIndex);
-  }
-
-  private TargetTrackingScalingPolicyConfiguration getScalingPolicyConfiguration(String type) {
-    return TargetTrackingScalingPolicyConfiguration.builder()
-        .predefinedMetricSpecification(
-            PredefinedMetricSpecification.builder()
-                .predefinedMetricType(SCALING_POLICY_METRIC_TYPE_MAP.get(type))
-                .build())
-        .scaleInCooldown(COOL_DOWN_DURATION_SECS)
-        .scaleOutCooldown(COOL_DOWN_DURATION_SECS)
-        .targetValue(TARGET_USAGE_RATE)
-        .build();
-  }
-
-  private String getLocalIndexName(String namespace, String tableName, String keyName) {
-    return getFullTableName(namespace, tableName) + "." + INDEX_NAME_PREFIX + "." + keyName;
-  }
-
-  private String getGlobalIndexName(String namespace, String tableName, String keyName) {
-    return getFullTableName(namespace, tableName) + "." + GLOBAL_INDEX_NAME_PREFIX + "." + keyName;
   }
 
   @Override

@@ -4,13 +4,17 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
+import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.Value;
 import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
 import java.util.Map;
-import org.junit.Ignore;
-import org.junit.Test;
+import java.util.Random;
 
 public class DynamoMultipleClusteringKeysIntegrationTest
     extends StorageMultipleClusteringKeysIntegrationTestBase {
+
+  private static final double DYNAMO_DOUBLE_MAX_VALUE = 9.99999999999999E125D;
+  private static final double DYNAMO_DOUBLE_MIN_VALUE = -9.99999999999999E125D;
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
@@ -19,8 +23,20 @@ public class DynamoMultipleClusteringKeysIntegrationTest
 
   @Override
   protected ListMultimap<DataType, DataType> getClusteringKeyTypes() {
-    // Return empty for now
-    return ArrayListMultimap.create();
+    // Return types without BLOB because blob is not supported for clustering key for now
+    ListMultimap<DataType, DataType> clusteringKeyTypes = ArrayListMultimap.create();
+    for (DataType firstClusteringKeyType : DataType.values()) {
+      if (firstClusteringKeyType == DataType.BLOB) {
+        continue;
+      }
+      for (DataType secondClusteringKeyType : DataType.values()) {
+        if (secondClusteringKeyType == DataType.BLOB) {
+          continue;
+        }
+        clusteringKeyTypes.put(firstClusteringKeyType, secondClusteringKeyType);
+      }
+    }
+    return clusteringKeyTypes;
   }
 
   @Override
@@ -28,80 +44,35 @@ public class DynamoMultipleClusteringKeysIntegrationTest
     return DynamoEnv.getCreateOptions();
   }
 
-  // Ignore all tests for now. We will have them back after the sort key optimization
-
-  @Ignore
-  @Test
   @Override
-  public void scan_WithoutClusteringKeyRange_ShouldReturnProperResult() {}
+  protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+    if (dataType == DataType.DOUBLE) {
+      return new DoubleValue(columnName, nextDynamoDouble(random));
+    }
+    return super.getRandomValue(random, columnName, dataType);
+  }
 
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult() {}
+  private double nextDynamoDouble(Random random) {
+    return random
+        .doubles(DYNAMO_DOUBLE_MIN_VALUE, DYNAMO_DOUBLE_MAX_VALUE)
+        .limit(1)
+        .findFirst()
+        .orElse(0.0d);
+  }
 
-  @Ignore
-  @Test
   @Override
-  public void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult() {}
+  protected Value<?> getMinValue(String columnName, DataType dataType) {
+    if (dataType == DataType.DOUBLE) {
+      return new DoubleValue(columnName, DYNAMO_DOUBLE_MAX_VALUE);
+    }
+    return super.getMinValue(columnName, dataType);
+  }
 
-  @Ignore
-  @Test
   @Override
-  public void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult() {}
-
-  @Ignore
-  @Test
-  @Override
-  public void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult() {}
+  protected Value<?> getMaxValue(String columnName, DataType dataType) {
+    if (dataType == DataType.DOUBLE) {
+      return new DoubleValue(columnName, DYNAMO_DOUBLE_MIN_VALUE);
+    }
+    return super.getMaxValue(columnName, dataType);
+  }
 }

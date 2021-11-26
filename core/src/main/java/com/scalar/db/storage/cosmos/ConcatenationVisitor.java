@@ -28,6 +28,7 @@ public class ConcatenationVisitor implements ValueVisitor {
   }
 
   public String build() {
+    // TODO What if the string or blob value includes `:`?
     return String.join(":", values);
   }
 
@@ -102,6 +103,8 @@ public class ConcatenationVisitor implements ValueVisitor {
         .get()
         .ifPresent(
             b -> {
+              // TODO Can we really convert bytes to string directly?
+              //      Maybe need to use the BASE64 encoding?
               ByteBuffer buffer = (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip();
               values.add(new String(buffer.array(), StandardCharsets.UTF_8));
             });

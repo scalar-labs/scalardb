@@ -40,7 +40,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(BooleanValue value) {
-    values.put(value.getName(), AttributeValue.builder().bool(value.get()).build());
+    values.put(value.getName(), AttributeValue.builder().bool(value.getAsBoolean()).build());
   }
 
   /**
@@ -50,7 +50,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(IntValue value) {
-    String v = String.valueOf(value.get());
+    String v = String.valueOf(value.getAsInt());
     values.put(value.getName(), AttributeValue.builder().n(v).build());
   }
 
@@ -61,7 +61,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(BigIntValue value) {
-    String v = String.valueOf(value.get());
+    String v = String.valueOf(value.getAsLong());
     values.put(value.getName(), AttributeValue.builder().n(v).build());
   }
 
@@ -72,7 +72,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(FloatValue value) {
-    String v = String.valueOf(value.get());
+    String v = String.valueOf(value.getAsFloat());
     values.put(value.getName(), AttributeValue.builder().n(v).build());
   }
 
@@ -83,7 +83,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(DoubleValue value) {
-    String v = String.valueOf(value.get());
+    String v = String.valueOf(value.getAsDouble());
     values.put(value.getName(), AttributeValue.builder().n(v).build());
   }
 
