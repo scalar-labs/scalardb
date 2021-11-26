@@ -18,7 +18,7 @@ public class CosmosClientSingleton {
             .buildClient();
   }
 
-  public synchronized static CosmosClient getCosmosClient(CosmosConfig config) {
+  public static synchronized CosmosClient getCosmosClient(CosmosConfig config) {
     if (cosmosClient == null) {
       initializeCosmosClient(config);
     }
@@ -27,7 +27,7 @@ public class CosmosClientSingleton {
     return cosmosClient;
   }
 
-  public synchronized static void release() {
+  public static synchronized void release() {
     if (references == 1) {
       cosmosClient.close();
       cosmosClient = null;
