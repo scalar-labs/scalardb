@@ -85,7 +85,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      tearUp();
+      DatabaseConfig config = getDatabaseConfig();
+      StorageFactory factory = new StorageFactory(config);
+      admin = factory.getAdmin();
+      consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
+      consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
+      namespace1 = getNamespace1();
+      namespace2 = getNamespace2();
+      createTables();
+      originalStorage = factory.getStorage();
       initialized = true;
     }
 
@@ -96,18 +104,6 @@ public abstract class ConsensusCommitIntegrationTestBase {
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
     manager =
         new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
-  }
-
-  protected void tearUp() throws ExecutionException, Exception {
-    DatabaseConfig config = getDatabaseConfig();
-    StorageFactory factory = new StorageFactory(config);
-    admin = factory.getAdmin();
-    consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-    consensusCommitAdmin = new ConsensusCommitAdmin(admin, consensusCommitConfig);
-    namespace1 = getNamespace1();
-    namespace2 = getNamespace2();
-    createTables();
-    originalStorage = factory.getStorage();
   }
 
   protected void initialize() throws Exception {}
@@ -122,7 +118,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     return NAMESPACE_2;
   }
 
-  protected void createTables() throws ExecutionException {
+  private void createTables() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     TableMetadata tableMetadata =
         TableMetadata.newBuilder()
