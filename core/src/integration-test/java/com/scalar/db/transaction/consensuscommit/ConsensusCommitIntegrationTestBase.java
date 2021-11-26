@@ -158,7 +158,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     originalStorage.close();
   }
 
-  protected static void deleteTables() throws ExecutionException {
+  private static void deleteTables() throws ExecutionException {
     admin.dropTable(namespace1, TABLE_1);
     admin.dropNamespace(namespace1);
     admin.dropTable(namespace2, TABLE_2);

@@ -2,9 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.scalar.db.util.Utility.getFullTableName;
 
-import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
@@ -67,14 +65,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Inject
   public CosmosAdmin(CosmosConfig config) {
-    client =
-        new CosmosClientBuilder()
-            .endpoint(config.getContactPoints().get(0))
-            .key(config.getPassword().orElse(null))
-            .directMode()
-            .consistencyLevel(ConsistencyLevel.STRONG)
-            .connectionSharingAcrossClientsEnabled(true)
-            .buildClient();
+    client = CosmosClientSingleton.getCosmosClient(config);
     metadataDatabase = config.getTableMetadataDatabase().orElse(METADATA_DATABASE);
   }
 
@@ -387,7 +378,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   @Override
   public void close() {
-    client.close();
+    CosmosClientSingleton.release();
   }
 
   private ThroughputProperties calculateThroughput(Map<String, String> options) {

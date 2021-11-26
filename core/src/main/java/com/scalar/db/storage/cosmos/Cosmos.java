@@ -2,9 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
-import com.azure.cosmos.CosmosClientBuilder;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
@@ -47,14 +45,7 @@ public class Cosmos implements DistributedStorage {
 
   @Inject
   public Cosmos(CosmosConfig config) {
-    client =
-        new CosmosClientBuilder()
-            .endpoint(config.getContactPoints().get(0))
-            .key(config.getPassword().orElse(null))
-            .directMode()
-            .consistencyLevel(ConsistencyLevel.STRONG)
-            .connectionSharingAcrossClientsEnabled(true)
-            .buildClient();
+    client = CosmosClientSingleton.getCosmosClient(config);
 
     namespace = Optional.empty();
     tableName = Optional.empty();
@@ -68,10 +59,6 @@ public class Cosmos implements DistributedStorage {
     batchHandler = new BatchHandler(client, metadataManager);
 
     LOGGER.info("Cosmos DB object is created properly.");
-  }
-
-  public CosmosClient getCosmosClient() {
-    return client;
   }
 
   @Override
@@ -179,6 +166,6 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void close() {
-    client.close();
+    CosmosClientSingleton.release();
   }
 }
