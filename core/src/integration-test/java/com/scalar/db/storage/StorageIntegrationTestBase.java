@@ -119,7 +119,7 @@ public abstract class StorageIntegrationTestBase {
     storage.close();
   }
 
-  protected static void deleteTable() throws ExecutionException {
+  private static void deleteTable() throws ExecutionException {
     admin.dropTable(namespace, TABLE);
     admin.dropNamespace(namespace);
   }
