@@ -16,15 +16,8 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -41,17 +34,15 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
-public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
+@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
-  protected static final String TABLE_BASE_NAME = "test_table_mul_key_";
+  protected static final String TABLE_BASE_NAME = "mul_clustering_key_";
   protected static final String PARTITION_KEY = "pkey";
   protected static final String FIRST_CLUSTERING_KEY = "ckey1";
   protected static final String SECOND_CLUSTERING_KEY = "ckey2";
@@ -59,8 +50,6 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   private static final int FIRST_CLUSTERING_KEY_NUM = 5;
   private static final int SECOND_CLUSTERING_KEY_NUM = 30;
-  protected static final int TEXT_MAX_COUNT = 20;
-  protected static final int BLOB_MAX_LENGTH = 20;
 
   private static final Random RANDOM = new Random();
 
@@ -85,7 +74,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
       System.out.println(
-          "The seed used in the multiple clustering keys integration test is " + seed);
+          "The seed used in the multiple clustering key scan integration test is " + seed);
       initialized = true;
     }
   }
@@ -230,7 +219,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
@@ -322,7 +311,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
@@ -408,7 +397,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startAndEndClusteringKey.first), startInclusive)
             .withEnd(new Key(startAndEndClusteringKey.first), endInclusive)
             .withOrdering(
@@ -488,7 +477,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
@@ -566,7 +555,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withOrdering(
                 new Ordering(
@@ -628,7 +617,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withOrdering(
                 new Ordering(
@@ -699,7 +688,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
@@ -755,7 +744,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
@@ -866,7 +855,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
@@ -983,7 +972,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(
                 new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
                 startInclusive)
@@ -1098,7 +1087,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             secondClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
@@ -1212,7 +1201,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withOrdering(
                 new Ordering(
@@ -1299,7 +1288,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             secondClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withOrdering(
                 new Ordering(
@@ -1405,7 +1394,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
@@ -1492,7 +1481,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             secondClusteringOrder);
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
@@ -1542,7 +1531,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Put> puts = new ArrayList<>();
 
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      booleanValues(FIRST_CLUSTERING_KEY)
+      TestUtils.booleanValues(FIRST_CLUSTERING_KEY)
           .forEach(
               firstClusteringKeyValue ->
                   prepareRecords(
@@ -1624,7 +1613,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       List<Put> puts,
       List<ClusteringKey> ret) {
     if (secondClusteringKeyType == DataType.BOOLEAN) {
-      booleanValues(SECOND_CLUSTERING_KEY)
+      TestUtils.booleanValues(SECOND_CLUSTERING_KEY)
           .forEach(
               secondClusteringKeyValue -> {
                 ret.add(
@@ -1671,10 +1660,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       Value<?> secondClusteringKeyValue) {
-    return new Put(
-            new Key(getPartitionKeyValue()),
-            new Key(firstClusteringKeyValue, secondClusteringKeyValue))
-        .withValue(new IntValue(COL_NAME, 1))
+    return new Put(getPartitionKey(), new Key(firstClusteringKeyValue, secondClusteringKeyValue))
+        .withValue(COL_NAME, 1)
         .forNamespace(getNamespaceName(firstClusteringKeyType))
         .forTable(
             getTableName(
@@ -1682,10 +1669,6 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
                 firstClusteringOrder,
                 secondClusteringKeyType,
                 secondClusteringOrder));
-  }
-
-  private List<BooleanValue> booleanValues(String name) {
-    return Arrays.asList(new BooleanValue(name, false), new BooleanValue(name, true));
   }
 
   private int getFirstClusteringKeyIndex(int i, DataType secondClusteringKeyType) {
@@ -1732,8 +1715,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     }
   }
 
-  private IntValue getPartitionKeyValue() {
-    return new IntValue(PARTITION_KEY, 1);
+  private Key getPartitionKey() {
+    return new Key(PARTITION_KEY, 1);
   }
 
   private Value<?> getFirstClusteringKeyValue(DataType dataType) {
@@ -1770,92 +1753,15 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
   }
 
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, nextBigInt(random));
-      case INT:
-        return new IntValue(columnName, random.nextInt());
-      case FLOAT:
-        return new FloatValue(columnName, nextFloat(random));
-      case DOUBLE:
-        return new DoubleValue(columnName, nextDouble(random));
-      case BLOB:
-        int length = random.nextInt(BLOB_MAX_LENGTH - 1) + 1;
-        byte[] bytes = new byte[length];
-        random.nextBytes(bytes);
-        return new BlobValue(columnName, bytes);
-      case TEXT:
-        int count = random.nextInt(TEXT_MAX_COUNT - 1) + 1;
-        return new TextValue(
-            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
-      case BOOLEAN:
-        return new BooleanValue(columnName, random.nextBoolean());
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  protected long nextBigInt(Random random) {
-    return random
-        .longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1))
-        .limit(1)
-        .findFirst()
-        .orElse(0);
-  }
-
-  protected float nextFloat(Random random) {
-    return (float)
-        random.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
-  }
-
-  protected double nextDouble(Random random) {
-    return random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+    return TestUtils.getRandomValue(random, columnName, dataType);
   }
 
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
-      case INT:
-        return new IntValue(columnName, Integer.MIN_VALUE);
-      case FLOAT:
-        return new FloatValue(columnName, Float.MIN_VALUE);
-      case DOUBLE:
-        return new DoubleValue(columnName, Double.MIN_VALUE);
-      case BLOB:
-        return new BlobValue(columnName, new byte[] {0x00});
-      case TEXT:
-        return new TextValue(columnName, "\u0001");
-      case BOOLEAN:
-        return new BooleanValue(columnName, false);
-      default:
-        throw new AssertionError();
-    }
+    return TestUtils.getMinValue(columnName, dataType);
   }
 
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
-      case INT:
-        return new IntValue(columnName, Integer.MAX_VALUE);
-      case FLOAT:
-        return new FloatValue(columnName, Float.MAX_VALUE);
-      case DOUBLE:
-        return new DoubleValue(columnName, Double.MAX_VALUE);
-      case BLOB:
-        byte[] blobBytes = new byte[BLOB_MAX_LENGTH];
-        Arrays.fill(blobBytes, (byte) 0xff);
-        return new BlobValue(columnName, blobBytes);
-      case TEXT:
-        StringBuilder builder = new StringBuilder();
-        IntStream.range(0, TEXT_MAX_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
-        return new TextValue(columnName, builder.toString());
-      case BOOLEAN:
-        return new BooleanValue(columnName, true);
-      default:
-        throw new AssertionError();
-    }
+    return TestUtils.getMaxValue(columnName, dataType);
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
