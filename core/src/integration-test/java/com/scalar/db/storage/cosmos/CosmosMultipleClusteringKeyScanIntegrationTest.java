@@ -4,12 +4,12 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
+import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.util.Map;
 import java.util.Optional;
 
-public class CosmosMultipleClusteringKeysIntegrationTest
-    extends StorageMultipleClusteringKeysIntegrationTestBase {
+public class CosmosMultipleClusteringKeyScanIntegrationTest
+    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {

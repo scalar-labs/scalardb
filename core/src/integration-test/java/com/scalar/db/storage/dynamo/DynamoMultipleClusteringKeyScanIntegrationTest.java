@@ -4,13 +4,13 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
+import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.util.Map;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class DynamoMultipleClusteringKeysIntegrationTest
-    extends StorageMultipleClusteringKeysIntegrationTestBase {
+public class DynamoMultipleClusteringKeyScanIntegrationTest
+    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
