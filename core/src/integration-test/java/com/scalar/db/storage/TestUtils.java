@@ -23,6 +23,11 @@ public final class TestUtils {
   private TestUtils() {}
 
   public static Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
+    return getRandomValue(random, columnName, dataType, false);
+  }
+
+  public static Value<?> getRandomValue(
+      Random random, String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
         return new BigIntValue(columnName, nextBigInt(random));
@@ -33,12 +38,14 @@ public final class TestUtils {
       case DOUBLE:
         return new DoubleValue(columnName, nextDouble(random));
       case BLOB:
-        int length = random.nextInt(MAX_BLOB_LENGTH - 1) + 1;
+        int length =
+            allowEmpty ? random.nextInt(MAX_BLOB_LENGTH) : random.nextInt(MAX_BLOB_LENGTH - 1) + 1;
         byte[] bytes = new byte[length];
         random.nextBytes(bytes);
         return new BlobValue(columnName, bytes);
       case TEXT:
-        int count = random.nextInt(MAX_TEXT_COUNT - 1) + 1;
+        int count =
+            allowEmpty ? random.nextInt(MAX_TEXT_COUNT) : random.nextInt(MAX_TEXT_COUNT - 1) + 1;
         return new TextValue(
             columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
       case BOOLEAN:
@@ -66,6 +73,10 @@ public final class TestUtils {
   }
 
   public static Value<?> getMinValue(String columnName, DataType dataType) {
+    return getMinValue(columnName, dataType, false);
+  }
+
+  public static Value<?> getMinValue(String columnName, DataType dataType, boolean allowEmpty) {
     switch (dataType) {
       case BIGINT:
         return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
@@ -76,9 +87,9 @@ public final class TestUtils {
       case DOUBLE:
         return new DoubleValue(columnName, Double.MIN_VALUE);
       case BLOB:
-        return new BlobValue(columnName, new byte[] {0x00});
+        return new BlobValue(columnName, allowEmpty ? new byte[0] : new byte[] {0x00});
       case TEXT:
-        return new TextValue(columnName, "\u0001");
+        return new TextValue(columnName, allowEmpty ? "" : "\u0001");
       case BOOLEAN:
         return new BooleanValue(columnName, false);
       default:
