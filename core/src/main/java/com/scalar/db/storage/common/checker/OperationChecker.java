@@ -36,7 +36,7 @@ public class OperationChecker {
     checkProjections(get, metadata);
 
     if (Utility.isSecondaryIndexSpecified(get, metadata)) {
-      if (!new ColumnChecker(metadata, true).check(get.getPartitionKey().get().get(0))) {
+      if (!new ColumnChecker(metadata, false).check(get.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
       }
@@ -57,7 +57,7 @@ public class OperationChecker {
     checkProjections(scan, metadata);
 
     if (Utility.isSecondaryIndexSpecified(scan, metadata)) {
-      if (!new ColumnChecker(metadata, true).check(scan.getPartitionKey().get().get(0))) {
+      if (!new ColumnChecker(metadata, false).check(scan.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
       }
