@@ -31,8 +31,8 @@ import org.junit.Test;
 @SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class StorageSecondaryIndexIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
-  protected static final String TABLE_BASE_NAME = "secondary_index_";
+  protected static final String TEST_NAME = "secondary_idx";
+  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   protected static final String PARTITION_KEY = "pkey";
   protected static final String INDEX_COL_NAME = "idx_col";
   protected static final String COL_NAME = "col";
@@ -53,7 +53,8 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace = getNamespace();
       secondaryIndexTypes = getSecondaryIndexTypes();
@@ -122,7 +123,7 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
   }
 
   private static String getTableName(DataType secondaryIndexType) {
-    return TABLE_BASE_NAME + secondaryIndexType;
+    return secondaryIndexType.toString();
   }
 
   @Test
