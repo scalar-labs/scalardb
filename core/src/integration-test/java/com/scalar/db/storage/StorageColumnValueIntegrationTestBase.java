@@ -33,7 +33,8 @@ import org.junit.Test;
 @SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class StorageColumnValueIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
+  protected static final String TEST_NAME = "col_val";
+  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   protected static final String TABLE = "test_table";
   protected static final String PARTITION_KEY = "pkey";
   protected static final String COL_NAME1 = "c1";
@@ -57,7 +58,8 @@ public abstract class StorageColumnValueIntegrationTestBase {
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace = getNamespace();
       createTable();

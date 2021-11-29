@@ -21,7 +21,8 @@ import org.junit.Test;
     value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class AdminIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
+  protected static final String TEST_NAME = "admin";
+  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   protected static final String TABLE = "test_table";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
@@ -43,7 +44,8 @@ public abstract class AdminIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace = getNamespace();
       createTable();

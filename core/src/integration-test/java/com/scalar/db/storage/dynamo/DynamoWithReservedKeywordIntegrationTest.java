@@ -24,7 +24,7 @@ import org.junit.Test;
 
 public class DynamoWithReservedKeywordIntegrationTest {
 
-  private static final String NAMESPACE = "integration_testing";
+  private static final String NAMESPACE = "integration_testing_dynamo_reserved_keyword";
   private static final String TABLE = "test_table";
   protected static final String COL_NAME1 = "c1";
   protected static final String COL_NAME2 = "c2";
