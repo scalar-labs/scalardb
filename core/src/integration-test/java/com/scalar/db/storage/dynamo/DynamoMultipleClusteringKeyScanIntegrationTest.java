@@ -4,17 +4,13 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
+import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.util.Map;
 import java.util.Random;
 
-public class DynamoMultipleClusteringKeysIntegrationTest
-    extends StorageMultipleClusteringKeysIntegrationTestBase {
-
-  private static final double DYNAMO_DOUBLE_MAX_VALUE = 9.99999999999999E125D;
-  private static final double DYNAMO_DOUBLE_MIN_VALUE = -9.99999999999999E125D;
+public class DynamoMultipleClusteringKeyScanIntegrationTest
+    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
@@ -47,23 +43,15 @@ public class DynamoMultipleClusteringKeysIntegrationTest
   @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
-      return new DoubleValue(columnName, nextDynamoDouble(random));
+      return DynamoTestUtils.getRandomDynamoDoubleValue(random, columnName);
     }
     return super.getRandomValue(random, columnName, dataType);
-  }
-
-  private double nextDynamoDouble(Random random) {
-    return random
-        .doubles(DYNAMO_DOUBLE_MIN_VALUE, DYNAMO_DOUBLE_MAX_VALUE)
-        .limit(1)
-        .findFirst()
-        .orElse(0.0d);
   }
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
-      return new DoubleValue(columnName, DYNAMO_DOUBLE_MAX_VALUE);
+      return DynamoTestUtils.getMinDynamoDoubleValue(columnName);
     }
     return super.getMinValue(columnName, dataType);
   }
@@ -71,7 +59,7 @@ public class DynamoMultipleClusteringKeysIntegrationTest
   @Override
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
     if (dataType == DataType.DOUBLE) {
-      return new DoubleValue(columnName, DYNAMO_DOUBLE_MIN_VALUE);
+      return DynamoTestUtils.getMaxDynamoDoubleValue(columnName);
     }
     return super.getMaxValue(columnName, dataType);
   }
