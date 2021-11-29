@@ -1,5 +1,6 @@
 package com.scalar.db.storage;
 
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
@@ -9,8 +10,17 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.storage.cosmos.CosmosAdmin;
+import com.scalar.db.storage.cosmos.CosmosConfig;
+import com.scalar.db.storage.dynamo.DynamoAdmin;
+import com.scalar.db.storage.dynamo.DynamoConfig;
+import com.scalar.db.storage.jdbc.JdbcConfig;
+import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -135,5 +145,52 @@ public final class TestUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  /**
+   * Add a suffix to the metadata database/namespace/schema name and the consensus-commit
+   * coordinator table name.
+   *
+   * @param config the original config
+   * @param testName used for the suffix
+   * @return config added the suffix
+   */
+  public static DatabaseConfig addSuffix(DatabaseConfig config, String testName) {
+    Properties properties = new Properties();
+    properties.putAll(config.getProperties());
+
+    // for Cosmos
+    String tableMetadataDatabase = properties.getProperty(CosmosConfig.TABLE_METADATA_DATABASE);
+    if (tableMetadataDatabase == null) {
+      tableMetadataDatabase = CosmosAdmin.METADATA_DATABASE;
+    }
+    properties.setProperty(
+        CosmosConfig.TABLE_METADATA_DATABASE, tableMetadataDatabase + "_" + testName);
+
+    // for Dynamo
+    String tableMetadataNamespace = properties.getProperty(DynamoConfig.TABLE_METADATA_NAMESPACE);
+    if (tableMetadataNamespace == null) {
+      tableMetadataNamespace = DynamoAdmin.METADATA_NAMESPACE;
+    }
+    properties.setProperty(
+        DynamoConfig.TABLE_METADATA_NAMESPACE, tableMetadataNamespace + "_" + testName);
+
+    // for JDBC
+    String tableMetadataSchema = properties.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
+    if (tableMetadataSchema == null) {
+      tableMetadataSchema = JdbcDatabaseAdmin.METADATA_SCHEMA;
+    }
+    properties.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
+
+    // for consensus-commit
+    String coordinatorNamespace =
+        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
+    if (coordinatorNamespace == null) {
+      coordinatorNamespace = Coordinator.NAMESPACE;
+    }
+    properties.setProperty(
+        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    return new DatabaseConfig(properties);
   }
 }

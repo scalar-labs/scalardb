@@ -32,8 +32,8 @@ import org.junit.Test;
 @SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class StorageSinglePartitionKeyIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
-  protected static final String TABLE_BASE_NAME = "single_pkey_";
+  protected static final String TEST_NAME = "single_pkey";
+  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
   protected static final String PARTITION_KEY = "pkey";
   protected static final String COL_NAME = "col";
 
@@ -52,7 +52,8 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace = getNamespace();
       partitionKeyTypes = getPartitionKeyTypes();
@@ -120,7 +121,7 @@ public abstract class StorageSinglePartitionKeyIntegrationTestBase {
   }
 
   private static String getTableName(DataType partitionKeyType) {
-    return TABLE_BASE_NAME + partitionKeyType;
+    return partitionKeyType.toString();
   }
 
   @Test
