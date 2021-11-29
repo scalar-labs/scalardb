@@ -11,14 +11,14 @@ The library is available on [Maven Central](https://search.maven.org/search?q=a:
 You can install it in your application using your build tool such as Gradle and Maven.
 
 To add a dependency on Scalar DB using Gradle, use the following:
-```
+```gradle
 dependencies {
     implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.3.0'
 }
 ```
 
 To add a dependency using Maven:
-```
+```xml
 <dependency>
   <groupId>com.scalar-labs</groupId>
   <artifactId>scalardb</artifactId>

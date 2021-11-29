@@ -38,6 +38,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.TestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,10 +56,11 @@ import org.junit.Test;
     value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class ConsensusCommitIntegrationTestBase {
 
-  protected static final String NAMESPACE_1 = "integration_testing1";
-  protected static final String NAMESPACE_2 = "integration_testing2";
-  protected static final String TABLE_1 = "tx_test_table1";
-  protected static final String TABLE_2 = "tx_test_table2";
+  protected static final String TEST_NAME = "cc";
+  protected static final String NAMESPACE_1 = "integration_testing_" + TEST_NAME + "1";
+  protected static final String NAMESPACE_2 = "integration_testing_" + TEST_NAME + "2";
+  protected static final String TABLE_1 = "test_table1";
+  protected static final String TABLE_2 = "test_table2";
   protected static final String ACCOUNT_ID = "account_id";
   protected static final String ACCOUNT_TYPE = "account_type";
   protected static final String BALANCE = "balance";
@@ -85,7 +87,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      DatabaseConfig config = getDatabaseConfig();
+      DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
       StorageFactory factory = new StorageFactory(config);
       admin = factory.getAdmin();
       consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());

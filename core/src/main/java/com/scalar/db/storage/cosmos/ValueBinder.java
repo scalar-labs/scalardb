@@ -8,7 +8,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
-import java.nio.ByteBuffer;
+import java.util.Base64;
 import java.util.function.Consumer;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -95,12 +95,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
-    value
-        .get()
-        .ifPresent(
-            b -> {
-              ByteBuffer buffer = (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip();
-              consumer.accept(buffer.array());
-            });
+    value.get().ifPresent(b -> consumer.accept(Base64.getEncoder().encodeToString(b)));
   }
 }
