@@ -12,7 +12,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.ResultImpl;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -74,20 +73,10 @@ public class ResultInterpreter {
         return new DoubleValue(
             name, recordValue == null ? 0.0 : ((Number) recordValue).doubleValue());
       case TEXT:
-        return new TextValue(
-            name,
-            recordValue == null
-                ? null
-                : new String(
-                    ((String) recordValue).getBytes(StandardCharsets.UTF_8),
-                    StandardCharsets.UTF_8));
+        return new TextValue(name, recordValue == null ? null : (String) recordValue);
       case BLOB:
         return new BlobValue(
-            name,
-            recordValue == null
-                ? null
-                : Base64.getDecoder()
-                    .decode(((String) recordValue).getBytes(StandardCharsets.UTF_8)));
+            name, recordValue == null ? null : Base64.getDecoder().decode((String) recordValue));
       default:
         throw new AssertionError();
     }
