@@ -192,6 +192,7 @@ jobs:
 
       - run:
           name: Run integration test
+          no_output_timeout: 20m
           command: gradle integrationTestDynamo
 
       - run:
