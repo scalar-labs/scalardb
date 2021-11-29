@@ -8,9 +8,8 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -98,12 +97,9 @@ public class ConcatenationVisitor implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
+    // Use Base64 encoding
     value
         .get()
-        .ifPresent(
-            b -> {
-              ByteBuffer buffer = (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip();
-              values.add(new String(buffer.array(), StandardCharsets.UTF_8));
-            });
+        .ifPresent(b -> values.add(Base64.getUrlEncoder().withoutPadding().encodeToString(b)));
   }
 }
