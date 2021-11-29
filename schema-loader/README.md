@@ -335,7 +335,7 @@ If this data type mapping doesn't match your application, please alter the table
 ## Using Schema Loader in your program
 You can check `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
-```
+```gradle
 dependencies {
     implementation group: 'com.scalar-labs', name: 'scalardb-schema-loader', version: '<version>'
 }
@@ -346,13 +346,13 @@ You can create/delete tables that defined in the schema using SchemaLoader by si
 
 ```java
 public class SchemaLoaderSample {
-  public static int main(String... args) throws IOException, SchemaOperatorException {
-    String configPath = "database.properties";
-    String schemaFile = "sample_schema.json";
+  public static int main(String... args) throws SchemaOperatorException {
+    Path configFilePath = Paths.get("database.properties");
+    Path schemaFilePath = Paths.get("sample_schema.json");
     boolean createCoordinatorTable = true;
     boolean deleteCoordinatorTable = true;
 
-    Map<String, String> metaOptions = new HashMap<>();
+    Map<String, String> options = new HashMap<>();
 
     metaOptions.put(
         CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
@@ -364,23 +364,30 @@ public class SchemaLoaderSample {
     metaOptions.put(DynamoAdmin.NO_BACKUP, "true");
 
     // Create tables
-    SchemaLoader.load(configPath, schemaFile, metaOptions, createCoordinatorTable);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, createCoordinatorTable);
 
     // Delete tables
-    SchemaLoader.unload(configPath, schemaFile, metaOptions, deleteCoordinatorTable);
+    SchemaLoader.unload(configFilePath, schemaFilePath, options, deleteCoordinatorTable);
 
     return 0;
   }
 }
 ```
 
-You can also create/delete a schema by passing a serialized schema json string (raw string value from schema file) to schema operator
+You can also create/delete a schema by passing a serialized schema json string (raw string value from schema file)
 ```
 // Create tables
-SchemaLoader.load(configPath, serializedSchemaJson, metaOptions,
-                    createCoordinatorTable, InputSchemaType.SERIALIZED_JSON_STRING);
+SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTable);
 
 // Delete tables
-SchemaLoader.unload(configPath, serializedSchemaJson, metaOptions,
-                    deleteCoordinatorTable, InputSchemaType.SERIALIZED_JSON_STRING);
+SchemaLoader.unload(configFilePath, serializedSchemaJson, options, deleteCoordinatorTable);
+```
+
+For Scalar DB configuration, a `Properties` object can be used as well 
+```
+// Create tables
+SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTable);
+
+// Delete tables
+SchemaLoader.unload(properties, serializedSchemaJson, options, deleteCoordinatorTable);
 ```

@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 public class Table {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
+
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
   private static final String PARTITION_KEY = "partition-key";
@@ -62,10 +63,8 @@ public class Table {
     if (fullName.length < 2) {
       throw new SchemaException("Table full name must contains table name and namespace");
     }
-
     namespace = fullName[0];
     tableName = fullName[1];
-
     tableMetadata = buildTableMetadata(tableDefinition);
     options = buildOptions(tableDefinition, metaOptions);
   }

@@ -10,10 +10,10 @@ import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import java.io.IOException;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -70,48 +70,123 @@ public class SchemaLoader {
   /**
    * Creates tables defined in the schema file.
    *
+   * @param configProperties Scalar DB config properties.
+   * @param schemaFilePath path to schema file.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTable create coordinator table or not.
+   */
+  public static void load(
+      Properties configProperties,
+      Path schemaFilePath,
+      Map<String, String> options,
+      boolean createCoordinatorTable)
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
+
+    // Create tables
+    operator.createTables(schemaFilePath, options);
+    if (createCoordinatorTable) {
+      operator.createCoordinatorTable(options);
+    }
+
+    operator.close();
+  }
+
+  /**
+   * Creates tables defined in the schema file.
+   *
    * @param configFilePath path to Scalar DB config file.
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
-   * @param createCoordinatorTable create coordinator table or not.\
+   * @param createCoordinatorTable create coordinator table or not.
    */
   public static void load(
-      String configFilePath,
-      String schemaFilePath,
+      Path configFilePath,
+      Path schemaFilePath,
       Map<String, String> options,
       boolean createCoordinatorTable)
-      throws IOException, SchemaOperatorException {
-    load(
-        configFilePath, schemaFilePath, options, createCoordinatorTable, InputSchemaType.FILE_PATH);
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+
+    // Create tables
+    operator.createTables(schemaFilePath, options);
+    if (createCoordinatorTable) {
+      operator.createCoordinatorTable(options);
+    }
+
+    operator.close();
+  }
+
+  /**
+   * Creates tables defined in the schema.
+   *
+   * @param configProperties Scalar DB config properties.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTable create coordinator table or not.
+   */
+  public static void load(
+      Properties configProperties,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean createCoordinatorTable)
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
+
+    // Create tables
+    operator.createTables(serializedSchemaJson, options);
+    if (createCoordinatorTable) {
+      operator.createCoordinatorTable(options);
+    }
+
+    operator.close();
   }
 
   /**
    * Creates tables defined in the schema.
    *
    * @param configFilePath path to Scalar DB config file.
-   * @param schema schema definition, can be path to schema file or serialized json string schema.
+   * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
-   * @param inputSchemaType type of input schema {@link InputSchemaType}
    */
   public static void load(
-      String configFilePath,
-      String schema,
+      Path configFilePath,
+      String serializedSchemaJson,
       Map<String, String> options,
-      boolean createCoordinatorTable,
-      InputSchemaType inputSchemaType)
-      throws IOException, SchemaOperatorException {
+      boolean createCoordinatorTable)
+      throws SchemaOperatorException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
 
     // Create tables
-    if (inputSchemaType == InputSchemaType.FILE_PATH) {
-      operator.createTables(Paths.get(schema), options);
-    } else {
-      operator.createTables(schema, options);
-    }
-
+    operator.createTables(serializedSchemaJson, options);
     if (createCoordinatorTable) {
       operator.createCoordinatorTable(options);
+    }
+
+    operator.close();
+  }
+
+  /**
+   * Delete tables defined in the schema file.
+   *
+   * @param configProperties Scalar DB config properties.
+   * @param schemaFilePath path to schema json file.
+   * @param options specific options for deleting tables.
+   * @param deleteCoordinatorTable delete coordinator table or not.
+   */
+  public static void unload(
+      Properties configProperties,
+      Path schemaFilePath,
+      Map<String, String> options,
+      boolean deleteCoordinatorTable)
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
+
+    // Delete tables
+    operator.deleteTables(schemaFilePath, options);
+    if (deleteCoordinatorTable) {
+      operator.dropCoordinatorTable();
     }
 
     operator.close();
@@ -126,49 +201,69 @@ public class SchemaLoader {
    * @param deleteCoordinatorTable delete coordinator table or not.
    */
   public static void unload(
-      String configFilePath,
-      String schemaFilePath,
+      Path configFilePath,
+      Path schemaFilePath,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
-      throws IOException, SchemaOperatorException {
-    unload(
-        configFilePath, schemaFilePath, options, deleteCoordinatorTable, InputSchemaType.FILE_PATH);
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+
+    // Delete tables
+    operator.deleteTables(schemaFilePath, options);
+    if (deleteCoordinatorTable) {
+      operator.dropCoordinatorTable();
+    }
+
+    operator.close();
+  }
+
+  /**
+   * Delete tables defined in the schema.
+   *
+   * @param configProperties Scalar DB config properties.
+   * @param serializedSchemaJson serialized json string schema.
+   * @param options specific options for deleting tables.
+   * @param deleteCoordinatorTable delete coordinator table or not.
+   */
+  public static void unload(
+      Properties configProperties,
+      String serializedSchemaJson,
+      Map<String, String> options,
+      boolean deleteCoordinatorTable)
+      throws SchemaOperatorException {
+    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
+
+    // Delete tables
+    operator.deleteTables(serializedSchemaJson, options);
+    if (deleteCoordinatorTable) {
+      operator.dropCoordinatorTable();
+    }
+
+    operator.close();
   }
 
   /**
    * Delete tables defined in the schema.
    *
    * @param configFilePath path to Scalar DB config file.
-   * @param schema schema definition, can be path to schema file or serialized json string schema.
+   * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
-   * @param inputSchemaType type of input schema {@link InputSchemaType}
    */
   public static void unload(
-      String configFilePath,
-      String schema,
+      Path configFilePath,
+      String serializedSchemaJson,
       Map<String, String> options,
-      boolean deleteCoordinatorTable,
-      InputSchemaType inputSchemaType)
-      throws IOException, SchemaOperatorException {
+      boolean deleteCoordinatorTable)
+      throws SchemaOperatorException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
 
     // Delete tables
-    if (inputSchemaType == InputSchemaType.FILE_PATH) {
-      operator.deleteTables(Paths.get(schema), options);
-    } else {
-      operator.deleteTables(schema, options);
-    }
-
+    operator.deleteTables(serializedSchemaJson, options);
     if (deleteCoordinatorTable) {
-      operator.createCoordinatorTable(options);
+      operator.dropCoordinatorTable();
     }
 
     operator.close();
-  }
-
-  public enum InputSchemaType {
-    FILE_PATH,
-    SERIALIZED_JSON_STRING
   }
 }
