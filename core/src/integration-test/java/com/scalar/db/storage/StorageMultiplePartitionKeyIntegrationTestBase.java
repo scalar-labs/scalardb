@@ -25,6 +25,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
@@ -34,8 +38,8 @@ import org.junit.Test;
 @SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
-  protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
-  protected static final String TABLE_BASE_NAME = "mul_pkey_";
+  protected static final String TEST_NAME = "mul_pkey";
+  protected static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
   protected static final String FIRST_PARTITION_KEY = "pkey1";
   protected static final String SECOND_PARTITION_KEY = "pkey2";
   protected static final String COL_NAME = "col";
@@ -44,6 +48,8 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
   private static final int SECOND_PARTITION_KEY_NUM = 5;
 
   private static final Random RANDOM = new Random();
+
+  private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
@@ -55,13 +61,17 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static long seed;
 
+  private static ExecutorService executorService;
+
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
       partitionKeyTypes = getPartitionKeyTypes();
+      executorService = Executors.newFixedThreadPool(THREAD_NUM);
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -90,14 +100,27 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     return Collections.emptyMap();
   }
 
-  private void createTables() throws ExecutionException {
+  private void createTables() throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+
     Map<String, String> options = getCreateOptions();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
-      admin.createNamespace(getNamespaceName(firstPartitionKeyType), true, options);
-      for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
-        createTable(firstPartitionKeyType, secondPartitionKeyType, options);
-      }
+      Callable<Void> testCallable =
+          () -> {
+            admin.createNamespace(getNamespaceName(firstPartitionKeyType), true, options);
+            for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
+              createTable(firstPartitionKeyType, secondPartitionKeyType, options);
+            }
+            return null;
+          };
+      testCallables.add(testCallable);
     }
+
+    // We firstly execute the first one and then the rest. This is because the first table creation
+    // creates the metadata table, and this process can't be handled in multiple threads/processes
+    // at the same time.
+    execute(testCallables.subList(0, 1));
+    execute(testCallables.subList(1, testCallables.size()));
   }
 
   private void createTable(
@@ -124,15 +147,28 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
     storage.close();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private static void deleteTables()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstPartitionKeyType : partitionKeyTypes.keySet()) {
-      for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
-        admin.dropTable(
-            getNamespaceName(firstPartitionKeyType),
-            getTableName(firstPartitionKeyType, secondPartitionKeyType));
-      }
-      admin.dropNamespace(getNamespaceName(firstPartitionKeyType));
+      Callable<Void> testCallable =
+          () -> {
+            for (DataType secondPartitionKeyType : partitionKeyTypes.get(firstPartitionKeyType)) {
+              admin.dropTable(
+                  getNamespaceName(firstPartitionKeyType),
+                  getTableName(firstPartitionKeyType, secondPartitionKeyType));
+            }
+            admin.dropNamespace(getNamespaceName(firstPartitionKeyType));
+            return null;
+          };
+      testCallables.add(testCallable);
     }
+
+    // We firstly execute the callables without the last one. And then we execute the last one. This
+    // is because the last table deletion deletes the metadata table, and this process can't be
+    // handled in multiple threads/processes at the same time.
+    execute(testCallables.subList(0, testCallables.size() - 1));
+    execute(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
   private void truncateTable(DataType firstPartitionKeyType, DataType secondPartitionKeyType)
@@ -144,12 +180,19 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static String getTableName(
       DataType firstPartitionKeyType, DataType secondPartitionKeyType) {
-    return TABLE_BASE_NAME
-        + String.join("_", firstPartitionKeyType.toString(), secondPartitionKeyType.toString());
+    return String.join("_", firstPartitionKeyType.toString(), secondPartitionKeyType.toString());
   }
 
   private static String getNamespaceName(DataType firstPartitionKeyType) {
     return namespaceBaseName + firstPartitionKeyType;
+  }
+
+  private static void execute(List<Callable<Void>> testCallables)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    for (Future<Void> future : futures) {
+      future.get();
+    }
   }
 
   @Test
