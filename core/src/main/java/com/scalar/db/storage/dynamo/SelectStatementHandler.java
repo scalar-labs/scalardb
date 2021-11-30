@@ -396,8 +396,8 @@ public class SelectStatementHandler extends StatementHandler {
               DynamoOperation.START_CLUSTERING_KEY_ALIAS,
               AttributeValue.builder().b(SdkBytes.fromByteBuffer(closestNextBytes.get())).build());
         } else {
-          // TODO comment
-
+          // if we can't find the closest next bytes of the start key bytes, return false. That
+          // means we should return empty results in this case
           return false;
         }
       }
