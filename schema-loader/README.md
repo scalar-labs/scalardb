@@ -346,7 +346,7 @@ You can create/delete tables that defined in the schema using SchemaLoader by si
 
 ```java
 public class SchemaLoaderSample {
-  public static int main(String... args) throws SchemaOperatorException {
+  public static int main(String... args) throws SchemaLoaderException {
     Path configFilePath = Paths.get("database.properties");
     Path schemaFilePath = Paths.get("sample_schema.json");
     boolean createCoordinatorTable = true;
@@ -354,14 +354,14 @@ public class SchemaLoaderSample {
 
     Map<String, String> options = new HashMap<>();
 
-    metaOptions.put(
+    options.put(
         CassandraAdmin.REPLICATION_STRATEGY, ReplicationStrategy.SIMPLE_STRATEGY.toString());
-    metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
-    metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, "1");
+    options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
+    options.put(CassandraAdmin.REPLICATION_FACTOR, "1");
 
-    metaOptions.put(DynamoAdmin.REQUEST_UNIT, "1");
-    metaOptions.put(DynamoAdmin.NO_SCALING, "true");
-    metaOptions.put(DynamoAdmin.NO_BACKUP, "true");
+    options.put(DynamoAdmin.REQUEST_UNIT, "1");
+    options.put(DynamoAdmin.NO_SCALING, "true");
+    options.put(DynamoAdmin.NO_BACKUP, "true");
 
     // Create tables
     SchemaLoader.load(configFilePath, schemaFilePath, options, createCoordinatorTable);

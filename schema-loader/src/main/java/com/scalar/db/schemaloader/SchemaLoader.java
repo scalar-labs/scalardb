@@ -80,13 +80,21 @@ public class SchemaLoader {
       Path schemaFilePath,
       Map<String, String> options,
       boolean createCoordinatorTable)
-      throws SchemaOperatorException {
+      throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
 
     // Create tables
-    operator.createTables(schemaFilePath, options);
+    try {
+      operator.createTables(schemaFilePath, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Creating tables failed.", e);
+    }
     if (createCoordinatorTable) {
-      operator.createCoordinatorTable(options);
+      try {
+        operator.createCoordinatorTable(options);
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Creating coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -105,16 +113,27 @@ public class SchemaLoader {
       Path schemaFilePath,
       Map<String, String> options,
       boolean createCoordinatorTable)
-      throws SchemaOperatorException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
-
-    // Create tables
-    operator.createTables(schemaFilePath, options);
-    if (createCoordinatorTable) {
-      operator.createCoordinatorTable(options);
+      throws SchemaLoaderException {
+    SchemaOperator operator;
+    try {
+      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Initializing schema operator failed.", e);
     }
 
-    operator.close();
+    // Create tables
+    try {
+      operator.createTables(schemaFilePath, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Creating tables failed.", e);
+    }
+    if (createCoordinatorTable) {
+      try {
+        operator.createCoordinatorTable(options);
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Creating coordinator table failed.", e);
+      }
+    }
   }
 
   /**
@@ -130,13 +149,21 @@ public class SchemaLoader {
       String serializedSchemaJson,
       Map<String, String> options,
       boolean createCoordinatorTable)
-      throws SchemaOperatorException {
+      throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
 
     // Create tables
-    operator.createTables(serializedSchemaJson, options);
+    try {
+      operator.createTables(serializedSchemaJson, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Creating tables failed.", e);
+    }
     if (createCoordinatorTable) {
-      operator.createCoordinatorTable(options);
+      try {
+        operator.createCoordinatorTable(options);
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Creating coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -155,13 +182,26 @@ public class SchemaLoader {
       String serializedSchemaJson,
       Map<String, String> options,
       boolean createCoordinatorTable)
-      throws SchemaOperatorException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+      throws SchemaLoaderException {
+    SchemaOperator operator;
+    try {
+      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Initializing schema operator failed.", e);
+    }
 
     // Create tables
-    operator.createTables(serializedSchemaJson, options);
+    try {
+      operator.createTables(serializedSchemaJson, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Creating tables failed.", e);
+    }
     if (createCoordinatorTable) {
-      operator.createCoordinatorTable(options);
+      try {
+        operator.createCoordinatorTable(options);
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Creating coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -180,13 +220,22 @@ public class SchemaLoader {
       Path schemaFilePath,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
-      throws SchemaOperatorException {
+      throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
 
     // Delete tables
-    operator.deleteTables(schemaFilePath, options);
+    try {
+      operator.deleteTables(schemaFilePath, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Deleting tables failed.", e);
+    }
+
     if (deleteCoordinatorTable) {
-      operator.dropCoordinatorTable();
+      try {
+        operator.dropCoordinatorTable();
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -205,13 +254,27 @@ public class SchemaLoader {
       Path schemaFilePath,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
-      throws SchemaOperatorException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+      throws SchemaLoaderException {
+    SchemaOperator operator;
+    try {
+      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Initializing schema operator failed.", e);
+    }
 
     // Delete tables
-    operator.deleteTables(schemaFilePath, options);
+    try {
+      operator.deleteTables(schemaFilePath, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Deleting tables failed.", e);
+    }
+
     if (deleteCoordinatorTable) {
-      operator.dropCoordinatorTable();
+      try {
+        operator.dropCoordinatorTable();
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -230,13 +293,22 @@ public class SchemaLoader {
       String serializedSchemaJson,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
-      throws SchemaOperatorException {
+      throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
 
     // Delete tables
-    operator.deleteTables(serializedSchemaJson, options);
+    try {
+      operator.deleteTables(serializedSchemaJson, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Deleting tables failed.", e);
+    }
+
     if (deleteCoordinatorTable) {
-      operator.dropCoordinatorTable();
+      try {
+        operator.dropCoordinatorTable();
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
+      }
     }
 
     operator.close();
@@ -255,13 +327,27 @@ public class SchemaLoader {
       String serializedSchemaJson,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
-      throws SchemaOperatorException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+      throws SchemaLoaderException {
+    SchemaOperator operator;
+    try {
+      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Initializing schema operator failed.", e);
+    }
 
     // Delete tables
-    operator.deleteTables(serializedSchemaJson, options);
+    try {
+      operator.deleteTables(serializedSchemaJson, options);
+    } catch (SchemaOperatorException e) {
+      throw new SchemaLoaderException("Deleting tables failed.", e);
+    }
+
     if (deleteCoordinatorTable) {
-      operator.dropCoordinatorTable();
+      try {
+        operator.dropCoordinatorTable();
+      } catch (SchemaOperatorException e) {
+        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
+      }
     }
 
     operator.close();

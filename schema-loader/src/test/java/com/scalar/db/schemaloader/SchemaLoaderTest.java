@@ -3,7 +3,6 @@ package com.scalar.db.schemaloader;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -50,8 +49,7 @@ public class SchemaLoaderTest {
   }
 
   @Test
-  public void load_WithProperFilePathsArguments_ShouldCallCreateTables()
-      throws SchemaOperatorException {
+  public void load_WithProperFilePathsArguments_ShouldCallCreateTables() throws Exception {
     // Act
     SchemaLoader.load(configFilePath, schemaFilePath, Collections.emptyMap(), true);
 
@@ -62,7 +60,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void load_WithProperPropertiesAndFilePathArguments_ShouldCallCreateTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Act
     SchemaLoader.load(configProperties, schemaFilePath, Collections.emptyMap(), true);
 
@@ -73,7 +71,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void load_WithProperFilePathAndJsonSchemaArguments_ShouldCallCreateTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Arrange
     String schema =
         "{\n"
@@ -99,7 +97,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void load_WithProperPropertiesAndJsonSchemaArguments_ShouldCallCreateTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Arrange
     String schema =
         "{\n"
@@ -124,8 +122,7 @@ public class SchemaLoaderTest {
   }
 
   @Test
-  public void unload_WithProperFilePathsArguments_ShouldCallDeleteTables()
-      throws SchemaOperatorException {
+  public void unload_WithProperFilePathsArguments_ShouldCallDeleteTables() throws Exception {
     // Act
     SchemaLoader.unload(configFilePath, schemaFilePath, Collections.emptyMap(), true);
 
@@ -136,7 +133,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void unload_WithProperPropertiesAndFilePathArguments_ShouldCallDeleteTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Act
     SchemaLoader.unload(configProperties, schemaFilePath, Collections.emptyMap(), true);
 
@@ -147,7 +144,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void unload_WithProperFilePathAndJsonSchemaArguments_ShouldCallDeleteTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Arrange
     String schema =
         "{\n"
@@ -173,7 +170,7 @@ public class SchemaLoaderTest {
 
   @Test
   public void unload_WithProperPropertiesAndJsonSchemaArguments_ShouldCallDeleteTables()
-      throws SchemaOperatorException {
+      throws Exception {
     // Arrange
     String schema =
         "{\n"
