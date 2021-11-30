@@ -45,14 +45,16 @@ Please follow [the basic strategy](#general-way-to-create-a-transactionally-cons
 
 #### Basic strategy to create a transactionally-consistent backup
 
-The best way to take a transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
-you can easily pause the application without losing ongoing transactions.
-
 One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions. 
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
 If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
 
-You must pause for a long enough time (e.g., 10 seconds) to create a backup and use the midtime of the pause as a restore point.
+To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
+you can easily pause the application without losing ongoing transactions.
+
+Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented applications nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
+Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
+Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midtime of the paused duration since clock synchronization cannot perfectly synchronize clocks between nodes.
 
 ## Restore Backup
 
