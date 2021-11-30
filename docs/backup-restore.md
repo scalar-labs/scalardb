@@ -52,7 +52,7 @@ If an underlying database supports a point-in-time restore/recovery mechanism, y
 To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
 you can easily pause the application without losing ongoing transactions.
 
-Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented applications nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
+Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented application nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
 Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
 Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midtime of the paused duration since clock synchronization cannot perfectly synchronize clocks between nodes.
 
