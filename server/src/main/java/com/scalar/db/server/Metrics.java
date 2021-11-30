@@ -14,6 +14,7 @@ import com.scalar.db.util.ThrowableSupplier;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.dropwizard.DropwizardExports;
 import io.prometheus.client.exporter.MetricsServlet;
+import io.prometheus.client.hotspot.DefaultExports;
 import javax.annotation.concurrent.ThreadSafe;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -68,6 +69,7 @@ public class Metrics {
     }
 
     CollectorRegistry.defaultRegistry.register(new DropwizardExports(metricRegistry));
+    DefaultExports.initialize();
 
     Server server = new Server(prometheusExporterPort);
     ServletContextHandler context = new ServletContextHandler();
