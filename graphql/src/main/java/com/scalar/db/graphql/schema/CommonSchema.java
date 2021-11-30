@@ -18,7 +18,7 @@ import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLNamedInputType;
 import java.util.Set;
 
-public class CommonSchema {
+public final class CommonSchema {
   public static Set<GraphQLNamedInputType> createCommonGraphQLTypes() {
     GraphQLInputObjectType conditionalExpressionInputObject =
         newInputObject()
