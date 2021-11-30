@@ -40,7 +40,7 @@ Please follow [the basic strategy](#general-way-to-create-a-transactionally-cons
 
 **DynamoDB**
 
-You must create tables with point-in-time recovery (PITR) and autoscaling in DynamoDB. Scalar DB Schema Loader enables PITR and autoscaling by default.
+You must create tables with point-in-time recovery (PITR) and auto-scaling in DynamoDB. Scalar DB Schema Loader enables PITR and auto-scaling by default.
 Please follow [the basic strategy](#general-way-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 #### Basic strategy to create a transactionally-consistent backup
@@ -90,7 +90,8 @@ You can restore tables one by one from the [Amazon DynamoDB console](https://doc
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
-Scalar DB is recommended to enable point-in-time recovery (PITR) for continuous backup creation and enable auto-scaling for better performance.
-DynamoDB will not enable PITR and autoscaling by default after restoring.
+It is recommended to enable point-in-time recovery (PITR) for continuous backup creation and auto-scaling for better performance. Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns.
+DynamoDB will not enable PITR and auto-scaling by default after restoring.
 
-You must enable continuous backup and auto-scaling using the scalardb schema loader or Amazon DynamoDB console. The scalardb schema loader doesn't remake the existing tables.
+You can enable continuous backup and auto-scaling using the schema loader or Amazon DynamoDB console. Configuring the continuous backup and auto-scaling is easier if you use the schema loader.
+Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist.
