@@ -49,7 +49,7 @@ COPY log4j2.properties .
 COPY database.properties.tmpl .
 COPY docker-entrypoint.sh .
 
-ENV JAVA_OPT_MAX_RAM_PERCENTAGE '50.0'
+ENV JAVA_OPT_MAX_RAM_PERCENTAGE '70.0'
 ENV SCALARDB_SERVER_OPTS -Dlog4j.configurationFile=file:log4j2.properties
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
