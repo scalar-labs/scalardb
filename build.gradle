@@ -49,6 +49,7 @@ subprojects {
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.8.7'
         log4jVersion = '2.14.1'
+        graphqlJavaVersion = '17.2'
     }
 
     repositories {
