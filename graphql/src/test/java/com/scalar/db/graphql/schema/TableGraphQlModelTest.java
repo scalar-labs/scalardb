@@ -151,7 +151,7 @@ public class TableGraphQlModelTest {
     assertNullableFieldDefinition(fields.get(0), COLUMN_NAME_1, Scalars.GraphQLString);
     assertNullableFieldDefinition(fields.get(1), COLUMN_NAME_2, Scalars.GraphQLInt);
     assertNullableFieldDefinition(fields.get(2), COLUMN_NAME_3, Scalars.GraphQLString);
-    assertNullableFieldDefinition(fields.get(3), COLUMN_NAME_4, Scalars.GraphQLFloat);
+    assertNullableFieldDefinition(fields.get(3), COLUMN_NAME_4, CommonSchema.FLOAT_32_SCALAR);
     assertNullableFieldDefinition(fields.get(4), COLUMN_NAME_5, Scalars.GraphQLBoolean);
   }
 
@@ -166,7 +166,7 @@ public class TableGraphQlModelTest {
     //   column_1: String!
     //   column_2: Int!
     //   column_3: String!
-    //   column_4: Float!
+    //   column_4: Float32!
     // }
     GraphQLInputObjectType objectType = model.getPrimaryKeyInputObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_Key");
@@ -175,7 +175,7 @@ public class TableGraphQlModelTest {
     assertNonNullInputObjectField(fields.get(0), COLUMN_NAME_1, Scalars.GraphQLString);
     assertNonNullInputObjectField(fields.get(1), COLUMN_NAME_2, Scalars.GraphQLInt);
     assertNonNullInputObjectField(fields.get(2), COLUMN_NAME_3, Scalars.GraphQLString);
-    assertNonNullInputObjectField(fields.get(3), COLUMN_NAME_4, Scalars.GraphQLFloat);
+    assertNonNullInputObjectField(fields.get(3), COLUMN_NAME_4, CommonSchema.FLOAT_32_SCALAR);
   }
 
   @Test
@@ -351,11 +351,11 @@ public class TableGraphQlModelTest {
         new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
-    // input table_1_ScanBoundary {
+    // input table_1_ClusteringKey {
     //   name: table_1_ClusteringKeyName!
-    //   inclusive: Boolean
     //   intValue: Int
-    //   floatValue: Float
+    //   floatValue: Float32
+    //   doubleValue: Float
     //   stringValue: String
     //   booleanValue: Boolean
     //   bigIntValue: Float
@@ -363,13 +363,14 @@ public class TableGraphQlModelTest {
     GraphQLInputObjectType inputObjectType = model.getClusteringKeyInputObjectType();
     assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ClusteringKey");
     List<GraphQLInputObjectField> fields = inputObjectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(6);
+    assertThat(fields.size()).isEqualTo(7);
     assertNonNullInputObjectField(fields.get(0), "name", model.getClusteringKeyNameEnum());
     assertNullableInputObjectField(fields.get(1), "intValue", Scalars.GraphQLInt);
-    assertNullableInputObjectField(fields.get(2), "floatValue", Scalars.GraphQLFloat);
-    assertNullableInputObjectField(fields.get(3), "stringValue", Scalars.GraphQLString);
-    assertNullableInputObjectField(fields.get(4), "booleanValue", Scalars.GraphQLBoolean);
-    assertNullableInputObjectField(fields.get(5), "bigIntValue", Scalars.GraphQLFloat);
+    assertNullableInputObjectField(fields.get(2), "floatValue", CommonSchema.FLOAT_32_SCALAR);
+    assertNullableInputObjectField(fields.get(3), "doubleValue", Scalars.GraphQLFloat);
+    assertNullableInputObjectField(fields.get(4), "stringValue", Scalars.GraphQLString);
+    assertNullableInputObjectField(fields.get(5), "booleanValue", Scalars.GraphQLBoolean);
+    assertNullableInputObjectField(fields.get(6), "bigIntValue", Scalars.GraphQLFloat);
   }
 
   @Test
@@ -455,8 +456,8 @@ public class TableGraphQlModelTest {
     field = fields.get(1);
     assertThat(field.getName()).isEqualTo("key");
     assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull)
-        field.getType()).getWrappedType()).isEqualTo(model.getPrimaryKeyOutputObjectType());
+    assertThat(((GraphQLNonNull) field.getType()).getWrappedType())
+        .isEqualTo(model.getPrimaryKeyOutputObjectType());
   }
 
   @Test

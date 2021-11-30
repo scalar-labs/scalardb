@@ -15,6 +15,7 @@ final class SchemaUtils {
       case INT:
         return Scalars.GraphQLInt;
       case FLOAT:
+        return CommonSchema.FLOAT_32_SCALAR;
       case DOUBLE:
       case BIGINT:
         return Scalars.GraphQLFloat;

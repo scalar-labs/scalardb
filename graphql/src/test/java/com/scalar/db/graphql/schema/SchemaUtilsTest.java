@@ -19,12 +19,12 @@ public class SchemaUtilsTest {
   }
 
   @Test
-  public void dataTypeToGraphQLScalarType_FloatGiven_ShouldReturnFloat() {
+  public void dataTypeToGraphQLScalarType_FloatGiven_ShouldReturnCustomFloat32() {
     // Act
     GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.FLOAT);
 
     // Assert
-    assertThat(type).isEqualTo(Scalars.GraphQLFloat);
+    assertThat(type).isEqualTo(CommonSchema.FLOAT_32_SCALAR);
   }
 
   @Test

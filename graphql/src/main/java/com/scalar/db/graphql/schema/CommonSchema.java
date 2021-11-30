@@ -5,6 +5,7 @@ import static graphql.schema.GraphQLInputObjectField.newInputObjectField;
 import static graphql.schema.GraphQLInputObjectType.newInputObject;
 import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
+import static graphql.schema.GraphQLScalarType.newScalar;
 
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionalExpression;
@@ -16,19 +17,24 @@ import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLNamedInputType;
+import graphql.schema.GraphQLScalarType;
 import java.util.Set;
 
 public final class CommonSchema {
+  public static final GraphQLScalarType FLOAT_32_SCALAR =
+      newScalar().name("Float32").coercing(FloatCoercing.INSTANCE).build();
+
   public static Set<GraphQLNamedInputType> createCommonGraphQLTypes() {
     GraphQLInputObjectType conditionalExpressionInputObject =
         newInputObject()
             .name("ConditionalExpression")
             .field(newInputObjectField().name("name").type(nonNull(Scalars.GraphQLString)))
             .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
-            .field(newInputObjectField().name("floatValue").type(Scalars.GraphQLFloat))
+            .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
             .field(newInputObjectField().name("stringValue").type(Scalars.GraphQLString))
             .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
             .field(newInputObjectField().name("bigIntValue").type(Scalars.GraphQLFloat))
+            .field(newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR))
             .field(
                 newInputObjectField()
                     .name("operator")
@@ -46,6 +52,7 @@ public final class CommonSchema {
             .build();
 
     return ImmutableSet.<GraphQLNamedInputType>builder()
+        .add(FLOAT_32_SCALAR)
         .add(
             newEnum()
                 .name("Order")
