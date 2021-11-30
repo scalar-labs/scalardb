@@ -103,32 +103,47 @@ public class DynamoAdminTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item())
         .thenReturn(
-            ImmutableMap.of(
-                DynamoAdmin.METADATA_ATTR_TABLE,
-                AttributeValue.builder().s(FULL_TABLE_NAME).build(),
-                DynamoAdmin.METADATA_ATTR_COLUMNS,
-                AttributeValue.builder()
-                    .m(
-                        ImmutableMap.<String, AttributeValue>builder()
-                            .put("c1", AttributeValue.builder().s("text").build())
-                            .put("c2", AttributeValue.builder().s("bigint").build())
-                            .put("c3", AttributeValue.builder().s("boolean").build())
-                            .put("c4", AttributeValue.builder().s("blob").build())
-                            .put("c5", AttributeValue.builder().s("int").build())
-                            .put("c6", AttributeValue.builder().s("double").build())
-                            .put("c7", AttributeValue.builder().s("float").build())
-                            .build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
-                AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build(),
-                DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
-                AttributeValue.builder()
-                    .l(
-                        AttributeValue.builder().s("c2").build(),
-                        AttributeValue.builder().s("c3").build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
-                AttributeValue.builder().ss("c4").build()));
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("bigint").build())
+                                .put("c3", AttributeValue.builder().s("boolean").build())
+                                .put("c4", AttributeValue.builder().s("blob").build())
+                                .put("c5", AttributeValue.builder().s("int").build())
+                                .put("c6", AttributeValue.builder().s("double").build())
+                                .put("c7", AttributeValue.builder().s("float").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
+                    AttributeValue.builder()
+                        .l(
+                            AttributeValue.builder().s("c2").build(),
+                            AttributeValue.builder().s("c3").build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c2", AttributeValue.builder().s("DESC").build())
+                                .put("c3", AttributeValue.builder().s("ASC").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
+                    AttributeValue.builder().ss("c4").build())
+                .build());
 
     if (tableMetadataNamespace.isPresent()) {
       when(config.getTableMetadataNamespace()).thenReturn(tableMetadataNamespace);
@@ -143,7 +158,7 @@ public class DynamoAdminTest {
         .isEqualTo(
             TableMetadata.newBuilder()
                 .addPartitionKey("c1")
-                .addClusteringKey("c2", Order.ASC)
+                .addClusteringKey("c2", Order.DESC)
                 .addClusteringKey("c3", Order.ASC)
                 .addColumn("c1", DataType.TEXT)
                 .addColumn("c2", DataType.BIGINT)
@@ -219,7 +234,7 @@ public class DynamoAdminTest {
     TableMetadata metadata =
         TableMetadata.newBuilder()
             .addPartitionKey("c1")
-            .addClusteringKey("c2", Order.DESC)
+            .addClusteringKey("c2", Order.ASC)
             .addClusteringKey("c3", Order.ASC)
             .addColumn("c1", DataType.TEXT)
             .addColumn("c2", DataType.BIGINT)
@@ -398,6 +413,12 @@ public class DynamoAdminTest {
         AttributeValue.builder()
             .l(AttributeValue.builder().s("c2").build(), AttributeValue.builder().s("c3").build())
             .build());
+    Map<String, AttributeValue> clusteringOrders = new HashMap<>();
+    clusteringOrders.put("c2", AttributeValue.builder().s("ASC").build());
+    clusteringOrders.put("c3", AttributeValue.builder().s("ASC").build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+        AttributeValue.builder().m(clusteringOrders).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX, AttributeValue.builder().ss("c4").build());
     assertThat(actualPutItemRequest.item()).isEqualTo(itemValues);
@@ -565,6 +586,12 @@ public class DynamoAdminTest {
         AttributeValue.builder()
             .l(AttributeValue.builder().s("c2").build(), AttributeValue.builder().s("c3").build())
             .build());
+    Map<String, AttributeValue> clusteringOrders = new HashMap<>();
+    clusteringOrders.put("c2", AttributeValue.builder().s("DESC").build());
+    clusteringOrders.put("c3", AttributeValue.builder().s("ASC").build());
+    itemValues.put(
+        DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+        AttributeValue.builder().m(clusteringOrders).build());
     itemValues.put(
         DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX, AttributeValue.builder().ss("c4").build());
     assertThat(actualPutItemRequest.item()).isEqualTo(itemValues);
@@ -654,29 +681,44 @@ public class DynamoAdminTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item())
         .thenReturn(
-            ImmutableMap.of(
-                DynamoAdmin.METADATA_ATTR_TABLE,
-                AttributeValue.builder().s(FULL_TABLE_NAME).build(),
-                DynamoAdmin.METADATA_ATTR_COLUMNS,
-                AttributeValue.builder()
-                    .m(
-                        ImmutableMap.<String, AttributeValue>builder()
-                            .put("c1", AttributeValue.builder().s("text").build())
-                            .put("c2", AttributeValue.builder().s("bigint").build())
-                            .put("c3", AttributeValue.builder().s("boolean").build())
-                            .put("c4", AttributeValue.builder().s("int").build())
-                            .build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
-                AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build(),
-                DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
-                AttributeValue.builder()
-                    .l(
-                        AttributeValue.builder().s("c2").build(),
-                        AttributeValue.builder().s("c3").build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
-                AttributeValue.builder().ss("c4").build()));
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("bigint").build())
+                                .put("c3", AttributeValue.builder().s("boolean").build())
+                                .put("c4", AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+                    AttributeValue.builder()
+                        .l(
+                            AttributeValue.builder().s("c2").build(),
+                            AttributeValue.builder().s("c3").build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c2", AttributeValue.builder().s("DESC").build())
+                                .put("c3", AttributeValue.builder().s("ASC").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
+                    AttributeValue.builder().ss("c4").build())
+                .build());
 
     // for the table metadata table
     ScanResponse scanResponse = mock(ScanResponse.class);
@@ -742,29 +784,44 @@ public class DynamoAdminTest {
     when(client.getItem(any(GetItemRequest.class))).thenReturn(response);
     when(response.item())
         .thenReturn(
-            ImmutableMap.of(
-                DynamoAdmin.METADATA_ATTR_TABLE,
-                AttributeValue.builder().s(FULL_TABLE_NAME).build(),
-                DynamoAdmin.METADATA_ATTR_COLUMNS,
-                AttributeValue.builder()
-                    .m(
-                        ImmutableMap.<String, AttributeValue>builder()
-                            .put("c1", AttributeValue.builder().s("text").build())
-                            .put("c2", AttributeValue.builder().s("bigint").build())
-                            .put("c3", AttributeValue.builder().s("boolean").build())
-                            .put("c4", AttributeValue.builder().s("int").build())
-                            .build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
-                AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build(),
-                DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
-                AttributeValue.builder()
-                    .l(
-                        AttributeValue.builder().s("c2").build(),
-                        AttributeValue.builder().s("c3").build())
-                    .build(),
-                DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
-                AttributeValue.builder().ss("c4").build()));
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("bigint").build())
+                                .put("c3", AttributeValue.builder().s("boolean").build())
+                                .put("c4", AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
+                    AttributeValue.builder()
+                        .l(
+                            AttributeValue.builder().s("c2").build(),
+                            AttributeValue.builder().s("c3").build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c2", AttributeValue.builder().s("DESC").build())
+                                .put("c3", AttributeValue.builder().s("ASC").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
+                    AttributeValue.builder().ss("c4").build())
+                .build());
 
     // for the table metadata table
     ScanResponse scanResponse = mock(ScanResponse.class);

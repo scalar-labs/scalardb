@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -105,6 +105,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public static final String METADATA_TABLE = "metadata";
   @VisibleForTesting static final String METADATA_ATTR_PARTITION_KEY = "partitionKey";
   @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_KEY = "clusteringKey";
+  @VisibleForTesting static final String METADATA_ATTR_CLUSTERING_ORDERS = "clusteringOrders";
   @VisibleForTesting static final String METADATA_ATTR_SECONDARY_INDEX = "secondaryIndex";
   @VisibleForTesting static final String METADATA_ATTR_COLUMNS = "columns";
   @VisibleForTesting static final String METADATA_ATTR_TABLE = "table";
@@ -375,6 +376,17 @@ public class DynamoAdmin implements DistributedStorageAdmin {
                       .map(pKey -> AttributeValue.builder().s(pKey).build())
                       .collect(Collectors.toList()))
               .build());
+
+      Map<String, AttributeValue> clusteringOrders = new HashMap<>();
+      for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
+        clusteringOrders.put(
+            clusteringKeyName,
+            AttributeValue.builder()
+                .s(metadata.getClusteringOrder(clusteringKeyName).name())
+                .build());
+      }
+      itemValues.put(
+          METADATA_ATTR_CLUSTERING_ORDERS, AttributeValue.builder().m(clusteringOrders).build());
     }
     if (!metadata.getSecondaryIndexNames().isEmpty()) {
       itemValues.put(
@@ -827,10 +839,11 @@ public class DynamoAdmin implements DistributedStorageAdmin {
         .map(AttributeValue::s)
         .forEach(builder::addPartitionKey);
     if (metadata.containsKey(METADATA_ATTR_CLUSTERING_KEY)) {
-      // The clustering order is always ASC for now
+      Map<String, AttributeValue> clusteringOrders =
+          metadata.get(METADATA_ATTR_CLUSTERING_ORDERS).m();
       metadata.get(METADATA_ATTR_CLUSTERING_KEY).l().stream()
           .map(AttributeValue::s)
-          .forEach(n -> builder.addClusteringKey(n, Scan.Ordering.Order.ASC));
+          .forEach(n -> builder.addClusteringKey(n, Order.valueOf(clusteringOrders.get(n).s())));
     }
     if (metadata.containsKey(METADATA_ATTR_SECONDARY_INDEX)) {
       metadata.get(METADATA_ATTR_SECONDARY_INDEX).ss().forEach(builder::addSecondaryIndex);
