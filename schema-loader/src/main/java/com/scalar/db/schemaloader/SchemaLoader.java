@@ -10,10 +10,14 @@ import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
 import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
+import com.scalar.db.schemaloader.util.either.Either;
+import com.scalar.db.schemaloader.util.either.Left;
+import com.scalar.db.schemaloader.util.either.Right;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -77,27 +81,13 @@ public class SchemaLoader {
    */
   public static void load(
       Properties configProperties,
-      Path schemaFilePath,
+      @Nullable Path schemaFilePath,
       Map<String, String> options,
       boolean createCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
-
-    // Create tables
-    try {
-      operator.createTables(schemaFilePath, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Creating tables failed.", e);
-    }
-    if (createCoordinatorTable) {
-      try {
-        operator.createCoordinatorTable(options);
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Creating coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Left<>(schemaFilePath);
+    load(config, schema, options, createCoordinatorTable);
   }
 
   /**
@@ -110,30 +100,13 @@ public class SchemaLoader {
    */
   public static void load(
       Path configFilePath,
-      Path schemaFilePath,
+      @Nullable Path schemaFilePath,
       Map<String, String> options,
       boolean createCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator;
-    try {
-      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Initializing schema operator failed.", e);
-    }
-
-    // Create tables
-    try {
-      operator.createTables(schemaFilePath, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Creating tables failed.", e);
-    }
-    if (createCoordinatorTable) {
-      try {
-        operator.createCoordinatorTable(options);
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Creating coordinator table failed.", e);
-      }
-    }
+    Either<Path, Properties> config = new Left<>(configFilePath);
+    Either<Path, String> schema = new Left<>(schemaFilePath);
+    load(config, schema, options, createCoordinatorTable);
   }
 
   /**
@@ -146,27 +119,13 @@ public class SchemaLoader {
    */
   public static void load(
       Properties configProperties,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean createCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
-
-    // Create tables
-    try {
-      operator.createTables(serializedSchemaJson, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Creating tables failed.", e);
-    }
-    if (createCoordinatorTable) {
-      try {
-        operator.createCoordinatorTable(options);
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Creating coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    load(config, schema, options, createCoordinatorTable);
   }
 
   /**
@@ -179,32 +138,54 @@ public class SchemaLoader {
    */
   public static void load(
       Path configFilePath,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean createCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator;
-    try {
-      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Initializing schema operator failed.", e);
-    }
+    Either<Path, Properties> config = new Left<>(configFilePath);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    load(config, schema, options, createCoordinatorTable);
+  }
+
+  /**
+   * Creates tables defined in the schema file.
+   *
+   * @param config Scalar DB config.
+   * @param schema schema definition.
+   * @param options specific options for creating tables.
+   * @param createCoordinatorTable create coordinator table or not.
+   */
+  public static void load(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> options,
+      boolean createCoordinatorTable)
+      throws SchemaLoaderException {
+    SchemaOperator operator = getSchemaOperator(config);
 
     // Create tables
     try {
-      operator.createTables(serializedSchemaJson, options);
+      if (schema instanceof Left) {
+        Left<Path, String> schemaFilePath = (Left<Path, String>) schema;
+        if (schemaFilePath.getValue() != null) {
+          operator.createTables(schemaFilePath.getValue(), options);
+        }
+      } else {
+        Right<Path, String> serializedSchemaJson = (Right<Path, String>) schema;
+        if (serializedSchemaJson.getValue() != null) {
+          operator.createTables(serializedSchemaJson.getValue(), options);
+        }
+      }
+
+      if (createCoordinatorTable) {
+        operator.createCoordinatorTable(options);
+      }
+
     } catch (SchemaOperatorException e) {
       throw new SchemaLoaderException("Creating tables failed.", e);
+    } finally {
+      operator.close();
     }
-    if (createCoordinatorTable) {
-      try {
-        operator.createCoordinatorTable(options);
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Creating coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
   }
 
   /**
@@ -221,24 +202,9 @@ public class SchemaLoader {
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
-
-    // Delete tables
-    try {
-      operator.deleteTables(schemaFilePath, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Deleting tables failed.", e);
-    }
-
-    if (deleteCoordinatorTable) {
-      try {
-        operator.dropCoordinatorTable();
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Left<>(schemaFilePath);
+    unload(config, schema, options, deleteCoordinatorTable);
   }
 
   /**
@@ -255,29 +221,9 @@ public class SchemaLoader {
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator;
-    try {
-      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Initializing schema operator failed.", e);
-    }
-
-    // Delete tables
-    try {
-      operator.deleteTables(schemaFilePath, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Deleting tables failed.", e);
-    }
-
-    if (deleteCoordinatorTable) {
-      try {
-        operator.dropCoordinatorTable();
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
+    Either<Path, Properties> config = new Left<>(configFilePath);
+    Either<Path, String> schema = new Left<>(schemaFilePath);
+    unload(config, schema, options, deleteCoordinatorTable);
   }
 
   /**
@@ -294,24 +240,9 @@ public class SchemaLoader {
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configProperties, true);
-
-    // Delete tables
-    try {
-      operator.deleteTables(serializedSchemaJson, options);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Deleting tables failed.", e);
-    }
-
-    if (deleteCoordinatorTable) {
-      try {
-        operator.dropCoordinatorTable();
-      } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
-      }
-    }
-
-    operator.close();
+    Either<Path, Properties> config = new Right<>(configProperties);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    unload(config, schema, options, deleteCoordinatorTable);
   }
 
   /**
@@ -328,28 +259,68 @@ public class SchemaLoader {
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator;
-    try {
-      operator = SchemaOperatorFactory.getSchemaOperator(configFilePath, true);
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Initializing schema operator failed.", e);
-    }
+    Either<Path, Properties> config = new Left<>(configFilePath);
+    Either<Path, String> schema = new Right<>(serializedSchemaJson);
+    unload(config, schema, options, deleteCoordinatorTable);
+  }
+
+  /**
+   * Delete tables defined in the schema.
+   *
+   * @param config Scalar DB config.
+   * @param schema schema definition.
+   * @param options specific options for deleting tables.
+   * @param deleteCoordinatorTable delete coordinator table or not.
+   */
+  public static void unload(
+      Either<Path, Properties> config,
+      Either<Path, String> schema,
+      Map<String, String> options,
+      boolean deleteCoordinatorTable)
+      throws SchemaLoaderException {
+    SchemaOperator operator = getSchemaOperator(config);
 
     // Delete tables
     try {
-      operator.deleteTables(serializedSchemaJson, options);
+      if (schema instanceof Left) {
+        Left<Path, String> schemaFilePath = (Left<Path, String>) schema;
+        if (schemaFilePath.getValue() != null) {
+          operator.deleteTables(schemaFilePath.getValue(), options);
+        }
+      } else {
+        Right<Path, String> serializedSchemaJson = (Right<Path, String>) schema;
+        if (serializedSchemaJson.getValue() != null) {
+          operator.deleteTables(serializedSchemaJson.getValue(), options);
+        }
+      }
+
+      if (deleteCoordinatorTable) {
+        operator.dropCoordinatorTable();
+      }
     } catch (SchemaOperatorException e) {
       throw new SchemaLoaderException("Deleting tables failed.", e);
+    } finally {
+      operator.close();
     }
+  }
 
-    if (deleteCoordinatorTable) {
+  private static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
+      throws SchemaLoaderException {
+    SchemaOperator operator;
+    if (config instanceof Left) {
+      Left<Path, Properties> configPath = (Left<Path, Properties>) config;
       try {
-        operator.dropCoordinatorTable();
+        assert configPath.getValue() != null;
+        operator = SchemaOperatorFactory.getSchemaOperator(configPath.getValue(), true);
       } catch (SchemaOperatorException e) {
-        throw new SchemaLoaderException("Deleting coordinator table failed.", e);
+        throw new SchemaLoaderException("Initializing schema operator failed.", e);
       }
+    } else {
+      Right<Path, Properties> configProperties = (Right<Path, Properties>) config;
+      assert configProperties.getValue() != null;
+      operator = SchemaOperatorFactory.getSchemaOperator(configProperties.getValue(), true);
     }
 
-    operator.close();
+    return operator;
   }
 }

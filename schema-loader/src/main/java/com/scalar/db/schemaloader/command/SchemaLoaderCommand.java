@@ -1,7 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
+import com.scalar.db.schemaloader.SchemaLoader;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
@@ -97,25 +96,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath.toString(), true);
-
-    if (coordinator) {
-      operator.createCoordinatorTable(metaOptions);
+    if (!deleteTables) {
+      SchemaLoader.load(configPath, schemaFile, metaOptions, coordinator);
+    } else {
+      SchemaLoader.unload(configPath, schemaFile, metaOptions, coordinator);
     }
 
-    if (schemaFile != null) {
-      if (deleteTables) {
-        operator.deleteTables(schemaFile, metaOptions);
-      } else {
-        operator.createTables(schemaFile, metaOptions);
-      }
-    }
-
-    if (coordinator && deleteTables) {
-      operator.dropCoordinatorTable();
-    }
-
-    operator.close();
     return 0;
   }
 }
