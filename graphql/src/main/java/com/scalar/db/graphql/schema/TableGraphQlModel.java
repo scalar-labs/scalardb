@@ -195,6 +195,7 @@ public class TableGraphQlModel {
         .field(newInputObjectField().name("floatValue").type(Scalars.GraphQLFloat))
         .field(newInputObjectField().name("stringValue").type(Scalars.GraphQLString))
         .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
+        .field(newInputObjectField().name("bigIntValue").type(Scalars.GraphQLFloat))
         .build();
   }
 

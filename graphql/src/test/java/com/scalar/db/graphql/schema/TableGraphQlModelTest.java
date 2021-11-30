@@ -358,16 +358,18 @@ public class TableGraphQlModelTest {
     //   floatValue: Float
     //   stringValue: String
     //   booleanValue: Boolean
+    //   bigIntValue: Float
     // }
     GraphQLInputObjectType inputObjectType = model.getClusteringKeyInputObjectType();
     assertThat(inputObjectType.getName()).isEqualTo(TABLE_NAME + "_ClusteringKey");
     List<GraphQLInputObjectField> fields = inputObjectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(5);
+    assertThat(fields.size()).isEqualTo(6);
     assertNonNullInputObjectField(fields.get(0), "name", model.getClusteringKeyNameEnum());
     assertNullableInputObjectField(fields.get(1), "intValue", Scalars.GraphQLInt);
     assertNullableInputObjectField(fields.get(2), "floatValue", Scalars.GraphQLFloat);
     assertNullableInputObjectField(fields.get(3), "stringValue", Scalars.GraphQLString);
     assertNullableInputObjectField(fields.get(4), "booleanValue", Scalars.GraphQLBoolean);
+    assertNullableInputObjectField(fields.get(5), "bigIntValue", Scalars.GraphQLFloat);
   }
 
   @Test
