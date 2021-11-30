@@ -18,7 +18,9 @@ import graphql.schema.GraphQLSchema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.annotation.concurrent.Immutable;
 
+@Immutable
 public class GraphQlFactory {
 
   private final DistributedStorage storage;
