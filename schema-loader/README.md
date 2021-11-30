@@ -341,8 +341,8 @@ dependencies {
 }
 ```
 
-### Create/Delete tables:
-You can create/delete tables that defined in the schema using SchemaLoader by simply passing Scalar DB configuration file, schema and additional options if needed.
+### Create and delete tables
+You can create and delete tables that are defined in the schema using SchemaLoader by simply passing Scalar DB configuration file, schema, and additional options if needed as shown below.
 
 ```java
 public class SchemaLoaderSample {
@@ -374,7 +374,7 @@ public class SchemaLoaderSample {
 }
 ```
 
-You can also create/delete a schema by passing a serialized schema json string (raw string value from schema file)
+You can also create and delete a schema by passing a serialized schema JSON string (the raw text of a schema file).
 ```
 // Create tables
 SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTable);
@@ -383,7 +383,7 @@ SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinat
 SchemaLoader.unload(configFilePath, serializedSchemaJson, options, deleteCoordinatorTable);
 ```
 
-For Scalar DB configuration, a `Properties` object can be used as well 
+For Scalar DB configuration, a `Properties` object can be used as well.
 ```
 // Create tables
 SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTable);
