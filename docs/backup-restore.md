@@ -17,17 +17,6 @@ Or when you use Amazon RDS (Relational Database Service) or Azure Database for M
 
 ### For Non-transactional Databases
 
-#### General way to create a transactionally-consistent backup
-
-The best way to take a transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
-you can easily pause the application without losing ongoing transactions.
-
-One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions. 
-If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
-If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
-
-You must pause for a long enough time (e.g., 10 seconds) to create a backup and use the midtime of the pause as a restore point.
-
 #### Database-specific ways to create a transactionally-consistent backup   
 
 **Cassandra**
@@ -54,6 +43,16 @@ Please follow [the basic strategy](#general-way-to-create-a-transactionally-cons
 You must create tables with point-in-time recovery (PITR) and autoscaling in DynamoDB. Scalar DB Schema Loader enables PITR and autoscaling by default.
 Please follow [the basic strategy](#general-way-to-create-a-transactionally-consistent-backup) section to create a backup.
 
+#### Basic strategy to create a transactionally-consistent backup
+
+The best way to take a transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
+you can easily pause the application without losing ongoing transactions.
+
+One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions. 
+If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
+If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
+
+You must pause for a long enough time (e.g., 10 seconds) to create a backup and use the midtime of the pause as a restore point.
 
 ## Restore Backup
 
@@ -82,14 +81,14 @@ It is highly recommended to use the midtime of the pause as a restore point as w
 You can restore the table to a point in time using the DynamoDB console or the AWS Command Line Interface (AWS CLI). The point-in-time recovery process restores to a new table.
 By default, the table can only be restored one by one.
 
-You must restore tables one by one from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps and use the midtime of the pause as a restore point
+You can restore tables one by one from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps and use the midtime of the pause as a restore point
 
 * Restore with PITR of table A to another table B
 * Take a backup of the restored table B (assume the backup is named backup B)
 * Remove table A
 * Create a table named A with backup B
 
-If you want to restore multiple tables, you can create a script to restore multiple tables using the AWS CLI commands.
+If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
 Scalar DB is recommended to enable point-in-time recovery (PITR) for continuous backup creation and enable auto-scaling for better performance.
 DynamoDB will not enable PITR and autoscaling by default after restoring.
