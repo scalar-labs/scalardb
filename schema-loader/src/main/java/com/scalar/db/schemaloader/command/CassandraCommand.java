@@ -1,30 +1,21 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
-import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cassandra",
     description = "Create/Delete Cassandra schemas")
-public class CassandraCommand implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
+public class CassandraCommand extends StorageSpecificCommandBase implements Callable<Integer> {
 
   @Option(
       names = {"-h", "--host"},
@@ -65,21 +56,8 @@ public class CassandraCommand implements Callable<Integer> {
       description = "Cassandra replication factor")
   private String replicationFactor;
 
-  @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
-
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
-
   @Override
-  public Integer call() throws Exception {
-    LOGGER.info("Schema path: " + schemaFile);
+  public Integer call() throws SchemaLoaderException {
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIp);
@@ -99,16 +77,8 @@ public class CassandraCommand implements Callable<Integer> {
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
-    List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
+    execute(props, metaOptions);
 
-    if (deleteTables) {
-      operator.deleteTables(tableList);
-    } else {
-      operator.createTables(tableList, metaOptions);
-    }
-
-    operator.close();
     return 0;
   }
 }
