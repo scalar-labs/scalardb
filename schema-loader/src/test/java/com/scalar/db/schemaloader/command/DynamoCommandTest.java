@@ -6,6 +6,9 @@ import static org.mockito.Mockito.verify;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -58,7 +61,7 @@ public class DynamoCommandTest extends CommandTestBase {
         schemaFile);
 
     // Assert
-    verify(operator).createTables(Mockito.any(), eq(metaOptions));
+    verify(operator).createTables(Mockito.any(Path.class), eq(metaOptions));
   }
 
   @Test
@@ -70,7 +73,7 @@ public class DynamoCommandTest extends CommandTestBase {
     commandLine.execute("-u", user, "--region", region, "-p", password, "-f", schemaFile, "-D");
 
     // Assert
-    verify(operator).deleteTables(Mockito.any());
+    verify(operator).deleteTables(Paths.get(schemaFile), Collections.emptyMap());
   }
 
   @Test

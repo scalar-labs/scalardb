@@ -35,10 +35,16 @@ public abstract class CommandTestBase {
 
     schemaOperatorFactoryMockedStatic = Mockito.mockStatic(SchemaOperatorFactory.class);
     schemaOperatorFactoryMockedStatic
-        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Path.class)))
+        .when(
+            () ->
+                SchemaOperatorFactory.getSchemaOperator(
+                    Mockito.any(Path.class), Mockito.anyBoolean()))
         .thenReturn(operator);
     schemaOperatorFactoryMockedStatic
-        .when(() -> SchemaOperatorFactory.getSchemaOperator(Mockito.any(Properties.class)))
+        .when(
+            () ->
+                SchemaOperatorFactory.getSchemaOperator(
+                    Mockito.any(Properties.class), Mockito.anyBoolean()))
         .thenReturn(operator);
   }
 
