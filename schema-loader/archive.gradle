@@ -8,7 +8,7 @@ publishing {
             from components.java
             pom {
                 name = 'Scalar DB Schema Loader'
-                description = 'Scalar DB Schema Loader is a module using for schema creation and schema deletion in Scalar DB'
+                description = 'Scalar DB Schema Loader is a module for schema creation and schema deletion in Scalar DB'
                 url = 'https://github.com/scalar-labs/scalardb'
                 licenses {
                     license {

@@ -155,7 +155,7 @@ public class SchemaLoader {
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
    */
-  public static void load(
+  private static void load(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,
@@ -198,7 +198,7 @@ public class SchemaLoader {
    */
   public static void unload(
       Properties configProperties,
-      Path schemaFilePath,
+      @Nullable Path schemaFilePath,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
@@ -217,7 +217,7 @@ public class SchemaLoader {
    */
   public static void unload(
       Path configFilePath,
-      Path schemaFilePath,
+      @Nullable Path schemaFilePath,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
@@ -236,7 +236,7 @@ public class SchemaLoader {
    */
   public static void unload(
       Properties configProperties,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
@@ -255,7 +255,7 @@ public class SchemaLoader {
    */
   public static void unload(
       Path configFilePath,
-      String serializedSchemaJson,
+      @Nullable String serializedSchemaJson,
       Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
@@ -272,7 +272,7 @@ public class SchemaLoader {
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    */
-  public static void unload(
+  private static void unload(
       Either<Path, Properties> config,
       Either<Path, String> schema,
       Map<String, String> options,

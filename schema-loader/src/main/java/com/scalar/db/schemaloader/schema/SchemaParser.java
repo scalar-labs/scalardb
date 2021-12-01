@@ -15,9 +15,10 @@ import javax.annotation.concurrent.Immutable;
 public class SchemaParser {
   public static List<Table> parse(Path jsonFilePath, Map<String, String> metaOptions)
       throws SchemaException, IOException {
-    Reader reader = Files.newBufferedReader(jsonFilePath);
-    JsonObject schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
-    reader.close();
+    JsonObject schemaJson;
+    try (Reader reader = Files.newBufferedReader(jsonFilePath)) {
+      schemaJson = JsonParser.parseReader(reader).getAsJsonObject();
+    }
 
     return parse(schemaJson, metaOptions);
   }
@@ -29,7 +30,7 @@ public class SchemaParser {
     return parse(schemaJson, metaOptions);
   }
 
-  public static List<Table> parse(JsonObject schemaJson, Map<String, String> metaOptions) {
+  private static List<Table> parse(JsonObject schemaJson, Map<String, String> metaOptions) {
     return schemaJson.entrySet().stream()
         .map(table -> new Table(table.getKey(), table.getValue().getAsJsonObject(), metaOptions))
         .collect(Collectors.toList());

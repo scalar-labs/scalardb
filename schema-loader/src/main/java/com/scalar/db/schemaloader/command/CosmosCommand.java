@@ -1,8 +1,7 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
+import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -17,7 +16,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
     description = "Create/Delete Cosmos DB schemas")
-public class CosmosCommand implements Callable<Integer> {
+public class CosmosCommand extends SpecificStorageCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
 
@@ -55,7 +54,7 @@ public class CosmosCommand implements Callable<Integer> {
   private boolean deleteTables;
 
   @Override
-  public Integer call() throws Exception {
+  public Integer call() throws SchemaLoaderException {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
@@ -71,15 +70,8 @@ public class CosmosCommand implements Callable<Integer> {
       metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
+    execute(props, schemaFile, metaOptions, deleteTables);
 
-    if (deleteTables) {
-      operator.deleteTables(schemaFile, metaOptions);
-    } else {
-      operator.createTables(schemaFile, metaOptions);
-    }
-
-    operator.close();
     return 0;
   }
 }

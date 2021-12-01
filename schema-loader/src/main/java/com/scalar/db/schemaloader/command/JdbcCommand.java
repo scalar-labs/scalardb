@@ -1,8 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
@@ -16,7 +14,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --jdbc",
     description = "Create/Delete JDBC schemas")
-public class JdbcCommand implements Callable<Integer> {
+public class JdbcCommand extends SpecificStorageCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
 
@@ -62,15 +60,8 @@ public class JdbcCommand implements Callable<Integer> {
 
     Map<String, String> metaOptions = Collections.emptyMap();
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
+    execute(props, schemaFile, metaOptions, deleteTables);
 
-    if (deleteTables) {
-      operator.deleteTables(schemaFile, metaOptions);
-    } else {
-      operator.createTables(schemaFile, metaOptions);
-    }
-
-    operator.close();
     return 0;
   }
 }

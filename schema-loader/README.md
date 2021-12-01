@@ -333,7 +333,7 @@ However, the following types are converted differently when they are used as a p
 If this data type mapping doesn't match your application, please alter the tables to change the data types after creating them with this tool.
 
 ## Using Schema Loader in your program
-You can check `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
+You can check the version of `schema-loader` from [maven central repository](https://mvnrepository.com/artifact/com.scalar-labs/scalardb-schema-loader).
 For example in Gradle, you can add the following dependency to your build.gradle. Please replace the `<version>` with the version you want to use.
 ```gradle
 dependencies {

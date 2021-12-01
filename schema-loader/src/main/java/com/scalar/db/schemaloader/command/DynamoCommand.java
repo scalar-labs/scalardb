@@ -1,8 +1,7 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
+import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import java.nio.file.Path;
@@ -18,7 +17,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --dynamo",
     description = "Create/Delete DynamoDB schemas")
-public class DynamoCommand implements Callable<Integer> {
+public class DynamoCommand extends SpecificStorageCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
 
@@ -66,7 +65,7 @@ public class DynamoCommand implements Callable<Integer> {
   private boolean deleteTables;
 
   @Override
-  public Integer call() throws Exception {
+  public Integer call() throws SchemaLoaderException {
     LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
@@ -89,15 +88,8 @@ public class DynamoCommand implements Callable<Integer> {
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
+    execute(props, schemaFile, metaOptions, deleteTables);
 
-    if (deleteTables) {
-      operator.deleteTables(schemaFile, metaOptions);
-    } else {
-      operator.createTables(schemaFile, metaOptions);
-    }
-
-    operator.close();
     return 0;
   }
 }

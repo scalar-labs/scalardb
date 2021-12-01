@@ -1,5 +1,6 @@
 package com.scalar.db.schemaloader;
 
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.schemaloader.core.SchemaOperator;
@@ -59,6 +60,30 @@ public class SchemaLoaderTest {
   }
 
   @Test
+  public void
+      load_WithProperConfigFilePathAndNullPathSchemaArguments_ShouldJustCallCreateCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.load(configFilePath, (Path) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).createCoordinatorTable(Collections.emptyMap());
+  }
+
+  @Test
+  public void
+      load_WithProperConfigFilePathAndNullStringSchemaArguments_ShouldJustCallCreateCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.load(configFilePath, (String) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).createCoordinatorTable(Collections.emptyMap());
+  }
+
+  @Test
   public void load_WithProperPropertiesAndFilePathArguments_ShouldCallCreateTables()
       throws Exception {
     // Act
@@ -66,6 +91,30 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(operator).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).createCoordinatorTable(Collections.emptyMap());
+  }
+
+  @Test
+  public void
+      load_WithProperPropertiesConfigAndNullPathSchemaArguments_ShouldJustCallCreateCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.load(configProperties, (Path) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).createCoordinatorTable(Collections.emptyMap());
+  }
+
+  @Test
+  public void
+      load_WithProperPropertiesConfigAndNullStringSchemaArguments_ShouldJustCallCreateCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.load(configProperties, (String) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
     verify(operator).createCoordinatorTable(Collections.emptyMap());
   }
 
@@ -132,6 +181,30 @@ public class SchemaLoaderTest {
   }
 
   @Test
+  public void
+      unload_WithProperConfigFilePathAndNullPathSchemaArguments_ShouldJustCallDropCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.unload(configFilePath, (Path) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithProperConfigFilePathAndNullStringSchemaArguments_ShouldJustCallDropCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.unload(configFilePath, (String) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
   public void unload_WithProperPropertiesAndFilePathArguments_ShouldCallDeleteTables()
       throws Exception {
     // Act
@@ -139,6 +212,30 @@ public class SchemaLoaderTest {
 
     // Assert
     verify(operator).deleteTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithProperConfigPropertiesAndNullPathSchemaArguments_ShouldJustCallDropCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.unload(configProperties, (Path) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithProperConfigPropertiesAndNullStringSchemaArguments_ShouldJustCallDropCoordinator()
+          throws Exception {
+    // Act
+    SchemaLoader.unload(configProperties, (String) null, Collections.emptyMap(), true);
+
+    // Assert
+    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
     verify(operator).dropCoordinatorTable();
   }
 
