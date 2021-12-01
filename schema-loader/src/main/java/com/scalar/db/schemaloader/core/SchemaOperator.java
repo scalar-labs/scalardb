@@ -67,6 +67,7 @@ public class SchemaOperator {
     createTables(tableList, metaOptions);
   }
 
+  @VisibleForTesting
   void createTables(List<Table> tableList, Map<String, String> metaOptions)
       throws SchemaOperatorException {
     boolean hasTransactionTable = false;
@@ -124,6 +125,7 @@ public class SchemaOperator {
     deleteTables(tableList);
   }
 
+  @VisibleForTesting
   void deleteTables(List<Table> tableList) throws SchemaOperatorException {
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;

@@ -19,11 +19,13 @@ public class Right<L, R> extends Either<L, R> {
     return true;
   }
 
+  @Nullable
   @Override
   public L getLeft() {
     throw new IllegalStateException("No left");
   }
 
+  @Nullable
   @Override
   public R getRight() {
     return rightValue;
