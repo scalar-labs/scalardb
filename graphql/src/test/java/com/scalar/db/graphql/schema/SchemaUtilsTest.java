@@ -37,12 +37,12 @@ public class SchemaUtilsTest {
   }
 
   @Test
-  public void dataTypeToGraphQLScalarType_BigIntGiven_ShouldReturnFloat() {
+  public void dataTypeToGraphQLScalarType_BigIntGiven_ShouldReturnCustomBigInt() {
     // Act
     GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.BIGINT);
 
     // Assert
-    assertThat(type).isEqualTo(Scalars.GraphQLFloat);
+    assertThat(type).isEqualTo(CommonSchema.BIG_INT_SCALAR);
   }
 
   @Test

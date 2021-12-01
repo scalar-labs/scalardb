@@ -24,17 +24,20 @@ public final class CommonSchema {
   public static final GraphQLScalarType FLOAT_32_SCALAR =
       newScalar().name("Float32").coercing(FloatCoercing.INSTANCE).build();
 
+  public static final GraphQLScalarType BIG_INT_SCALAR =
+      newScalar().name("BigInt").coercing(BigIntCoercing.INSTANCE).build();
+
   public static Set<GraphQLNamedInputType> createCommonGraphQLTypes() {
     GraphQLInputObjectType conditionalExpressionInputObject =
         newInputObject()
             .name("ConditionalExpression")
             .field(newInputObjectField().name("name").type(nonNull(Scalars.GraphQLString)))
             .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
+            .field(newInputObjectField().name("bigIntValue").type(BIG_INT_SCALAR))
+            .field(newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR))
             .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
             .field(newInputObjectField().name("stringValue").type(Scalars.GraphQLString))
             .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
-            .field(newInputObjectField().name("bigIntValue").type(Scalars.GraphQLFloat))
-            .field(newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR))
             .field(
                 newInputObjectField()
                     .name("operator")
@@ -52,6 +55,7 @@ public final class CommonSchema {
             .build();
 
     return ImmutableSet.<GraphQLNamedInputType>builder()
+        .add(BIG_INT_SCALAR)
         .add(FLOAT_32_SCALAR)
         .add(
             newEnum()

@@ -14,10 +14,11 @@ final class SchemaUtils {
         return Scalars.GraphQLBoolean;
       case INT:
         return Scalars.GraphQLInt;
+      case BIGINT:
+        return CommonSchema.BIG_INT_SCALAR;
       case FLOAT:
         return CommonSchema.FLOAT_32_SCALAR;
       case DOUBLE:
-      case BIGINT:
         return Scalars.GraphQLFloat;
       case TEXT:
         return Scalars.GraphQLString;
