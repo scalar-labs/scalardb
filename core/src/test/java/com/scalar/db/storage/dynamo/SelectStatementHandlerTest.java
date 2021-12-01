@@ -624,6 +624,93 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void
+      handle_ScanOperationWithFullMultipleClusteringKeysRangeInclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withStart(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                true)
+            .withEnd(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_4)
+                    .build(),
+                true);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(
+                            Key.newBuilder()
+                                .addText(ANY_NAME_2, ANY_TEXT_2)
+                                .addText(ANY_NAME_3, ANY_TEXT_4)
+                                .build(),
+                            metadata.getClusteringOrders())))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(
+                            Key.newBuilder()
+                                .addText(ANY_NAME_2, ANY_TEXT_2)
+                                .addText(ANY_NAME_3, ANY_TEXT_3)
+                                .build(),
+                            metadata.getClusteringOrders())))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
       handle_ScanOperationWithFullMultipleClusteringKeysRangeExclusively_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(metadata.getPartitionKeyNames())
@@ -696,6 +783,97 @@ public class SelectStatementHandlerTest {
                                     Key.newBuilder()
                                         .addText(ANY_NAME_2, ANY_TEXT_2)
                                         .addText(ANY_NAME_3, ANY_TEXT_4)
+                                        .build(),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithFullMultipleClusteringKeysRangeExclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withStart(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                false)
+            .withEnd(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_4)
+                    .build(),
+                false);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestNextBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    Key.newBuilder()
+                                        .addText(ANY_NAME_2, ANY_TEXT_2)
+                                        .addText(ANY_NAME_3, ANY_TEXT_4)
+                                        .build(),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestPreviousBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    Key.newBuilder()
+                                        .addText(ANY_NAME_2, ANY_TEXT_2)
+                                        .addText(ANY_NAME_3, ANY_TEXT_3)
                                         .build(),
                                     metadata.getClusteringOrders()))
                         .get()))
@@ -933,6 +1111,82 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void
+      handle_ScanOperationWithFullMultipleStartClusteringKeysInclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withStart(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                true);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(
+                            Key.newBuilder()
+                                .addText(ANY_NAME_2, ANY_TEXT_2)
+                                .addText(ANY_NAME_3, ANY_TEXT_3)
+                                .build(),
+                            metadata.getClusteringOrders())))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
       handle_ScanOperationWithFullMultipleStartClusteringKeysExclusively_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(metadata.getPartitionKeyNames())
@@ -997,6 +1251,84 @@ public class SelectStatementHandlerTest {
                             new KeyBytesEncoder()
                                 .encode(
                                     new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithFullMultipleStartClusteringKeysExclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withStart(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                false);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(new Key(ANY_NAME_2, ANY_TEXT_2), metadata.getClusteringOrders())))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestPreviousBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    Key.newBuilder()
+                                        .addText(ANY_NAME_2, ANY_TEXT_2)
+                                        .addText(ANY_NAME_3, ANY_TEXT_3)
+                                        .build(),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
@@ -1199,6 +1531,86 @@ public class SelectStatementHandlerTest {
 
   @Test
   public void
+      handle_ScanOperationWithFullMultipleEndClusteringKeysInclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withEnd(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                true);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    new KeyBytesEncoder()
+                        .encode(
+                            Key.newBuilder()
+                                .addText(ANY_NAME_2, ANY_TEXT_2)
+                                .addText(ANY_NAME_3, ANY_TEXT_3)
+                                .build(),
+                            metadata.getClusteringOrders())))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestNextBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    new Key(ANY_NAME_2, ANY_TEXT_2),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
       handle_ScanOperationWithFullMultipleEndClusteringKeysExclusively_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(metadata.getPartitionKeyNames())
@@ -1259,6 +1671,88 @@ public class SelectStatementHandlerTest {
                                         .addText(ANY_NAME_2, ANY_TEXT_2)
                                         .addText(ANY_NAME_3, ANY_TEXT_3)
                                         .build(),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    ArgumentCaptor<QueryRequest> captor = ArgumentCaptor.forClass(QueryRequest.class);
+    verify(client).query(captor.capture());
+    QueryRequest actualRequest = captor.getValue();
+    assertThat(actualRequest.keyConditionExpression()).isEqualTo(expectedCondition);
+    assertThat(actualRequest.expressionAttributeValues()).isEqualTo(expectedBindMap);
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithFullMultipleEndClusteringKeysExclusivelyWithClusteringOrder_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getPartitionKeyNames())
+        .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_1)));
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_2)).thenReturn(Order.ASC);
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+    when(metadata.getClusteringOrders())
+        .thenReturn(ImmutableMap.of(ANY_NAME_2, Order.ASC, ANY_NAME_3, Order.DESC));
+
+    when(client.query(any(QueryRequest.class))).thenReturn(queryResponse);
+    when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
+
+    Scan scan =
+        prepareScan()
+            .withEnd(
+                Key.newBuilder()
+                    .addText(ANY_NAME_2, ANY_TEXT_2)
+                    .addText(ANY_NAME_3, ANY_TEXT_3)
+                    .build(),
+                false);
+
+    String expectedCondition =
+        DynamoOperation.PARTITION_KEY
+            + " = "
+            + DynamoOperation.PARTITION_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS;
+
+    DynamoOperation dynamoOperation = new DynamoOperation(scan, metadata);
+    ByteBuffer partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+
+    Map<String, AttributeValue> expectedBindMap = new HashMap<>();
+    expectedBindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(partitionKey)).build());
+    expectedBindMap.put(
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestNextBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    Key.newBuilder()
+                                        .addText(ANY_NAME_2, ANY_TEXT_2)
+                                        .addText(ANY_NAME_3, ANY_TEXT_3)
+                                        .build(),
+                                    metadata.getClusteringOrders()))
+                        .get()))
+            .build());
+    expectedBindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder()
+            .b(
+                SdkBytes.fromByteBuffer(
+                    BytesUtils.getClosestNextBytes(
+                            new KeyBytesEncoder()
+                                .encode(
+                                    new Key(ANY_NAME_2, ANY_TEXT_2),
                                     metadata.getClusteringOrders()))
                         .get()))
             .build());
