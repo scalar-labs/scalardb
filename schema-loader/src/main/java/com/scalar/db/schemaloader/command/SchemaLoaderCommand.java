@@ -1,16 +1,12 @@
 package com.scalar.db.schemaloader.command;
 
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.schemaloader.SchemaLoader;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -100,26 +96,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath);
-
-    if (coordinator) {
-      operator.createCoordinatorTable(metaOptions);
+    if (!deleteTables) {
+      SchemaLoader.load(configPath, schemaFile, metaOptions, coordinator);
+    } else {
+      SchemaLoader.unload(configPath, schemaFile, metaOptions, coordinator);
     }
 
-    if (schemaFile != null) {
-      List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
-      if (deleteTables) {
-        operator.deleteTables(tableList);
-      } else {
-        operator.createTables(tableList, metaOptions);
-      }
-    }
-
-    if (coordinator && deleteTables) {
-      operator.dropCoordinatorTable();
-    }
-
-    operator.close();
     return 0;
   }
 }
