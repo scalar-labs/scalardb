@@ -1,8 +1,6 @@
 package com.scalar.db.schemaloader.core;
 
-import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,26 +29,6 @@ public class SchemaOperatorFactory {
    *     param is `true` then for example when creating a schema which contains a transactional
    *     table, the coordinator will be created as well.
    */
-  public static SchemaOperator getSchemaOperator(
-      String configPath, boolean separateCoordinatorTable) throws SchemaOperatorException {
-    DatabaseConfig dbConfig;
-    try {
-      dbConfig = new DatabaseConfig(new FileInputStream(configPath));
-    } catch (IOException e) {
-      throw new SchemaOperatorException("Reading config file failed", e);
-    }
-
-    return new SchemaOperator(dbConfig, separateCoordinatorTable);
-  }
-
-  /**
-   * Creates a SchemaOperator instance.
-   *
-   * @param configPath the file path to Scalar DB configuration file
-   * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
-   *     param is `true` then for example when creating a schema which contains a transactional
-   *     table, the coordinator will be created as well.
-   */
   public static SchemaOperator getSchemaOperator(Path configPath, boolean separateCoordinatorTable)
       throws SchemaOperatorException {
     DatabaseConfig dbConfig;
@@ -60,34 +38,5 @@ public class SchemaOperatorFactory {
       throw new SchemaOperatorException("Reading config file failed", e);
     }
     return new SchemaOperator(dbConfig, separateCoordinatorTable);
-  }
-
-  /**
-   * Creates a SchemaOperator instance.
-   *
-   * @param dbConfig the Scalar DB configuration, instance of {@link DatabaseConfig}
-   * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
-   *     param is `true` then for example when creating a schema which contains a transactional
-   *     table, the coordinator will be created as well.
-   */
-  public static SchemaOperator getSchemaOperator(
-      DatabaseConfig dbConfig, boolean separateCoordinatorTable) {
-    return new SchemaOperator(dbConfig, separateCoordinatorTable);
-  }
-
-  /**
-   * Creates a SchemaOperator instance.
-   *
-   * @param admin the instance of {@link DistributedStorageAdmin}
-   * @param consensusCommitAdmin the instance of {@link ConsensusCommitAdmin}
-   * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
-   *     param is `true` then for example when creating a schema which contains a transactional
-   *     table, the coordinator will be created as well.
-   */
-  public static SchemaOperator getSchemaOperator(
-      DistributedStorageAdmin admin,
-      ConsensusCommitAdmin consensusCommitAdmin,
-      boolean separateCoordinatorTable) {
-    return new SchemaOperator(admin, consensusCommitAdmin, separateCoordinatorTable);
   }
 }

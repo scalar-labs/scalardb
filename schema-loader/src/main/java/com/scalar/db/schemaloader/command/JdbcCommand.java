@@ -1,7 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -14,7 +13,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --jdbc",
     description = "Create/Delete JDBC schemas")
-public class JdbcCommand extends SpecificStorageCommandBase implements Callable<Integer> {
+public class JdbcCommand extends StorageSpecificCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
 
@@ -35,18 +34,6 @@ public class JdbcCommand extends SpecificStorageCommandBase implements Callable<
       description = "JDBC password",
       required = true)
   private String password;
-
-  @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
-
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
 
   @Override
   public Integer call() throws Exception {

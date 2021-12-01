@@ -2,14 +2,30 @@ package com.scalar.db.schemaloader.util.either;
 
 import javax.annotation.Nullable;
 
-public class Left<A, B> extends Either<A, B> {
-  @Nullable public A leftValue;
+public class Left<L, R> extends Either<L, R> {
+  @Nullable public L leftValue;
 
-  public Left(@Nullable A a) {
+  public Left(@Nullable L a) {
     leftValue = a;
   }
 
-  public A getValue() {
+  @Override
+  public boolean isLeft() {
+    return true;
+  }
+
+  @Override
+  public boolean isRight() {
+    return false;
+  }
+
+  @Override
+  public L getLeft() {
     return leftValue;
+  }
+
+  @Override
+  public R getRight() {
+    throw new IllegalStateException("No right");
   }
 }

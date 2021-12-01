@@ -165,15 +165,13 @@ public class SchemaLoader {
 
     // Create tables
     try {
-      if (schema instanceof Left) {
-        Left<Path, String> schemaFilePath = (Left<Path, String>) schema;
-        if (schemaFilePath.getValue() != null) {
-          operator.createTables(schemaFilePath.getValue(), options);
+      if (schema.isLeft()) {
+        if (schema.getLeft() != null) {
+          operator.createTables(schema.getLeft(), options);
         }
       } else {
-        Right<Path, String> serializedSchemaJson = (Right<Path, String>) schema;
-        if (serializedSchemaJson.getValue() != null) {
-          operator.createTables(serializedSchemaJson.getValue(), options);
+        if (schema.getRight() != null) {
+          operator.createTables(schema.getRight(), options);
         }
       }
 
@@ -282,15 +280,13 @@ public class SchemaLoader {
 
     // Delete tables
     try {
-      if (schema instanceof Left) {
-        Left<Path, String> schemaFilePath = (Left<Path, String>) schema;
-        if (schemaFilePath.getValue() != null) {
-          operator.deleteTables(schemaFilePath.getValue(), options);
+      if (schema.isLeft()) {
+        if (schema.getLeft() != null) {
+          operator.deleteTables(schema.getLeft(), options);
         }
       } else {
-        Right<Path, String> serializedSchemaJson = (Right<Path, String>) schema;
-        if (serializedSchemaJson.getValue() != null) {
-          operator.deleteTables(serializedSchemaJson.getValue(), options);
+        if (schema.getRight() != null) {
+          operator.deleteTables(schema.getRight(), options);
         }
       }
 
@@ -307,18 +303,16 @@ public class SchemaLoader {
   private static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
       throws SchemaLoaderException {
     SchemaOperator operator;
-    if (config instanceof Left) {
-      Left<Path, Properties> configPath = (Left<Path, Properties>) config;
+    if (config.isLeft()) {
       try {
-        assert configPath.getValue() != null;
-        operator = SchemaOperatorFactory.getSchemaOperator(configPath.getValue(), true);
+        assert config.getLeft() != null;
+        operator = SchemaOperatorFactory.getSchemaOperator(config.getLeft(), true);
       } catch (SchemaOperatorException e) {
         throw new SchemaLoaderException("Initializing schema operator failed.", e);
       }
     } else {
-      Right<Path, Properties> configProperties = (Right<Path, Properties>) config;
-      assert configProperties.getValue() != null;
-      operator = SchemaOperatorFactory.getSchemaOperator(configProperties.getValue(), true);
+      assert config.getRight() != null;
+      operator = SchemaOperatorFactory.getSchemaOperator(config.getRight(), true);
     }
 
     return operator;

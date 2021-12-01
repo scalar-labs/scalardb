@@ -5,7 +5,6 @@ import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -18,7 +17,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cassandra",
     description = "Create/Delete Cassandra schemas")
-public class CassandraCommand extends SpecificStorageCommandBase implements Callable<Integer> {
+public class CassandraCommand extends StorageSpecificCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
 
@@ -60,18 +59,6 @@ public class CassandraCommand extends SpecificStorageCommandBase implements Call
       names = {"-R", "--replication-factor"},
       description = "Cassandra replication factor")
   private String replicationFactor;
-
-  @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
-
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
 
   @Override
   public Integer call() throws SchemaLoaderException {

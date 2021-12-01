@@ -98,8 +98,11 @@ public class SchemaLoaderTest {
   public void
       load_WithProperPropertiesConfigAndNullPathSchemaArguments_ShouldJustCallCreateCoordinator()
           throws Exception {
+    // Arrange
+    Path schemaPath = null;
+
     // Act
-    SchemaLoader.load(configProperties, (Path) null, Collections.emptyMap(), true);
+    SchemaLoader.load(configProperties, schemaPath, Collections.emptyMap(), true);
 
     // Assert
     verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
@@ -110,8 +113,11 @@ public class SchemaLoaderTest {
   public void
       load_WithProperPropertiesConfigAndNullStringSchemaArguments_ShouldJustCallCreateCoordinator()
           throws Exception {
+    // Arrange
+    String serializedSchema = null;
+
     // Act
-    SchemaLoader.load(configProperties, (String) null, Collections.emptyMap(), true);
+    SchemaLoader.load(configProperties, serializedSchema, Collections.emptyMap(), true);
 
     // Assert
     verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
@@ -219,8 +225,11 @@ public class SchemaLoaderTest {
   public void
       unload_WithProperConfigPropertiesAndNullPathSchemaArguments_ShouldJustCallDropCoordinator()
           throws Exception {
+    // Arrange
+    Path schemaPath = null;
+
     // Act
-    SchemaLoader.unload(configProperties, (Path) null, Collections.emptyMap(), true);
+    SchemaLoader.unload(configProperties, schemaPath, Collections.emptyMap(), true);
 
     // Assert
     verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
@@ -231,8 +240,11 @@ public class SchemaLoaderTest {
   public void
       unload_WithProperConfigPropertiesAndNullStringSchemaArguments_ShouldJustCallDropCoordinator()
           throws Exception {
+    // Arrange
+    String serializedSchema = null;
+
     // Act
-    SchemaLoader.unload(configProperties, (String) null, Collections.emptyMap(), true);
+    SchemaLoader.unload(configProperties, serializedSchema, Collections.emptyMap(), true);
 
     // Assert
     verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());

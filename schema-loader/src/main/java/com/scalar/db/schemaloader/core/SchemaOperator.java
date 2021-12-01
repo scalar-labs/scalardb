@@ -1,5 +1,6 @@
 package com.scalar.db.schemaloader.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -34,6 +35,7 @@ public class SchemaOperator {
         new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(dbConfig.getProperties()));
   }
 
+  @VisibleForTesting
   public SchemaOperator(
       DistributedStorageAdmin admin,
       ConsensusCommitAdmin consensusCommitAdmin,

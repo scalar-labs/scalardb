@@ -4,7 +4,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -17,7 +16,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --dynamo",
     description = "Create/Delete DynamoDB schemas")
-public class DynamoCommand extends SpecificStorageCommandBase implements Callable<Integer> {
+public class DynamoCommand extends StorageSpecificCommandBase implements Callable<Integer> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
 
@@ -51,18 +50,6 @@ public class DynamoCommand extends SpecificStorageCommandBase implements Callabl
       names = "--endpoint-override",
       description = "Endpoint with which the DynamoDB SDK should communicate")
   private String endpointOverride;
-
-  @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
-
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
 
   @Override
   public Integer call() throws SchemaLoaderException {
