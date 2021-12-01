@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.schema;
 
-import static com.scalar.db.graphql.schema.SchemaUtils.dataTypeToGraphQLScalarType;
+import static com.scalar.db.graphql.schema.ScalarDbTypes.dataTypeToGraphQLScalarType;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLEnumType.newEnum;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
@@ -197,8 +197,8 @@ public class TableGraphQlModel {
         .name(objectType.getName() + "_ClusteringKey")
         .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
         .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
-        .field(newInputObjectField().name("bigIntValue").type(CommonSchema.BIG_INT_SCALAR))
-        .field(newInputObjectField().name("floatValue").type(CommonSchema.FLOAT_32_SCALAR))
+        .field(newInputObjectField().name("bigIntValue").type(ScalarDbTypes.BIG_INT_SCALAR))
+        .field(newInputObjectField().name("floatValue").type(ScalarDbTypes.FLOAT_32_SCALAR))
         .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
         .field(newInputObjectField().name("textValue").type(Scalars.GraphQLString))
         .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))

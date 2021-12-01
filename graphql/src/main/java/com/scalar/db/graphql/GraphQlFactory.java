@@ -17,7 +17,7 @@ import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
-import com.scalar.db.graphql.schema.CommonSchema;
+import com.scalar.db.graphql.schema.ScalarDbTypes;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
@@ -131,10 +131,10 @@ public class GraphQlFactory {
         GraphQLSchema.newSchema()
             .query(queryObjectType)
             .mutation(mutationObjectType)
-            .codeRegistry(createGraphQLCodeRegistry(queryObjectType, mutationObjectType));
-    CommonSchema.createCommonGraphQLTypes().forEach(schemaBuilder::additionalType);
+            .codeRegistry(createGraphQLCodeRegistry(queryObjectType, mutationObjectType))
+            .additionalTypes(ScalarDbTypes.SCALAR_DB_GRAPHQL_TYPES);
     if (transactionManager != null) {
-      schemaBuilder.additionalDirective(CommonSchema.createTransactionDirective());
+      schemaBuilder.additionalDirective(ScalarDbTypes.TRANSACTION_DIRECTIVE);
     } else {
       LOGGER.info("@transaction directive is disabled since transactionManager is not given");
     }
