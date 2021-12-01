@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 
 public abstract class SpecificStorageCommandBase {
-  protected void execute(
+  protected static void execute(
       Properties props, Path schemaFile, Map<String, String> metaOptions, boolean deleteTables)
       throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
