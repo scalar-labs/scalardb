@@ -16,6 +16,7 @@ import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +42,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
       consensusCommitAdmin =
           new ConsensusCommitAdmin(
               admin, new ConsensusCommitConfig(databaseConfig.getProperties()));
-      tables = SchemaParser.parse(SCHEMA_FILE, Collections.emptyMap());
+      tables = SchemaParser.parse(Paths.get(SCHEMA_FILE), Collections.emptyMap());
       initialized = true;
     }
   }
