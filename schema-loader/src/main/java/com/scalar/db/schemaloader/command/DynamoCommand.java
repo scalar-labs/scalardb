@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -17,8 +15,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar --dynamo",
     description = "Create/Delete DynamoDB schemas")
 public class DynamoCommand extends StorageSpecificCommandBase implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
 
   @Option(
       names = {"-u", "--user"},
@@ -53,7 +49,6 @@ public class DynamoCommand extends StorageSpecificCommandBase implements Callabl
 
   @Override
   public Integer call() throws SchemaLoaderException {
-    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, awsRegion);
@@ -75,7 +70,7 @@ public class DynamoCommand extends StorageSpecificCommandBase implements Callabl
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
 
-    execute(props, schemaFile, metaOptions, deleteTables);
+    execute(props, metaOptions);
 
     return 0;
   }

@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -14,8 +12,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar --jdbc",
     description = "Create/Delete JDBC schemas")
 public class JdbcCommand extends StorageSpecificCommandBase implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcCommand.class);
 
   @Option(
       names = {"-j", "--jdbc-url"},
@@ -37,7 +33,6 @@ public class JdbcCommand extends StorageSpecificCommandBase implements Callable<
 
   @Override
   public Integer call() throws Exception {
-    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, url);
@@ -47,7 +42,7 @@ public class JdbcCommand extends StorageSpecificCommandBase implements Callable<
 
     Map<String, String> metaOptions = Collections.emptyMap();
 
-    execute(props, schemaFile, metaOptions, deleteTables);
+    execute(props, metaOptions);
 
     return 0;
   }

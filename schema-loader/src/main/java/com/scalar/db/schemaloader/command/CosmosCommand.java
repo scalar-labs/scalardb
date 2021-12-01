@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -16,8 +14,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
     description = "Create/Delete Cosmos DB schemas")
 public class CosmosCommand extends StorageSpecificCommandBase implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
 
   @Option(
       names = {"-h", "--host"},
@@ -42,7 +38,6 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
 
   @Override
   public Integer call() throws SchemaLoaderException {
-    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, uri);
@@ -57,7 +52,7 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
       metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
-    execute(props, schemaFile, metaOptions, deleteTables);
+    execute(props, metaOptions);
 
     return 0;
   }

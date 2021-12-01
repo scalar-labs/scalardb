@@ -67,7 +67,7 @@ public class SchemaOperator {
     createTables(tableList, metaOptions);
   }
 
-  public void createTables(List<Table> tableList, Map<String, String> metaOptions)
+  void createTables(List<Table> tableList, Map<String, String> metaOptions)
       throws SchemaOperatorException {
     boolean hasTransactionTable = false;
     for (Table table : tableList) {
@@ -124,7 +124,7 @@ public class SchemaOperator {
     deleteTables(tableList);
   }
 
-  public void deleteTables(List<Table> tableList) throws SchemaOperatorException {
+  void deleteTables(List<Table> tableList) throws SchemaOperatorException {
     Set<String> namespaces = new HashSet<>();
     boolean hasTransactionTable = false;
     for (Table table : tableList) {

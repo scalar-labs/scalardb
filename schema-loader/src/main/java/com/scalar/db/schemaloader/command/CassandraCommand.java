@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -18,8 +16,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar --cassandra",
     description = "Create/Delete Cassandra schemas")
 public class CassandraCommand extends StorageSpecificCommandBase implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(CassandraCommand.class);
 
   @Option(
       names = {"-h", "--host"},
@@ -62,7 +58,6 @@ public class CassandraCommand extends StorageSpecificCommandBase implements Call
 
   @Override
   public Integer call() throws SchemaLoaderException {
-    LOGGER.info("Schema path: " + schemaFile);
 
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIp);
@@ -82,7 +77,7 @@ public class CassandraCommand extends StorageSpecificCommandBase implements Call
       metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
 
-    execute(props, schemaFile, metaOptions, deleteTables);
+    execute(props, metaOptions);
 
     return 0;
   }

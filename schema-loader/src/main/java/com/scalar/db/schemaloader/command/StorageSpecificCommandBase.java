@@ -7,25 +7,29 @@ import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Option;
 
 public abstract class StorageSpecificCommandBase {
+  private static final Logger LOGGER = LoggerFactory.getLogger(StorageSpecificCommandBase.class);
+
   @Option(
       names = {"-f", "--schema-file"},
       description = "Path to the schema json file",
       required = true)
-  protected Path schemaFile;
+  private Path schemaFile;
 
   @Option(
       names = {"-D", "--delete-all"},
       description = "Delete tables",
       defaultValue = "false")
-  protected boolean deleteTables;
+  private boolean deleteTables;
 
-  protected static void execute(
-      Properties props, Path schemaFile, Map<String, String> metaOptions, boolean deleteTables)
+  protected void execute(Properties props, Map<String, String> metaOptions)
       throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
+    LOGGER.info("Schema path: " + schemaFile);
 
     try {
       if (deleteTables) {
