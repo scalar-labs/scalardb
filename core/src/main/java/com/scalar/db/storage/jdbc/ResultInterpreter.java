@@ -55,7 +55,9 @@ public class ResultInterpreter {
       case BIGINT:
         return new BigIntValue(name, resultSet.getLong(name));
       case FLOAT:
-        return new FloatValue(name, resultSet.getFloat(name));
+        // To handle Float.MAX_VALUE in MySQL, we need to get the value as double, then cast it to
+        // float
+        return new FloatValue(name, (float) resultSet.getDouble(name));
       case DOUBLE:
         return new DoubleValue(name, resultSet.getDouble(name));
       case TEXT:

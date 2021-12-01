@@ -1,5 +1,7 @@
 package com.scalar.db.storage.multistorage;
 
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -52,7 +54,7 @@ public class MultiStorageConfig {
   }
 
   private void load() {
-    String storage = props.getProperty(DatabaseConfig.STORAGE);
+    String storage = getString(getProperties(), DatabaseConfig.STORAGE, null);
     if (storage == null || !storage.equals(MULTI_STORAGE)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE + " should be '" + MULTI_STORAGE + "'");
@@ -62,12 +64,12 @@ public class MultiStorageConfig {
     loadTableStorageMapping();
     loadNamespaceStorageMapping();
 
-    defaultStorage = props.getProperty(DEFAULT_STORAGE);
+    defaultStorage = getString(getProperties(), DEFAULT_STORAGE, null);
     checkIfStorageExists(defaultStorage);
   }
 
   private void loadDatabaseConfigs() {
-    String storages = props.getProperty(STORAGES);
+    String storages = getString(getProperties(), STORAGES, null);
     if (storages == null) {
       databaseConfigMap = Collections.emptyMap();
       return;
@@ -93,7 +95,7 @@ public class MultiStorageConfig {
   }
 
   private void loadTableStorageMapping() {
-    String tableMapping = props.getProperty(TABLE_MAPPING);
+    String tableMapping = getString(getProperties(), TABLE_MAPPING, null);
     if (tableMapping == null) {
       tableStorageMap = Collections.emptyMap();
       return;
@@ -110,7 +112,7 @@ public class MultiStorageConfig {
   }
 
   private void loadNamespaceStorageMapping() {
-    String namespaceMapping = props.getProperty(NAMESPACE_MAPPING);
+    String namespaceMapping = getString(getProperties(), NAMESPACE_MAPPING, null);
     if (namespaceMapping == null) {
       namespaceStorageMap = Collections.emptyMap();
       return;
@@ -127,7 +129,7 @@ public class MultiStorageConfig {
   }
 
   private void checkIfStorageExists(String storage) {
-    if (!databaseConfigMap.containsKey(storage)) {
+    if (storage == null || !databaseConfigMap.containsKey(storage)) {
       throw new IllegalArgumentException("storage not found: " + storage);
     }
   }
