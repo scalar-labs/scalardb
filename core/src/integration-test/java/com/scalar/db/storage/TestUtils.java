@@ -1,5 +1,6 @@
 package com.scalar.db.storage;
 
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
@@ -192,5 +193,16 @@ public final class TestUtils {
         ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
 
     return new DatabaseConfig(properties);
+  }
+
+  public static Order reverseOrder(Order order) {
+    switch (order) {
+      case ASC:
+        return Order.DESC;
+      case DESC:
+        return Order.ASC;
+      default:
+        throw new AssertionError();
+    }
   }
 }
