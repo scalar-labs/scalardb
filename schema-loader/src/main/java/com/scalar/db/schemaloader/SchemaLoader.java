@@ -47,12 +47,12 @@ public class SchemaLoader {
     String[] commandArgs = args;
     for (String arg : args) {
       if (COMMAND_MAP.containsKey(arg)) {
-        LOGGER.warn(
-            "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
-                + "are deprecated and will be removed in the future. Please use "
-                + "the --config option along with your config file instead.");
         command = COMMAND_MAP.get(arg);
         if (STORAGE_SPECIFIC_OPTION_LIST.contains(arg)) {
+          LOGGER.warn(
+              "Storage-specific options (--cassandra, --cosmos, --dynamo, --jdbc) "
+                  + "are deprecated and will be removed in the future. Please use "
+                  + "the --config option along with your config file instead.");
           // Remove the storage specific option from args
           commandArgs = Arrays.stream(args).filter(a -> !a.equals(arg)).toArray(String[]::new);
         }
