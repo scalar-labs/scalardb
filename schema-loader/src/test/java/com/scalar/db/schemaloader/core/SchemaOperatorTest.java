@@ -98,7 +98,7 @@ public class SchemaOperatorTest {
       createTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminCreateCoordinatorTable()
           throws Exception {
     // Arrange
-    operator = new SchemaOperator(admin, consensusCommitAdmin, true);
+    operator = new SchemaOperator(admin, consensusCommitAdmin, false);
     List<Table> tableList = Arrays.asList(table, table, table);
     when(table.getNamespace()).thenReturn("ns");
     when(table.getOptions()).thenReturn(Collections.emptyMap());
@@ -145,7 +145,7 @@ public class SchemaOperatorTest {
       deleteTables_WithTableListContainTransactionalTableAndIsStorageCommandSpecific_ShouldCallConsensusCommitAdminDropCoordinatorTable()
           throws Exception {
     // Arrange
-    operator = new SchemaOperator(admin, consensusCommitAdmin, true);
+    operator = new SchemaOperator(admin, consensusCommitAdmin, false);
     List<Table> tableList = Arrays.asList(table, table, table);
     when(table.getNamespace()).thenReturn("ns");
     when(table.getOptions()).thenReturn(Collections.emptyMap());

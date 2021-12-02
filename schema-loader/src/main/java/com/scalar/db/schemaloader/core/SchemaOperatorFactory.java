@@ -7,13 +7,36 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 public class SchemaOperatorFactory {
-  public static SchemaOperator getSchemaOperator(Properties properties) {
+  /**
+   * Creates a SchemaOperator instance.
+   *
+   * @param properties the Scalar DB properties configuration
+   * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
+   *     param is `true` then for example when creating a schema which contains a transactional
+   *     table, the coordinator will be created as well.
+   */
+  public static SchemaOperator getSchemaOperator(
+      Properties properties, boolean separateCoordinatorTable) {
     DatabaseConfig databaseConfig = new DatabaseConfig(properties);
-    return new SchemaOperator(databaseConfig, true);
+    return new SchemaOperator(databaseConfig, separateCoordinatorTable);
   }
 
-  public static SchemaOperator getSchemaOperator(Path configPath) throws IOException {
-    DatabaseConfig dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
-    return new SchemaOperator(dbConfig, false);
+  /**
+   * Creates a SchemaOperator instance.
+   *
+   * @param configPath the file path to Scalar DB configuration file
+   * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
+   *     param is `true` then for example when creating a schema which contains a transactional
+   *     table, the coordinator will be created as well.
+   */
+  public static SchemaOperator getSchemaOperator(Path configPath, boolean separateCoordinatorTable)
+      throws SchemaOperatorException {
+    DatabaseConfig dbConfig;
+    try {
+      dbConfig = new DatabaseConfig(new FileInputStream(configPath.toString()));
+    } catch (IOException e) {
+      throw new SchemaOperatorException("Reading config file failed", e);
+    }
+    return new SchemaOperator(dbConfig, separateCoordinatorTable);
   }
 }

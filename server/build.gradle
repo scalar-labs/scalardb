@@ -40,6 +40,7 @@ dependencies {
     implementation group: 'io.dropwizard.metrics', name: 'metrics-jmx', version: "${dropwizardMetricsVersion}"
     implementation group: 'io.prometheus', name: 'simpleclient_dropwizard', version: "${prometheusVersion}"
     implementation group: 'io.prometheus', name: 'simpleclient_servlet', version: "${prometheusVersion}"
+    implementation group: 'io.prometheus', name: 'simpleclient_hotspot', version: "${prometheusVersion}"
     implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: "${jettyVersion}"
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
@@ -65,7 +66,7 @@ application {
 
 docker {
     name "ghcr.io/scalar-labs/scalardb-server:${project.version}"
-    files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl'
+    files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
 task integrationTestScalarDbServer(type: Test) {

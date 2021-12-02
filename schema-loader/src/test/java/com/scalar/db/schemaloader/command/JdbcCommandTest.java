@@ -4,6 +4,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -35,7 +37,7 @@ public class JdbcCommandTest extends CommandTestBase {
     commandLine.execute("-j", jdbcUrl, "-u", user, "-p", password, "-f", schemaFile);
 
     // Assert
-    verify(operator).createTables(Mockito.any(), eq(Collections.emptyMap()));
+    verify(operator).createTables(Mockito.any(Path.class), eq(Collections.emptyMap()));
   }
 
   @Test
@@ -47,7 +49,7 @@ public class JdbcCommandTest extends CommandTestBase {
     commandLine.execute("-j", jdbcUrl, "-u", user, "-p", password, "-f", schemaFile, "-D");
 
     // Assert
-    verify(operator).deleteTables(Mockito.any());
+    verify(operator).deleteTables(Paths.get(schemaFile), Collections.emptyMap());
   }
 
   @Test

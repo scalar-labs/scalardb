@@ -8,6 +8,9 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.schemaloader.core.SchemaOperatorException;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -68,7 +71,7 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
         "--coordinator");
 
     // Assert
-    verify(operator).createTables(Mockito.any(), eq(metaOptions));
+    verify(operator).createTables(Mockito.any(Path.class), eq(metaOptions));
     verify(operator).createCoordinatorTable(Mockito.any());
   }
 
@@ -133,7 +136,7 @@ public class SchemaLoaderCommandTest extends CommandTestBase {
     commandLine.execute("-f", schemaFile, "-D", "--config", configFile);
 
     // Assert
-    verify(operator).deleteTables(Mockito.any());
+    verify(operator).deleteTables(Paths.get(schemaFile), Collections.emptyMap());
   }
 
   @Test
