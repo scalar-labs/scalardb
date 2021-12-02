@@ -49,7 +49,7 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static final int THREAD_NUM = 10;
+  private static final int THREAD_NUM = 5;
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
