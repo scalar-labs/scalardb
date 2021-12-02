@@ -60,7 +60,6 @@ public class ConcatenationVisitorTest {
     assertThat(values[5]).isEqualTo(ANY_TEXT);
     assertThat(values[6])
         .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
-    ;
   }
 
   @Test
