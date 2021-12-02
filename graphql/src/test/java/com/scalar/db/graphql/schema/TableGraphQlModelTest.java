@@ -30,6 +30,7 @@ public class TableGraphQlModelTest {
   private static final String COLUMN_NAME_3 = "column_3";
   private static final String COLUMN_NAME_4 = "column_4";
   private static final String COLUMN_NAME_5 = "column_5";
+  private static final String COLUMN_NAME_6 = "column_6";
 
   private void assertNullableFieldDefinition(
       GraphQLFieldDefinition field, String name, GraphQLType type) {
@@ -85,6 +86,7 @@ public class TableGraphQlModelTest {
         .addColumn(COLUMN_NAME_3, DataType.TEXT)
         .addColumn(COLUMN_NAME_4, DataType.FLOAT)
         .addColumn(COLUMN_NAME_5, DataType.BOOLEAN)
+        .addColumn(COLUMN_NAME_6, DataType.BIGINT)
         .addPartitionKey(COLUMN_NAME_1)
         .addPartitionKey(COLUMN_NAME_2)
         .addClusteringKey(COLUMN_NAME_3)
@@ -99,6 +101,7 @@ public class TableGraphQlModelTest {
         .addColumn(COLUMN_NAME_3, DataType.TEXT)
         .addColumn(COLUMN_NAME_4, DataType.FLOAT)
         .addColumn(COLUMN_NAME_5, DataType.BOOLEAN)
+        .addColumn(COLUMN_NAME_6, DataType.BIGINT)
         .addPartitionKey(COLUMN_NAME_1)
         .addPartitionKey(COLUMN_NAME_2)
         .build();
@@ -147,12 +150,13 @@ public class TableGraphQlModelTest {
     GraphQLObjectType objectType = model.getObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME);
     List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(5);
+    assertThat(fields.size()).isEqualTo(6);
     assertNullableFieldDefinition(fields.get(0), COLUMN_NAME_1, Scalars.GraphQLString);
     assertNullableFieldDefinition(fields.get(1), COLUMN_NAME_2, Scalars.GraphQLInt);
     assertNullableFieldDefinition(fields.get(2), COLUMN_NAME_3, Scalars.GraphQLString);
     assertNullableFieldDefinition(fields.get(3), COLUMN_NAME_4, CommonSchema.FLOAT_32_SCALAR);
     assertNullableFieldDefinition(fields.get(4), COLUMN_NAME_5, Scalars.GraphQLBoolean);
+    assertNullableFieldDefinition(fields.get(5), COLUMN_NAME_6, CommonSchema.BIG_INT_SCALAR);
   }
 
   @Test
@@ -469,12 +473,14 @@ public class TableGraphQlModelTest {
     // Assert
     // input table_1_PutValues {
     //  column_5: Boolean
+    //  column_6: BigInt
     // }
     GraphQLInputObjectType objectType = model.getPutValuesObjectType();
     assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_PutValues");
     List<GraphQLInputObjectField> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(1);
+    assertThat(fields.size()).isEqualTo(2);
     assertNullableInputObjectField(fields.get(0), COLUMN_NAME_5, Scalars.GraphQLBoolean);
+    assertNullableInputObjectField(fields.get(1), COLUMN_NAME_6, CommonSchema.BIG_INT_SCALAR);
   }
 
   @Test
