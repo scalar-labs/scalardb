@@ -26,7 +26,7 @@ Cassandra has a built-in replication mechanism, so you do not always have to cre
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, please follow [the basic strategy](#general-way-to-create-a-transactionally-consistent-backup) section, or 
+If you want to create a transactionally-consistent cluster-wide backup, please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section, or 
 stop the Cassandra cluster and take the copies of all the nodes of the cluster, and start the cluster. 
 
 To avoid mistakes when doing backup operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
@@ -36,12 +36,12 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 **Cosmos DB**
 
 You must create a Cosmos DB account with a Continuous backup policy to create point-in-time restore (PITR).
-Please follow [the basic strategy](#general-way-to-create-a-transactionally-consistent-backup) section to create a backup.
+Please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 **DynamoDB**
 
-You must create tables with point-in-time recovery (PITR) and auto-scaling in DynamoDB. Scalar DB Schema Loader enables PITR and auto-scaling by default.
-Please follow [the basic strategy](#general-way-to-create-a-transactionally-consistent-backup) section to create a backup.
+You must create tables with point-in-time recovery (PITR) and auto-scaling in DynamoDB. Point-in-time recovery creates continuous backup and auto-scaling provides better performance. Scalar DB Schema Loader enables PITR and auto-scaling by default.
+Please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
 
 #### Basic strategy to create a transactionally-consistent backup
 
@@ -49,12 +49,12 @@ One way to create a transactionally-consistent backup is to take a backup while 
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
 If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
 
-To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application,
-you can easily pause the application without losing ongoing transactions.
+To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which is implemented `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application.
+You can use the [Client-side tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool) to pause the application without losing ongoing transactions.
 
 Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented application nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
 Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
-Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midtime of the paused duration since clock synchronization cannot perfectly synchronize clocks between nodes.
+Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midtime of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
 
 ## Restore Backup
 
@@ -92,7 +92,7 @@ You can restore tables one by one from the [Amazon DynamoDB console](https://doc
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
-It is recommended to enable point-in-time recovery (PITR) for continuous backup creation and auto-scaling for better performance. Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns.
+It is highly recommended to enable point-in-time recovery (PITR) for continuous backup creation and auto-scaling for better performance. Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns.
 DynamoDB will not enable PITR and auto-scaling by default after restoring.
 
 You can enable continuous backup and auto-scaling using the schema loader or Amazon DynamoDB console. Configuring the continuous backup and auto-scaling is easier if you use the schema loader.
