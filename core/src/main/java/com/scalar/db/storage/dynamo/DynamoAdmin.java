@@ -614,11 +614,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
     try {
       client.deleteTable(DeleteTableRequest.builder().tableName(fullTableName).build());
     } catch (Exception e) {
-      if (e instanceof ResourceNotFoundException) {
-        LOGGER.warn("table " + fullTableName + " does not exist for deleting");
-      } else {
-        throw new ExecutionException("deleting table " + fullTableName + " failed", e);
-      }
+      throw new ExecutionException("deleting table " + fullTableName + " failed", e);
     }
     waitForTableDeletion(namespace, table);
     deleteTableMetadata(namespace, table);
