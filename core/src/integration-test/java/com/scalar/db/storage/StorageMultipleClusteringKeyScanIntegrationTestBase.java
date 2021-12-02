@@ -58,7 +58,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static final int THREAD_NUM = 5;
+  private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
@@ -80,7 +80,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
       clusteringKeyTypes = getClusteringKeyTypes();
-      executorService = Executors.newFixedThreadPool(THREAD_NUM);
+      executorService = Executors.newFixedThreadPool(getThreadNum());
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -104,6 +104,10 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       }
     }
     return clusteringKeyTypes;
+  }
+
+  protected int getThreadNum() {
+    return THREAD_NUM;
   }
 
   protected Map<String, String> getCreateOptions() {

@@ -49,7 +49,7 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
   private static final Random RANDOM = new Random();
 
-  private static final int THREAD_NUM = 5;
+  private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
@@ -71,7 +71,7 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
       partitionKeyTypes = getPartitionKeyTypes();
-      executorService = Executors.newFixedThreadPool(THREAD_NUM);
+      executorService = Executors.newFixedThreadPool(getThreadNum());
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -94,6 +94,10 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
       }
     }
     return partitionKeyTypes;
+  }
+
+  protected int getThreadNum() {
+    return THREAD_NUM;
   }
 
   protected Map<String, String> getCreateOptions() {

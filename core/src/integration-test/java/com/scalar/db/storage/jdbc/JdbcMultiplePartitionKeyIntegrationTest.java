@@ -18,6 +18,14 @@ public class JdbcMultiplePartitionKeyIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      return 1;
+    }
+    return super.getThreadNum();
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
