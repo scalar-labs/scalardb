@@ -84,11 +84,13 @@ You can restore the table to a point in time using the DynamoDB console or the A
 By default, the table can only be restored one by one.
 
 You can restore tables one by one from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps and use the midtime of the pause as a restore point
-
+ 
 * Restore with PITR of table A to another table B
 * Take a backup of the restored table B (assume the backup is named backup B)
 * Remove table A
 * Create a table named A with backup B
+
+Note that you need to follow the above steps because the application requires tables with the same name as before. In DynamoDB, table restoration is possible only with an alias, so you can restore the table with alias and delete the actual table and rename the restored table (alias) with an actual name.
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
