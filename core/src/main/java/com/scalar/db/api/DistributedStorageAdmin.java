@@ -42,8 +42,6 @@ import java.util.Set;
  */
 public interface DistributedStorageAdmin {
 
-  String INDEX_NAME_PREFIX = "index";
-
   /**
    * Creates a namespace.
    *
