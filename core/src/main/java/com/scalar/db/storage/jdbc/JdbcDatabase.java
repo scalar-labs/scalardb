@@ -45,7 +45,7 @@ public class JdbcDatabase implements DistributedStorage {
 
   @Inject
   public JdbcDatabase(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config);
+    dataSource = JdbcUtils.initDataSource(config, config.getIsolation());
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
