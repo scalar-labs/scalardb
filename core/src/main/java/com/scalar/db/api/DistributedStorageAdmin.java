@@ -127,7 +127,7 @@ public interface DistributedStorageAdmin {
       boolean ifNotExists,
       Map<String, String> options)
       throws ExecutionException {
-    if (ifNotExists && getNamespaceTableNames(namespace).contains(table)) {
+    if (ifNotExists && tableExists(namespace, table)) {
       return;
     }
     createTable(namespace, table, metadata, options);
@@ -147,7 +147,7 @@ public interface DistributedStorageAdmin {
   default void createTable(
       String namespace, String table, TableMetadata metadata, boolean ifNotExists)
       throws ExecutionException {
-    if (ifNotExists && getNamespaceTableNames(namespace).contains(table)) {
+    if (ifNotExists && tableExists(namespace, table)) {
       return;
     }
     createTable(namespace, table, metadata, Collections.emptyMap());
@@ -186,7 +186,7 @@ public interface DistributedStorageAdmin {
    */
   default void dropTable(String namespace, String table, boolean ifExists)
       throws ExecutionException {
-    if (ifExists && !getNamespaceTableNames(namespace).contains(table)) {
+    if (ifExists && !tableExists(namespace, table)) {
       return;
     }
     dropTable(namespace, table);
