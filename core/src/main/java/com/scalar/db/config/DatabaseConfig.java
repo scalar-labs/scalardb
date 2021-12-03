@@ -8,7 +8,6 @@ import static com.scalar.db.config.ConfigUtils.getString;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
@@ -52,7 +51,6 @@ public class DatabaseConfig {
   private Class<? extends DistributedStorageAdmin> adminClass;
   private Class<? extends DistributedTransactionManager> transactionManagerClass;
   private Class<? extends TwoPhaseCommitTransactionManager> twoPhaseCommitTransactionManagerClass;
-  private Isolation isolation;
   private long tableMetadataCacheExpirationTimeSecs;
 
   public static final String PREFIX = "scalar.db.";
@@ -62,7 +60,6 @@ public class DatabaseConfig {
   public static final String PASSWORD = PREFIX + "password";
   public static final String STORAGE = PREFIX + "storage";
   public static final String TRANSACTION_MANAGER = PREFIX + "transaction_manager";
-  public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS =
       PREFIX + "table_metadata.cache_expiration_time_secs";
 
@@ -162,11 +159,6 @@ public class DatabaseConfig {
             "transaction manager '" + transactionManager + "' isn't supported");
     }
 
-    isolation =
-        Isolation.valueOf(
-            getString(getProperties(), ISOLATION_LEVEL, Isolation.SNAPSHOT.toString())
-                .toUpperCase());
-
     tableMetadataCacheExpirationTimeSecs =
         getLong(getProperties(), TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, -1);
   }
@@ -202,10 +194,6 @@ public class DatabaseConfig {
 
   public Class<? extends DistributedTransactionManager> getTransactionManagerClass() {
     return transactionManagerClass;
-  }
-
-  public Isolation getIsolation() {
-    return isolation;
   }
 
   public long getTableMetadataCacheExpirationTimeSecs() {
