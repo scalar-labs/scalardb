@@ -42,7 +42,7 @@ public class JdbcDatabaseTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcDatabase = new JdbcDatabase(dataSource, jdbcService);
+    jdbcDatabase = new JdbcDatabase(dataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }

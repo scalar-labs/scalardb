@@ -17,6 +17,7 @@ import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
+import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -212,43 +213,16 @@ public class JdbcTransaction implements DistributedTransaction {
   }
 
   private CrudException createCrudException(SQLException e, String message) {
-    if (isConflictError(e)) {
+    if (JdbcUtils.isConflictError(e, rdbEngine)) {
       return new CrudConflictException("conflict happened; try restarting transaction", e);
     }
     return new CrudException(message, e);
   }
 
   private CommitException createCommitException(SQLException e) {
-    if (isConflictError(e)) {
+    if (JdbcUtils.isConflictError(e, rdbEngine)) {
       return new CommitConflictException("conflict happened; try restarting transaction", e);
     }
     return new CommitException("failed to commit", e);
-  }
-
-  private boolean isConflictError(SQLException e) {
-    switch (rdbEngine) {
-      case MYSQL:
-        if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
-          // Deadlock found when trying to get lock or Lock wait timeout exceeded
-          return true;
-        }
-        break;
-      case POSTGRESQL:
-        if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
-          // Serialization error happened or Dead lock found
-          return true;
-        }
-        break;
-      case ORACLE:
-        if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
-          // ORA-08177: can't serialize access for this transaction
-          // ORA-00060: deadlock detected while waiting for resource
-          return true;
-        }
-        break;
-      default:
-        break;
-    }
-    return false;
   }
 }
