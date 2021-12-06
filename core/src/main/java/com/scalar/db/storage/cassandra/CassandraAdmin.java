@@ -34,6 +34,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String REPLICATION_STRATEGY = "replication-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
+  @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
+
   private final ClusterManager clusterManager;
 
   @Inject
