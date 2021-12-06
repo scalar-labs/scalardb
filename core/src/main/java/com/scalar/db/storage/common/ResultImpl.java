@@ -38,6 +38,9 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
+    if (names.isEmpty()) {
+      return Optional.empty();
+    }
     Key.Builder builder = Key.newBuilder();
     for (String name : names) {
       Value<?> value = values.get(name);
