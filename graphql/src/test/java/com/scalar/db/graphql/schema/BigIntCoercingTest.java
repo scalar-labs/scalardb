@@ -26,9 +26,19 @@ public class BigIntCoercingTest {
   }
 
   @Test
-  public void serialize_LongOutOfRangeGiven_ShouldThrowException() {
+  public void serialize_LongOutOfUpperBoundGiven_ShouldThrowException() {
     // Arrange
     Long value = BigIntValue.MAX_VALUE + 1;
+
+    // Act Assert
+    assertThatThrownBy(() -> BigIntCoercing.INSTANCE.serialize(value))
+        .isInstanceOf(CoercingSerializeException.class);
+  }
+
+  @Test
+  public void serialize_LongOutOfLowerBoundGiven_ShouldThrowException() {
+    // Arrange
+    Long value = BigIntValue.MIN_VALUE - 1;
 
     // Act Assert
     assertThatThrownBy(() -> BigIntCoercing.INSTANCE.serialize(value))
@@ -85,9 +95,19 @@ public class BigIntCoercingTest {
   }
 
   @Test
-  public void parseValue_ValueOutOfRangeGiven_ShouldThrowException() {
+  public void parseValue_ValueOutOfUpperBoundGiven_ShouldThrowException() {
     // Arrange
     Long value = BigIntValue.MAX_VALUE + 1;
+
+    // Act Assert
+    assertThatThrownBy(() -> BigIntCoercing.INSTANCE.parseValue(value))
+        .isInstanceOf(CoercingParseValueException.class);
+  }
+
+  @Test
+  public void parseValue_ValueOutOfLowerBoundGiven_ShouldThrowException() {
+    // Arrange
+    Long value = BigIntValue.MIN_VALUE - 1;
 
     // Act Assert
     assertThatThrownBy(() -> BigIntCoercing.INSTANCE.parseValue(value))
@@ -119,10 +139,21 @@ public class BigIntCoercingTest {
   }
 
   @Test
-  public void parseLiteral_IntValueOutOfRangeGiven_ShouldThrowException() {
+  public void parseLiteral_IntValueOutOfUpperBoundGiven_ShouldThrowException() {
     // Arrange
     graphql.language.IntValue value =
         new graphql.language.IntValue(BigInteger.valueOf(BigIntValue.MAX_VALUE + 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> BigIntCoercing.INSTANCE.parseLiteral(value))
+        .isInstanceOf(CoercingParseLiteralException.class);
+  }
+
+  @Test
+  public void parseLiteral_IntValueOutOfLowerBoundGiven_ShouldThrowException() {
+    // Arrange
+    graphql.language.IntValue value =
+        new graphql.language.IntValue(BigInteger.valueOf(BigIntValue.MIN_VALUE - 1));
 
     // Act Assert
     assertThatThrownBy(() -> BigIntCoercing.INSTANCE.parseLiteral(value))
