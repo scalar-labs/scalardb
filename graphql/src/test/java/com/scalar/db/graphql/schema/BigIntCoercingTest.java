@@ -121,7 +121,8 @@ public class BigIntCoercingTest {
   @Test
   public void parseLiteral_IntValueOutOfRangeGiven_ShouldThrowException() {
     // Arrange
-    Long value = BigIntValue.MAX_VALUE + 1;
+    graphql.language.IntValue value =
+        new graphql.language.IntValue(BigInteger.valueOf(BigIntValue.MAX_VALUE + 1));
 
     // Act Assert
     assertThatThrownBy(() -> BigIntCoercing.INSTANCE.parseLiteral(value))
