@@ -6,6 +6,7 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.Collections;
 import java.util.List;
@@ -17,6 +18,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 
 /**
  * A handler class for delete statements
@@ -41,6 +43,8 @@ public class DeleteStatementHandler extends StatementHandler {
       delete(delete, tableMetadata);
     } catch (ConditionalCheckFailedException e) {
       throw new NoMutationException("no mutation was applied.", e);
+    } catch (TransactionConflictException e) {
+      throw new RetriableExecutionException(e.getMessage(), e);
     } catch (DynamoDbException e) {
       throw new ExecutionException(e.getMessage(), e);
     }
