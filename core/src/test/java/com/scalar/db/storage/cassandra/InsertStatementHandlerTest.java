@@ -28,7 +28,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
-import com.scalar.db.exception.storage.ReadRepairableExecutionException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import org.junit.Before;
