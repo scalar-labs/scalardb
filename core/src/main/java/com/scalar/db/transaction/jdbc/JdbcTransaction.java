@@ -96,7 +96,9 @@ public class JdbcTransaction implements DistributedTransaction {
   public Optional<Result> get(Get get) throws CrudException {
     try {
       return jdbcService.get(get, connection, namespace, tableName);
-    } catch (SQLException | ExecutionException e) {
+    } catch (SQLException e) {
+      throw createCrudException(e, "get operation failed");
+    } catch (ExecutionException e) {
       throw new CrudException("get operation failed", e);
     }
   }
@@ -105,7 +107,9 @@ public class JdbcTransaction implements DistributedTransaction {
   public List<Result> scan(Scan scan) throws CrudException {
     try {
       return jdbcService.scan(scan, connection, namespace, tableName);
-    } catch (SQLException | ExecutionException e) {
+    } catch (SQLException e) {
+      throw createCrudException(e, "scan operation failed");
+    } catch (ExecutionException e) {
       throw new CrudException("scan operation failed", e);
     }
   }
