@@ -25,6 +25,17 @@ public final class JdbcUtils {
     }
   }
 
+  /**
+   * @param config a jdbc config
+   * @return the data source
+   * @deprecated As of release 3.5.0. Will be removed in release 4.0.0.
+   */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
+  public static BasicDataSource initDataSource(JdbcConfig config) {
+    return initDataSource(config, false, null);
+  }
+
   public static BasicDataSource initDataSource(JdbcConfig config, @Nullable Isolation isolation) {
     return initDataSource(config, false, isolation);
   }
