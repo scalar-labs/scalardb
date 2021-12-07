@@ -72,7 +72,7 @@ public final class ServerEnv {
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, storage);
     if (isolation != null) {
-      properties.setProperty(DatabaseConfig.ISOLATION_LEVEL, isolation.name());
+      properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, isolation.name());
     }
     if (serializableStrategy != null) {
       properties.setProperty(
