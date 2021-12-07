@@ -2,6 +2,7 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -10,7 +11,13 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.util.ThrowableRunnable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +28,20 @@ public class CommitHandler {
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final RecoveryHandler recovery;
+  private final ConsensusCommitConfig config;
+  @Nullable private final ExecutorService parallelExecutorService;
 
   public CommitHandler(
-      DistributedStorage storage, Coordinator coordinator, RecoveryHandler recovery) {
+      DistributedStorage storage,
+      Coordinator coordinator,
+      RecoveryHandler recovery,
+      ConsensusCommitConfig config,
+      @Nullable ExecutorService parallelExecutorService) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.recovery = checkNotNull(recovery);
+    this.config = config;
+    this.parallelExecutorService = parallelExecutorService;
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
@@ -66,9 +81,13 @@ public class CommitHandler {
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
-    for (PartitionedMutations.Key key : mutations.getOrderedKeys()) {
-      storage.mutate(mutations.get(key));
+    ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+    List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+    for (PartitionedMutations.Key key : orderedKeys) {
+      tasks.add(() -> storage.mutate(mutations.get(key)));
     }
+    ScalarDbUtils.executeTasks(
+        tasks, parallelExecutorService, config.isParallelPreparationEnabled(), false);
   }
 
   public void preCommitValidation(Snapshot snapshot, boolean abortIfError)
@@ -116,10 +135,13 @@ public class CommitHandler {
       snapshot.to(composer);
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
-      // TODO : make it configurable if it's synchronous or asynchronous
-      for (PartitionedMutations.Key key : mutations.getOrderedKeys()) {
-        storage.mutate(mutations.get(key));
+      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+      List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+      for (PartitionedMutations.Key key : orderedKeys) {
+        tasks.add(() -> storage.mutate(mutations.get(key)));
       }
+      ScalarDbUtils.executeTasks(
+          tasks, parallelExecutorService, config.isParallelCommitEnabled(), false);
     } catch (Exception e) {
       LOGGER.warn("committing records failed", e);
       // ignore since records are recovered lazily
@@ -151,12 +173,6 @@ public class CommitHandler {
   }
 
   public void rollbackRecords(Snapshot snapshot) {
-    try {
-      // TODO : make it configurable if it's synchronous or asynchronous
-      recovery.rollback(snapshot);
-    } catch (Exception e) {
-      LOGGER.warn("rolling back records failed", e);
-      // ignore since records are recovered lazily
-    }
+    recovery.rollbackRecords(snapshot);
   }
 }
