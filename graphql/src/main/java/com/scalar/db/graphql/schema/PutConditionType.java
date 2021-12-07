@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.schema;
 
-enum PutConditionType {
+public enum PutConditionType {
   PutIf,
   PutIfExists,
   PutIfNotExists

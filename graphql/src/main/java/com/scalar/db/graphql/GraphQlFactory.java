@@ -1,10 +1,13 @@
 package com.scalar.db.graphql;
 
+import static graphql.schema.FieldCoordinates.coordinates;
+
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -69,7 +72,11 @@ public class GraphQlFactory {
   private GraphQLCodeRegistry createGraphQLCodeRegistry(
       GraphQLObjectType queryObjectType, GraphQLObjectType mutationObjectType) {
     GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
-    // TODO: Add data fetchers
+    for (TableGraphQlModel tableModel : tableModels) {
+      builder.dataFetcher(
+          coordinates(queryObjectType, tableModel.getQueryGetField()),
+          new QueryGetDataFetcher(storage, tableModel));
+    }
     return builder.build();
   }
 

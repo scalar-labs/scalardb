@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.schema;
 
-enum DeleteConditionType {
+public enum DeleteConditionType {
   DeleteIf,
   DeleteIfExists
 }
