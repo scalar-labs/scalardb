@@ -132,16 +132,15 @@ jobs:
       - image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
         name: emulator
         environment:
-          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 10
-          AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: true
-          #AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: emulator
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 100
+          AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: false
           AZURE_COSMOS_EMULATOR_ARGS: '/Consistency=Strong'
     resource_class: large
 
     working_directory: ~/repo
 
     environment:
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4"
       TERM: dumb
 
     steps:
@@ -168,7 +167,7 @@ jobs:
           name: Start Cosmos DB Emulator
           command: |
             dockerize -wait tcp://emulator:8081 -timeout 1m
-            sleep 10
+            sleep 20
 
       - run:
           name: Add certificates from Cosmos DB elmulator container
