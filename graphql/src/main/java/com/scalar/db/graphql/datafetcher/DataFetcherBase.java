@@ -85,6 +85,16 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
     }
   }
 
+  protected void performPut(DataFetchingEnvironment environment, Put put)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      transaction.put(put);
+    } else {
+      storage.put(put);
+    }
+  }
+
   private DistributedTransaction getTransactionIfEnabled(DataFetchingEnvironment environment) {
     DistributedTransaction transaction = null;
     if (tableModel.getTransactionEnabled()) {
