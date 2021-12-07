@@ -6,6 +6,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
@@ -52,6 +53,9 @@ public class CommitHandler {
       }
       if (e instanceof NoMutationException) {
         throw new CommitConflictException("preparing record exists", e);
+      }
+      if (e instanceof RetriableExecutionException) {
+        throw new CommitConflictException("conflict happened when preparing records", e);
       }
       throw new CommitException("preparing records failed", e);
     }
