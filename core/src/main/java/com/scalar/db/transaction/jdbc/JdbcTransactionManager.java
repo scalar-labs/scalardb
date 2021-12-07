@@ -35,7 +35,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
 
   @Inject
   public JdbcTransactionManager(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config, true);
+    dataSource = JdbcUtils.initDataSource(config, true, config.getIsolation());
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
