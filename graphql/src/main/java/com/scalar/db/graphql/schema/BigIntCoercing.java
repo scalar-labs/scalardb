@@ -6,6 +6,7 @@ import graphql.schema.CoercingParseLiteralException;
 import graphql.schema.CoercingParseValueException;
 import graphql.schema.CoercingSerializeException;
 import java.math.BigInteger;
+import javax.annotation.Nonnull;
 
 /** Handles type conversions for Scalar DB {@link BigIntValue}. */
 class BigIntCoercing implements Coercing<Long, Long> {
@@ -14,7 +15,7 @@ class BigIntCoercing implements Coercing<Long, Long> {
   private BigIntCoercing() {}
 
   @Override
-  public Long serialize(Object dataFetcherResult) throws CoercingSerializeException {
+  public Long serialize(@Nonnull Object dataFetcherResult) throws CoercingSerializeException {
     if (!(dataFetcherResult instanceof Long)) {
       throw new CoercingSerializeException("Expected a long value");
     }
@@ -25,8 +26,9 @@ class BigIntCoercing implements Coercing<Long, Long> {
     return value;
   }
 
+  @Nonnull
   @Override
-  public Long parseValue(Object input) throws CoercingParseValueException {
+  public Long parseValue(@Nonnull Object input) throws CoercingParseValueException {
     long value;
     try {
       if (input instanceof BigInteger) {
@@ -48,8 +50,9 @@ class BigIntCoercing implements Coercing<Long, Long> {
     }
   }
 
+  @Nonnull
   @Override
-  public Long parseLiteral(Object input) throws CoercingParseLiteralException {
+  public Long parseLiteral(@Nonnull Object input) throws CoercingParseLiteralException {
     if (!(input instanceof graphql.language.IntValue)) {
       throw new CoercingParseLiteralException("Expected AST type 'IntValue'");
     }

@@ -6,6 +6,7 @@ import graphql.schema.CoercingParseValueException;
 import graphql.schema.CoercingSerializeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import javax.annotation.Nonnull;
 
 /** Handles type conversions for Scalar DB {@link com.scalar.db.io.FloatValue}. */
 class FloatCoercing implements Coercing<Float, Float> {
@@ -13,8 +14,9 @@ class FloatCoercing implements Coercing<Float, Float> {
 
   private FloatCoercing() {}
 
+  @Nonnull
   @Override
-  public Float serialize(Object dataFetcherResult) throws CoercingSerializeException {
+  public Float serialize(@Nonnull Object dataFetcherResult) throws CoercingSerializeException {
     if (dataFetcherResult instanceof Float) {
       return (Float) dataFetcherResult;
     } else {
@@ -22,8 +24,9 @@ class FloatCoercing implements Coercing<Float, Float> {
     }
   }
 
+  @Nonnull
   @Override
-  public Float parseValue(Object input) throws CoercingParseValueException {
+  public Float parseValue(@Nonnull Object input) throws CoercingParseValueException {
     if (input instanceof Number) {
       return ((Number) input).floatValue();
     } else {
@@ -31,8 +34,9 @@ class FloatCoercing implements Coercing<Float, Float> {
     }
   }
 
+  @Nonnull
   @Override
-  public Float parseLiteral(Object input) throws CoercingParseLiteralException {
+  public Float parseLiteral(@Nonnull Object input) throws CoercingParseLiteralException {
     if (input instanceof graphql.language.IntValue) {
       BigInteger bi = ((graphql.language.IntValue) input).getValue();
       return bi.floatValue();
