@@ -129,7 +129,7 @@ public class CrudHandler {
   private Optional<Snapshot.Key> getSnapshotKey(Result result, Scan scan) {
     Optional<Key> partitionKey = result.getPartitionKey();
     Optional<Key> clusteringKey = result.getClusteringKey();
-    if (!partitionKey.isPresent() || !clusteringKey.isPresent()) {
+    if (!partitionKey.isPresent()) {
       return Optional.empty();
     }
 
@@ -138,7 +138,7 @@ public class CrudHandler {
             scan.forNamespace().get(),
             scan.forTable().get(),
             partitionKey.get(),
-            clusteringKey.get()));
+            clusteringKey.orElse(null)));
   }
 
   public Snapshot getSnapshot() {
