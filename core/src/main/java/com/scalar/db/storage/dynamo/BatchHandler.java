@@ -7,6 +7,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,10 +68,19 @@ public class BatchHandler {
     try {
       client.transactWriteItems(builder.build());
     } catch (TransactionCanceledException e) {
+      boolean allReasonsAreTransactionConflicts = true;
       for (CancellationReason reason : e.cancellationReasons()) {
         if (reason.code().equals("ConditionalCheckFailed")) {
           throw new NoMutationException("no mutation was applied.", e);
         }
+        if (!reason.code().equals("TransactionConflict") && !reason.code().equals("None")) {
+          allReasonsAreTransactionConflicts = false;
+        }
+      }
+      if (allReasonsAreTransactionConflicts) {
+        // If all the reasons of the cancellation are "TransactionConflict", throw
+        // RetriableExecutionException
+        throw new RetriableExecutionException(e.getMessage(), e);
       }
       throw new ExecutionException(e.getMessage(), e);
     } catch (DynamoDbException e) {
