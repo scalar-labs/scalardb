@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
