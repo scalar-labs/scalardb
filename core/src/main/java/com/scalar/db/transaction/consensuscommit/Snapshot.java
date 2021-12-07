@@ -7,7 +7,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -25,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -357,7 +357,7 @@ public class Snapshot {
         String namespace,
         String table,
         com.scalar.db.io.Key partitionKey,
-        com.scalar.db.io.Key clusteringKey) {
+        @Nullable com.scalar.db.io.Key clusteringKey) {
       this.namespace = namespace;
       this.table = table;
       this.partitionKey = partitionKey;

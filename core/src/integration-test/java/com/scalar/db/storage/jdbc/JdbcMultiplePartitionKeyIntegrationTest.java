@@ -2,19 +2,12 @@ package com.scalar.db.storage.jdbc;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageMultipleClusteringKeysIntegrationTestBase;
+import com.scalar.db.storage.StorageMultiplePartitionKeyIntegrationTestBase;
 import java.util.Random;
-import java.util.stream.IntStream;
 
-public class JdbcMultipleClusteringKeysIntegrationTest
-    extends StorageMultipleClusteringKeysIntegrationTestBase {
-
-  private static final double ORACLE_DOUBLE_MAX_VALUE = 9.99999999999999E125D;
-  private static final double ORACLE_DOUBLE_MIN_VALUE = -9.99999999999999E125D;
-
+public class JdbcMultiplePartitionKeyIntegrationTest
+    extends StorageMultiplePartitionKeyIntegrationTestBase {
   private static RdbEngine rdbEngine;
 
   @Override
@@ -25,28 +18,28 @@ public class JdbcMultipleClusteringKeysIntegrationTest
   }
 
   @Override
+  protected int getThreadNum() {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      return 1;
+    }
+    return super.getThreadNum();
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
-        return new DoubleValue(columnName, nextOracleDouble(random));
+        return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
     }
     return super.getRandomValue(random, columnName, dataType);
-  }
-
-  private double nextOracleDouble(Random random) {
-    return random
-        .doubles(ORACLE_DOUBLE_MIN_VALUE, ORACLE_DOUBLE_MAX_VALUE)
-        .limit(1)
-        .findFirst()
-        .orElse(0.0d);
   }
 
   @Override
   protected Value<?> getMinValue(String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
-        return new DoubleValue(columnName, ORACLE_DOUBLE_MIN_VALUE);
+        return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
     }
     return super.getMinValue(columnName, dataType);
@@ -56,16 +49,12 @@ public class JdbcMultipleClusteringKeysIntegrationTest
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
-        return new DoubleValue(columnName, ORACLE_DOUBLE_MAX_VALUE);
+        return JdbcTestUtils.getMaxOracleDoubleValue(columnName);
       }
     }
-
     if (rdbEngine == RdbEngine.SQL_SERVER) {
       if (dataType == DataType.TEXT) {
-        // Since SQL Server can't handle 0xFF character correctly, we use "ZZZ..." as the max value
-        StringBuilder builder = new StringBuilder();
-        IntStream.range(0, TEXT_MAX_COUNT).forEach(i -> builder.append('Z'));
-        return new TextValue(columnName, builder.toString());
+        return JdbcTestUtils.getMaxSqlServerTextValue(columnName);
       }
     }
     return super.getMaxValue(columnName, dataType);

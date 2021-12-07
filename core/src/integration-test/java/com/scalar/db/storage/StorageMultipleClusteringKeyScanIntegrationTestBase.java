@@ -16,15 +16,8 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.BigIntValue;
-import com.scalar.db.io.BlobValue;
-import com.scalar.db.io.BooleanValue;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.DoubleValue;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -33,36 +26,39 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
-public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
+@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  protected static final String NAMESPACE_BASE_NAME = "integration_testing_";
-  protected static final String TABLE_BASE_NAME = "test_table_mul_key_";
+  protected static final String TEST_NAME = "mul_ckey";
+  protected static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
   protected static final String PARTITION_KEY = "pkey";
   protected static final String FIRST_CLUSTERING_KEY = "ckey1";
   protected static final String SECOND_CLUSTERING_KEY = "ckey2";
   protected static final String COL_NAME = "col";
 
   private static final int FIRST_CLUSTERING_KEY_NUM = 5;
-  private static final int SECOND_CLUSTERING_KEY_NUM = 30;
-  protected static final int TEXT_MAX_COUNT = 20;
-  protected static final int BLOB_MAX_LENGTH = 20;
+  private static final int SECOND_CLUSTERING_KEY_NUM = 20;
 
   private static final Random RANDOM = new Random();
+
+  private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
   protected static DistributedStorageAdmin admin;
@@ -74,18 +70,22 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   private static long seed;
 
+  private static ExecutorService executorService;
+
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
       clusteringKeyTypes = getClusteringKeyTypes();
+      executorService = Executors.newFixedThreadPool(getThreadNum());
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
       System.out.println(
-          "The seed used in the multiple clustering keys integration test is " + seed);
+          "The seed used in the multiple clustering key scan integration test is " + seed);
       initialized = true;
     }
   }
@@ -106,18 +106,45 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     return clusteringKeyTypes;
   }
 
+  protected int getThreadNum() {
+    return THREAD_NUM;
+  }
+
   protected Map<String, String> getCreateOptions() {
     return Collections.emptyMap();
   }
 
-  private void createTables() throws ExecutionException {
+  private void createTables() throws InterruptedException, java.util.concurrent.ExecutionException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+
     Map<String, String> options = getCreateOptions();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        createTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC, options);
-      }
+      Callable<Void> testCallable =
+          () -> {
+            admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
+            for (DataType secondClusteringKeyType :
+                clusteringKeyTypes.get(firstClusteringKeyType)) {
+              for (Order firstClusteringOrder : Order.values()) {
+                for (Order secondClusteringOrder : Order.values()) {
+                  createTable(
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder,
+                      options);
+                }
+              }
+            }
+            return null;
+          };
+      testCallables.add(testCallable);
     }
+
+    // We firstly execute the first one and then the rest. This is because the first table creation
+    // creates the metadata table, and this process can't be handled in multiple threads/processes
+    // at the same time.
+    execute(testCallables.subList(0, 1));
+    execute(testCallables.subList(1, testCallables.size()));
   }
 
   private void createTable(
@@ -152,17 +179,40 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     deleteTables();
     admin.close();
     storage.close();
+    executorService.shutdown();
   }
 
-  private static void deleteTables() throws ExecutionException {
+  private static void deleteTables()
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        admin.dropTable(
-            getNamespaceName(firstClusteringKeyType),
-            getTableName(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC));
-      }
-      admin.dropNamespace(getNamespaceName(firstClusteringKeyType));
+      Callable<Void> testCallable =
+          () -> {
+            for (DataType secondClusteringKeyType :
+                clusteringKeyTypes.get(firstClusteringKeyType)) {
+              for (Order firstClusteringOrder : Order.values()) {
+                for (Order secondClusteringOrder : Order.values()) {
+                  admin.dropTable(
+                      getNamespaceName(firstClusteringKeyType),
+                      getTableName(
+                          firstClusteringKeyType,
+                          firstClusteringOrder,
+                          secondClusteringKeyType,
+                          secondClusteringOrder));
+                }
+              }
+            }
+            admin.dropNamespace(getNamespaceName(firstClusteringKeyType));
+            return null;
+          };
+      testCallables.add(testCallable);
     }
+
+    // We firstly execute the callables without the last one. And then we execute the last one. This
+    // is because the last table deletion deletes the metadata table, and this process can't be
+    // handled in multiple threads/processes at the same time.
+    execute(testCallables.subList(0, testCallables.size() - 1));
+    execute(testCallables.subList(testCallables.size() - 1, testCallables.size()));
   }
 
   private void truncateTable(
@@ -185,39 +235,45 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       Order firstClusteringOrder,
       DataType secondClusteringKeyType,
       Order secondClusteringOrder) {
-    return TABLE_BASE_NAME
-        + String.join(
-            "_",
-            firstClusteringKeyType.toString(),
-            firstClusteringOrder.toString(),
-            secondClusteringKeyType.toString(),
-            secondClusteringOrder.toString());
+    return String.join(
+        "_",
+        firstClusteringKeyType.toString(),
+        firstClusteringOrder.toString(),
+        secondClusteringKeyType.toString(),
+        secondClusteringOrder.toString());
   }
 
   private static String getNamespaceName(DataType firstClusteringKeyType) {
     return namespaceBaseName + firstClusteringKeyType;
   }
 
+  private static void execute(List<Callable<Void>> testCallables)
+      throws InterruptedException, java.util.concurrent.ExecutionException {
+    List<Future<Void>> futures = executorService.invokeAll(testCallables);
+    for (Future<Void> future : futures) {
+      future.get();
+    }
+  }
+
   @Test
   public void scan_WithoutClusteringKeyRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean reverse : Arrays.asList(false, true)) {
-          scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
-              clusteringKeys,
-              firstClusteringKeyType,
-              Order.ASC,
-              secondClusteringKeyType,
-              Order.ASC,
-              reverse);
-        }
-      }
-    }
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean reverse : Arrays.asList(false, true)) {
+            scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+                clusteringKeys,
+                firstClusteringKeyType,
+                firstClusteringKeyOrder,
+                secondClusteringKeyType,
+                secondClusteringKeyOrder,
+                reverse);
+          }
+        });
   }
 
   protected void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
@@ -230,15 +286,17 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -268,26 +326,23 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean startInclusive : Arrays.asList(true, false)) {
-        for (Boolean endInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                startInclusive,
-                endInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
@@ -303,32 +358,24 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey endClusteringKey;
     if (firstClusteringKeyType == DataType.BOOLEAN) {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first);
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first);
     } else {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first);
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -363,26 +410,23 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean startInclusive : Arrays.asList(true, false)) {
-        for (Boolean endInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                startInclusive,
-                endInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
@@ -397,24 +441,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey startAndEndClusteringKey;
     if (firstClusteringKeyType == DataType.BOOLEAN) {
       startAndEndClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first);
     } else {
       startAndEndClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(2, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(2, DataType.INT)).first);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startAndEndClusteringKey.first), startInclusive)
             .withEnd(new Key(startAndEndClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -449,26 +489,23 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean startInclusive : Arrays.asList(true, false)) {
-        for (Boolean endInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                startInclusive,
-                endInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
@@ -481,20 +518,18 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
-        new ClusteringKey(
-            getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+        new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     ClusteringKey endClusteringKey =
-        new ClusteringKey(
-            getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+        new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -529,19 +564,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean startInclusive : Arrays.asList(true, false)) {
-        for (Boolean reverse : Arrays.asList(false, true)) {
-          scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
-              clusteringKeys, firstClusteringKeyType, Order.ASC, startInclusive, reverse);
-        }
-      }
-    }
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  startInclusive,
+                  reverse);
+            }
+          }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
@@ -555,23 +591,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey startClusteringKey;
     if (firstClusteringKeyType == DataType.BOOLEAN) {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(0, DataType.INT)).first);
     } else {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -600,19 +632,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean startInclusive : Arrays.asList(true, false)) {
-        for (Boolean reverse : Arrays.asList(false, true)) {
-          scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
-              clusteringKeys, firstClusteringKeyType, Order.ASC, startInclusive, reverse);
-        }
-      }
-    }
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  startInclusive,
+                  reverse);
+            }
+          }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
@@ -624,16 +657,15 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
-        new ClusteringKey(
-            getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+        new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first), startInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -662,19 +694,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean endInclusive : Arrays.asList(true, false)) {
-        for (Boolean reverse : Arrays.asList(false, true)) {
-          scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
-              clusteringKeys, firstClusteringKeyType, Order.ASC, endInclusive, reverse);
-        }
-      }
-    }
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  endInclusive,
+                  reverse);
+            }
+          }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
@@ -688,23 +721,19 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey endClusteringKey;
     if (firstClusteringKeyType == DataType.BOOLEAN) {
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first);
     } else {
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first,
-              firstClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -727,19 +756,20 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-      List<ClusteringKey> clusteringKeys =
-          prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
-
-      for (Boolean endInclusive : Arrays.asList(true, false)) {
-        for (Boolean reverse : Arrays.asList(false, true)) {
-          scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
-              clusteringKeys, firstClusteringKeyType, Order.ASC, endInclusive, reverse);
-        }
-      }
-    }
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  endInclusive,
+                  reverse);
+            }
+          }
+        });
   }
 
   protected void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
@@ -751,16 +781,15 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey endClusteringKey =
-        new ClusteringKey(
-            getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType), firstClusteringOrder);
+        new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -783,30 +812,29 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean startInclusive : Arrays.asList(true, false)) {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  Order.ASC,
-                  secondClusteringKeyType,
-                  Order.ASC,
-                  startInclusive,
-                  endInclusive,
-                  reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
             }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
@@ -839,44 +867,30 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey endClusteringKey;
     if (secondClusteringKeyType == DataType.BOOLEAN) {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(0).first,
-              firstClusteringOrder,
-              clusteringKeys.get(0).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(0).first, clusteringKeys.get(0).second);
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(1).first,
-              firstClusteringOrder,
-              clusteringKeys.get(1).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(1).first, clusteringKeys.get(1).second);
     } else {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(4).first,
-              firstClusteringOrder,
-              clusteringKeys.get(4).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(4).first, clusteringKeys.get(4).second);
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(14).first,
-              firstClusteringOrder,
-              clusteringKeys.get(14).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(14).first, clusteringKeys.get(14).second);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -913,30 +927,29 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean startInclusive : Arrays.asList(true, false)) {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  Order.ASC,
-                  secondClusteringKeyType,
-                  Order.ASC,
-                  startInclusive,
-                  endInclusive,
-                  reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean endInclusive : Arrays.asList(true, false)) {
+              for (Boolean reverse : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    startInclusive,
+                    endInclusive,
+                    reverse);
+              }
             }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
@@ -968,22 +981,14 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey startAndEndClusteringKey;
     if (secondClusteringKeyType == DataType.BOOLEAN) {
       startAndEndClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(0).first,
-              firstClusteringOrder,
-              clusteringKeys.get(0).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(0).first, clusteringKeys.get(0).second);
     } else {
       startAndEndClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(9).first,
-              firstClusteringOrder,
-              clusteringKeys.get(9).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(9).first, clusteringKeys.get(9).second);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(
                 new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
                 startInclusive)
@@ -993,11 +998,13 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1034,33 +1041,32 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean useMinValueForFirstClusteringKeyValue : Arrays.asList(true, false)) {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    Order.ASC,
-                    useMinValueForFirstClusteringKeyValue,
-                    secondClusteringKeyType,
-                    Order.ASC,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean useMinValueForFirstClusteringKeyValue : Arrays.asList(true, false)) {
+            for (Boolean startInclusive : Arrays.asList(true, false)) {
+              for (Boolean endInclusive : Arrays.asList(true, false)) {
+                for (Boolean reverse : Arrays.asList(false, true)) {
+                  scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      useMinValueForFirstClusteringKeyValue,
+                      secondClusteringKeyType,
+                      secondClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      reverse);
+                }
               }
             }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
@@ -1086,29 +1092,25 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
     ClusteringKey startClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue,
-            firstClusteringOrder,
-            getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-            secondClusteringOrder);
+            firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
     ClusteringKey endClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue,
-            firstClusteringOrder,
-            getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-            secondClusteringOrder);
+            firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1145,27 +1147,26 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean startInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                secondClusteringKeyType,
-                Order.ASC,
-                startInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  secondClusteringKeyType,
+                  secondClusteringKeyOrder,
+                  startInclusive,
+                  reverse);
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
@@ -1185,7 +1186,6 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-
       Value<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
@@ -1197,31 +1197,25 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey startClusteringKey;
     if (secondClusteringKeyType == DataType.BOOLEAN) {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(0).first,
-              firstClusteringOrder,
-              clusteringKeys.get(0).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(0).first, clusteringKeys.get(0).second);
     } else {
       startClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(4).first,
-              firstClusteringOrder,
-              clusteringKeys.get(4).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(4).first, clusteringKeys.get(4).second);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1252,27 +1246,26 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean startInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                secondClusteringKeyType,
-                Order.ASC,
-                startInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean startInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  secondClusteringKeyType,
+                  secondClusteringKeyOrder,
+                  startInclusive,
+                  reverse);
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
@@ -1293,22 +1286,21 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
     ClusteringKey startClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue,
-            firstClusteringOrder,
-            getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-            secondClusteringOrder);
+            firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1339,27 +1331,26 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean endInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                secondClusteringKeyType,
-                Order.ASC,
-                endInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  secondClusteringKeyType,
+                  secondClusteringKeyOrder,
+                  endInclusive,
+                  reverse);
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
@@ -1390,31 +1381,25 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     ClusteringKey endClusteringKey;
     if (secondClusteringKeyType == DataType.BOOLEAN) {
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(1).first,
-              firstClusteringOrder,
-              clusteringKeys.get(1).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(1).first, clusteringKeys.get(1).second);
     } else {
       endClusteringKey =
-          new ClusteringKey(
-              clusteringKeys.get(14).first,
-              firstClusteringOrder,
-              clusteringKeys.get(14).second,
-              secondClusteringOrder);
+          new ClusteringKey(clusteringKeys.get(14).first, clusteringKeys.get(14).second);
     }
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1445,27 +1430,26 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
   @Test
   public void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult()
-      throws ExecutionException, IOException {
-    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-        List<ClusteringKey> clusteringKeys =
-            prepareRecords(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
-
-        for (Boolean endInclusive : Arrays.asList(true, false)) {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                Order.ASC,
-                secondClusteringKeyType,
-                Order.ASC,
-                endInclusive,
-                reverse);
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    execute(
+        (clusteringKeys,
+            firstClusteringKeyType,
+            firstClusteringKeyOrder,
+            secondClusteringKeyType,
+            secondClusteringKeyOrder) -> {
+          for (Boolean endInclusive : Arrays.asList(true, false)) {
+            for (Boolean reverse : Arrays.asList(false, true)) {
+              scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  secondClusteringKeyType,
+                  secondClusteringKeyOrder,
+                  endInclusive,
+                  reverse);
+            }
           }
-        }
-      }
-    }
+        });
   }
 
   protected void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
@@ -1486,22 +1470,21 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
 
     ClusteringKey endClusteringKey =
         new ClusteringKey(
-            firstClusteringKeyValue,
-            firstClusteringOrder,
-            getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
-            secondClusteringOrder);
+            firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
 
     Scan scan =
-        new Scan(new Key(getPartitionKeyValue()))
+        new Scan(getPartitionKey())
             .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1542,7 +1525,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     List<Put> puts = new ArrayList<>();
 
     if (firstClusteringKeyType == DataType.BOOLEAN) {
-      booleanValues(FIRST_CLUSTERING_KEY)
+      TestUtils.booleanValues(FIRST_CLUSTERING_KEY)
           .forEach(
               firstClusteringKeyValue ->
                   prepareRecords(
@@ -1611,7 +1594,7 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     } catch (ExecutionException e) {
       throw new ExecutionException("put data to database failed", e);
     }
-    Collections.sort(ret);
+    ret.sort(getClusteringKeyComparator(firstClusteringOrder, secondClusteringOrder));
     return ret;
   }
 
@@ -1624,15 +1607,10 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       List<Put> puts,
       List<ClusteringKey> ret) {
     if (secondClusteringKeyType == DataType.BOOLEAN) {
-      booleanValues(SECOND_CLUSTERING_KEY)
+      TestUtils.booleanValues(SECOND_CLUSTERING_KEY)
           .forEach(
               secondClusteringKeyValue -> {
-                ret.add(
-                    new ClusteringKey(
-                        firstClusteringKeyValue,
-                        firstClusteringOrder,
-                        secondClusteringKeyValue,
-                        secondClusteringOrder));
+                ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
                 puts.add(
                     preparePut(
                         firstClusteringKeyType,
@@ -1643,15 +1621,39 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
                         secondClusteringKeyValue));
               });
     } else {
-      List<Value<?>> secondClusteringKeyValues =
-          getSecondClusteringKeyValues(secondClusteringKeyType);
-      for (Value<?> secondClusteringKeyValue : secondClusteringKeyValues) {
-        ret.add(
-            new ClusteringKey(
-                firstClusteringKeyValue,
-                firstClusteringOrder,
-                secondClusteringKeyValue,
-                secondClusteringOrder));
+      Set<Value<?>> valueSet = new HashSet<>();
+
+      // min and max second clustering key values
+      Arrays.asList(
+              getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+              getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType))
+          .forEach(
+              secondClusteringKeyValue -> {
+                ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
+                puts.add(
+                    preparePut(
+                        firstClusteringKeyType,
+                        firstClusteringOrder,
+                        firstClusteringKeyValue,
+                        secondClusteringKeyType,
+                        secondClusteringOrder,
+                        secondClusteringKeyValue));
+                valueSet.add(secondClusteringKeyValue);
+              });
+
+      for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
+        Value<?> secondClusteringKeyValue;
+        while (true) {
+          secondClusteringKeyValue =
+              getRandomValue(RANDOM, SECOND_CLUSTERING_KEY, secondClusteringKeyType);
+          // reject duplication
+          if (!valueSet.contains(secondClusteringKeyValue)) {
+            valueSet.add(secondClusteringKeyValue);
+            break;
+          }
+        }
+
+        ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
         puts.add(
             preparePut(
                 firstClusteringKeyType,
@@ -1671,10 +1673,8 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       Value<?> secondClusteringKeyValue) {
-    return new Put(
-            new Key(getPartitionKeyValue()),
-            new Key(firstClusteringKeyValue, secondClusteringKeyValue))
-        .withValue(new IntValue(COL_NAME, 1))
+    return new Put(getPartitionKey(), new Key(firstClusteringKeyValue, secondClusteringKeyValue))
+        .withValue(COL_NAME, 1)
         .forNamespace(getNamespaceName(firstClusteringKeyType))
         .forTable(
             getTableName(
@@ -1682,10 +1682,6 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
                 firstClusteringOrder,
                 secondClusteringKeyType,
                 secondClusteringOrder));
-  }
-
-  private List<BooleanValue> booleanValues(String name) {
-    return Arrays.asList(new BooleanValue(name, false), new BooleanValue(name, true));
   }
 
   private int getFirstClusteringKeyIndex(int i, DataType secondClusteringKeyType) {
@@ -1721,141 +1717,24 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     return builder.toString();
   }
 
-  private Order reverseOrder(Order order) {
-    switch (order) {
-      case ASC:
-        return Order.DESC;
-      case DESC:
-        return Order.ASC;
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  private IntValue getPartitionKeyValue() {
-    return new IntValue(PARTITION_KEY, 1);
+  private Key getPartitionKey() {
+    return new Key(PARTITION_KEY, 1);
   }
 
   private Value<?> getFirstClusteringKeyValue(DataType dataType) {
     return getRandomValue(RANDOM, FIRST_CLUSTERING_KEY, dataType);
   }
 
-  private List<Value<?>> getSecondClusteringKeyValues(DataType dataType) {
-    Set<Value<?>> valueSet = new HashSet<>();
-    List<Value<?>> ret = new ArrayList<>();
-
-    // min and max second clustering key values
-    Arrays.asList(
-            getMinValue(SECOND_CLUSTERING_KEY, dataType),
-            getMaxValue(SECOND_CLUSTERING_KEY, dataType))
-        .forEach(
-            value -> {
-              ret.add(value);
-              valueSet.add(value);
-            });
-
-    for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
-      while (true) {
-        Value<?> value = getRandomValue(RANDOM, SECOND_CLUSTERING_KEY, dataType);
-        // reject duplication
-        if (!valueSet.contains(value)) {
-          ret.add(value);
-          valueSet.add(value);
-          break;
-        }
-      }
-    }
-
-    return ret;
-  }
-
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, nextBigInt(random));
-      case INT:
-        return new IntValue(columnName, random.nextInt());
-      case FLOAT:
-        return new FloatValue(columnName, nextFloat(random));
-      case DOUBLE:
-        return new DoubleValue(columnName, nextDouble(random));
-      case BLOB:
-        int length = random.nextInt(BLOB_MAX_LENGTH - 1) + 1;
-        byte[] bytes = new byte[length];
-        random.nextBytes(bytes);
-        return new BlobValue(columnName, bytes);
-      case TEXT:
-        int count = random.nextInt(TEXT_MAX_COUNT - 1) + 1;
-        return new TextValue(
-            columnName, RandomStringUtils.random(count, 0, 0, true, true, null, random));
-      case BOOLEAN:
-        return new BooleanValue(columnName, random.nextBoolean());
-      default:
-        throw new AssertionError();
-    }
-  }
-
-  protected long nextBigInt(Random random) {
-    return random
-        .longs(BigIntValue.MIN_VALUE, (BigIntValue.MAX_VALUE + 1))
-        .limit(1)
-        .findFirst()
-        .orElse(0);
-  }
-
-  protected float nextFloat(Random random) {
-    return (float)
-        random.doubles(Float.MIN_VALUE, Float.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
-  }
-
-  protected double nextDouble(Random random) {
-    return random.doubles(Double.MIN_VALUE, Double.MAX_VALUE).limit(1).findFirst().orElse(0.0d);
+    return TestUtils.getRandomValue(random, columnName, dataType);
   }
 
   protected Value<?> getMinValue(String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MIN_VALUE);
-      case INT:
-        return new IntValue(columnName, Integer.MIN_VALUE);
-      case FLOAT:
-        return new FloatValue(columnName, Float.MIN_VALUE);
-      case DOUBLE:
-        return new DoubleValue(columnName, Double.MIN_VALUE);
-      case BLOB:
-        return new BlobValue(columnName, new byte[] {0x00});
-      case TEXT:
-        return new TextValue(columnName, "\u0001");
-      case BOOLEAN:
-        return new BooleanValue(columnName, false);
-      default:
-        throw new AssertionError();
-    }
+    return TestUtils.getMinValue(columnName, dataType);
   }
 
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
-    switch (dataType) {
-      case BIGINT:
-        return new BigIntValue(columnName, BigIntValue.MAX_VALUE);
-      case INT:
-        return new IntValue(columnName, Integer.MAX_VALUE);
-      case FLOAT:
-        return new FloatValue(columnName, Float.MAX_VALUE);
-      case DOUBLE:
-        return new DoubleValue(columnName, Double.MAX_VALUE);
-      case BLOB:
-        byte[] blobBytes = new byte[BLOB_MAX_LENGTH];
-        Arrays.fill(blobBytes, (byte) 0xff);
-        return new BlobValue(columnName, blobBytes);
-      case TEXT:
-        StringBuilder builder = new StringBuilder();
-        IntStream.range(0, TEXT_MAX_COUNT).forEach(i -> builder.append(Character.MAX_VALUE));
-        return new TextValue(columnName, builder.toString());
-      case BOOLEAN:
-        return new BooleanValue(columnName, true);
-      default:
-        throw new AssertionError();
-    }
+    return TestUtils.getMaxValue(columnName, dataType);
   }
 
   private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
@@ -1908,56 +1787,127 @@ public abstract class StorageMultipleClusteringKeysIntegrationTestBase {
     assertThat(actual).describedAs(description).isEqualTo(expected);
   }
 
+  private Comparator<ClusteringKey> getClusteringKeyComparator(
+      Order firstClusteringOrder, Order secondClusteringOrder) {
+    return (l, r) -> {
+      ComparisonChain chain =
+          ComparisonChain.start()
+              .compare(
+                  l.first,
+                  r.first,
+                  firstClusteringOrder == Order.ASC
+                      ? com.google.common.collect.Ordering.natural()
+                      : com.google.common.collect.Ordering.natural().reverse());
+      if (l.second != null && r.second != null) {
+        chain =
+            chain.compare(
+                l.second,
+                r.second,
+                secondClusteringOrder == Order.ASC
+                    ? com.google.common.collect.Ordering.natural()
+                    : com.google.common.collect.Ordering.natural().reverse());
+      }
+      return chain.result();
+    };
+  }
+
+  private void execute(TestForFirstClusteringKeyScan test)
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (Order firstClusteringOrder : Order.values()) {
+        testCallables.add(
+            () -> {
+              truncateTable(firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC);
+
+              List<ClusteringKey> clusteringKeys =
+                  prepareRecords(
+                      firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC);
+
+              test.execute(clusteringKeys, firstClusteringKeyType, firstClusteringOrder);
+              return null;
+            });
+      }
+    }
+
+    execute(testCallables);
+  }
+
+  private void execute(TestForSecondClusteringKeyScan test)
+      throws java.util.concurrent.ExecutionException, InterruptedException {
+    List<Callable<Void>> testCallables = new ArrayList<>();
+    for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
+      for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
+        for (Order firstClusteringOrder : Order.values()) {
+          for (Order secondClusteringOrder : Order.values()) {
+            testCallables.add(
+                () -> {
+                  truncateTable(
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder);
+
+                  List<ClusteringKey> clusteringKeys =
+                      prepareRecords(
+                          firstClusteringKeyType,
+                          firstClusteringOrder,
+                          secondClusteringKeyType,
+                          secondClusteringOrder);
+
+                  test.execute(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder);
+                  return null;
+                });
+          }
+        }
+      }
+    }
+    execute(testCallables);
+  }
+
+  @FunctionalInterface
+  private interface TestForFirstClusteringKeyScan {
+    void execute(
+        List<ClusteringKey> clusteringKeys,
+        DataType firstClusteringKeyType,
+        Order firstClusteringOrder)
+        throws Exception;
+  }
+
+  @FunctionalInterface
+  private interface TestForSecondClusteringKeyScan {
+    void execute(
+        List<ClusteringKey> clusteringKeys,
+        DataType firstClusteringKeyType,
+        Order firstClusteringOrder,
+        DataType secondClusteringKeyType,
+        Order secondClusteringOrder)
+        throws Exception;
+  }
+
   private static class ClusteringKey implements Comparable<ClusteringKey> {
     public final Value<?> first;
-    private final Order firstClusteringOrder;
     @Nullable public final Value<?> second;
-    @Nullable private final Order secondClusteringOrder;
 
-    public ClusteringKey(
-        Value<?> first,
-        Order firstClusteringOrder,
-        @Nullable Value<?> second,
-        @Nullable Order secondClusteringOrder) {
+    public ClusteringKey(Value<?> first, @Nullable Value<?> second) {
       this.first = first;
-      this.firstClusteringOrder = firstClusteringOrder;
       this.second = second;
-      this.secondClusteringOrder = secondClusteringOrder;
     }
 
-    public ClusteringKey(Value<?> first, Order firstClusteringOrder) {
-      this(first, firstClusteringOrder, null, null);
-    }
-
-    public ClusteringKey(Value<?> first, Value<?> second) {
-      this(first, Order.ASC, second, Order.ASC);
+    public ClusteringKey(Value<?> first) {
+      this(first, null);
     }
 
     @Override
     public int compareTo(ClusteringKey o) {
-      if (firstClusteringOrder != o.firstClusteringOrder) {
-        throw new IllegalStateException("different clustering order for the first clustering key");
-      }
-      ComparisonChain chain =
-          ComparisonChain.start()
-              .compare(
-                  first,
-                  o.first,
-                  firstClusteringOrder == Order.ASC
-                      ? com.google.common.collect.Ordering.natural()
-                      : com.google.common.collect.Ordering.natural().reverse());
+      ComparisonChain chain = ComparisonChain.start().compare(first, o.first);
       if (second != null && o.second != null) {
-        if (secondClusteringOrder != o.secondClusteringOrder) {
-          throw new IllegalStateException(
-              "different clustering order for the second clustering key");
-        }
-        chain =
-            chain.compare(
-                second,
-                o.second,
-                secondClusteringOrder == Order.ASC
-                    ? com.google.common.collect.Ordering.natural()
-                    : com.google.common.collect.Ordering.natural().reverse());
+        chain = chain.compare(second, o.second);
       }
       return chain.result();
     }

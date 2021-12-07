@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -57,7 +56,7 @@ public class ConsensusCommitManagerTest {
     // Arrange
 
     // Act
-    ConsensusCommit transaction = manager.start(Isolation.SERIALIZABLE);
+    ConsensusCommit transaction = manager.start(com.scalar.db.api.Isolation.SERIALIZABLE);
 
     // Assert
     assertThat(transaction.getCrudHandler().getSnapshot().getId()).isNotNull();
@@ -66,12 +65,12 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_NullIsolationGiven_ThrowIllegalArgumentException() {
+  public void start_NullIsolationGiven_ThrowNullPointerExceptionException() {
     // Arrange
 
     // Act Assert
-    assertThatThrownBy(() -> manager.start((Isolation) null))
-        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> manager.start((com.scalar.db.api.Isolation) null))
+        .isInstanceOf(NullPointerException.class);
   }
 
   @Test

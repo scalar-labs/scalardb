@@ -12,6 +12,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
@@ -37,6 +38,7 @@ public class JdbcDatabase implements DistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabase.class);
 
   private final BasicDataSource dataSource;
+  private final RdbEngine rdbEngine;
   private final JdbcService jdbcService;
   private Optional<String> namespace;
   private Optional<String> tableName;
@@ -44,7 +46,7 @@ public class JdbcDatabase implements DistributedStorage {
   @Inject
   public JdbcDatabase(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
-    RdbEngine rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+    rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
@@ -55,9 +57,10 @@ public class JdbcDatabase implements DistributedStorage {
   }
 
   @VisibleForTesting
-  JdbcDatabase(BasicDataSource dataSource, JdbcService jdbcService) {
+  JdbcDatabase(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcService jdbcService) {
     this.dataSource = dataSource;
     this.jdbcService = jdbcService;
+    this.rdbEngine = rdbEngine;
   }
 
   @Override
@@ -188,6 +191,11 @@ public class JdbcDatabase implements DistributedStorage {
         connection.rollback();
       } catch (SQLException sqlException) {
         throw new ExecutionException("failed to rollback", sqlException);
+      }
+      if (JdbcUtils.isConflictError(e, rdbEngine)) {
+        // Since a mutate operation executes multiple put/delete operations in a transaction,
+        // conflicts can happen. Throw RetriableExecutionException in that case.
+        throw new RetriableExecutionException("conflict happened in a mutate operation", e);
       }
       throw new ExecutionException("mutate operation failed", e);
     } finally {
