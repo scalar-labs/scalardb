@@ -42,6 +42,9 @@ scalar.db.storage=jdbc
 
 # The maximum number of open statements that can be allocated from the statement pool at the same time, or negative for no limit. The default is -1
 #scalar.db.jdbc.prepared_statements_pool.max_open=-1
+
+# Isolation level for JDBC. Either READ_UNCOMMITTED or READ_COMMITTED or REPEATABLE_READ or SERIALIZABLE can be specified
+#scalar.db.jdbc.isolation_level=
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.

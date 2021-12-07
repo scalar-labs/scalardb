@@ -26,6 +26,7 @@ public class JdbcConfig extends DatabaseConfig {
   public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
       PREFIX + "prepared_statements_pool.max_open";
   public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
+  public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
 
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
@@ -39,6 +40,7 @@ public class JdbcConfig extends DatabaseConfig {
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
   @Nullable private String tableMetadataSchema;
+  @Nullable private Isolation isolation;
 
   public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -79,6 +81,11 @@ public class JdbcConfig extends DatabaseConfig {
             DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
     tableMetadataSchema = getString(getProperties(), TABLE_METADATA_SCHEMA, null);
+
+    String isolationLevel = getString(getProperties(), ISOLATION_LEVEL, null);
+    if (isolationLevel != null) {
+      isolation = Isolation.valueOf(isolationLevel);
+    }
   }
 
   public int getConnectionPoolMinIdle() {
@@ -103,5 +110,10 @@ public class JdbcConfig extends DatabaseConfig {
 
   public Optional<String> getTableMetadataSchema() {
     return Optional.ofNullable(tableMetadataSchema);
+  }
+
+  @Nullable
+  public Isolation getIsolation() {
+    return isolation;
   }
 }
