@@ -40,7 +40,7 @@ To add a dependency using Maven:
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
-    * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader that is using for creating and deleting the schema in Scalar DB
+    * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader that creates and deletes Scalar DB schemas
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * [TLA+](tla+/consensus-commit/README.md)
 * Sample applications by contributors/collaborators
