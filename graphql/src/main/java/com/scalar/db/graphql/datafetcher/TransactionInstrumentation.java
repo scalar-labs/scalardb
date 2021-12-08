@@ -1,5 +1,6 @@
 package com.scalar.db.graphql.datafetcher;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -26,11 +27,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class TransactionInstrumentation extends SimpleInstrumentation {
-  private static final String EXTENSIONS_TRANSACTION_KEY = "transaction";
-  private static final String EXTENSIONS_TX_ID_KEY = "txId";
+  @VisibleForTesting static final String EXTENSIONS_TRANSACTION_KEY = "transaction";
+  @VisibleForTesting static final String EXTENSIONS_TX_ID_KEY = "txId";
 
+  @VisibleForTesting final Map<String, DistributedTransaction> transactionMap;
   private final DistributedTransactionManager transactionManager;
-  private final Map<String, DistributedTransaction> transactionMap;
 
   public TransactionInstrumentation(DistributedTransactionManager transactionManager) {
     this.transactionManager = transactionManager;
