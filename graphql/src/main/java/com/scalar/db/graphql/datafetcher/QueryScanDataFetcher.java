@@ -40,7 +40,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
       Key key =
           new Key(
               startInput.stream()
-                  .map(start -> createNamedValueFromMap((String) start.get("name"), start))
+                  .map(start -> createValueFromMap((String) start.get("name"), start))
                   .collect(toList()));
       if (startInclusiveInput != null) {
         scan.withStart(key, startInclusiveInput);
@@ -55,7 +55,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
       Key key =
           new Key(
               endInput.stream()
-                  .map(end -> createNamedValueFromMap((String) end.get("name"), end))
+                  .map(end -> createValueFromMap((String) end.get("name"), end))
                   .collect(toList()));
       if (endInclusiveInput != null) {
         scan.withEnd(key, endInclusiveInput);

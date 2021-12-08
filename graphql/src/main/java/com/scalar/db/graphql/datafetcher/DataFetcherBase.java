@@ -139,33 +139,12 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
             ex ->
                 new ConditionalExpression(
                     (String) ex.get("name"),
-                    createAnonymousValueFromMap(ex),
+                    createValueFromMap("", ex),
                     ConditionalExpression.Operator.valueOf((String) ex.get("operator"))))
         .collect(toList());
   }
 
-  protected Value<?> createAnonymousValueFromMap(Map<String, Object> map) {
-    Object v = getOneScalarValue(map);
-    Value<?> value;
-    if (v instanceof Integer) {
-      value = new IntValue((Integer) v);
-    } else if (v instanceof Long) {
-      value = new BigIntValue((Long) v);
-    } else if (v instanceof Float) {
-      value = new FloatValue((Float) v);
-    } else if (v instanceof Double) {
-      value = new DoubleValue((Double) v);
-    } else if (v instanceof String) {
-      value = new TextValue((String) v);
-    } else if (v instanceof Boolean) {
-      value = new BooleanValue((Boolean) v);
-    } else {
-      throw new IllegalArgumentException("Unexpected value: " + v.getClass());
-    }
-    return value;
-  }
-
-  protected Value<?> createNamedValueFromMap(String name, Map<String, Object> map) {
+  protected Value<?> createValueFromMap(String name, Map<String, Object> map) {
     Object v = getOneScalarValue(map);
     Value<?> value;
     if (v instanceof Integer) {
