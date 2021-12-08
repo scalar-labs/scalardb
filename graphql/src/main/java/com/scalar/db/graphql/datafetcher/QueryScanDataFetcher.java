@@ -97,7 +97,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
                       .ifPresent(
                           value -> {
                             if (value instanceof TextValue) {
-                              map.put(fieldName, ((TextValue) value).get().get());
+                              map.put(fieldName, value.getAsString().get());
                             } else {
                               map.put(fieldName, value.get());
                             }

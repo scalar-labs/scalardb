@@ -42,7 +42,7 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
                               .ifPresent(
                                   value -> {
                                     if (value instanceof TextValue) {
-                                      builder.put(fieldName, ((TextValue) value).get().get());
+                                      builder.put(fieldName, value.getAsString().get());
                                     } else {
                                       builder.put(fieldName, value.get());
                                     }
