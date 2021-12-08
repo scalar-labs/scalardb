@@ -48,6 +48,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
@@ -183,7 +184,8 @@ public class DynamoAdminTest {
   public void dropNamespace_ShouldDropAllTablesInNamespace() throws ExecutionException {
     // Arrange
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables()).thenReturn(listTablesResponse);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     when(listTablesResponse.tableNames())
         .thenReturn(
             ImmutableList.<String>builder()
@@ -726,7 +728,8 @@ public class DynamoAdminTest {
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables()).thenReturn(listTablesResponse);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
 
@@ -829,7 +832,8 @@ public class DynamoAdminTest {
     when(client.scan(any(ScanRequest.class))).thenReturn(scanResponse);
 
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables()).thenReturn(listTablesResponse);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     List<String> tableList = Collections.emptyList();
     when(listTablesResponse.tableNames()).thenReturn(tableList);
 
@@ -904,7 +908,8 @@ public class DynamoAdminTest {
     Set<String> tableNames = ImmutableSet.of("t1", "t2");
 
     ListTablesResponse listTablesResponse = mock(ListTablesResponse.class);
-    when(client.listTables()).thenReturn(listTablesResponse);
+    when(client.listTables(any(ListTablesRequest.class))).thenReturn(listTablesResponse);
+    when(listTablesResponse.lastEvaluatedTableName()).thenReturn(null);
     when(listTablesResponse.tableNames())
         .thenReturn(ImmutableList.of(NAMESPACE + ".t1", NAMESPACE + ".t2"));
 
