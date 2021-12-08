@@ -183,22 +183,12 @@ spotless {
     }
 }
 
-import com.github.spotbugs.snom.SpotBugsTask
-
-task spotbugsMain(type: SpotBugsTask) {
-    dependsOn 'classes'
-    classDirs = sourceSets.main.output
-    sourceDirs = sourceSets.main.allSource.sourceDirectories
-    auxClassPaths = sourceSets.main.compileClasspath
-    reports { html.enabled = true }
+spotbugsMain.reports {
+    html.enabled = true
 }
 
-task spotbugsTest(type: SpotBugsTask) {
-    dependsOn 'testClasses'
-    classDirs = sourceSets.test.output
-    sourceDirs = sourceSets.test.allSource.sourceDirectories
-    auxClassPaths = sourceSets.test.compileClasspath
-    reports { html.enabled = true }
+spotbugsTest.reports {
+    html.enabled = true
 }
 
 task spotbugsIntegrationTest(type: SpotBugsTask) {
