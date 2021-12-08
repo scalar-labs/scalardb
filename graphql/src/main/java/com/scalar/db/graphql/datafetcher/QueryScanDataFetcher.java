@@ -14,6 +14,7 @@ import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import graphql.schema.DataFetchingEnvironment;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -84,24 +85,22 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
     }
 
     // TODO: scan.withProjections()
-
+    LinkedHashSet<String> fieldNames = tableModel.getFieldNames();
     ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
     for (Result result : performScan(environment, scan)) {
       ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-      tableModel
-          .getFieldNames() // TODO: projected fields
-          .forEach(
-              fieldName ->
-                  result
-                      .getValue(fieldName)
-                      .ifPresent(
-                          value -> {
-                            if (value instanceof TextValue) {
-                              map.put(fieldName, value.getAsString().get());
-                            } else {
-                              map.put(fieldName, value.get());
-                            }
-                          }));
+      for (String fieldName : fieldNames) {
+        result
+            .getValue(fieldName)
+            .ifPresent(
+                value -> {
+                  if (value instanceof TextValue) {
+                    map.put(fieldName, value.getAsString().get());
+                  } else {
+                    map.put(fieldName, value.get());
+                  }
+                });
+      }
       list.add(map.build());
     }
 

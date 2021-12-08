@@ -33,20 +33,18 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
     performGet(environment, get)
         .ifPresent(
             result -> {
-              tableModel
-                  .getFieldNames()
-                  .forEach(
-                      fieldName ->
-                          result
-                              .getValue(fieldName)
-                              .ifPresent(
-                                  value -> {
-                                    if (value instanceof TextValue) {
-                                      builder.put(fieldName, value.getAsString().get());
-                                    } else {
-                                      builder.put(fieldName, value.get());
-                                    }
-                                  }));
+              for (String fieldName : tableModel.getFieldNames()) {
+                result
+                    .getValue(fieldName)
+                    .ifPresent(
+                        value -> {
+                          if (value instanceof TextValue) {
+                            builder.put(fieldName, value.getAsString().get());
+                          } else {
+                            builder.put(fieldName, value.get());
+                          }
+                        });
+              }
             });
 
     return ImmutableMap.of(tableModel.getObjectType().getName(), builder.build());
