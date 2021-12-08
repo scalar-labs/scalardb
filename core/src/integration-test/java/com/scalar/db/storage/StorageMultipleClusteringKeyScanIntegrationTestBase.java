@@ -80,7 +80,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       admin = factory.getAdmin();
       namespaceBaseName = getNamespaceBaseName();
       clusteringKeyTypes = getClusteringKeyTypes();
-      executorService = Executors.newFixedThreadPool(THREAD_NUM);
+      executorService = Executors.newFixedThreadPool(getThreadNum());
       createTables();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
@@ -106,6 +106,10 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     return clusteringKeyTypes;
   }
 
+  protected int getThreadNum() {
+    return THREAD_NUM;
+  }
+
   protected Map<String, String> getCreateOptions() {
     return Collections.emptyMap();
   }
@@ -120,8 +124,16 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             admin.createNamespace(getNamespaceName(firstClusteringKeyType), true, options);
             for (DataType secondClusteringKeyType :
                 clusteringKeyTypes.get(firstClusteringKeyType)) {
-              createTable(
-                  firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC, options);
+              for (Order firstClusteringOrder : Order.values()) {
+                for (Order secondClusteringOrder : Order.values()) {
+                  createTable(
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder,
+                      options);
+                }
+              }
             }
             return null;
           };
@@ -178,10 +190,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           () -> {
             for (DataType secondClusteringKeyType :
                 clusteringKeyTypes.get(firstClusteringKeyType)) {
-              admin.dropTable(
-                  getNamespaceName(firstClusteringKeyType),
-                  getTableName(
-                      firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC));
+              for (Order firstClusteringOrder : Order.values()) {
+                for (Order secondClusteringOrder : Order.values()) {
+                  admin.dropTable(
+                      getNamespaceName(firstClusteringKeyType),
+                      getTableName(
+                          firstClusteringKeyType,
+                          firstClusteringOrder,
+                          secondClusteringKeyType,
+                          secondClusteringOrder));
+                }
+              }
             }
             admin.dropNamespace(getNamespaceName(firstClusteringKeyType));
             return null;
@@ -271,11 +290,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -354,7 +375,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -433,7 +454,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -508,7 +529,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -582,7 +603,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -644,7 +665,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -712,7 +733,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -768,7 +789,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
@@ -863,11 +884,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -975,11 +998,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1079,11 +1104,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1159,7 +1186,6 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
               .filter(c -> c.first.equals(firstClusteringKeyValue))
               .collect(Collectors.toList());
     } else {
-
       Value<?> firstClusteringKeyValue =
           clusteringKeys.get(getFirstClusteringKeyIndex(2, secondClusteringKeyType)).first;
       clusteringKeys =
@@ -1183,11 +1209,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1266,11 +1294,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1363,11 +1393,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1446,11 +1478,13 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             .withOrdering(
                 new Ordering(
                     FIRST_CLUSTERING_KEY,
-                    reverse ? reverseOrder(firstClusteringOrder) : firstClusteringOrder))
+                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
             .withOrdering(
                 new Ordering(
                     SECOND_CLUSTERING_KEY,
-                    reverse ? reverseOrder(secondClusteringOrder) : secondClusteringOrder))
+                    reverse
+                        ? TestUtils.reverseOrder(secondClusteringOrder)
+                        : secondClusteringOrder))
             .forNamespace(getNamespaceName(firstClusteringKeyType))
             .forTable(
                 getTableName(
@@ -1587,9 +1621,38 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
                         secondClusteringKeyValue));
               });
     } else {
-      List<Value<?>> secondClusteringKeyValues =
-          getSecondClusteringKeyValues(secondClusteringKeyType);
-      for (Value<?> secondClusteringKeyValue : secondClusteringKeyValues) {
+      Set<Value<?>> valueSet = new HashSet<>();
+
+      // min and max second clustering key values
+      Arrays.asList(
+              getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType),
+              getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType))
+          .forEach(
+              secondClusteringKeyValue -> {
+                ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
+                puts.add(
+                    preparePut(
+                        firstClusteringKeyType,
+                        firstClusteringOrder,
+                        firstClusteringKeyValue,
+                        secondClusteringKeyType,
+                        secondClusteringOrder,
+                        secondClusteringKeyValue));
+                valueSet.add(secondClusteringKeyValue);
+              });
+
+      for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
+        Value<?> secondClusteringKeyValue;
+        while (true) {
+          secondClusteringKeyValue =
+              getRandomValue(RANDOM, SECOND_CLUSTERING_KEY, secondClusteringKeyType);
+          // reject duplication
+          if (!valueSet.contains(secondClusteringKeyValue)) {
+            valueSet.add(secondClusteringKeyValue);
+            break;
+          }
+        }
+
         ret.add(new ClusteringKey(firstClusteringKeyValue, secondClusteringKeyValue));
         puts.add(
             preparePut(
@@ -1654,52 +1717,12 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     return builder.toString();
   }
 
-  private Order reverseOrder(Order order) {
-    switch (order) {
-      case ASC:
-        return Order.DESC;
-      case DESC:
-        return Order.ASC;
-      default:
-        throw new AssertionError();
-    }
-  }
-
   private Key getPartitionKey() {
     return new Key(PARTITION_KEY, 1);
   }
 
   private Value<?> getFirstClusteringKeyValue(DataType dataType) {
     return getRandomValue(RANDOM, FIRST_CLUSTERING_KEY, dataType);
-  }
-
-  private List<Value<?>> getSecondClusteringKeyValues(DataType dataType) {
-    Set<Value<?>> valueSet = new HashSet<>();
-    List<Value<?>> ret = new ArrayList<>();
-
-    // min and max second clustering key values
-    Arrays.asList(
-            getMinValue(SECOND_CLUSTERING_KEY, dataType),
-            getMaxValue(SECOND_CLUSTERING_KEY, dataType))
-        .forEach(
-            value -> {
-              ret.add(value);
-              valueSet.add(value);
-            });
-
-    for (int i = 0; i < SECOND_CLUSTERING_KEY_NUM - 2; i++) {
-      while (true) {
-        Value<?> value = getRandomValue(RANDOM, SECOND_CLUSTERING_KEY, dataType);
-        // reject duplication
-        if (!valueSet.contains(value)) {
-          ret.add(value);
-          valueSet.add(value);
-          break;
-        }
-      }
-    }
-
-    return ret;
   }
 
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
@@ -1792,16 +1815,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
-      testCallables.add(
-          () -> {
-            truncateTable(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+      for (Order firstClusteringOrder : Order.values()) {
+        testCallables.add(
+            () -> {
+              truncateTable(firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC);
 
-            List<ClusteringKey> clusteringKeys =
-                prepareRecords(firstClusteringKeyType, Order.ASC, DataType.INT, Order.ASC);
+              List<ClusteringKey> clusteringKeys =
+                  prepareRecords(
+                      firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC);
 
-            test.execute(clusteringKeys, firstClusteringKeyType, Order.ASC);
-            return null;
-          });
+              test.execute(clusteringKeys, firstClusteringKeyType, firstClusteringOrder);
+              return null;
+            });
+      }
     }
 
     execute(testCallables);
@@ -1812,22 +1838,33 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     List<Callable<Void>> testCallables = new ArrayList<>();
     for (DataType firstClusteringKeyType : clusteringKeyTypes.keySet()) {
       for (DataType secondClusteringKeyType : clusteringKeyTypes.get(firstClusteringKeyType)) {
-        testCallables.add(
-            () -> {
-              truncateTable(firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+        for (Order firstClusteringOrder : Order.values()) {
+          for (Order secondClusteringOrder : Order.values()) {
+            testCallables.add(
+                () -> {
+                  truncateTable(
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder);
 
-              List<ClusteringKey> clusteringKeys =
-                  prepareRecords(
-                      firstClusteringKeyType, Order.ASC, secondClusteringKeyType, Order.ASC);
+                  List<ClusteringKey> clusteringKeys =
+                      prepareRecords(
+                          firstClusteringKeyType,
+                          firstClusteringOrder,
+                          secondClusteringKeyType,
+                          secondClusteringOrder);
 
-              test.execute(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  Order.ASC,
-                  secondClusteringKeyType,
-                  Order.ASC);
-              return null;
-            });
+                  test.execute(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringOrder,
+                      secondClusteringKeyType,
+                      secondClusteringOrder);
+                  return null;
+                });
+          }
+        }
       }
     }
     execute(testCallables);

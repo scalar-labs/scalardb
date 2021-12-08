@@ -118,6 +118,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
+  private static final String INDEX_NAME_PREFIX = "index";
 
   private final BasicDataSource dataSource;
   private final RdbEngine rdbEngine;
@@ -125,7 +126,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   @Inject
   public JdbcDatabaseAdmin(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config);
+    dataSource = JdbcUtils.initDataSource(config, config.getIsolation());
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }

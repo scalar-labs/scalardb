@@ -150,7 +150,6 @@ task integrationTestCassandra(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
-    maxParallelForks = 10
 }
 
 task integrationTestCosmos(type: Test) {
@@ -162,7 +161,7 @@ task integrationTestCosmos(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
-    maxParallelForks = 10
+    maxParallelForks = 3
 }
 
 task integrationTestDynamo(type: Test) {
@@ -186,7 +185,6 @@ task integrationTestJdbc(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
-    maxParallelForks = 10
 }
 
 task integrationTestMultiStorage(type: Test) {

@@ -17,6 +17,7 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.ArrayList;
@@ -195,6 +196,25 @@ public class BatchHandlerTest {
     // Act Assert
     assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))
         .isInstanceOf(NoMutationException.class);
+  }
+
+  @Test
+  public void
+      handle_TransactionCanceledExceptionWithTransactionConflict_ShouldThrowRetriableExecutionException() {
+    TransactionCanceledException toThrow =
+        TransactionCanceledException.builder()
+            .cancellationReasons(
+                CancellationReason.builder().code("TransactionConflict").build(),
+                CancellationReason.builder().code("None").build())
+            .build();
+    doThrow(toThrow).when(client).transactWriteItems(any(TransactWriteItemsRequest.class));
+
+    Put put = preparePut().withCondition(new PutIfNotExists());
+    Delete delete = prepareDelete().withCondition(new DeleteIfExists());
+
+    // Act Assert
+    assertThatThrownBy(() -> handler.handle(Arrays.asList(put, delete)))
+        .isInstanceOf(RetriableExecutionException.class);
   }
 
   @Test

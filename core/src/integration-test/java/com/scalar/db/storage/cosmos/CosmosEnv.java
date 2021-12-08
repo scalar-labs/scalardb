@@ -15,7 +15,7 @@ public final class CosmosEnv {
   private static final String PROP_COSMOS_CREATE_OPTIONS = "scalardb.cosmos.create_options";
 
   private static final ImmutableMap<String, String> DEFAULT_COSMOS_CREATE_OPTIONS =
-      ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "4000");
+      ImmutableMap.of(CosmosAdmin.REQUEST_UNIT, "10000");
 
   private CosmosEnv() {}
 

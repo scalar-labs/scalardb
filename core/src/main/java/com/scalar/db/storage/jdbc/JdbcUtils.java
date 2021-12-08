@@ -4,6 +4,7 @@ import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
+import javax.annotation.Nullable;
 import oracle.jdbc.OracleDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -24,11 +25,23 @@ public final class JdbcUtils {
     }
   }
 
+  /**
+   * @param config a jdbc config
+   * @return the data source
+   * @deprecated As of release 3.5.0. Will be removed in release 4.0.0.
+   */
+  @SuppressWarnings("InlineMeSuggester")
+  @Deprecated
   public static BasicDataSource initDataSource(JdbcConfig config) {
-    return initDataSource(config, false);
+    return initDataSource(config, false, null);
   }
 
-  public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
+  public static BasicDataSource initDataSource(JdbcConfig config, @Nullable Isolation isolation) {
+    return initDataSource(config, false, isolation);
+  }
+
+  public static BasicDataSource initDataSource(
+      JdbcConfig config, boolean transactional, @Nullable Isolation isolation) {
     String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
@@ -47,7 +60,27 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
+      // if transactional, the default isolation level is SERIALIZABLE
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    }
+
+    if (isolation != null) {
+      switch (isolation) {
+        case READ_UNCOMMITTED:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+          break;
+        case READ_COMMITTED:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+          break;
+        case REPEATABLE_READ:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+          break;
+        case SERIALIZABLE:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+          break;
+        default:
+          throw new AssertionError();
+      }
     }
 
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
@@ -76,5 +109,32 @@ public final class JdbcUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  public static boolean isConflictError(SQLException e, RdbEngine rdbEngine) {
+    switch (rdbEngine) {
+      case MYSQL:
+        if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
+          // Deadlock found when trying to get lock or Lock wait timeout exceeded
+          return true;
+        }
+        break;
+      case POSTGRESQL:
+        if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+          // Serialization error happened or Dead lock found
+          return true;
+        }
+        break;
+      case ORACLE:
+        if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
+          // ORA-08177: can't serialize access for this transaction
+          // ORA-00060: deadlock detected while waiting for resource
+          return true;
+        }
+        break;
+      default:
+        break;
+    }
+    return false;
   }
 }

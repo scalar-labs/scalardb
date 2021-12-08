@@ -16,6 +16,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
@@ -143,6 +144,28 @@ public class CommitHandlerTest {
     // Arrange
     Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
     ExecutionException toThrow = mock(NoMutationException.class);
+    doThrow(toThrow).when(storage).mutate(anyList());
+    doNothing().when(coordinator).putState(any(Coordinator.State.class));
+    doNothing().when(recovery).rollback(any(Snapshot.class));
+
+    // Act
+    assertThatThrownBy(() -> handler.commit(snapshot))
+        .isInstanceOf(CommitConflictException.class)
+        .hasCause(toThrow);
+
+    // Assert
+    verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
+    verify(coordinator, never())
+        .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
+    verify(recovery).rollback(snapshot);
+  }
+
+  @Test
+  public void commit_RetriableExecutionExceptionThrownInPrepareRecords_ShouldThrowCCException()
+      throws ExecutionException, CoordinatorException, CommitConflictException {
+    // Arrange
+    Snapshot snapshot = prepareSnapshotWithDifferentPartitionPut();
+    ExecutionException toThrow = mock(RetriableExecutionException.class);
     doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
     doNothing().when(recovery).rollback(any(Snapshot.class));

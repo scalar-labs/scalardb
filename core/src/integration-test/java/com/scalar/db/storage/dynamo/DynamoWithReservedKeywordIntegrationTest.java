@@ -13,6 +13,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.storage.TestUtils;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -24,19 +25,22 @@ import org.junit.Test;
 
 public class DynamoWithReservedKeywordIntegrationTest {
 
-  private static final String NAMESPACE = "integration_testing_dynamo_reserved_keyword";
+  private static final String TEST_NAME = "reserved_keyword";
+  private static final String NAMESPACE = "integration_testing_dynamo_" + TEST_NAME;
   private static final String TABLE = "test_table";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "status"; // Reserved keyword
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "status"; // Reserved keyword
 
   private static DynamoAdmin admin;
   private static Dynamo dynamo;
 
   @BeforeClass
   public static void setUpBeforeClass() throws ExecutionException {
-    DynamoConfig config = DynamoEnv.getDynamoConfig();
+    DynamoConfig config =
+        new DynamoConfig(
+            TestUtils.addSuffix(DynamoEnv.getDynamoConfig(), TEST_NAME).getProperties());
     admin = new DynamoAdmin(config);
     dynamo = new Dynamo(config);
     createTable();

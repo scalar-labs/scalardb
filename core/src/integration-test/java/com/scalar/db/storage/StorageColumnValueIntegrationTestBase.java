@@ -65,8 +65,7 @@ public abstract class StorageColumnValueIntegrationTestBase {
       createTable();
       storage = factory.getStorage();
       seed = System.currentTimeMillis();
-      System.out.println(
-          "The seed used in the single clustering key scan integration test is " + seed);
+      System.out.println("The seed used in the column value integration test is " + seed);
       initialized = true;
     }
     admin.truncateTable(namespace, TABLE);
