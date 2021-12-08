@@ -60,6 +60,7 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
 import software.amazon.awssdk.services.dynamodb.model.PointInTimeRecoverySpecification;
 import software.amazon.awssdk.services.dynamodb.model.Projection;
@@ -872,14 +873,21 @@ public class DynamoAdmin implements DistributedStorageAdmin {
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
       Set<String> tableSet = new HashSet<>();
-      ListTablesResponse listTablesResponse = client.listTables();
-      List<String> tableNames = listTablesResponse.tableNames();
-      String prefix = namespace + ".";
-      for (String tableName : tableNames) {
-        if (tableName.startsWith(prefix)) {
-          tableSet.add(tableName.substring(prefix.length()));
+      String lastEvaluatedTableName = null;
+      do {
+        ListTablesRequest listTablesRequest =
+            ListTablesRequest.builder().exclusiveStartTableName(lastEvaluatedTableName).build();
+        ListTablesResponse listTablesResponse = client.listTables(listTablesRequest);
+        lastEvaluatedTableName = listTablesResponse.lastEvaluatedTableName();
+        List<String> tableNames = listTablesResponse.tableNames();
+        String prefix = namespace + ".";
+        for (String tableName : tableNames) {
+          if (tableName.startsWith(prefix)) {
+            tableSet.add(tableName.substring(prefix.length()));
+          }
         }
-      }
+      } while (lastEvaluatedTableName != null);
+
       return tableSet;
     } catch (Exception e) {
       throw new ExecutionException("getting list of tables failed", e);
