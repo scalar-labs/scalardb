@@ -132,8 +132,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     verify(storage, never()).get(any());
-    verify(transaction, times(1))
-        .scan(simpleExpectedScan.withConsistency(Consistency.LINEARIZABLE));
+    verify(transaction, times(1)).scan(simpleExpectedScan);
   }
 
   private void testScanCommandIssued(Map<String, Object> scanArgument, Scan expectedScan)

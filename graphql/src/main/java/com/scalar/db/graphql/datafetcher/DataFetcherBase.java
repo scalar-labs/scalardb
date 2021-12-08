@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
@@ -92,7 +91,7 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = getTransactionIfEnabled(environment);
     if (transaction != null) {
-      return transaction.scan(scan.withConsistency(Consistency.LINEARIZABLE));
+      return transaction.scan(scan);
     } else {
       return ImmutableList.copyOf(storage.scan(scan));
     }
@@ -112,7 +111,7 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = getTransactionIfEnabled(environment);
     if (transaction != null) {
-      transaction.delete(delete.withConsistency(Consistency.LINEARIZABLE));
+      transaction.delete(delete);
     } else {
       storage.delete(delete);
     }

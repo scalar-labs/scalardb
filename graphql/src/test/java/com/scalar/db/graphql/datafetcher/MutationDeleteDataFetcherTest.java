@@ -98,8 +98,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     verify(storage, never()).get(any());
-    verify(transaction, times(1))
-        .delete(simpleExpectedDelete.withConsistency(Consistency.LINEARIZABLE));
+    verify(transaction, times(1)).delete(simpleExpectedDelete);
   }
 
   private void testDeleteCommandIssued(Map<String, Object> deleteArgument, Delete expectedDelete)
