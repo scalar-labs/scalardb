@@ -353,7 +353,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.info("recover uncommitted record");
+    LOGGER.debug("recover uncommitted records: " + results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

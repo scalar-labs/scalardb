@@ -30,7 +30,7 @@ public class RecoveryHandler {
 
   // lazy recovery in read phase
   public void recover(Selection selection, TransactionResult result) {
-    LOGGER.info("recovering for " + result.getId());
+    LOGGER.debug("recovering for {}", result.getId());
     Optional<Coordinator.State> state;
     try {
       state = coordinator.getState(result.getId());
@@ -51,7 +51,7 @@ public class RecoveryHandler {
   }
 
   public void rollback(Snapshot snapshot) throws CommitConflictException {
-    LOGGER.info("rollback from snapshot for " + snapshot.getId());
+    LOGGER.debug("rollback from snapshot for {}", snapshot.getId());
     RollbackMutationComposer composer = new RollbackMutationComposer(snapshot.getId(), storage);
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
@@ -63,13 +63,11 @@ public class RecoveryHandler {
 
   @VisibleForTesting
   void rollback(Selection selection, TransactionResult result) {
-    LOGGER.info(
-        "rollback for "
-            + selection.getPartitionKey()
-            + ", "
-            + selection.getClusteringKey()
-            + " mutated by "
-            + result.getId());
+    LOGGER.debug(
+        "rollback for {}, {} mutated by {}",
+        selection.getPartitionKey(),
+        selection.getClusteringKey(),
+        result.getId());
     RollbackMutationComposer composer = new RollbackMutationComposer(result.getId(), storage);
     composer.add(selection, result);
     mutate(composer.get());
@@ -77,13 +75,11 @@ public class RecoveryHandler {
 
   @VisibleForTesting
   void rollforward(Selection selection, TransactionResult result) {
-    LOGGER.info(
-        "rollforward for "
-            + selection.getPartitionKey()
-            + ", "
-            + selection.getClusteringKey()
-            + " mutated by "
-            + result.getId());
+    LOGGER.debug(
+        "rollforward for {}, {} mutated by {}",
+        selection.getPartitionKey(),
+        selection.getClusteringKey(),
+        result.getId());
     CommitMutationComposer composer = new CommitMutationComposer(result.getId());
     composer.add(selection, result);
     mutate(composer.get());
@@ -99,7 +95,7 @@ public class RecoveryHandler {
       coordinator.putState(new Coordinator.State(result.getId(), TransactionState.ABORTED));
       rollback(selection, result);
     } catch (CoordinatorException e) {
-      LOGGER.warn("coordinator tries to abort " + result.getId() + ", but failed", e);
+      LOGGER.warn("coordinator tries to abort {}, but failed", result.getId(), e);
     }
   }
 
