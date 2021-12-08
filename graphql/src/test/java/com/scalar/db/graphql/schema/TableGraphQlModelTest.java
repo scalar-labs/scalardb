@@ -361,7 +361,7 @@ public class TableGraphQlModelTest {
     //   bigIntValue: BigInt
     //   floatValue: Float32
     //   doubleValue: Float
-    //   stringValue: String
+    //   textValue: String
     //   booleanValue: Boolean
     // }
     GraphQLInputObjectType inputObjectType = model.getClusteringKeyInputObjectType();
@@ -373,7 +373,7 @@ public class TableGraphQlModelTest {
     assertNullableInputObjectField(fields.get(2), "bigIntValue", CommonSchema.BIG_INT_SCALAR);
     assertNullableInputObjectField(fields.get(3), "floatValue", CommonSchema.FLOAT_32_SCALAR);
     assertNullableInputObjectField(fields.get(4), "doubleValue", Scalars.GraphQLFloat);
-    assertNullableInputObjectField(fields.get(5), "stringValue", Scalars.GraphQLString);
+    assertNullableInputObjectField(fields.get(5), "textValue", Scalars.GraphQLString);
     assertNullableInputObjectField(fields.get(6), "booleanValue", Scalars.GraphQLBoolean);
   }
 
