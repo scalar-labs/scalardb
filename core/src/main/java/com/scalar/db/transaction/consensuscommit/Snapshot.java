@@ -315,14 +315,11 @@ public class Snapshot {
   }
 
   private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
-    LOGGER.warn(
-        "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
     throw new CommitConflictException(
         "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
   }
 
   private void throwExceptionDueToAntiDependency() throws CommitConflictException {
-    LOGGER.warn("Anti-dependency found. Aborting the transaction.");
     throw new CommitConflictException("Anti-dependency found. Aborting the transaction.");
   }
 
