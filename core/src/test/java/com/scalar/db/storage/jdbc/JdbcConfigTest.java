@@ -30,6 +30,7 @@ public class JdbcConfigTest {
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
     props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
+    props.setProperty(JdbcConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
 
     // Act
     JdbcConfig config = new JdbcConfig(props);
@@ -50,6 +51,7 @@ public class JdbcConfigTest {
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
     assertThat(config.getTableMetadataSchema()).isPresent();
     assertThat(config.getTableMetadataSchema().get()).isEqualTo(ANY_TABLE_METADATA_SCHEMA);
+    assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
   }
 
   @Test
@@ -85,6 +87,7 @@ public class JdbcConfigTest {
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
     assertThat(config.getTableMetadataSchema()).isNotPresent();
+    assertThat(config.getIsolation()).isNull();
   }
 
   @Test
@@ -130,6 +133,21 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "ddd");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "eee");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithInvalidIsolationLevelGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props.setProperty(JdbcConfig.ISOLATION_LEVEL, "aaa");
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);

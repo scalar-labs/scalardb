@@ -4,6 +4,7 @@ import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
+import javax.annotation.Nullable;
 import oracle.jdbc.OracleDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -24,11 +25,12 @@ public final class JdbcUtils {
     }
   }
 
-  public static BasicDataSource initDataSource(JdbcConfig config) {
-    return initDataSource(config, false);
+  public static BasicDataSource initDataSource(JdbcConfig config, @Nullable Isolation isolation) {
+    return initDataSource(config, false, isolation);
   }
 
-  public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
+  public static BasicDataSource initDataSource(
+      JdbcConfig config, boolean transactional, @Nullable Isolation isolation) {
     String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
@@ -47,7 +49,27 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
+      // if transactional, the default isolation level is SERIALIZABLE
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+    }
+
+    if (isolation != null) {
+      switch (isolation) {
+        case READ_UNCOMMITTED:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+          break;
+        case READ_COMMITTED:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+          break;
+        case REPEATABLE_READ:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+          break;
+        case SERIALIZABLE:
+          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+          break;
+        default:
+          throw new AssertionError();
+      }
     }
 
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
