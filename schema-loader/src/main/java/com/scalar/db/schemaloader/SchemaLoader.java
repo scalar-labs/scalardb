@@ -78,6 +78,7 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Properties configProperties,
@@ -97,6 +98,7 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema file.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Path configFilePath,
@@ -116,6 +118,7 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Properties configProperties,
@@ -135,6 +138,7 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
    */
   public static void load(
       Path configFilePath,
@@ -154,6 +158,7 @@ public class SchemaLoader {
    * @param schema schema definition.
    * @param options specific options for creating tables.
    * @param createCoordinatorTable create coordinator table or not.
+   * @throws SchemaLoaderException thrown when creating tables failed.
    */
   private static void load(
       Either<Path, Properties> config,
@@ -193,6 +198,7 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema json file.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
+   * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Properties configProperties,
@@ -212,6 +218,7 @@ public class SchemaLoader {
    * @param schemaFilePath path to schema json file.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
+   * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Path configFilePath,
@@ -231,6 +238,7 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
+   * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Properties configProperties,
@@ -250,6 +258,7 @@ public class SchemaLoader {
    * @param serializedSchemaJson serialized json string schema.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
+   * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Path configFilePath,
@@ -269,6 +278,7 @@ public class SchemaLoader {
    * @param schema schema definition.
    * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
+   * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   private static void unload(
       Either<Path, Properties> config,
