@@ -1,9 +1,9 @@
 plugins {
     id 'java'
     id 'com.palantir.docker' version '0.25.0'
-    id 'com.github.spotbugs' version '4.7.1'
     id 'net.ltgt.errorprone' version '2.0.2'
     id 'com.github.johnrengelman.shadow' version '7.1.0'
+    id 'com.github.spotbugs-base' version '4.7.1'
 }
 
 archivesBaseName = "scalardb-schema-loader"
@@ -183,12 +183,22 @@ spotless {
     }
 }
 
-spotbugsMain.reports {
-    html.enabled = true
+import com.github.spotbugs.snom.SpotBugsTask
+
+task spotbugsMain(type: SpotBugsTask) {
+    dependsOn 'classes'
+    classDirs = sourceSets.main.output
+    sourceDirs = sourceSets.main.allSource.sourceDirectories
+    auxClassPaths = sourceSets.main.compileClasspath
+    reports { html.enabled = true }
 }
 
-spotbugsTest.reports {
-    html.enabled = true
+task spotbugsTest(type: SpotBugsTask) {
+    dependsOn 'testClasses'
+    classDirs = sourceSets.test.output
+    sourceDirs = sourceSets.test.allSource.sourceDirectories
+    auxClassPaths = sourceSets.test.compileClasspath
+    reports { html.enabled = true }
 }
 
 task spotbugsIntegrationTest(type: SpotBugsTask) {
