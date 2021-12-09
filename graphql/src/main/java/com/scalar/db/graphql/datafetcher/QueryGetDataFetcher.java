@@ -15,6 +15,7 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
     super(storage, tableModel);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Map<String, Map<String, Object>> get(DataFetchingEnvironment environment)
       throws Exception {

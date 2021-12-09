@@ -30,6 +30,7 @@ public class MutationDeleteDataFetcher extends DataFetcherBase<List<Map<String, 
     return result;
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, Object> delete(
       DataFetchingEnvironment environment, Map<String, Object> deleteInput) throws Exception {
     Map<String, Object> keyArg = (Map<String, Object>) deleteInput.get("key"); // table_Key

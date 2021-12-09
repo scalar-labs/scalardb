@@ -24,6 +24,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
     super(storage, tableModel);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Map<String, List<Map<String, Object>>> get(DataFetchingEnvironment environment)
       throws Exception {

@@ -38,6 +38,7 @@ public class MutationPutDataFetcher extends DataFetcherBase<List<Map<String, Obj
     return result;
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, Object> put(DataFetchingEnvironment environment, Map<String, Object> putInput)
       throws TransactionException, ExecutionException {
     Map<String, Object> keyArg = (Map<String, Object>) putInput.get("key"); // table_Key
