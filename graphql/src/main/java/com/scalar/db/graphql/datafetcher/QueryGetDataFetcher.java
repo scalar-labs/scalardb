@@ -10,7 +10,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
-import com.scalar.db.io.TextValue;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 import java.util.Optional;
@@ -41,16 +40,7 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
         .ifPresent(
             result -> {
               for (String fieldName : tableModel.getFieldNames()) {
-                result
-                    .getValue(fieldName)
-                    .ifPresent(
-                        value -> {
-                          if (value instanceof TextValue) {
-                            builder.put(fieldName, value.getAsString().get());
-                          } else {
-                            builder.put(fieldName, value.get());
-                          }
-                        });
+                result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
               }
             });
 

@@ -124,6 +124,6 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     Map<String, Object> object = result.get(storageTableGraphQlModel.getObjectType().getName());
-    assertThat(object).containsOnly(entry("c1", 1), entry("c2", "A"), entry("c3", 2.0));
+    assertThat(object).containsOnly(entry("c1", 1), entry("c2", Optional.of("A")), entry("c3", 2.0));
   }
 }

@@ -16,7 +16,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.TextValue;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -95,16 +94,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
     for (Result result : performScan(environment, scan)) {
       ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
       for (String fieldName : fieldNames) {
-        result
-            .getValue(fieldName)
-            .ifPresent(
-                value -> {
-                  if (value instanceof TextValue) {
-                    map.put(fieldName, value.getAsString().get());
-                  } else {
-                    map.put(fieldName, value.get());
-                  }
-                });
+        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
       }
       list.add(map.build());
     }
