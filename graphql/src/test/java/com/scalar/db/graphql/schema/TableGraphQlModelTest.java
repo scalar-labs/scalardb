@@ -489,6 +489,23 @@ public class TableGraphQlModelTest {
   }
 
   @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationPutField() {
+    // Act
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // type Mutation {
+    //   table_1_put(put: table1_PutInput!): Boolean!
+    // }
+    GraphQLFieldDefinition field = model.getMutationPutField();
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_put", Scalars.GraphQLBoolean);
+    assertThat(field.getArguments().size()).isEqualTo(1);
+    GraphQLArgument argument = field.getArguments().get(0);
+    assertNonNullArgument(argument, "put", model.getPutInputObjectType());
+  }
+
+  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreateMutationBulkPutField() {
     // Act
     TableGraphQlModel model =
@@ -528,6 +545,23 @@ public class TableGraphQlModelTest {
     GraphQLInputType consistencyType = fields.get(2).getType();
     assertThat(consistencyType).isInstanceOf(GraphQLTypeReference.class);
     assertThat(((GraphQLTypeReference) consistencyType).getName()).isEqualTo("Consistency");
+  }
+
+  @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationDeleteField() {
+    // Act
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // type Mutation {
+    //   table_1_delete(put: table1_DeleteInput!): Boolean!
+    // }
+    GraphQLFieldDefinition field = model.getMutationPutField();
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_put", Scalars.GraphQLBoolean);
+    assertThat(field.getArguments().size()).isEqualTo(1);
+    GraphQLArgument argument = field.getArguments().get(0);
+    assertNonNullArgument(argument, "put", model.getPutInputObjectType());
   }
 
   @Test

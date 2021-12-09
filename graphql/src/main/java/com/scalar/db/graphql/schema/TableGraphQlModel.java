@@ -53,8 +53,10 @@ public class TableGraphQlModel {
   private final GraphQLObjectType primaryKeyOutputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
   private final GraphQLInputObjectType putInputObjectType;
+  private final GraphQLFieldDefinition mutationPutField;
   private final GraphQLFieldDefinition mutationBulkPutField;
   private final GraphQLInputObjectType deleteInputObjectType;
+  private final GraphQLFieldDefinition mutationDeleteField;
   private final GraphQLFieldDefinition mutationBulkDeleteField;
 
   public TableGraphQlModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
@@ -101,9 +103,11 @@ public class TableGraphQlModel {
 
     this.putValuesObjectType = createPutValuesObjectType();
     this.putInputObjectType = createPutInputObjectType();
+    this.mutationPutField = createMutationPutField();
     this.mutationBulkPutField = createMutationBulkPutField();
 
     this.deleteInputObjectType = createDeleteInputObjectType();
+    this.mutationDeleteField = createMutationDeleteField();
     this.mutationBulkDeleteField = createMutationBulkDeleteField();
   }
 
@@ -298,6 +302,14 @@ public class TableGraphQlModel {
         .build();
   }
 
+  private GraphQLFieldDefinition createMutationPutField() {
+    return newFieldDefinition()
+        .name(objectType.getName() + "_put")
+        .type(nonNull(Scalars.GraphQLBoolean))
+        .argument(newArgument().name("put").type(nonNull(putInputObjectType)))
+        .build();
+  }
+
   private GraphQLFieldDefinition createMutationBulkPutField() {
     return newFieldDefinition()
         .name(objectType.getName() + "_bulkPut")
@@ -312,6 +324,14 @@ public class TableGraphQlModel {
         .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
         .field(newInputObjectField().name("condition").type(typeRef("DeleteCondition")))
         .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
+        .build();
+  }
+
+  private GraphQLFieldDefinition createMutationDeleteField() {
+    return newFieldDefinition()
+        .name(objectType.getName() + "_delete")
+        .type(nonNull(Scalars.GraphQLBoolean))
+        .argument(newArgument().name("delete").type(nonNull(deleteInputObjectType)))
         .build();
   }
 
@@ -395,6 +415,10 @@ public class TableGraphQlModel {
     return primaryKeyOutputObjectType;
   }
 
+  public GraphQLFieldDefinition getMutationPutField() {
+    return mutationPutField;
+  }
+
   public GraphQLFieldDefinition getMutationBulkPutField() {
     return mutationBulkPutField;
   }
@@ -405,6 +429,10 @@ public class TableGraphQlModel {
 
   public GraphQLInputObjectType getPutValuesObjectType() {
     return putValuesObjectType;
+  }
+
+  public GraphQLFieldDefinition getMutationDeleteField() {
+    return mutationDeleteField;
   }
 
   public GraphQLFieldDefinition getMutationBulkDeleteField() {
