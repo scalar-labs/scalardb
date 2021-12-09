@@ -1,11 +1,15 @@
 package com.scalar.db.graphql.datafetcher;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.DeleteConditionType;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
@@ -69,5 +73,16 @@ public class MutationDeleteDataFetcher extends DataFetcherBase<List<Map<String, 
     performDelete(environment, delete);
 
     return ImmutableMap.of("applied", true, "key", keyArg);
+  }
+
+  @VisibleForTesting
+  void performDelete(DataFetchingEnvironment environment, Delete delete)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      transaction.delete(delete);
+    } else {
+      storage.delete(delete);
+    }
   }
 }

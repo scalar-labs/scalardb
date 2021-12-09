@@ -2,17 +2,9 @@ package com.scalar.db.graphql.datafetcher;
 
 import static java.util.stream.Collectors.toList;
 
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.api.Get;
-import com.scalar.db.api.Put;
-import com.scalar.db.api.Result;
-import com.scalar.db.api.Scan;
-import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.BigIntValue;
@@ -28,7 +20,6 @@ import graphql.schema.DataFetchingEnvironment;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 abstract class DataFetcherBase<T> implements DataFetcher<T> {
@@ -77,47 +68,7 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
     }
   }
 
-  protected Optional<Result> performGet(DataFetchingEnvironment environment, Get get)
-      throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
-    if (transaction != null) {
-      return transaction.get(get);
-    } else {
-      return storage.get(get);
-    }
-  }
-
-  protected List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
-      throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
-    if (transaction != null) {
-      return transaction.scan(scan);
-    } else {
-      return ImmutableList.copyOf(storage.scan(scan));
-    }
-  }
-
-  protected void performPut(DataFetchingEnvironment environment, Put put)
-      throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
-    if (transaction != null) {
-      transaction.put(put);
-    } else {
-      storage.put(put);
-    }
-  }
-
-  protected void performDelete(DataFetchingEnvironment environment, Delete delete)
-      throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
-    if (transaction != null) {
-      transaction.delete(delete);
-    } else {
-      storage.delete(delete);
-    }
-  }
-
-  private DistributedTransaction getTransactionIfEnabled(DataFetchingEnvironment environment) {
+  protected DistributedTransaction getTransactionIfEnabled(DataFetchingEnvironment environment) {
     DistributedTransaction transaction = null;
     if (tableModel.getTransactionEnabled()) {
       transaction = environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);

@@ -2,14 +2,18 @@ package com.scalar.db.graphql.datafetcher;
 
 import static java.util.stream.Collectors.toList;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
@@ -106,5 +110,16 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
     }
 
     return ImmutableMap.of(tableModel.getObjectType().getName(), list.build());
+  }
+
+  @VisibleForTesting
+  List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      return transaction.scan(scan);
+    } else {
+      return ImmutableList.copyOf(storage.scan(scan));
+    }
   }
 }

@@ -1,8 +1,10 @@
 package com.scalar.db.graphql.datafetcher;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -107,5 +109,16 @@ public class MutationPutDataFetcher extends DataFetcherBase<List<Map<String, Obj
     performPut(environment, put);
 
     return ImmutableMap.of("applied", true, "key", keyArg);
+  }
+
+  @VisibleForTesting
+  void performPut(DataFetchingEnvironment environment, Put put)
+      throws TransactionException, ExecutionException {
+    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    if (transaction != null) {
+      transaction.put(put);
+    } else {
+      storage.put(put);
+    }
   }
 }
