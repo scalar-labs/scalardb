@@ -8,8 +8,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
-import com.scalar.db.util.ProtoUtil;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -65,7 +65,7 @@ public class GrpcScanOnBidirectionalStream
     requestStream.onNext(request);
 
     ResponseOrError responseOrError =
-        Utility.pollUninterruptibly(
+        ScalarDbUtils.pollUninterruptibly(
             queue, config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS);
     if (responseOrError == null) {
       requestStream.cancel("deadline exceeded", null);
@@ -88,14 +88,14 @@ public class GrpcScanOnBidirectionalStream
       closeScanner();
     }
     return response.getResultList().stream()
-        .map(r -> ProtoUtil.toResult(r, metadata))
+        .map(r -> ProtoUtils.toResult(r, metadata))
         .collect(Collectors.toList());
   }
 
   public List<Result> openScanner(Scan scan) throws ExecutionException {
     throwIfScannerHasNoMoreResults();
     ResponseOrError responseOrError =
-        sendRequest(ScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)).build());
+        sendRequest(ScanRequest.newBuilder().setScan(ProtoUtils.toScan(scan)).build());
     throwIfErrorForOpenScanner(responseOrError);
     return getResults(responseOrError.getResponse());
   }

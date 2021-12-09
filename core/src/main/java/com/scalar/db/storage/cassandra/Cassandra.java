@@ -19,7 +19,7 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -96,10 +96,10 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
     TableMetadata metadata = metadataManager.getTableMetadata(get);
-    Utility.addProjectionsForKeys(get, metadata);
+    ScalarDbUtils.addProjectionsForKeys(get, metadata);
 
     ResultSet resultSet = handlers.select().handle(get);
     Row row = resultSet.one();
@@ -117,10 +117,10 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
-    Utility.addProjectionsForKeys(scan, metadata);
+    ScalarDbUtils.addProjectionsForKeys(scan, metadata);
 
     ResultSet results = handlers.select().handle(scan);
 
@@ -130,7 +130,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
     handlers.get(put).handle(put);
   }
@@ -144,7 +144,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
     handlers.delete().handle(delete);
   }
@@ -169,7 +169,7 @@ public class Cassandra implements DistributedStorage {
       return;
     }
 
-    Utility.setTargetToIfNot(mutations, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
     for (Mutation mutation : mutations) {
       operationChecker.check(mutation);

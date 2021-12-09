@@ -27,8 +27,8 @@ import com.scalar.db.rpc.TransactionResponse;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcConfig;
-import com.scalar.db.util.ProtoUtil;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -86,7 +86,7 @@ public class GrpcTransactionOnBidirectionalStream
     requestStream.onNext(request);
 
     ResponseOrError responseOrError =
-        Utility.pollUninterruptibly(
+        ScalarDbUtils.pollUninterruptibly(
             queue, config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS);
     if (responseOrError == null) {
       requestStream.cancel("deadline exceeded", null);
@@ -144,14 +144,14 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(
             TransactionRequest.newBuilder()
-                .setGetRequest(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)))
+                .setGetRequest(GetRequest.newBuilder().setGet(ProtoUtils.toGet(get)))
                 .build());
     throwIfErrorForCrud(responseOrError);
 
     GetResponse getResponse = responseOrError.getResponse().getGetResponse();
     if (getResponse.hasResult()) {
       TableMetadata tableMetadata = getTableMetadata(get);
-      return Optional.of(ProtoUtil.toResult(getResponse.getResult(), tableMetadata));
+      return Optional.of(ProtoUtils.toResult(getResponse.getResult(), tableMetadata));
     }
 
     return Optional.empty();
@@ -163,13 +163,13 @@ public class GrpcTransactionOnBidirectionalStream
     ResponseOrError responseOrError =
         sendRequest(
             TransactionRequest.newBuilder()
-                .setScanRequest(ScanRequest.newBuilder().setScan(ProtoUtil.toScan(scan)))
+                .setScanRequest(ScanRequest.newBuilder().setScan(ProtoUtils.toScan(scan)))
                 .build());
     throwIfErrorForCrud(responseOrError);
 
     TableMetadata tableMetadata = getTableMetadata(scan);
     return responseOrError.getResponse().getScanResponse().getResultList().stream()
-        .map(r -> ProtoUtil.toResult(r, tableMetadata))
+        .map(r -> ProtoUtils.toResult(r, tableMetadata))
         .collect(Collectors.toList());
   }
 
@@ -188,7 +188,7 @@ public class GrpcTransactionOnBidirectionalStream
         sendRequest(
             TransactionRequest.newBuilder()
                 .setMutateRequest(
-                    MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)))
+                    MutateRequest.newBuilder().addMutation(ProtoUtils.toMutation(mutation)))
                 .build());
     throwIfErrorForCrud(responseOrError);
   }
@@ -197,7 +197,7 @@ public class GrpcTransactionOnBidirectionalStream
     throwIfTransactionFinished();
 
     MutateRequest.Builder builder = MutateRequest.newBuilder();
-    mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
+    mutations.forEach(m -> builder.addMutation(ProtoUtils.toMutation(m)));
     ResponseOrError responseOrError =
         sendRequest(TransactionRequest.newBuilder().setMutateRequest(builder).build());
     throwIfErrorForCrud(responseOrError);
