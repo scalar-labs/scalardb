@@ -75,7 +75,6 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actual).isPresent();
-    assertThat(actual.get()).isEqualTo(result);
     verify(recovery, never()).recover(get, result);
     verify(crud).get(get);
   }
@@ -112,7 +111,7 @@ public class TwoPhaseConsensusCommitTest {
     List<Result> actual = transaction.scan(scan);
 
     // Assert
-    assertThat(actual).isEqualTo(results);
+    assertThat(actual.size()).isEqualTo(1);
     verify(crud).scan(scan);
   }
 
