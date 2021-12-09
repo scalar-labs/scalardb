@@ -37,7 +37,7 @@ class ConditionChecker implements MutationConditionVisitor {
     // Check the values in the expressions
     for (ConditionalExpression expression : condition.getExpressions()) {
       isValid =
-          new ColumnChecker(tableMetadata, false)
+          new ColumnChecker(tableMetadata, false, false, true)
               .check(expression.getName(), expression.getValue());
       if (!isValid) {
         break;
@@ -65,7 +65,7 @@ class ConditionChecker implements MutationConditionVisitor {
     // Check the values in the expressions
     for (ConditionalExpression expression : condition.getExpressions()) {
       isValid =
-          new ColumnChecker(tableMetadata, false)
+          new ColumnChecker(tableMetadata, false, false, true)
               .check(expression.getName(), expression.getValue());
       if (!isValid) {
         break;
