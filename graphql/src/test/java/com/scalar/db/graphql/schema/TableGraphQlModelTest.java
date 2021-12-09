@@ -38,6 +38,13 @@ public class TableGraphQlModelTest {
     assertThat(field.getType()).isEqualTo(type);
   }
 
+  private void assertNonNullFieldDefinition(
+      GraphQLFieldDefinition field, String name, GraphQLType type) {
+    assertThat(field.getName()).isEqualTo(name);
+    assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) field.getType()).getWrappedType()).isEqualTo(type);
+  }
+
   private void assertNonNullInputObjectField(
       GraphQLInputObjectField field, String name, GraphQLType type) {
     assertThat(field.getName()).isEqualTo(name);
@@ -436,35 +443,6 @@ public class TableGraphQlModelTest {
   }
 
   @Test
-  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationResultObjectType() {
-    // Act
-    TableGraphQlModel model =
-        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
-
-    // Assert
-    // type table_1_MutationResult {
-    //   applied: Boolean!
-    //   key: table_1_KeyOutput!
-    // }
-    GraphQLObjectType objectType = model.getMutationResultObjectType();
-    assertThat(objectType.getName()).isEqualTo(TABLE_NAME + "_MutationResult");
-    List<GraphQLFieldDefinition> fields = objectType.getFieldDefinitions();
-    assertThat(fields.size()).isEqualTo(2);
-
-    GraphQLFieldDefinition field = fields.get(0);
-    assertThat(field.getName()).isEqualTo("applied");
-    assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) field.getType()).getWrappedType())
-        .isEqualTo(Scalars.GraphQLBoolean);
-
-    field = fields.get(1);
-    assertThat(field.getName()).isEqualTo("key");
-    assertThat(field.getType()).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) field.getType()).getWrappedType())
-        .isEqualTo(model.getPrimaryKeyOutputObjectType());
-  }
-
-  @Test
   public void constructor_NonNullArgumentsGiven_ShouldCreatePutValuesObjectType() {
     // Act
     TableGraphQlModel model =
@@ -518,12 +496,10 @@ public class TableGraphQlModelTest {
 
     // Assert
     // type Mutation {
-    //   table_1_put(put: [table1_PutInput!]!): [table_1_MutationResult!]!
+    //   table_1_put(put: [table1_PutInput!]!): Boolean!
     // }
     GraphQLFieldDefinition field = model.getMutationPutField();
-    assertThat(field.getName()).isEqualTo(TABLE_NAME + "_put");
-    assertNonNullListOfNonNullObject(model.getMutationResultObjectType(), field.getType());
-
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_put", Scalars.GraphQLBoolean);
     assertThat(field.getArguments().size()).isEqualTo(1);
     GraphQLArgument argument = field.getArguments().get(0);
     assertNonNullListOfNonNullObjectArgument(argument, "put", model.getPutInputObjectType());
@@ -562,11 +538,10 @@ public class TableGraphQlModelTest {
 
     // Assert
     // type Mutation {
-    //   table_1_delete(delete: [table_1_DeleteInput!]!): [table_1_MutationResult!]!
+    //   table_1_delete(delete: [table_1_DeleteInput!]!): Boolean!
     // }
     GraphQLFieldDefinition field = model.getMutationDeleteField();
-    assertThat(field.getName()).isEqualTo(TABLE_NAME + "_delete");
-    assertNonNullListOfNonNullObject(model.getMutationResultObjectType(), field.getType());
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_delete", Scalars.GraphQLBoolean);
     assertThat(field.getArguments().size()).isEqualTo(1);
     assertNonNullListOfNonNullObjectArgument(
         field.getArguments().get(0), "delete", model.getDeleteInputObjectType());
