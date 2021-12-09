@@ -172,13 +172,13 @@ abstract class DataFetcherBase<T> implements DataFetcher<T> {
                 (Long) map.get("bigIntValue"),
                 (Float) map.get("floatValue"),
                 (Double) map.get("doubleValue"),
-                (String) map.get("stringValue"),
+                (String) map.get("textValue"),
                 (Boolean) map.get("booleanValue"))
             .filter(Objects::nonNull)
             .collect(toList());
     if (values.size() != 1) {
       throw new IllegalArgumentException(
-          "One and only one of intValue, bigIntValue, floatValue, doubleValue, stringValue, and booleanValue must be specified.");
+          "One and only one of intValue, bigIntValue, floatValue, doubleValue, textValue, and booleanValue must be specified.");
     }
     return values.get(0);
   }
