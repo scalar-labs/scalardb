@@ -36,7 +36,7 @@ public final class CommonSchema {
             .field(newInputObjectField().name("bigIntValue").type(BIG_INT_SCALAR))
             .field(newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR))
             .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
-            .field(newInputObjectField().name("stringValue").type(Scalars.GraphQLString))
+            .field(newInputObjectField().name("textValue").type(Scalars.GraphQLString))
             .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
             .field(
                 newInputObjectField()
