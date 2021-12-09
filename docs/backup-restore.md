@@ -17,6 +17,19 @@ Or when you use Amazon RDS (Relational Database Service) or Azure Database for M
 
 ### For Non-transactional Databases
 
+#### Basic strategy to create a transactionally-consistent backup
+
+One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions.
+If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
+If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
+
+To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which is implemented `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application.
+You can use the [Client-side tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool) to pause the application without losing ongoing transactions.
+
+Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented application nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
+Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
+Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midpoint time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
+
 #### Database-specific ways to create a transactionally-consistent backup   
 
 **Cassandra**
@@ -26,7 +39,7 @@ Cassandra has a built-in replication mechanism, so you do not always have to cre
 For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section, or 
+If you want to create a transactionally-consistent cluster-wide backup, pause the application and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or 
 stop the Cassandra cluster and take the copies of all the nodes of the cluster, and start the cluster. 
 
 To avoid mistakes when doing backup operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
@@ -35,26 +48,14 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 **Cosmos DB**
 
-You must create a Cosmos DB account with a Continuous backup policy to create point-in-time restore (PITR).
-Please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
+You must create a Cosmos DB account with a Continuous backup policy to create point-in-time restore (PITR). Backups are created continuously after enabling this.
 
 **DynamoDB**
 
-You must create tables with point-in-time recovery (PITR) and auto-scaling in DynamoDB. Point-in-time recovery creates continuous backup and auto-scaling provides better performance. Scalar DB Schema Loader enables PITR and auto-scaling by default.
-Please follow [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup) section to create a backup.
-
-#### Basic strategy to create a transactionally-consistent backup
-
-One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions. 
-If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
-If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
-
-To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which is implemented `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application.
-You can use the [Client-side tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool) to pause the application without losing ongoing transactions.
-
-Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented application nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
-Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
-Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midtime of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
+You must create tables with point-in-time recovery (PITR) in DynamoDB. Point-in-time recovery creates a continuous backup for a table.
+For selecting a restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+You can enable auto-scaling if you want. Auto-scaling helps to maintain throughput capacity based on workload. It helps in improving efficiency and reducing costs.
+Scalar DB Schema Loader enables PITR and auto-scaling by default.
 
 ## Restore Backup
 
@@ -67,7 +68,7 @@ you can restore to any point within the backup retention period with the automat
 
 ### Cassandra
 
-To restore the backup, you should stop the Cassandra and clean the `data`, `commitlogs`, and `hints` directories then restores the backup copies of all the nodes of the cluster, and start the cluster.
+To restore the backup, you should stop the Cassandra and clean the `data`, `commitlogs`, and `hints` directories then restore the backup copies of all the nodes of the cluster, and start the cluster.
 
 To avoid mistakes when doing restore operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
 You can restore to any point using `CLUSTER-ID` and `SNAPSHOT-ID`.
@@ -76,26 +77,27 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 ### Cosmos DB
 
 To restore a backup, please follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
-It is highly recommended to use the midtime of the pause as a restore point as we explained earlier.
+It is recommended to use the mean or average of pause and unpause time as a restore point as we explained earlier.
 
 ### DynamoDB
 
 You can restore the table to a point in time using the DynamoDB console or the AWS Command Line Interface (AWS CLI). The point-in-time recovery process restores to a new table.
-By default, the table can only be restored one by one.
+The tables can only be restored one by one.
 
-You can restore tables one by one from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps and use the midtime of the pause as a restore point
- 
+You can restore tables from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps.
+
+* Select the mean or average of pause and unpause time as a restore point.
 * Restore with PITR of table A to another table B
 * Take a backup of the restored table B (assume the backup is named backup B)
 * Remove table A
 * Create a table named A with backup B
 
-Note that you need to follow the above steps because the application requires tables with the same name as before. In DynamoDB, table restoration is possible only with an alias, so you can restore the table with alias and delete the actual table and rename the restored table (alias) with an actual name.
+Note that you need to follow the above steps because it assumes the application requires tables with the same names as before. In DynamoDB, a table can only be restored with an alias, so you can restore the table with an alias and delete the original table and rename the alias to the original name.
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
 It is highly recommended to enable point-in-time recovery (PITR) for continuous backup creation and auto-scaling for better performance. Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns.
 DynamoDB will not enable PITR and auto-scaling by default after restoring.
 
-You can enable continuous backup and auto-scaling using the schema loader or Amazon DynamoDB console. Configuring the continuous backup and auto-scaling is easier if you use the schema loader.
+It is recommended to re-apply schemas with the schema loader because it configures continuous backup and auto-scaling.
 Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist.
