@@ -555,7 +555,7 @@ public class TableGraphQlModelTest {
 
     // Assert
     // type Mutation {
-    //   table_1_delete(put: table1_DeleteInput!): Boolean!
+    //   table_1_delete(delete: table1_DeleteInput!): Boolean!
     // }
     GraphQLFieldDefinition field = model.getMutationPutField();
     assertNonNullFieldDefinition(field, TABLE_NAME + "_put", Scalars.GraphQLBoolean);
