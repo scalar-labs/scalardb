@@ -489,17 +489,17 @@ public class TableGraphQlModelTest {
   }
 
   @Test
-  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationPutField() {
+  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationBulkPutField() {
     // Act
     TableGraphQlModel model =
         new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Mutation {
-    //   table_1_put(put: [table1_PutInput!]!): Boolean!
+    //   table_1_bulkPut(put: [table1_PutInput!]!): Boolean!
     // }
-    GraphQLFieldDefinition field = model.getMutationPutField();
-    assertNonNullFieldDefinition(field, TABLE_NAME + "_put", Scalars.GraphQLBoolean);
+    GraphQLFieldDefinition field = model.getMutationBulkPutField();
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_bulkPut", Scalars.GraphQLBoolean);
     assertThat(field.getArguments().size()).isEqualTo(1);
     GraphQLArgument argument = field.getArguments().get(0);
     assertNonNullListOfNonNullObjectArgument(argument, "put", model.getPutInputObjectType());
@@ -531,17 +531,17 @@ public class TableGraphQlModelTest {
   }
 
   @Test
-  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationDeleteField() {
+  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationBulkDeleteField() {
     // Act
     TableGraphQlModel model =
         new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
 
     // Assert
     // type Mutation {
-    //   table_1_delete(delete: [table_1_DeleteInput!]!): Boolean!
+    //   table_1_bulkDelete(delete: [table_1_DeleteInput!]!): Boolean!
     // }
-    GraphQLFieldDefinition field = model.getMutationDeleteField();
-    assertNonNullFieldDefinition(field, TABLE_NAME + "_delete", Scalars.GraphQLBoolean);
+    GraphQLFieldDefinition field = model.getMutationBulkDeleteField();
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_bulkDelete", Scalars.GraphQLBoolean);
     assertThat(field.getArguments().size()).isEqualTo(1);
     assertNonNullListOfNonNullObjectArgument(
         field.getArguments().get(0), "delete", model.getDeleteInputObjectType());

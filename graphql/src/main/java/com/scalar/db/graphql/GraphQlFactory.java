@@ -55,8 +55,8 @@ public class GraphQlFactory {
   private GraphQLObjectType createMutationObjectType() {
     GraphQLObjectType.Builder builder = GraphQLObjectType.newObject().name("Mutation");
     for (TableGraphQlModel tableModel : tableModels) {
-      builder.field(tableModel.getMutationPutField());
-      builder.field(tableModel.getMutationDeleteField());
+      builder.field(tableModel.getMutationBulkPutField());
+      builder.field(tableModel.getMutationBulkDeleteField());
     }
     builder.field(
         GraphQLFieldDefinition.newFieldDefinition().name("commit").type(Scalars.GraphQLBoolean));
