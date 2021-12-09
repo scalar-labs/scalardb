@@ -12,7 +12,7 @@ This document sets out some guidelines for backing up and restoring the database
 You can take a backup with your favorite way for JDBC databases.
 One requirement for backup in Scalar DB on JDBC databases is that backups for all the Scalar DB managed tables (including the coordinator table) need to be transactionally-consistent or automatically recoverable to a transactionally-consistent state.
 That means that you need to create a consistent snapshot by dumping all tables in a single transaction.
-For example, you can use `mysqldump` command with `--single-transaction` option in MySQL and `pg_dump` command in PostgreSQL to achieve that.
+For example, you can use the `mysqldump` command with `--single-transaction` option in MySQL and the `pg_dump` command in PostgreSQL to achieve that.
 Or when you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL, you can restore to any point within the backup retention period with the automated backup feature, which satisfies the requirement.
 
 ### For Non-transactional Databases
@@ -48,11 +48,12 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 **Cosmos DB**
 
-You must create a Cosmos DB account with a Continuous backup policy to create point-in-time restore (PITR). Backups are created continuously after enabling this.
+You must create a Cosmos DB account with a Continuous backup policy enabled to create point-in-time restore (PITR). Backups are created continuously after enabling this.
+For creating a transactionally-consistent backup, you can refer to the [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
 
 **DynamoDB**
 
-You must create tables with point-in-time recovery (PITR) in DynamoDB. Point-in-time recovery creates a continuous backup for a table.
+You can enable the point-in-time recovery (PITR) feature for tables in DynamoDB. Point-in-time recovery(PITR) creates a continuous backup for a table.
 For selecting a restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
 You can enable auto-scaling if you want. Auto-scaling helps to maintain throughput capacity based on workload. It helps in improving efficiency and reducing costs.
 Scalar DB Schema Loader enables PITR and auto-scaling by default.
@@ -77,7 +78,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 ### Cosmos DB
 
 To restore a backup, please follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
-It is recommended to use the mean or average of pause and unpause time as a restore point as we explained earlier.
+It is recommended to use the midtime of paused duration as a restore point as we explained earlier.
 
 ### DynamoDB
 
@@ -86,7 +87,7 @@ The tables can only be restored one by one.
 
 You can restore tables from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps.
 
-* Select the mean or average of pause and unpause time as a restore point.
+* Select the midtime of paused duration as the restore point.
 * Restore with PITR of table A to another table B
 * Take a backup of the restored table B (assume the backup is named backup B)
 * Remove table A
@@ -96,8 +97,8 @@ Note that you need to follow the above steps because it assumes the application 
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
-It is highly recommended to enable point-in-time recovery (PITR) for continuous backup creation and auto-scaling for better performance. Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns.
-DynamoDB will not enable PITR and auto-scaling by default after restoring.
+DynamoDB will not enable features like PITR and auto-scaling by default after restoring. It is recommended to enable point-in-time recovery (PITR) for continuous backup creation.
+Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns. You can enable this feature if you need it.
 
-It is recommended to re-apply schemas with the schema loader because it configures continuous backup and auto-scaling.
-Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist.
+You can re-apply schemas with the schema loader because it enables features like  PITR and auto-scaling.
+_Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist._
