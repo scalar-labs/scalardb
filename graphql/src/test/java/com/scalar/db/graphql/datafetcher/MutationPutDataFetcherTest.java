@@ -197,7 +197,8 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutArgumentWithPutIfWithNullConditionsGiven_ShouldThrowIllegalStateException() {
+  public void
+      get_PutArgumentWithPutIfWithNullConditionsGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     prepareSimplePut();
     Map<String, Object> putArgumentWithPutIf = new HashMap<>(simplePutArgument);
@@ -208,7 +209,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> dataFetcher.get(environment))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

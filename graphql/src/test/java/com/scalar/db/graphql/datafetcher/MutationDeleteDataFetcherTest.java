@@ -179,7 +179,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
 
   @Test
   public void
-      get_DeleteArgumentWithDeleteIfWithNullConditionsGiven_ShouldThrowIllegalStateException() {
+      get_DeleteArgumentWithDeleteIfWithNullConditionsGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     prepareSimpleDelete();
     Map<String, Object> deleteArgumentWithDeleteIf = new HashMap<>(simpleDeleteArgument);
@@ -191,7 +191,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
 
     // Act Assert
     assertThatThrownBy(() -> dataFetcher.get(environment))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

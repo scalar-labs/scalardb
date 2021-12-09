@@ -60,7 +60,7 @@ public class MutationDeleteDataFetcher extends DataFetcherBase<List<Map<String, 
           List<Map<String, Object>> expressionsArg =
               (List<Map<String, Object>>) conditionArg.get("expressions");
           if (expressionsArg == null || expressionsArg.isEmpty()) {
-            throw new IllegalStateException("Empty expressions passed to PutIf condition");
+            throw new IllegalArgumentException("Empty expressions passed to PutIf condition");
           }
           delete.withCondition(new DeleteIf(getConditionalExpressions(expressionsArg)));
           break;

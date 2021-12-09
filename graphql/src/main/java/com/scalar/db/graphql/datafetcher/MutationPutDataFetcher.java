@@ -93,7 +93,7 @@ public class MutationPutDataFetcher extends DataFetcherBase<List<Map<String, Obj
           List<Map<String, Object>> expressionsArg =
               (List<Map<String, Object>>) conditionArg.get("expressions");
           if (expressionsArg == null || expressionsArg.isEmpty()) {
-            throw new IllegalStateException("Empty expressions passed to PutIf condition");
+            throw new IllegalArgumentException("Empty expressions passed to PutIf condition");
           }
           put.withCondition(new PutIf(getConditionalExpressions(expressionsArg)));
           break;
