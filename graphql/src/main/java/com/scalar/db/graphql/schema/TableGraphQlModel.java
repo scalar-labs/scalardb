@@ -298,16 +298,6 @@ public class TableGraphQlModel {
         .build();
   }
 
-  private GraphQLObjectType createPutPayloadObjectType() {
-    return newObject()
-        .name(objectType.getName() + "_PutPayload")
-        .field(
-            newFieldDefinition()
-                .name(objectType.getName())
-                .type(nonNull(list(nonNull(objectType)))))
-        .build();
-  }
-
   private GraphQLFieldDefinition createMutationPutField() {
     return newFieldDefinition()
         .name(objectType.getName() + "_put")
@@ -322,16 +312,6 @@ public class TableGraphQlModel {
         .field(newInputObjectField().name("key").type(nonNull(primaryKeyInputObjectType)))
         .field(newInputObjectField().name("condition").type(typeRef("DeleteCondition")))
         .field(newInputObjectField().name("consistency").type(typeRef("Consistency")))
-        .build();
-  }
-
-  private GraphQLObjectType createDeletePayloadObjectType() {
-    return newObject()
-        .name(objectType.getName() + "_DeletePayload")
-        .field(
-            newFieldDefinition()
-                .name(objectType.getName())
-                .type(nonNull(list(nonNull(objectType)))))
         .build();
   }
 
