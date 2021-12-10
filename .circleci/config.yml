@@ -135,12 +135,12 @@ jobs:
           AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 50
           AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: false
           AZURE_COSMOS_EMULATOR_ARGS: '/Consistency=Strong'
-    resource_class: medium
+    resource_class: large
 
     working_directory: ~/repo
 
     environment:
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=1"
       TERM: dumb
 
     steps:
