@@ -33,8 +33,8 @@ import com.scalar.db.storage.common.ResultImpl;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public final class ProtoUtil {
-  private ProtoUtil() {}
+public final class ProtoUtils {
+  private ProtoUtils() {}
 
   public static Get toGet(com.scalar.db.rpc.Get get) {
     Key partitionKey = toKey(get.getPartitionKey());
@@ -71,7 +71,7 @@ public final class ProtoUtil {
 
   private static Key toKey(com.scalar.db.rpc.Key key) {
     return new Key(
-        key.getValueList().stream().map(ProtoUtil::toValue).collect(Collectors.toList()));
+        key.getValueList().stream().map(ProtoUtils::toValue).collect(Collectors.toList()));
   }
 
   private static com.scalar.db.rpc.Key toKey(Key key) {
@@ -291,7 +291,7 @@ public final class ProtoUtil {
       case PUT_IF:
         return new PutIf(
             condition.getExpressionList().stream()
-                .map(ProtoUtil::toExpression)
+                .map(ProtoUtils::toExpression)
                 .collect(Collectors.toList()));
       case PUT_IF_EXISTS:
         return new PutIfExists();
@@ -300,7 +300,7 @@ public final class ProtoUtil {
       case DELETE_IF:
         return new DeleteIf(
             condition.getExpressionList().stream()
-                .map(ProtoUtil::toExpression)
+                .map(ProtoUtils::toExpression)
                 .collect(Collectors.toList()));
       case DELETE_IF_EXISTS:
         return new DeleteIfExists();
@@ -395,7 +395,7 @@ public final class ProtoUtil {
   public static Result toResult(com.scalar.db.rpc.Result result, TableMetadata metadata) {
     return new ResultImpl(
         result.getValueList().stream()
-            .map(ProtoUtil::toValue)
+            .map(ProtoUtils::toValue)
             .collect(Collectors.toMap(Value::getName, v -> v)),
         metadata);
   }

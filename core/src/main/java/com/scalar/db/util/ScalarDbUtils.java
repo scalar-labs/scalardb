@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public final class Utility {
+public final class ScalarDbUtils {
 
   public static void setTargetToIfNot(
       List<? extends Operation> operations,

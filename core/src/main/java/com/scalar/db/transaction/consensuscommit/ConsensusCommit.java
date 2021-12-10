@@ -16,7 +16,7 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -100,7 +100,7 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     get.clearProjections(); // project all
     try {
       return crud.get(get);
@@ -123,7 +123,7 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     scan.clearProjections(); // project all
     try {
       return crud.scan(scan);
@@ -135,7 +135,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void put(Put put) {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     crud.put(put);
   }
 
@@ -147,7 +147,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void delete(Delete delete) {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     crud.delete(delete);
   }
 

@@ -15,7 +15,7 @@ import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -52,10 +52,10 @@ public class JdbcService {
   public Optional<Result> get(
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
-    Utility.addProjectionsForKeys(get, tableMetadata);
+    ScalarDbUtils.addProjectionsForKeys(get, tableMetadata);
 
     SelectQuery selectQuery =
         queryBuilder
@@ -82,10 +82,10 @@ public class JdbcService {
   public Scanner getScanner(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
-    Utility.addProjectionsForKeys(scan, tableMetadata);
+    ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
     PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
@@ -101,10 +101,10 @@ public class JdbcService {
   public List<Result> scan(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
-    Utility.addProjectionsForKeys(scan, tableMetadata);
+    ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
     try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
@@ -137,7 +137,7 @@ public class JdbcService {
   public boolean put(
       Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
@@ -158,7 +158,7 @@ public class JdbcService {
   public boolean delete(
       Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
 
     if (!delete.getCondition().isPresent()) {
@@ -183,7 +183,7 @@ public class JdbcService {
       Optional<String> tableName)
       throws SQLException, ExecutionException {
     checkArgument(mutations.size() != 0);
-    Utility.setTargetToIfNot(mutations, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
 
     for (Mutation mutation : mutations) {

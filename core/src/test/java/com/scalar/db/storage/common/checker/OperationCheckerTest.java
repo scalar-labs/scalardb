@@ -26,7 +26,7 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -84,7 +84,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Returning null means table not found
     when(metadataManager.getTableMetadata(any())).thenReturn(null);
@@ -101,7 +101,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
@@ -114,7 +114,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, "v4");
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -129,7 +129,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -144,7 +144,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -159,7 +159,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -174,7 +174,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addText(CKEY1, "2").addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -189,7 +189,7 @@ public class OperationCheckerTest {
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -212,7 +212,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -234,7 +234,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -256,7 +256,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -278,7 +278,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -300,7 +300,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -321,7 +321,7 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -341,7 +341,7 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit);
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -364,7 +364,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -388,7 +388,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -412,7 +412,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -436,7 +436,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -460,7 +460,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -483,7 +483,7 @@ public class OperationCheckerTest {
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -506,7 +506,7 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -523,7 +523,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -539,7 +539,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = null;
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -556,7 +556,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -574,7 +574,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -592,7 +592,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -609,7 +609,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
     MutationCondition condition = new PutIfExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -626,7 +626,7 @@ public class OperationCheckerTest {
             new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -646,7 +646,7 @@ public class OperationCheckerTest {
         new PutIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -664,7 +664,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIfExists();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -681,7 +681,7 @@ public class OperationCheckerTest {
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIf();
     Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -698,7 +698,7 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -715,7 +715,7 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -732,7 +732,7 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -749,7 +749,7 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -777,7 +777,7 @@ public class OperationCheckerTest {
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -805,7 +805,7 @@ public class OperationCheckerTest {
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -833,7 +833,7 @@ public class OperationCheckerTest {
     Key clusteringKey = new Key(CKEY1, (byte[]) null);
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -861,7 +861,7 @@ public class OperationCheckerTest {
     Key clusteringKey = new Key(CKEY1, new byte[0]);
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
     Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -877,7 +877,7 @@ public class OperationCheckerTest {
         new DeleteIf(
             new ConditionalExpression(COL1, new IntValue(1), ConditionalExpression.Operator.EQ));
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
@@ -890,7 +890,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     MutationCondition condition = null;
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
@@ -904,7 +904,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -919,7 +919,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val1").build();
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -934,7 +934,7 @@ public class OperationCheckerTest {
     Key clusteringKey = null;
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -948,7 +948,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     MutationCondition condition = new PutIf();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -963,7 +963,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     MutationCondition condition = new PutIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -978,7 +978,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     MutationCondition condition = new PutIfNotExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -995,7 +995,7 @@ public class OperationCheckerTest {
         new DeleteIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -1008,9 +1008,9 @@ public class OperationCheckerTest {
     Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
     Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey, clusteringKey);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(Arrays.asList(put, delete)))
@@ -1034,9 +1034,9 @@ public class OperationCheckerTest {
     Key partitionKey2 = Key.newBuilder().addInt(PKEY1, 2).addText(PKEY2, "val2").build();
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val3").build();
     Put put = new Put(partitionKey1, clusteringKey).withValue(COL1, 1);
-    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey2, clusteringKey);
-    Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
@@ -1050,7 +1050,7 @@ public class OperationCheckerTest {
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
@@ -1064,7 +1064,7 @@ public class OperationCheckerTest {
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1079,7 +1079,7 @@ public class OperationCheckerTest {
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1094,7 +1094,7 @@ public class OperationCheckerTest {
     Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    Utility.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1116,7 +1116,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit);
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -1137,7 +1137,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit);
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1159,7 +1159,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit);
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1181,7 +1181,7 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit);
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1204,7 +1204,7 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-    Utility.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
