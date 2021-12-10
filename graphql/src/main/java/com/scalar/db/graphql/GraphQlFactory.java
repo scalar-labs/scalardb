@@ -8,7 +8,10 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.datafetcher.DataFetcherHelper;
+import com.scalar.db.graphql.datafetcher.MutationBulkDeleteDataFetcher;
+import com.scalar.db.graphql.datafetcher.MutationBulkPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
+import com.scalar.db.graphql.datafetcher.MutationMutateDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
@@ -88,20 +91,30 @@ public class GraphQlFactory {
     GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
     for (TableGraphQlModel tableModel : tableModels) {
       DataFetcherHelper helper = new DataFetcherHelper(tableModel);
-      builder.dataFetcher(
-          coordinates(queryObjectType, tableModel.getQueryGetField()),
-          new QueryGetDataFetcher(storage, helper));
+      builder
+          .dataFetcher(
+              coordinates(queryObjectType, tableModel.getQueryGetField()),
+              new QueryGetDataFetcher(storage, helper))
+          .dataFetcher(
+              coordinates(mutationObjectType, tableModel.getMutationPutField()),
+              new MutationPutDataFetcher(storage, helper))
+          .dataFetcher(
+              coordinates(mutationObjectType, tableModel.getMutationBulkPutField()),
+              new MutationBulkPutDataFetcher(storage, helper))
+          .dataFetcher(
+              coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
+              new MutationDeleteDataFetcher(storage, helper))
+          .dataFetcher(
+              coordinates(mutationObjectType, tableModel.getMutationBulkDeleteField()),
+              new MutationBulkDeleteDataFetcher(storage, helper))
+          .dataFetcher(
+              coordinates(mutationObjectType, tableModel.getMutationMutateField()),
+              new MutationMutateDataFetcher(storage, helper));
       if (tableModel.getQueryScanField() != null) {
         builder.dataFetcher(
             coordinates(queryObjectType, tableModel.getQueryScanField()),
             new QueryScanDataFetcher(storage, helper));
       }
-      builder.dataFetcher(
-          coordinates(mutationObjectType, tableModel.getMutationPutField()),
-          new MutationPutDataFetcher(storage, helper));
-      builder.dataFetcher(
-          coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
-          new MutationDeleteDataFetcher(storage, helper));
     }
     return builder.build();
   }
