@@ -24,3 +24,6 @@ scalar.db.isolation_level={{ default .Env.SCALAR_DB_ISOLATION_LEVEL "" }}
 # Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
 # If SNAPSHOT is specified, this is ignored.
 scalar.db.consensus_commit.serializable_strategy={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY "" }}
+
+# Port number for grpc server. Default port number is 60051.
+scalar.db.server.port={{ default .Env.SCALAR_DB_SERVER_PORT "" }}
