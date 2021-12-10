@@ -59,17 +59,17 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
       try {
         latest = getLatestResult(base, result).orElse(null);
       } catch (ExecutionException e) {
-        LOGGER.warn(e.getMessage());
+        LOGGER.warn("failed to get the latest result", e);
         return;
       }
       if (latest == null) {
-        LOGGER.info("the record was not prepared or has already rollback deleted");
+        LOGGER.debug("the record was not prepared or has already rollback deleted");
         return;
       }
 
       if (!latest.getId().equals(id)) {
-        LOGGER.info(
-            "the record is not prepared (yet) by this transaction " + "or has already rolled back");
+        LOGGER.debug(
+            "the record is not prepared (yet) by this transaction or has already rolled back");
         return;
       }
     } else {

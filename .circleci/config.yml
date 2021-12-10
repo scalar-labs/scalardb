@@ -77,7 +77,7 @@ jobs:
   integration-test-for-cassandra:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: cassandra:3.11
+      - image: cassandra:3.11.11
         environment:
           MAX_HEAP_SIZE: 2048m
           HEAP_NEWSIZE: 512m
@@ -199,7 +199,7 @@ jobs:
   integration-test-for-dynamo:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: amazon/dynamodb-local:1.15.0
+      - image: amazon/dynamodb-local:1.17.0
 
     working_directory: ~/repo
 
@@ -240,7 +240,7 @@ jobs:
   integration-test-for-jdbc-mysql:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -282,7 +282,7 @@ jobs:
   integration-test-for-jdbc-postgresql:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/postgres:9.6.9-alpine
+      - image: postgres:14.1-alpine
         environment:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -325,12 +325,12 @@ jobs:
   integration-test-for-jdbc-oracle:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: ghcr.io/scalar-labs/oracle/database:18.4.0-xe
+      - image: ghcr.io/scalar-labs/oracle/database:21.3.0-xe
         auth:
           username: scalar-git
           password: ${SCALAR_GIT_PASSWORD}
         environment:
-          ORACLE_PWD: Oracle18
+          ORACLE_PWD: Oracle21
 
     working_directory: ~/repo
 
@@ -360,7 +360,7 @@ jobs:
 
       - run:
           name: Run integration test
-          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
+          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle21
 
       - run:
           name: Save Gradle integration test reports
@@ -420,11 +420,11 @@ jobs:
   integration-test-for-multi-storage:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: cassandra:3.11
+      - image: cassandra:3.11.11
         environment:
           MAX_HEAP_SIZE: 1536m
           HEAP_NEWSIZE: 256m
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -472,7 +472,7 @@ jobs:
   integration-test-for-scalardb-server:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -514,7 +514,7 @@ jobs:
   integration-test-for-two-phase-consensus-commit:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 

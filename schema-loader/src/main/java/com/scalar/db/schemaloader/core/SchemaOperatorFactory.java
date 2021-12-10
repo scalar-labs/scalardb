@@ -10,10 +10,11 @@ public class SchemaOperatorFactory {
   /**
    * Creates a SchemaOperator instance.
    *
-   * @param properties the Scalar DB properties configuration
+   * @param properties the Scalar DB properties configuration.
    * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
    *     param is `true` then for example when creating a schema which contains a transactional
    *     table, the coordinator will be created as well.
+   * @return {@link SchemaOperator} instance.
    */
   public static SchemaOperator getSchemaOperator(
       Properties properties, boolean separateCoordinatorTable) {
@@ -24,10 +25,12 @@ public class SchemaOperatorFactory {
   /**
    * Creates a SchemaOperator instance.
    *
-   * @param configPath the file path to Scalar DB configuration file
+   * @param configPath the file path to Scalar DB configuration file.
    * @param separateCoordinatorTable separate creating/deleting coordinator table or not. If this
    *     param is `true` then for example when creating a schema which contains a transactional
    *     table, the coordinator will be created as well.
+   * @return {@link SchemaOperator} instance.
+   * @throws SchemaOperatorException thrown when getting {@link SchemaOperator} instance failed.
    */
   public static SchemaOperator getSchemaOperator(Path configPath, boolean separateCoordinatorTable)
       throws SchemaOperatorException {
