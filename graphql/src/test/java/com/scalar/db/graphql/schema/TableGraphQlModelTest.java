@@ -80,10 +80,15 @@ public class TableGraphQlModelTest {
       GraphQLType listElementType, GraphQLType outerType) {
     assertThat(outerType).isInstanceOf(GraphQLNonNull.class);
     GraphQLType wrappedType1 = ((GraphQLNonNull) outerType).getWrappedType();
-    assertThat(wrappedType1).isInstanceOf(GraphQLList.class);
-    GraphQLType wrappedType2 = ((GraphQLList) wrappedType1).getWrappedType();
-    assertThat(wrappedType2).isInstanceOf(GraphQLNonNull.class);
-    assertThat(((GraphQLNonNull) wrappedType2).getWrappedType()).isEqualTo(listElementType);
+    assertListOfNonNullObject(listElementType, wrappedType1);
+  }
+
+  private void assertListOfNonNullObject(
+      GraphQLType listElementType, GraphQLType outerType) {
+    assertThat(outerType).isInstanceOf(GraphQLList.class);
+    GraphQLType wrappedType = ((GraphQLList) outerType).getWrappedType();
+    assertThat(wrappedType).isInstanceOf(GraphQLNonNull.class);
+    assertThat(((GraphQLNonNull) wrappedType).getWrappedType()).isEqualTo(listElementType);
   }
 
   private TableMetadata createTableMetadata() {
@@ -579,6 +584,29 @@ public class TableGraphQlModelTest {
     assertThat(field.getArguments().size()).isEqualTo(1);
     assertNonNullListOfNonNullObjectArgument(
         field.getArguments().get(0), "delete", model.getDeleteInputObjectType());
+  }
+
+  @Test
+  public void constructor_NonNullArgumentsGiven_ShouldCreateMutationMutateField() {
+    // Act
+    TableGraphQlModel model =
+        new TableGraphQlModel(NAMESPACE_NAME, TABLE_NAME, createTableMetadata());
+
+    // Assert
+    // type Mutation {
+    //   table_1_mutate(put: [table1_PutInput!], delete: [table1_DeleteInput!]): Boolean!
+    // }
+    GraphQLFieldDefinition field = model.getMutationMutateField();
+    assertNonNullFieldDefinition(field, TABLE_NAME + "_mutate", Scalars.GraphQLBoolean);
+    assertThat(field.getArguments().size()).isEqualTo(2);
+
+    GraphQLArgument argument = field.getArguments().get(0);
+    assertThat(argument.getName()).isEqualTo("put");
+    assertListOfNonNullObject(model.getPutInputObjectType(), argument.getType());
+
+    argument = field.getArguments().get(1);
+    assertThat(argument.getName()).isEqualTo("delete");
+    assertListOfNonNullObject(model.getDeleteInputObjectType(), argument.getType());
   }
 
   @Test

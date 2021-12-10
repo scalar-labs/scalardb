@@ -58,6 +58,7 @@ public class TableGraphQlModel {
   private final GraphQLInputObjectType deleteInputObjectType;
   private final GraphQLFieldDefinition mutationDeleteField;
   private final GraphQLFieldDefinition mutationBulkDeleteField;
+  private final GraphQLFieldDefinition mutationMutateField;
 
   public TableGraphQlModel(String namespaceName, String tableName, TableMetadata tableMetadata) {
     this.namespaceName = Objects.requireNonNull(namespaceName);
@@ -109,6 +110,8 @@ public class TableGraphQlModel {
     this.deleteInputObjectType = createDeleteInputObjectType();
     this.mutationDeleteField = createMutationDeleteField();
     this.mutationBulkDeleteField = createMutationBulkDeleteField();
+
+    this.mutationMutateField = createMutationMutateField();
   }
 
   public LinkedHashSet<String> getPartitionKeyNames() {
@@ -343,6 +346,15 @@ public class TableGraphQlModel {
         .build();
   }
 
+  private GraphQLFieldDefinition createMutationMutateField() {
+    return newFieldDefinition()
+        .name(objectType.getName() + "_mutate")
+        .type(nonNull(Scalars.GraphQLBoolean))
+        .argument(newArgument().name("put").type(list(nonNull(putInputObjectType))))
+        .argument(newArgument().name("delete").type(list(nonNull(deleteInputObjectType))))
+        .build();
+  }
+
   public String getNamespaceName() {
     return namespaceName;
   }
@@ -441,5 +453,9 @@ public class TableGraphQlModel {
 
   public GraphQLInputObjectType getDeleteInputObjectType() {
     return deleteInputObjectType;
+  }
+
+  public GraphQLFieldDefinition getMutationMutateField() {
+    return mutationMutateField;
   }
 }

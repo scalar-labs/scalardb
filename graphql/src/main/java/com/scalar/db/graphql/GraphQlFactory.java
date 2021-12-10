@@ -60,7 +60,8 @@ public class GraphQlFactory {
           .field(tableModel.getMutationPutField())
           .field(tableModel.getMutationBulkPutField())
           .field(tableModel.getMutationDeleteField())
-          .field(tableModel.getMutationBulkDeleteField());
+          .field(tableModel.getMutationBulkDeleteField())
+          .field(tableModel.getMutationMutateField());
     }
     builder
         .field(
