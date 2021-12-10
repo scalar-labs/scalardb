@@ -46,7 +46,7 @@ subprojects {
         spotbugsVersion = '4.3.0'
         errorproneVersion = '2.8.0'
         errorproneJavacVersion = '9+181-r4173-1'
-        log4jVersion = '2.14.1'
+        log4jVersion = '2.15.0'
     }
 
     repositories {
