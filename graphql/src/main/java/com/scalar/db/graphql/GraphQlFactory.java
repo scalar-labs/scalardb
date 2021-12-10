@@ -1,10 +1,16 @@
 package com.scalar.db.graphql;
 
+import static graphql.schema.FieldCoordinates.coordinates;
+
 import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
+import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
+import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
+import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -69,7 +75,22 @@ public class GraphQlFactory {
   private GraphQLCodeRegistry createGraphQLCodeRegistry(
       GraphQLObjectType queryObjectType, GraphQLObjectType mutationObjectType) {
     GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
-    // TODO: Add data fetchers
+    for (TableGraphQlModel tableModel : tableModels) {
+      builder.dataFetcher(
+          coordinates(queryObjectType, tableModel.getQueryGetField()),
+          new QueryGetDataFetcher(storage, tableModel));
+      if (tableModel.getQueryScanField() != null) {
+        builder.dataFetcher(
+            coordinates(queryObjectType, tableModel.getQueryScanField()),
+            new QueryScanDataFetcher(storage, tableModel));
+      }
+      builder.dataFetcher(
+          coordinates(mutationObjectType, tableModel.getMutationPutField()),
+          new MutationPutDataFetcher(storage, tableModel));
+      builder.dataFetcher(
+          coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
+          new MutationDeleteDataFetcher(storage, tableModel));
+    }
     return builder.build();
   }
 
