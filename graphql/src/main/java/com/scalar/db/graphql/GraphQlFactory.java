@@ -8,7 +8,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.datafetcher.MutationAbortDataFetcher;
-import com.scalar.db.graphql.datafetcher.MutationCommitDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
@@ -94,7 +93,6 @@ public class GraphQlFactory {
           coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
           new MutationDeleteDataFetcher(storage, tableModel));
     }
-    builder.dataFetcher(coordinates(mutationObjectType, "commit"), new MutationCommitDataFetcher());
     builder.dataFetcher(coordinates(mutationObjectType, "abort"), new MutationAbortDataFetcher());
     return builder.build();
   }

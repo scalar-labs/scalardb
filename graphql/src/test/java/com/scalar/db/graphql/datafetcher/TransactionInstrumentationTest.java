@@ -15,15 +15,19 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.graphql.datafetcher.TransactionInstrumentation.TransactionCommitInstrumentationContext;
 import com.scalar.db.graphql.schema.Constants;
 import graphql.ExecutionResult;
 import graphql.GraphQLContext;
 import graphql.GraphQLError;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.ExecutionContext;
+import graphql.execution.instrumentation.InstrumentationContext;
+import graphql.execution.instrumentation.SimpleInstrumentationContext;
 import graphql.execution.instrumentation.parameters.InstrumentationExecuteOperationParameters;
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters;
 import graphql.language.Argument;
+import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.OperationDefinition;
 import graphql.language.StringValue;
@@ -45,10 +49,8 @@ public class TransactionInstrumentationTest {
   @Mock private OperationDefinition operationDefinition;
   @Mock private DistributedTransactionManager transactionManager;
   @Mock private DistributedTransaction transaction;
-
   @Mock private InstrumentationExecutionParameters instrumentationExecutionParameters;
   @Mock private ExecutionResult executionResult;
-
   private GraphQLContext graphQlContext;
   private TransactionInstrumentation instrumentation;
 
@@ -77,24 +79,49 @@ public class TransactionInstrumentationTest {
   }
 
   @Test
-  public void beginExecuteOperation_DirectiveWithoutTxIdGiven_ShouldStartTransaction()
+  public void beginExecuteOperation_DirectiveWithNoArgumentGiven_ShouldStartTransaction()
       throws Exception {
     // Arrange
-    prepareDirective(Directive.newDirective().name(Constants.TRANSACTION_DIRECTIVE_NAME).build());
+    prepareDirective(new Directive(Constants.TRANSACTION_DIRECTIVE_NAME));
 
     // Act
-    instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
 
     // Assert
     verify(transactionManager, times(1)).start();
     verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+  }
+
+  @Test
+  public void
+      beginExecuteOperation_DirectiveWithNoTxIdAndCommitTrueGiven_ShouldStartTransactionAndCommit()
+          throws Exception {
+    // Arrange
+    prepareDirective(
+        Directive.newDirective()
+            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
+            .argument(
+                new Argument(
+                    Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME, new BooleanValue(true)))
+            .build());
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, times(1)).start();
+    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isInstanceOf(TransactionCommitInstrumentationContext.class);
   }
 
   @Test
   public void beginExecuteOperation_TransactionFailsToStart_ShouldThrowAbortExecutionException()
       throws Exception {
     // Arrange
-    prepareDirective(Directive.newDirective().name(Constants.TRANSACTION_DIRECTIVE_NAME).build());
+    prepareDirective(new Directive(Constants.TRANSACTION_DIRECTIVE_NAME));
     when(transactionManager.start()).thenThrow(TransactionException.class);
 
     // Act Assert
@@ -106,22 +133,55 @@ public class TransactionInstrumentationTest {
   }
 
   @Test
-  public void beginExecuteOperation_DirectiveWithTxIdGiven_ShouldSetExistingTransactionToContext()
+  public void beginExecuteOperation_DirectiveWithTxIdGiven_ShouldLoadExistingTransaction()
       throws Exception {
     // Arrange
     prepareDirective(
         Directive.newDirective()
             .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
+            .argument(
+                new Argument(
+                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
+                    new StringValue(ANY_TX_ID)))
             .build());
     instrumentation.transactionMap.put(ANY_TX_ID, transaction);
 
     // Act
-    instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
 
     // Assert
     verify(transactionManager, never()).start();
     verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+  }
+
+  @Test
+  public void
+      beginExecuteOperation_DirectiveWithTxIdAndCommitTrueGiven_ShouldLoadExistingTransactionAndCommit()
+          throws Exception {
+    // Arrange
+    prepareDirective(
+        Directive.newDirective()
+            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
+            .argument(
+                new Argument(
+                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
+                    new StringValue(ANY_TX_ID)))
+            .argument(
+                new Argument(
+                    Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME, new BooleanValue(true)))
+            .build());
+    instrumentation.transactionMap.put(ANY_TX_ID, transaction);
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, never()).start();
+    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isInstanceOf(TransactionCommitInstrumentationContext.class);
   }
 
   @Test
@@ -131,7 +191,10 @@ public class TransactionInstrumentationTest {
     prepareDirective(
         Directive.newDirective()
             .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
+            .argument(
+                new Argument(
+                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
+                    new StringValue(ANY_TX_ID)))
             .build());
 
     // Act Assert

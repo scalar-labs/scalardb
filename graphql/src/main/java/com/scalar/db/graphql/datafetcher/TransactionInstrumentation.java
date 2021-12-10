@@ -4,7 +4,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
+import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.graphql.schema.Constants;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
@@ -17,6 +19,7 @@ import graphql.execution.instrumentation.SimpleInstrumentationContext;
 import graphql.execution.instrumentation.parameters.InstrumentationExecuteOperationParameters;
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters;
 import graphql.language.Argument;
+import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.StringValue;
 import java.util.Collections;
@@ -48,37 +51,51 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
         executionContext
             .getOperationDefinition()
             .getDirectives(Constants.TRANSACTION_DIRECTIVE_NAME);
-    if (transactionDirectives.size() > 0) {
-      Argument txIdArg =
-          transactionDirectives
-              .get(0)
-              .getArgument(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
 
-      if (txIdArg == null) {
-        try {
-          DistributedTransaction transaction = transactionManager.start();
-          transactionMap.put(transaction.getId(), transaction);
-          graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
-        } catch (TransactionException e) {
-          throw new AbortExecutionException("Failed to start transaction.", e);
+    if (transactionDirectives.isEmpty()) {
+      return SimpleInstrumentationContext.noOp();
+    }
+
+    Directive directive = transactionDirectives.get(0); // @transaction is not repeatable
+    Argument txIdArg = directive.getArgument(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
+    Argument commitArg =
+        directive.getArgument(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
+    boolean isCommitTrue =
+        commitArg != null
+            && commitArg.getValue() != null
+            && ((BooleanValue) commitArg.getValue()).isValue();
+    if (txIdArg == null) {
+      // start a new transaction
+      try {
+        DistributedTransaction transaction = transactionManager.start();
+        transactionMap.put(transaction.getId(), transaction);
+        graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+        if (isCommitTrue) {
+          return new TransactionCommitInstrumentationContext(transaction);
         }
-      } else {
-        String txId = ((StringValue) txIdArg.getValue()).getValue();
-        if (txId != null) {
-          DistributedTransaction transaction = transactionMap.get(txId);
-          if (transaction == null) {
-            throw new AbortExecutionException(
-                "The specified "
-                    + Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME
-                    + " "
-                    + txId
-                    + " does not exist.");
-          }
-          graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+      } catch (TransactionException e) {
+        throw new AbortExecutionException("Failed to start transaction.", e);
+      }
+    } else {
+      // continue an existing transaction
+      String txId = ((StringValue) txIdArg.getValue()).getValue();
+      if (txId != null) {
+        DistributedTransaction transaction = transactionMap.get(txId);
+        if (transaction == null) {
+          throw new AbortExecutionException(
+              "The specified "
+                  + Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME
+                  + " "
+                  + txId
+                  + " does not exist.");
+        }
+        graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+        if (isCommitTrue) {
+          return new TransactionCommitInstrumentationContext(transaction);
         }
       }
     }
-    return new SimpleInstrumentationContext<>();
+    return SimpleInstrumentationContext.noOp();
   }
 
   @Override
@@ -98,5 +115,31 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
 
     return CompletableFuture.completedFuture(
         new ExecutionResultImpl(executionResult.getData(), executionResult.getErrors(), withTxExt));
+  }
+
+  @VisibleForTesting
+  static class TransactionCommitInstrumentationContext
+      implements InstrumentationContext<ExecutionResult> {
+
+    private final DistributedTransaction transaction;
+
+    public TransactionCommitInstrumentationContext(DistributedTransaction transaction) {
+      this.transaction = transaction;
+    }
+
+    @Override
+    public void onDispatched(CompletableFuture<ExecutionResult> result) {}
+
+    @Override
+    public void onCompleted(ExecutionResult result, Throwable t) {
+      if (t != null) {
+        return;
+      }
+      try {
+        transaction.commit();
+      } catch (CommitException | UnknownTransactionStatusException e) {
+        throw new AbortExecutionException(e);
+      }
+    }
   }
 }
