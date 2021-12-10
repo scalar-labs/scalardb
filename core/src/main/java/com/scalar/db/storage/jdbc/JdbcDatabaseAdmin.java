@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;

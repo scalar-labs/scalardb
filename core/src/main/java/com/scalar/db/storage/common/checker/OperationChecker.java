@@ -12,7 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -35,7 +35,7 @@ public class OperationChecker {
 
     checkProjections(get, metadata);
 
-    if (Utility.isSecondaryIndexSpecified(get, metadata)) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
       if (!new ColumnChecker(metadata, true, false, false)
           .check(get.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
@@ -57,7 +57,7 @@ public class OperationChecker {
 
     checkProjections(scan, metadata);
 
-    if (Utility.isSecondaryIndexSpecified(scan, metadata)) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
       if (!new ColumnChecker(metadata, true, false, false)
           .check(scan.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(

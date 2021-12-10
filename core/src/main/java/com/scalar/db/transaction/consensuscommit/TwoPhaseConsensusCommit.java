@@ -22,7 +22,7 @@ import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -359,6 +359,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void setTargetToIfNot(Operation operation) {
-    Utility.setTargetToIfNot(operation, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
   }
 }

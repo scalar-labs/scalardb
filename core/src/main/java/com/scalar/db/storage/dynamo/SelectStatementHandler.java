@@ -15,7 +15,7 @@ import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.dynamo.bytes.BytesUtils;
 import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,7 +61,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
     try {
-      if (Utility.isSecondaryIndexSpecified(operation, tableMetadata)) {
+      if (ScalarDbUtils.isSecondaryIndexSpecified(operation, tableMetadata)) {
         return executeQueryWithIndex((Selection) operation, tableMetadata);
       }
 

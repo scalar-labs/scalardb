@@ -20,9 +20,9 @@ import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableSupplier;
-import com.scalar.db.util.Utility;
 import com.scalar.db.util.retry.Retry;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
 import io.grpc.ManagedChannel;
@@ -122,16 +122,16 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public Optional<Result> get(Get get) throws ExecutionException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     return execute(
         () -> {
           GetResponse response =
               blockingStub
                   .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
-                  .get(GetRequest.newBuilder().setGet(ProtoUtil.toGet(get)).build());
+                  .get(GetRequest.newBuilder().setGet(ProtoUtils.toGet(get)).build());
           if (response.hasResult()) {
             TableMetadata tableMetadata = metadataManager.getTableMetadata(get);
-            return Optional.of(ProtoUtil.toResult(response.getResult(), tableMetadata));
+            return Optional.of(ProtoUtils.toResult(response.getResult(), tableMetadata));
           }
           return Optional.empty();
         });
@@ -139,7 +139,7 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     return executeWithRetries(
         () -> {
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
@@ -169,24 +169,24 @@ public class GrpcStorage implements DistributedStorage {
   }
 
   private void mutate(Mutation mutation) throws ExecutionException {
-    Utility.setTargetToIfNot(mutation, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutation, namespace, tableName);
     execute(
         () -> {
           blockingStub
               .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
               .mutate(
-                  MutateRequest.newBuilder().addMutation(ProtoUtil.toMutation(mutation)).build());
+                  MutateRequest.newBuilder().addMutation(ProtoUtils.toMutation(mutation)).build());
           return null;
         });
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    Utility.setTargetToIfNot(mutations, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     execute(
         () -> {
           MutateRequest.Builder builder = MutateRequest.newBuilder();
-          mutations.forEach(m -> builder.addMutation(ProtoUtil.toMutation(m)));
+          mutations.forEach(m -> builder.addMutation(ProtoUtils.toMutation(m)));
           blockingStub
               .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
               .mutate(builder.build());

@@ -19,7 +19,7 @@ import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ActiveExpiringMap;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Optional;
@@ -192,7 +192,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
               blockingStub
                   .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                   .getState(GetTransactionStateRequest.newBuilder().setTransactionId(txId).build());
-          return ProtoUtil.toTransactionState(response.getState());
+          return ProtoUtils.toTransactionState(response.getState());
         });
   }
 
@@ -204,7 +204,7 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
               blockingStub
                   .withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
                   .abort(AbortRequest.newBuilder().setTransactionId(txId).build());
-          return ProtoUtil.toTransactionState(response.getState());
+          return ProtoUtils.toTransactionState(response.getState());
         });
   }
 
