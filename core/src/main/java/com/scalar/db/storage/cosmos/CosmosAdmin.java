@@ -7,9 +7,13 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.NotFoundException;
+import com.azure.cosmos.implementation.RequestOptions;
+import com.azure.cosmos.implementation.batch.ItemBulkOperation;
 import com.azure.cosmos.models.CompositePath;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosItemOperation;
+import com.azure.cosmos.models.CosmosItemOperationType;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
@@ -33,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,6 +64,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   private static final String STORED_PROCEDURE_FILE_NAME = "mutate.js";
   private static final String STORED_PROCEDURE_PATH =
       "cosmosdb_stored_procedure/" + STORED_PROCEDURE_FILE_NAME;
+  private static final int BULK_SIZE = 100;
 
   private final CosmosClient client;
   private final String metadataDatabase;
@@ -301,12 +307,30 @@ public class CosmosAdmin implements DistributedStorageAdmin {
               "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + table + " t",
               new CosmosQueryRequestOptions(),
               Record.class);
-      records.forEach(
-          record ->
-              container.deleteItem(
-                  record.getId(),
-                  new PartitionKey(record.getConcatenatedPartitionKey()),
-                  new CosmosItemRequestOptions()));
+
+      List<CosmosItemOperation> itemBulkOperationList = new ArrayList<>();
+      Iterator<Record> recordIterator = records.iterator();
+
+      long index = 0;
+      while (recordIterator.hasNext()) {
+        Record record = recordIterator.next();
+        index++;
+
+        itemBulkOperationList.add(
+            new ItemBulkOperation<>(
+                CosmosItemOperationType.DELETE,
+                record.getId(),
+                new PartitionKey(record.getConcatenatedPartitionKey()),
+                new RequestOptions(),
+                record,
+                client));
+
+        if (index % BULK_SIZE == 0
+            || (!recordIterator.hasNext() && itemBulkOperationList.size() > 0)) {
+          container.executeBulkOperations(itemBulkOperationList);
+          itemBulkOperationList.clear();
+        }
+      }
     } catch (RuntimeException e) {
       throw new ExecutionException("truncating the container failed", e);
     }
