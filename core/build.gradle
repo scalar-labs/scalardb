@@ -162,7 +162,6 @@ task integrationTestCosmos(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
-    maxParallelForks = 3
 }
 
 task integrationTestDynamo(type: Test) {

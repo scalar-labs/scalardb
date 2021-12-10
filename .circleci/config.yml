@@ -132,15 +132,15 @@ jobs:
       - image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator
         name: emulator
         environment:
-          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 100
+          AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 50
           AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: false
           AZURE_COSMOS_EMULATOR_ARGS: '/Consistency=Strong'
-    resource_class: large
+    resource_class: medium
 
     working_directory: ~/repo
 
     environment:
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
       TERM: dumb
 
     steps:
