@@ -110,7 +110,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimpleScan();
     QueryScanDataFetcher dataFetcher =
-        spy(new QueryScanDataFetcher(storage, storageTableGraphQlModel));
+        spy(new QueryScanDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -125,7 +125,9 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimpleScan();
     QueryScanDataFetcher dataFetcher =
-        spy(new QueryScanDataFetcher(storage, transactionalTableGraphQlModel));
+        spy(
+            new QueryScanDataFetcher(
+                storage, new DataFetcherHelper(transactionalTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -140,7 +142,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     when(environment.getArgument("scan")).thenReturn(scanArgument);
     QueryScanDataFetcher dataFetcher =
-        spy(new QueryScanDataFetcher(storage, storageTableGraphQlModel));
+        spy(new QueryScanDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);

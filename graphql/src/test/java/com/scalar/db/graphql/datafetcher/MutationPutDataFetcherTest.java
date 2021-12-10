@@ -2,7 +2,6 @@ package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -28,7 +27,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -62,14 +60,14 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   }
 
   private void prepareSimplePut() {
-    // table1_put(put: [{
+    // table1_put(put: {
     //   key: { c1: 1, c2: "A" },
     //   values: { c3: 2.0 }
-    // }])
+    // })
     simplePutArgument =
         ImmutableMap.of(
             "key", ImmutableMap.of("c1", 1, "c2", "A"), "values", ImmutableMap.of("c3", 2.0F));
-    when(environment.getArgument("put")).thenReturn(ImmutableList.of(simplePutArgument));
+    when(environment.getArgument("put")).thenReturn(simplePutArgument);
 
     simpleExpectedPut =
         new Put(new Key("c1", 1), new Key("c2", "A"))
@@ -83,7 +81,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimplePut();
     MutationPutDataFetcher dataFetcher =
-        spy(new MutationPutDataFetcher(storage, storageTableGraphQlModel));
+        spy(new MutationPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -98,7 +96,9 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimplePut();
     MutationPutDataFetcher dataFetcher =
-        spy(new MutationPutDataFetcher(storage, transactionalTableGraphQlModel));
+        spy(
+            new MutationPutDataFetcher(
+                storage, new DataFetcherHelper(transactionalTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -111,9 +111,9 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   private void testPutCommandIssued(Map<String, Object> putArgument, Put expectedPut)
       throws Exception {
     // Arrange
-    when(environment.getArgument("put")).thenReturn(ImmutableList.of(putArgument));
+    when(environment.getArgument("put")).thenReturn(putArgument);
     MutationPutDataFetcher dataFetcher =
-        spy(new MutationPutDataFetcher(storage, storageTableGraphQlModel));
+        spy(new MutationPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -203,9 +203,9 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
     prepareSimplePut();
     Map<String, Object> putArgumentWithPutIf = new HashMap<>(simplePutArgument);
     putArgumentWithPutIf.put("condition", ImmutableMap.of("type", "PutIf"));
-    when(environment.getArgument("put")).thenReturn(ImmutableList.of(putArgumentWithPutIf));
+    when(environment.getArgument("put")).thenReturn(putArgumentWithPutIf);
     MutationPutDataFetcher dataFetcher =
-        spy(new MutationPutDataFetcher(storage, storageTableGraphQlModel));
+        spy(new MutationPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act Assert
     assertThatThrownBy(() -> dataFetcher.get(environment))
@@ -213,63 +213,16 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_SinglePutArgumentGiven_ShouldReturnResultAsList() throws Exception {
+  public void get_PutArgumentGiven_ShouldReturnTrue() throws Exception {
     // Arrange
     prepareSimplePut();
     MutationPutDataFetcher dataFetcher =
-        new MutationPutDataFetcher(storage, storageTableGraphQlModel);
+        new MutationPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
 
     // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
+    Boolean result = dataFetcher.get(environment);
 
     // Assert
-    assertThat(result).hasSize(1);
-    Map<String, Object> object = result.get(0);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 1), entry("c2", "A"));
-  }
-
-  @Test
-  public void get_MultiplePutArgumentsGiven_ShouldReturnResultAsList() throws Exception {
-    // Arrange
-    prepareSimplePut();
-    MutationPutDataFetcher dataFetcher =
-        new MutationPutDataFetcher(storage, storageTableGraphQlModel);
-
-    // table1_put(put: [{
-    //   key: { c1: 1, c2: "A" },
-    //   values: { c3: 2.0 }
-    // },
-    // {
-    //   key: { c1: 2, c2: "B" },
-    //   values: { c3: 3.0, c4: 10.0, c5: 2147483648 c6: true }
-    // }])
-    List<Map<String, Object>> multiplePutArguments =
-        ImmutableList.of(
-            simplePutArgument,
-            ImmutableMap.of(
-                "key", ImmutableMap.of("c1", 2, "c2", "B"),
-                "values",
-                    ImmutableMap.of(
-                        "c3", 3.0F, "c4", 10.0, "c5", Integer.MAX_VALUE + 1L, "c6", true)));
-    when(environment.getArgument("put")).thenReturn(multiplePutArguments);
-
-    // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
-
-    // Assert
-    assertThat(result).hasSize(2);
-    Map<String, Object> object = result.get(0);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 1), entry("c2", "A"));
-    object = result.get(1);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 2), entry("c2", "B"));
+    assertThat(result).isTrue();
   }
 }

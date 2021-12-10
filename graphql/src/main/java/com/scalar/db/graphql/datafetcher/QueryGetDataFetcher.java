@@ -9,15 +9,18 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.graphql.schema.TableGraphQlModel;
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 import java.util.Optional;
 
-public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String, Object>>> {
+public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, Object>>> {
+  private final DistributedStorage storage;
+  private final DataFetcherHelper helper;
 
-  public QueryGetDataFetcher(DistributedStorage storage, TableGraphQlModel tableModel) {
-    super(storage, tableModel);
+  public QueryGetDataFetcher(DistributedStorage storage, DataFetcherHelper helper) {
+    this.storage = storage;
+    this.helper = helper;
   }
 
   @SuppressWarnings("unchecked")
@@ -27,9 +30,11 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
     Map<String, Object> getInput = environment.getArgument("get");
     Map<String, Object> key = (Map<String, Object>) getInput.get("key");
     Get get =
-        new Get(createPartitionKeyFromKeyArgument(key), createClusteringKeyFromKeyArgument(key))
-            .forNamespace(tableModel.getNamespaceName())
-            .forTable(tableModel.getTableName());
+        new Get(
+                helper.createPartitionKeyFromKeyArgument(key),
+                helper.createClusteringKeyFromKeyArgument(key))
+            .forNamespace(helper.getNamespaceName())
+            .forTable(helper.getTableName());
     String consistency = (String) getInput.get("consistency");
     if (consistency != null) {
       get.withConsistency(Consistency.valueOf(consistency));
@@ -39,18 +44,18 @@ public class QueryGetDataFetcher extends DataFetcherBase<Map<String, Map<String,
     performGet(environment, get)
         .ifPresent(
             result -> {
-              for (String fieldName : tableModel.getFieldNames()) {
+              for (String fieldName : helper.getFieldNames()) {
                 result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
               }
             });
 
-    return ImmutableMap.of(tableModel.getObjectType().getName(), builder.build());
+    return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
   }
 
   @VisibleForTesting
   Optional<Result> performGet(DataFetchingEnvironment environment, Get get)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
     if (transaction != null) {
       return transaction.get(get);
     } else {

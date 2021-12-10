@@ -2,7 +2,6 @@ package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -27,7 +26,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -58,12 +56,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   private void prepareSimpleDelete() {
-    // table1_delete(delete: [{
+    // table1_delete(delete: {
     //   key: { c1: 1, c2: "A" },
     //   consistency: EVENTUAL
-    // }])
+    // })
     simpleDeleteArgument = ImmutableMap.of("key", ImmutableMap.of("c1", 1, "c2", "A"));
-    when(environment.getArgument("delete")).thenReturn(ImmutableList.of(simpleDeleteArgument));
+    when(environment.getArgument("delete")).thenReturn(simpleDeleteArgument);
 
     simpleExpectedDelete =
         new Delete(new Key("c1", 1), new Key("c2", "A"))
@@ -76,10 +74,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimpleDelete();
     MutationDeleteDataFetcher dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, storageTableGraphQlModel));
+        spy(
+            new MutationDeleteDataFetcher(
+                storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, times(1)).delete(simpleExpectedDelete);
@@ -91,10 +91,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareSimpleDelete();
     MutationDeleteDataFetcher dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, transactionalTableGraphQlModel));
+        spy(
+            new MutationDeleteDataFetcher(
+                storage, new DataFetcherHelper(transactionalTableGraphQlModel)));
 
     // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -104,12 +106,14 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   private void testDeleteCommandIssued(Map<String, Object> deleteArgument, Delete expectedDelete)
       throws Exception {
     // Arrange
-    when(environment.getArgument("delete")).thenReturn(ImmutableList.of(deleteArgument));
+    when(environment.getArgument("delete")).thenReturn(deleteArgument);
     MutationDeleteDataFetcher dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, storageTableGraphQlModel));
+        spy(
+            new MutationDeleteDataFetcher(
+                storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     ArgumentCaptor<Delete> argument = ArgumentCaptor.forClass(Delete.class);
@@ -184,10 +188,11 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
     prepareSimpleDelete();
     Map<String, Object> deleteArgumentWithDeleteIf = new HashMap<>(simpleDeleteArgument);
     deleteArgumentWithDeleteIf.put("condition", ImmutableMap.of("type", "DeleteIf"));
-    when(environment.getArgument("delete"))
-        .thenReturn(ImmutableList.of(deleteArgumentWithDeleteIf));
+    when(environment.getArgument("delete")).thenReturn(deleteArgumentWithDeleteIf);
     MutationDeleteDataFetcher dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, storageTableGraphQlModel));
+        spy(
+            new MutationDeleteDataFetcher(
+                storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act Assert
     assertThatThrownBy(() -> dataFetcher.get(environment))
@@ -195,65 +200,16 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_SingleDeleteArgumentGiven_ShouldReturnResultAsList() throws Exception {
+  public void get_DeleteArgumentGiven_ShouldReturnTrue() throws Exception {
     // Arrange
     prepareSimpleDelete();
     MutationDeleteDataFetcher dataFetcher =
-        new MutationDeleteDataFetcher(storage, storageTableGraphQlModel);
+        new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
 
     // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
+    Boolean result = dataFetcher.get(environment);
 
     // Assert
-    assertThat(result).hasSize(1);
-    Map<String, Object> object = result.get(0);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 1), entry("c2", "A"));
-  }
-
-  @Test
-  public void get_MultipleDeleteArgumentsGiven_ShouldReturnResultAsList() throws Exception {
-    // Arrange
-    prepareSimpleDelete();
-    MutationDeleteDataFetcher dataFetcher =
-        new MutationDeleteDataFetcher(storage, storageTableGraphQlModel);
-
-    // table1_delete(delete: [{
-    //   key: { c1: 1, c2: "A" },
-    //   consistency: EVENTUAL
-    // },
-    // {
-    //   key: { c1: 2, c2: "B" },
-    //   consistency: EVENTUAL
-    // }])
-    List<Map<String, Object>> multipleDeleteArguments =
-        ImmutableList.of(
-            simpleDeleteArgument,
-            ImmutableMap.of(
-                "key",
-                ImmutableMap.of("c1", 2, "c2", "B"),
-                "values",
-                ImmutableMap.of("c3", 3.0),
-                "consistency",
-                "EVENTUAL"));
-    when(environment.getArgument("delete")).thenReturn(multipleDeleteArguments);
-
-    // Act
-    List<Map<String, Object>> result = dataFetcher.get(environment);
-
-    // Assert
-    assertThat(result).hasSize(2);
-    Map<String, Object> object = result.get(0);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 1), entry("c2", "A"));
-    object = result.get(1);
-    assertThat(object).containsOnlyKeys("applied", "key");
-    assertThat((Boolean) object.get("applied")).isTrue();
-    assertThat((Map<String, Object>) object.get("key"))
-        .containsOnly(entry("c1", 2), entry("c2", "B"));
+    assertThat(result).isTrue();
   }
 }

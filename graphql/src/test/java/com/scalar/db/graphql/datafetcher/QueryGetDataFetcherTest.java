@@ -70,7 +70,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_ForStorageTable_ShouldUseStorage() throws Exception {
     // Arrange
     QueryGetDataFetcher dataFetcher =
-        spy(new QueryGetDataFetcher(storage, storageTableGraphQlModel));
+        spy(new QueryGetDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -84,7 +84,9 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
     // Arrange
     QueryGetDataFetcher dataFetcher =
-        spy(new QueryGetDataFetcher(storage, transactionalTableGraphQlModel));
+        spy(
+            new QueryGetDataFetcher(
+                storage, new DataFetcherHelper(transactionalTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -98,7 +100,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_GetArgumentGiven_ShouldRunScalarDbGet() throws Exception {
     // Arrange
     QueryGetDataFetcher dataFetcher =
-        spy(new QueryGetDataFetcher(storage, storageTableGraphQlModel));
+        spy(new QueryGetDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
 
     // Act
     dataFetcher.get(environment);
@@ -112,7 +114,8 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_GetArgumentGiven_ShouldReturnResultAsMap() throws Exception {
     // Arrange
-    QueryGetDataFetcher dataFetcher = new QueryGetDataFetcher(storage, storageTableGraphQlModel);
+    QueryGetDataFetcher dataFetcher =
+        new QueryGetDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
     Result mockResult = mock(Result.class);
     when(mockResult.getValue("c1")).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue("c2")).thenReturn(Optional.of(new TextValue("A")));
@@ -124,6 +127,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     Map<String, Object> object = result.get(storageTableGraphQlModel.getObjectType().getName());
-    assertThat(object).containsOnly(entry("c1", 1), entry("c2", Optional.of("A")), entry("c3", 2.0));
+    assertThat(object)
+        .containsOnly(entry("c1", 1), entry("c2", Optional.of("A")), entry("c3", 2.0));
   }
 }

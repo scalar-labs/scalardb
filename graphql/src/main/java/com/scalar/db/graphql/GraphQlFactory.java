@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.graphql.datafetcher.DataFetcherHelper;
 import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
@@ -86,20 +87,21 @@ public class GraphQlFactory {
       GraphQLObjectType queryObjectType, GraphQLObjectType mutationObjectType) {
     GraphQLCodeRegistry.Builder builder = GraphQLCodeRegistry.newCodeRegistry();
     for (TableGraphQlModel tableModel : tableModels) {
+      DataFetcherHelper helper = new DataFetcherHelper(tableModel);
       builder.dataFetcher(
           coordinates(queryObjectType, tableModel.getQueryGetField()),
-          new QueryGetDataFetcher(storage, tableModel));
+          new QueryGetDataFetcher(storage, helper));
       if (tableModel.getQueryScanField() != null) {
         builder.dataFetcher(
             coordinates(queryObjectType, tableModel.getQueryScanField()),
-            new QueryScanDataFetcher(storage, tableModel));
+            new QueryScanDataFetcher(storage, helper));
       }
       builder.dataFetcher(
           coordinates(mutationObjectType, tableModel.getMutationPutField()),
-          new MutationPutDataFetcher(storage, tableModel));
+          new MutationPutDataFetcher(storage, helper));
       builder.dataFetcher(
           coordinates(mutationObjectType, tableModel.getMutationDeleteField()),
-          new MutationDeleteDataFetcher(storage, tableModel));
+          new MutationDeleteDataFetcher(storage, helper));
     }
     return builder.build();
   }
