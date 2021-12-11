@@ -24,7 +24,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import java.util.Collections;
@@ -238,7 +237,7 @@ public class SnapshotTest {
     snapshot.put(key, put);
 
     // Act Assert
-    assertThatThrownBy(() -> snapshot.get(key)).isInstanceOf(CrudRuntimeException.class);
+    assertThatThrownBy(() -> snapshot.get(key)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -707,7 +706,7 @@ public class SnapshotTest {
 
   @Test
   public void
-      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowCrudRuntimeException() {
+      get_ScanGivenAndPutWithSamePartitionKeyWithoutClusteringKeyInWriteSet_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePutWithPartitionKeyOnly();
@@ -719,12 +718,12 @@ public class SnapshotTest {
     Throwable thrown = catchThrowable(() -> snapshot.get(scan));
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      get_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+      get_ScanWithNoRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -742,12 +741,12 @@ public class SnapshotTest {
     Throwable thrown = catchThrowable(() -> snapshot.get(scan));
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void
-      get_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+      get_ScanWithRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -788,16 +787,16 @@ public class SnapshotTest {
     Throwable thrown5 = catchThrowable(() -> snapshot.get(scan5));
 
     // Assert
-    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
-    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
-    assertThat(thrown3).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown3).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown4).doesNotThrowAnyException();
     assertThat(thrown5).doesNotThrowAnyException();
   }
 
   @Test
   public void
-      get_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+      get_ScanWithEndSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -832,14 +831,14 @@ public class SnapshotTest {
     Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
 
     // Assert
-    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
-    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown3).doesNotThrowAnyException();
   }
 
   @Test
   public void
-      get_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowCrudRuntimeException() {
+      get_ScanWithStartSideInfiniteRangeGivenAndPutInWriteSetOverlappedWithScan_ShouldThrowIllegalArgumentException() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     // "text2"
@@ -874,8 +873,8 @@ public class SnapshotTest {
     Throwable thrown3 = catchThrowable(() -> snapshot.get(scan3));
 
     // Assert
-    assertThat(thrown1).isInstanceOf(CrudRuntimeException.class);
-    assertThat(thrown2).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown1).isInstanceOf(IllegalArgumentException.class);
+    assertThat(thrown2).isInstanceOf(IllegalArgumentException.class);
     assertThat(thrown3).doesNotThrowAnyException();
   }
 }

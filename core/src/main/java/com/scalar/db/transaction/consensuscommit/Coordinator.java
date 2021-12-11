@@ -15,7 +15,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CoordinatorException;
-import com.scalar.db.exception.transaction.RequiredValueMissingException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import java.util.Objects;
@@ -185,15 +184,15 @@ public class Coordinator {
     private void checkNotMissingRequired(Result result) {
       if (!result.getValue(Attribute.ID).isPresent()
           || !result.getValue(Attribute.ID).get().getAsString().isPresent()) {
-        throw new RequiredValueMissingException("id is missing in the coordinator state");
+        throw new IllegalArgumentException("id is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.STATE).isPresent()
           || result.getValue(Attribute.STATE).get().getAsInt() == 0) {
-        throw new RequiredValueMissingException("state is missing in the coordinator state");
+        throw new IllegalArgumentException("state is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.CREATED_AT).isPresent()
           || result.getValue(Attribute.CREATED_AT).get().getAsLong() == 0) {
-        throw new RequiredValueMissingException("created_at is missing in the coordinator state");
+        throw new IllegalArgumentException("created_at is missing in the coordinator state");
       }
     }
   }
