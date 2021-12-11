@@ -26,11 +26,14 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(JdbcConfig.CONNECTION_POOL_MIN_IDLE, "1");
     props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_IDLE, "100");
-    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "200");
+    props.setProperty(JdbcConfig.CONNECTION_POOL_MAX_TOTAL, "500");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_ENABLED, "true");
     props.setProperty(JdbcConfig.PREPARED_STATEMENTS_POOL_MAX_OPEN, "300");
-    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
     props.setProperty(JdbcConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.name());
+    props.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, ANY_TABLE_METADATA_SCHEMA);
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "100");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "200");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "300");
 
     // Act
     JdbcConfig config = new JdbcConfig(props);
@@ -46,12 +49,16 @@ public class JdbcConfigTest {
     assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
     assertThat(config.getConnectionPoolMaxIdle()).isEqualTo(100);
-    assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(200);
+    assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(500);
     assertThat(config.isPreparedStatementsPoolEnabled()).isEqualTo(true);
     assertThat(config.getPreparedStatementsPoolMaxOpen()).isEqualTo(300);
+    assertThat(config.getIsolation()).isPresent();
+    assertThat(config.getIsolation().get()).isEqualTo(Isolation.SERIALIZABLE);
     assertThat(config.getTableMetadataSchema()).isPresent();
     assertThat(config.getTableMetadataSchema().get()).isEqualTo(ANY_TABLE_METADATA_SCHEMA);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
+    assertThat(config.getTableMetadataConnectionPoolMinIdle()).isEqualTo(100);
+    assertThat(config.getTableMetadataConnectionPoolMaxIdle()).isEqualTo(200);
+    assertThat(config.getTableMetadataConnectionPoolMaxTotal()).isEqualTo(300);
   }
 
   @Test
@@ -86,8 +93,14 @@ public class JdbcConfigTest {
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     assertThat(config.getPreparedStatementsPoolMaxOpen())
         .isEqualTo(JdbcConfig.DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+    assertThat(config.getIsolation()).isNotPresent();
     assertThat(config.getTableMetadataSchema()).isNotPresent();
-    assertThat(config.getIsolation()).isNull();
+    assertThat(config.getTableMetadataConnectionPoolMinIdle())
+        .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
+    assertThat(config.getTableMetadataConnectionPoolMaxIdle())
+        .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
+    assertThat(config.getTableMetadataConnectionPoolMaxTotal())
+        .isEqualTo(JdbcConfig.DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
   }
 
   @Test
@@ -148,6 +161,23 @@ public class JdbcConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
     props.setProperty(JdbcConfig.ISOLATION_LEVEL, "aaa");
+
+    // Act Assert
+    assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      constructor_PropertiesWithInvalidTableMetadataConnectionPoolPropertiesGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_JDBC_URL);
+    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
+    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
+    props.setProperty(DatabaseConfig.STORAGE, JDBC_STORAGE);
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MIN_IDLE, "aaa");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_IDLE, "bbb");
+    props.setProperty(JdbcConfig.TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL, "ccc");
 
     // Act Assert
     assertThatThrownBy(() -> new JdbcConfig(props)).isInstanceOf(IllegalArgumentException.class);
