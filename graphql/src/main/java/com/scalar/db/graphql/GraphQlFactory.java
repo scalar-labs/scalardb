@@ -19,6 +19,7 @@ import graphql.GraphQL;
 import graphql.Scalars;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import java.util.ArrayList;
@@ -61,13 +62,22 @@ public class GraphQlFactory {
   private GraphQLObjectType createMutationObjectType() {
     GraphQLObjectType.Builder builder = GraphQLObjectType.newObject().name("Mutation");
     for (TableGraphQlModel tableModel : tableModels) {
-      builder.field(tableModel.getMutationPutField());
-      builder.field(tableModel.getMutationDeleteField());
+      builder
+          .field(tableModel.getMutationPutField())
+          .field(tableModel.getMutationBulkPutField())
+          .field(tableModel.getMutationDeleteField())
+          .field(tableModel.getMutationBulkDeleteField())
+          .field(tableModel.getMutationMutateField());
     }
-    builder.field(
-        GraphQLFieldDefinition.newFieldDefinition().name("commit").type(Scalars.GraphQLBoolean));
-    builder.field(
-        GraphQLFieldDefinition.newFieldDefinition().name("abort").type(Scalars.GraphQLBoolean));
+    builder
+        .field(
+            GraphQLFieldDefinition.newFieldDefinition()
+                .name("commit")
+                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)))
+        .field(
+            GraphQLFieldDefinition.newFieldDefinition()
+                .name("abort")
+                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
 
     return builder.build();
   }
