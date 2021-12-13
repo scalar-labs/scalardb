@@ -71,15 +71,10 @@ public class GraphQlFactory {
           .field(tableModel.getMutationBulkDeleteField())
           .field(tableModel.getMutationMutateField());
     }
-    builder
-        .field(
-            GraphQLFieldDefinition.newFieldDefinition()
-                .name("commit")
-                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)))
-        .field(
-            GraphQLFieldDefinition.newFieldDefinition()
-                .name("abort")
-                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
+    builder.field(
+        GraphQLFieldDefinition.newFieldDefinition()
+            .name("abort")
+            .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
 
     return builder.build();
   }
