@@ -49,7 +49,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 **Cosmos DB**
 
 You must create a Cosmos DB account with a Continuous backup policy enabled to create point-in-time restore (PITR). Backups are created continuously after enabling this.
-For creating a transactionally-consistent restore point, you can refer to the [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+For creating a transactionally-consistent restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
 
 **DynamoDB**
 
