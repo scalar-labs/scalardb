@@ -23,11 +23,26 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
     this.helper = helper;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public Map<String, Map<String, Object>> get(DataFetchingEnvironment environment)
       throws Exception {
     Map<String, Object> getInput = environment.getArgument("get");
+    Get get = createGet(getInput);
+
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    performGet(environment, get)
+        .ifPresent(
+            result -> {
+              for (String fieldName : helper.getFieldNames()) {
+                result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
+              }
+            });
+
+    return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private Get createGet(Map<String, Object> getInput) {
     Map<String, Object> key = (Map<String, Object>) getInput.get("key");
     Get get =
         new Get(
@@ -40,16 +55,7 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
       get.withConsistency(Consistency.valueOf(consistency));
     }
 
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    performGet(environment, get)
-        .ifPresent(
-            result -> {
-              for (String fieldName : helper.getFieldNames()) {
-                result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
-              }
-            });
-
-    return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
+    return get;
   }
 
   @VisibleForTesting

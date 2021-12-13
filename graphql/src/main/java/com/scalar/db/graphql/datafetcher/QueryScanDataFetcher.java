@@ -30,11 +30,28 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
     this.helper = helper;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public Map<String, List<Map<String, Object>>> get(DataFetchingEnvironment environment)
       throws Exception {
     Map<String, Object> scanInput = environment.getArgument("scan");
+    Scan scan = createScan(scanInput);
+
+    // TODO: scan.withProjections()
+    LinkedHashSet<String> fieldNames = helper.getFieldNames();
+    ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
+    for (Result result : performScan(environment, scan)) {
+      ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
+      for (String fieldName : fieldNames) {
+        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
+      }
+      list.add(map.build());
+    }
+
+    return ImmutableMap.of(helper.getObjectTypeName(), list.build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private Scan createScan(Map<String, Object> scanInput) {
     Scan scan =
         new Scan(
                 helper.createPartitionKeyFromKeyArgument(
@@ -93,18 +110,7 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
       scan.withConsistency(Consistency.valueOf(consistencyInput));
     }
 
-    // TODO: scan.withProjections()
-    LinkedHashSet<String> fieldNames = helper.getFieldNames();
-    ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
-    for (Result result : performScan(environment, scan)) {
-      ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-      for (String fieldName : fieldNames) {
-        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
-      }
-      list.add(map.build());
-    }
-
-    return ImmutableMap.of(helper.getObjectTypeName(), list.build());
+    return scan;
   }
 
   @VisibleForTesting
