@@ -18,7 +18,6 @@ import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;

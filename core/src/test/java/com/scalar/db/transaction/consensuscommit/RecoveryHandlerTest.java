@@ -12,7 +12,6 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.io.Value;
 import java.util.Optional;
 import org.junit.Before;
