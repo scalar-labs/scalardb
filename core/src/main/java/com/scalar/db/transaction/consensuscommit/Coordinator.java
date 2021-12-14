@@ -82,7 +82,12 @@ public class Coordinator {
         throw new CoordinatorException("can't get coordinator state.");
       }
       try {
-        return storage.get(get).map(State::new);
+        Optional<Result> result = storage.get(get);
+        if (result.isPresent()) {
+          return Optional.of(new State(result.get()));
+        } else {
+          return Optional.empty();
+        }
       } catch (ExecutionException e) {
         LOGGER.warn("can't get coordinator state.", e);
       }
@@ -131,7 +136,7 @@ public class Coordinator {
     private final TransactionState state;
     private final long createdAt;
 
-    public State(Result result) {
+    public State(Result result) throws CoordinatorException {
       checkNotMissingRequired(result);
       id = result.getValue(Attribute.ID).get().getAsString().get();
       state = TransactionState.getInstance(result.getValue(Attribute.STATE).get().getAsInt());
@@ -181,18 +186,18 @@ public class Coordinator {
       return Objects.hash(id, state);
     }
 
-    private void checkNotMissingRequired(Result result) {
+    private void checkNotMissingRequired(Result result) throws CoordinatorException {
       if (!result.getValue(Attribute.ID).isPresent()
           || !result.getValue(Attribute.ID).get().getAsString().isPresent()) {
-        throw new IllegalArgumentException("id is missing in the coordinator state");
+        throw new CoordinatorException("id is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.STATE).isPresent()
           || result.getValue(Attribute.STATE).get().getAsInt() == 0) {
-        throw new IllegalArgumentException("state is missing in the coordinator state");
+        throw new CoordinatorException("state is missing in the coordinator state");
       }
       if (!result.getValue(Attribute.CREATED_AT).isPresent()
           || result.getValue(Attribute.CREATED_AT).get().getAsLong() == 0) {
-        throw new IllegalArgumentException("created_at is missing in the coordinator state");
+        throw new CoordinatorException("created_at is missing in the coordinator state");
       }
     }
   }
