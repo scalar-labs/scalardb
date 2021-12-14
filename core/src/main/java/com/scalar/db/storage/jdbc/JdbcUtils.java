@@ -4,7 +4,6 @@ import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
-import javax.annotation.Nullable;
 import oracle.jdbc.OracleDriver;
 import org.apache.commons.dbcp2.BasicDataSource;
 
@@ -25,23 +24,11 @@ public final class JdbcUtils {
     }
   }
 
-  /**
-   * @param config a jdbc config
-   * @return the data source
-   * @deprecated As of release 3.5.0. Will be removed in release 4.0.0.
-   */
-  @SuppressWarnings("InlineMeSuggester")
-  @Deprecated
   public static BasicDataSource initDataSource(JdbcConfig config) {
-    return initDataSource(config, false, null);
+    return initDataSource(config, false);
   }
 
-  public static BasicDataSource initDataSource(JdbcConfig config, @Nullable Isolation isolation) {
-    return initDataSource(config, false, isolation);
-  }
-
-  public static BasicDataSource initDataSource(
-      JdbcConfig config, boolean transactional, @Nullable Isolation isolation) {
+  public static BasicDataSource initDataSource(JdbcConfig config, boolean transactional) {
     String jdbcUrl = config.getContactPoints().get(0);
     BasicDataSource dataSource = new BasicDataSource();
 
@@ -64,30 +51,57 @@ public final class JdbcUtils {
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
 
-    if (isolation != null) {
-      switch (isolation) {
-        case READ_UNCOMMITTED:
-          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-          break;
-        case READ_COMMITTED:
-          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-          break;
-        case REPEATABLE_READ:
-          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
-          break;
-        case SERIALIZABLE:
-          dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-          break;
-        default:
-          throw new AssertionError();
-      }
-    }
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation -> {
+              switch (isolation) {
+                case READ_UNCOMMITTED:
+                  dataSource.setDefaultTransactionIsolation(
+                      Connection.TRANSACTION_READ_UNCOMMITTED);
+                  break;
+                case READ_COMMITTED:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                  break;
+                case REPEATABLE_READ:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+                  break;
+                case SERIALIZABLE:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                  break;
+                default:
+                  throw new AssertionError();
+              }
+            });
 
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
+
+    return dataSource;
+  }
+
+  public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
+    String jdbcUrl = config.getContactPoints().get(0);
+    BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlining database to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(getDriverClass(jdbcUrl));
+
+    dataSource.setUrl(jdbcUrl);
+
+    config.getUsername().ifPresent(dataSource::setUsername);
+    config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
+    dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
+    dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
 
     return dataSource;
   }

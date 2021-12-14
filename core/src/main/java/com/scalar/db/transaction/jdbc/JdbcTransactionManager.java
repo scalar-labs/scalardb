@@ -28,6 +28,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
+  private final BasicDataSource tableMetadataDataSource;
   private final RdbEngine rdbEngine;
   private final JdbcService jdbcService;
   private Optional<String> namespace;
@@ -35,10 +36,13 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
 
   @Inject
   public JdbcTransactionManager(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config, true, config.getIsolation());
+    dataSource = JdbcUtils.initDataSource(config, true);
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
+
+    tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(new JdbcDatabaseAdmin(dataSource, config), config);
+        new TableMetadataManager(new JdbcDatabaseAdmin(tableMetadataDataSource, config), config);
+
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
@@ -47,8 +51,13 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   }
 
   @VisibleForTesting
-  JdbcTransactionManager(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcService jdbcService) {
+  JdbcTransactionManager(
+      BasicDataSource dataSource,
+      BasicDataSource tableMetadataDataSource,
+      RdbEngine rdbEngine,
+      JdbcService jdbcService) {
     this.dataSource = dataSource;
+    this.tableMetadataDataSource = tableMetadataDataSource;
     this.rdbEngine = rdbEngine;
     this.jdbcService = jdbcService;
   }
@@ -156,6 +165,11 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
       dataSource.close();
     } catch (SQLException e) {
       LOGGER.warn("failed to close the dataSource", e);
+    }
+    try {
+      tableMetadataDataSource.close();
+    } catch (SQLException e) {
+      LOGGER.warn("failed to close the table metadata dataSource", e);
     }
   }
 }

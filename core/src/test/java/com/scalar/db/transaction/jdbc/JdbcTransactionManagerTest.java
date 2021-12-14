@@ -33,6 +33,7 @@ import org.mockito.MockitoAnnotations;
 public class JdbcTransactionManagerTest {
 
   @Mock private BasicDataSource dataSource;
+  @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
   @Mock private Connection connection;
   @Mock private SQLException sqlException;
@@ -42,7 +43,9 @@ public class JdbcTransactionManagerTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    manager = new JdbcTransactionManager(dataSource, RdbEngine.MYSQL, jdbcService);
+    manager =
+        new JdbcTransactionManager(
+            dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }
