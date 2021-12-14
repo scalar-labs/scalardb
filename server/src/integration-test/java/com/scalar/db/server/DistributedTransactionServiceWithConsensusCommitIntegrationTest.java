@@ -28,7 +28,6 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
-import com.scalar.db.transaction.consensuscommit.TransactionResult;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;
 import java.io.IOException;
@@ -137,8 +136,6 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    assertThat(new TransactionResult(result.get()).getState())
-        .isEqualTo(TransactionState.COMMITTED);
   }
 
   @Test
@@ -154,8 +151,6 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat(new TransactionResult(results.get(0)).getState())
-        .isEqualTo(TransactionState.COMMITTED);
   }
 
   @Test
@@ -229,13 +224,10 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Assert
     Get get = prepareGet(0, 0, TABLE_1);
     GrpcTransaction another = manager.start();
-    Optional<Result> r = another.get(get);
-    assertThat(r).isPresent();
-    TransactionResult result = new TransactionResult(r.get());
+    Optional<Result> result = another.get(get);
     another.commit();
-    assertThat(getBalance(result)).isEqualTo(expected);
-    assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(1);
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(expected);
   }
 
   @Test
@@ -256,13 +248,10 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
 
     // Assert
     GrpcTransaction another = manager.start();
-    Optional<Result> r = another.get(get);
-    assertThat(r).isPresent();
-    TransactionResult actual = new TransactionResult(r.get());
+    Optional<Result> actual = another.get(get);
+    assertThat(actual).isPresent();
     another.commit();
-    assertThat(getBalance(actual)).isEqualTo(expected);
-    assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(actual.getVersion()).isEqualTo(2);
+    assertThat(getBalance(actual.get())).isEqualTo(expected);
   }
 
   @Test

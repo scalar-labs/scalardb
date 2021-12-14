@@ -66,7 +66,7 @@ public class ConsensusCommitTest {
     Optional<Result> actual = consensus.get(get);
 
     // Assert
-    assertThat(actual.get()).isEqualTo(result);
+    assertThat(actual).isPresent();
     verify(recovery, never()).recover(get, result);
     verify(crud).get(get);
   }
@@ -97,7 +97,7 @@ public class ConsensusCommitTest {
     List<Result> actual = consensus.scan(scan);
 
     // Assert
-    assertThat(actual).isEqualTo(results);
+    assertThat(actual.size()).isEqualTo(1);
     verify(crud).scan(scan);
   }
 
