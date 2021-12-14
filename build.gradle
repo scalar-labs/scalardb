@@ -48,7 +48,7 @@ subprojects {
         errorproneVersion = '2.10.0'
         errorproneJavacVersion = '9+181-r4173-1'
         gsonVersion = '2.8.7'
-        log4jVersion = '2.14.1'
+        log4jVersion = '2.15.0'
     }
 
     repositories {
