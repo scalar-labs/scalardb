@@ -1,6 +1,6 @@
-package com.scalar.db.exception.transaction;
+package com.scalar.db.transaction.consensuscommit;
 
-public class CoordinatorException extends TransactionException {
+public class CoordinatorException extends Exception {
 
   public CoordinatorException(String message) {
     super(message);
