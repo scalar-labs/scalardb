@@ -19,7 +19,6 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
@@ -2155,14 +2154,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldIllegalArgumentException() {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act Assert
     assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
-        .isInstanceOf(CrudRuntimeException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

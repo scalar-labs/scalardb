@@ -29,7 +29,6 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
@@ -2284,7 +2283,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
     // Arrange
     ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
@@ -2295,7 +2294,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction.abort();
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
