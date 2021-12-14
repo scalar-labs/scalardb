@@ -25,8 +25,16 @@ public class JdbcConfig extends DatabaseConfig {
       PREFIX + "prepared_statements_pool.enabled";
   public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
       PREFIX + "prepared_statements_pool.max_open";
-  public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
+
   public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+
+  public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
+      PREFIX + "table_metadata.connection_pool.min_idle";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
+      PREFIX + "table_metadata.connection_pool.max_idle";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL =
+      PREFIX + "table_metadata.connection_pool.max_total";
 
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
@@ -34,13 +42,22 @@ public class JdbcConfig extends DatabaseConfig {
   public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
   public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
 
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE = 5;
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE = 10;
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL = 25;
+
   private int connectionPoolMinIdle;
   private int connectionPoolMaxIdle;
   private int connectionPoolMaxTotal;
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
-  @Nullable private String tableMetadataSchema;
+
   @Nullable private Isolation isolation;
+
+  @Nullable private String tableMetadataSchema;
+  private int tableMetadataConnectionPoolMinIdle;
+  private int tableMetadataConnectionPoolMaxIdle;
+  private int tableMetadataConnectionPoolMaxTotal;
 
   public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -80,12 +97,27 @@ public class JdbcConfig extends DatabaseConfig {
             PREPARED_STATEMENTS_POOL_MAX_OPEN,
             DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
-    tableMetadataSchema = getString(getProperties(), TABLE_METADATA_SCHEMA, null);
-
     String isolationLevel = getString(getProperties(), ISOLATION_LEVEL, null);
     if (isolationLevel != null) {
       isolation = Isolation.valueOf(isolationLevel);
     }
+
+    tableMetadataSchema = getString(getProperties(), TABLE_METADATA_SCHEMA, null);
+    tableMetadataConnectionPoolMinIdle =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MIN_IDLE,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
+    tableMetadataConnectionPoolMaxIdle =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MAX_IDLE,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
+    tableMetadataConnectionPoolMaxTotal =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
   }
 
   public int getConnectionPoolMinIdle() {
@@ -108,12 +140,23 @@ public class JdbcConfig extends DatabaseConfig {
     return preparedStatementsPoolMaxOpen;
   }
 
+  public Optional<Isolation> getIsolation() {
+    return Optional.ofNullable(isolation);
+  }
+
   public Optional<String> getTableMetadataSchema() {
     return Optional.ofNullable(tableMetadataSchema);
   }
 
-  @Nullable
-  public Isolation getIsolation() {
-    return isolation;
+  public int getTableMetadataConnectionPoolMinIdle() {
+    return tableMetadataConnectionPoolMinIdle;
+  }
+
+  public int getTableMetadataConnectionPoolMaxIdle() {
+    return tableMetadataConnectionPoolMaxIdle;
+  }
+
+  public int getTableMetadataConnectionPoolMaxTotal() {
+    return tableMetadataConnectionPoolMaxTotal;
   }
 }
