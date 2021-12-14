@@ -86,7 +86,7 @@ public class FilteredResultTest {
   }
 
   @Test
-  public void WithoutProjections_ShouldFilterTransactionMetaColumns() {
+  public void WithoutProjections_ShouldFilterOutTransactionMetaColumns() {
     // Arrange
     FilteredResult filteredResult = new FilteredResult(result, Collections.emptyList());
 
@@ -120,7 +120,7 @@ public class FilteredResultTest {
   }
 
   @Test
-  public void WithProjections_ShouldFilterNonProjectedColumnsAndTransactionMetaColumns() {
+  public void WithProjections_ShouldFilterOutUnprojectedColumnsAndTransactionMetaColumns() {
     // Arrange
     FilteredResult filteredResult = new FilteredResult(result, Arrays.asList(ACCOUNT_ID, BALANCE));
 
@@ -152,7 +152,7 @@ public class FilteredResultTest {
 
   @Test
   public void
-      WithProjectionsForPartitionKey_ShouldFilterNonProjectedColumnsAndTransactionMetaColumns() {
+      WithProjectionsForPartitionKey_ShouldFilterOutUnprojectedColumnsAndTransactionMetaColumns() {
     // Arrange
     FilteredResult filteredResult =
         new FilteredResult(result, Collections.singletonList(ACCOUNT_ID));
@@ -184,7 +184,7 @@ public class FilteredResultTest {
 
   @Test
   public void
-      WithProjectionsForClusteringKey_ShouldFilterNonProjectedColumnsAndTransactionMetaColumns() {
+      WithProjectionsForClusteringKey_ShouldFilterOutUnprojectedColumnsAndTransactionMetaColumns() {
     // Arrange
     FilteredResult filteredResult =
         new FilteredResult(result, Collections.singletonList(ACCOUNT_TYPE));
@@ -216,7 +216,7 @@ public class FilteredResultTest {
 
   @Test
   public void
-      WithProjectionsForNonPrimaryKey_ShouldFilterNonProjectedColumnsAndTransactionMetaColumns() {
+      WithProjectionsForNonPrimaryKey_ShouldFilterOutUnprojectedColumnsAndTransactionMetaColumns() {
     // Arrange
     FilteredResult filteredResult = new FilteredResult(result, Collections.singletonList(BALANCE));
 

@@ -18,7 +18,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** An implementation of {@code Result} to filter projected columns and transactional columns. */
+/**
+ * An implementation of {@code Result} to filter out unprojected columns and transactional columns.
+ */
 public class FilteredResult implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(FilteredResult.class);
 
