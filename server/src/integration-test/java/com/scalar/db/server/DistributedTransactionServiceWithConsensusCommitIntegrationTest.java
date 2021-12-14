@@ -17,7 +17,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
@@ -973,7 +972,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudException()
+  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
@@ -985,7 +984,7 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     transaction.abort();
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

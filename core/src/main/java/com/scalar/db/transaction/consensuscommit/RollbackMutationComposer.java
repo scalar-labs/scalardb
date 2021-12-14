@@ -19,7 +19,6 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionRuntimeException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
@@ -86,10 +85,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   }
 
   private Put composePut(Operation base, TransactionResult result) {
-    if (!result.getState().equals(TransactionState.PREPARED)
-        && !result.getState().equals(TransactionState.DELETED)) {
-      throw new TransactionRuntimeException("rollback is toward non-prepared record");
-    }
+    assert result.getState().equals(TransactionState.PREPARED)
+        || result.getState().equals(TransactionState.DELETED);
+
     Map<String, Value<?>> map = new HashMap<>();
     result
         .getValues()
@@ -120,10 +118,9 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
   }
 
   private Delete composeDelete(Operation base, TransactionResult result) {
-    if (!result.getState().equals(TransactionState.PREPARED)
-        && !result.getState().equals(TransactionState.DELETED)) {
-      throw new TransactionRuntimeException("rollback is toward non-prepared record");
-    }
+    assert result.getState().equals(TransactionState.PREPARED)
+        || result.getState().equals(TransactionState.DELETED);
+
     return new Delete(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
         .forTable(base.forTable().get())
