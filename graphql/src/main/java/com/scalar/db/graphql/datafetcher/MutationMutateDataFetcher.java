@@ -6,6 +6,8 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
 import graphql.VisibleForTesting;
+import graphql.execution.AbortExecutionException;
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.ArrayList;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class MutationMutateDataFetcher implements DataFetcher<Boolean> {
+public class MutationMutateDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -23,7 +25,7 @@ public class MutationMutateDataFetcher implements DataFetcher<Boolean> {
   }
 
   @Override
-  public Boolean get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     List<Map<String, Object>> putInput = environment.getArgument("put");
     List<Map<String, Object>> deleteInput = environment.getArgument("delete");
     List<Mutation> mutations = new ArrayList<>();
@@ -34,9 +36,15 @@ public class MutationMutateDataFetcher implements DataFetcher<Boolean> {
       mutations.addAll(deleteInput.stream().map(helper::createDelete).collect(Collectors.toList()));
     }
 
-    performMutate(environment, mutations);
+    DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
+    try {
+      performMutate(environment, mutations);
+      result.data(true);
+    } catch (TransactionException | ExecutionException e) {
+      result.data(false).error(new AbortExecutionException(e));
+    }
 
-    return true;
+    return result.build();
   }
 
   @VisibleForTesting

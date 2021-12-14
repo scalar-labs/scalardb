@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -19,12 +20,16 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
+import graphql.execution.AbortExecutionException;
+import graphql.execution.DataFetcherResult;
+import graphql.schema.DataFetchingEnvironment;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
@@ -207,9 +212,34 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
         new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
 
     // Act
-    Boolean result = dataFetcher.get(environment);
+    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
 
     // Assert
-    assertThat(result).isTrue();
+    assertThat(result.getData()).isTrue();
+    assertThat(result.getErrors()).isEmpty();
+  }
+
+  @Test
+  public void get_TransactionExceptionThrown_ShouldReturnFalseResultWithErrors() throws Exception {
+    // Arrange
+    prepareSimpleDelete();
+    MutationDeleteDataFetcher dataFetcher =
+        spy(new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    TransactionException exception = new TransactionException("error");
+    doThrow(exception)
+        .when(dataFetcher)
+        .performDelete(any(DataFetchingEnvironment.class), eq(simpleExpectedDelete));
+
+    // Act
+    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
+
+    // Assert
+    assertThat(result.getData()).isFalse();
+    assertThat(result.getErrors())
+        .hasSize(1)
+        .element(0)
+        .isInstanceOf(AbortExecutionException.class);
+    assertThat(((AbortExecutionException) result.getErrors().get(0)).getCause())
+        .isSameAs(exception);
   }
 }

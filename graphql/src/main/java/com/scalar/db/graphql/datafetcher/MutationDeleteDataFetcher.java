@@ -6,11 +6,13 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
+import graphql.execution.AbortExecutionException;
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 
-public class MutationDeleteDataFetcher implements DataFetcher<Boolean> {
+public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -20,11 +22,19 @@ public class MutationDeleteDataFetcher implements DataFetcher<Boolean> {
   }
 
   @Override
-  public Boolean get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     Map<String, Object> deleteInput = environment.getArgument("delete");
-    performDelete(environment, helper.createDelete(deleteInput));
+    Delete delete = helper.createDelete(deleteInput);
 
-    return true;
+    DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
+    try {
+      performDelete(environment, delete);
+      result.data(true);
+    } catch (TransactionException | ExecutionException e) {
+      result.data(false).error(new AbortExecutionException(e));
+    }
+
+    return result.build();
   }
 
   @VisibleForTesting
