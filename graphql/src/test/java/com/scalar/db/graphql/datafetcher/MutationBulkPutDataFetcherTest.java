@@ -30,9 +30,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 
 public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
-  private TableGraphQlModel storageTableGraphQlModel;
-  private TableGraphQlModel transactionalTableGraphQlModel;
-  private Put simpleExpectedPut;
+  private static final String COL1 = "c1";
+  private static final String COL2 = "c2";
+  private static final String COL3 = "c3";
+  private static final String COL4 = "c4";
+  private static final String COL5 = "c5";
+  private static final String COL6 = "c5";
+
+  private MutationBulkPutDataFetcher dataFetcherForStorageTable;
+  private MutationBulkPutDataFetcher dataFetcherForTransactionalTable;
+  private Put expectedPut;
   @Captor private ArgumentCaptor<List<Put>> putListCaptor;
 
   @Override
@@ -40,36 +47,41 @@ public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     TableMetadata storageTableMetadata =
         TableMetadata.newBuilder()
-            .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.TEXT)
-            .addColumn("c3", DataType.FLOAT)
-            .addColumn("c4", DataType.DOUBLE)
-            .addColumn("c5", DataType.BIGINT)
-            .addColumn("c6", DataType.BOOLEAN)
-            .addPartitionKey("c1")
-            .addClusteringKey("c2")
+            .addColumn(COL1, DataType.INT)
+            .addColumn(COL2, DataType.TEXT)
+            .addColumn(COL3, DataType.FLOAT)
+            .addColumn(COL4, DataType.DOUBLE)
+            .addColumn(COL5, DataType.BIGINT)
+            .addColumn(COL6, DataType.BOOLEAN)
+            .addPartitionKey(COL1)
+            .addClusteringKey(COL2)
             .build();
-    storageTableGraphQlModel =
+    TableGraphQlModel storageTableGraphQlModel =
         new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
+    dataFetcherForStorageTable =
+        new MutationBulkPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
     TableMetadata transactionalTableMetadata =
         ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    transactionalTableGraphQlModel =
+    TableGraphQlModel transactionalTableGraphQlModel =
         new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
+    dataFetcherForTransactionalTable =
+        new MutationBulkPutDataFetcher(
+            storage, new DataFetcherHelper(transactionalTableGraphQlModel));
   }
 
-  private void prepareSimplePut() {
+  private void preparePutInputAndExpectedPut() {
     // table1_bulkPut(put: [{
     //   key: { c1: 1, c2: "A" },
     //   values: { c3: 2.0 }
     // }])
-    Map<String, Object> simplePutInput =
+    Map<String, Object> putInput =
         ImmutableMap.of(
-            "key", ImmutableMap.of("c1", 1, "c2", "A"), "values", ImmutableMap.of("c3", 2.0F));
-    when(environment.getArgument("put")).thenReturn(ImmutableList.of(simplePutInput));
+            "key", ImmutableMap.of(COL1, 1, COL2, "A"), "values", ImmutableMap.of(COL3, 2.0F));
+    when(environment.getArgument("put")).thenReturn(ImmutableList.of(putInput));
 
-    simpleExpectedPut =
-        new Put(new Key("c1", 1), new Key("c2", "A"))
-            .withValue("c3", 2.0F)
+    expectedPut =
+        new Put(new Key(COL1, 1), new Key(COL2, "A"))
+            .withValue(COL3, 2.0F)
             .forNamespace(ANY_NAMESPACE)
             .forTable(ANY_TABLE);
   }
@@ -77,44 +89,36 @@ public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_ForStorageTable_ShouldUseStorage() throws Exception {
     // Arrange
-    prepareSimplePut();
-    MutationBulkPutDataFetcher dataFetcher =
-        new MutationBulkPutDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
+    preparePutInputAndExpectedPut();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcherForStorageTable.get(environment);
 
     // Assert
     verify(storage, times(1)).put(putListCaptor.capture());
-    assertThat(putListCaptor.getValue()).containsExactly(simpleExpectedPut);
+    assertThat(putListCaptor.getValue()).containsExactly(expectedPut);
     verify(transaction, never()).get(any());
   }
 
   @Test
   public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
     // Arrange
-    prepareSimplePut();
-    MutationBulkPutDataFetcher dataFetcher =
-        new MutationBulkPutDataFetcher(
-            storage, new DataFetcherHelper(transactionalTableGraphQlModel));
+    preparePutInputAndExpectedPut();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcherForTransactionalTable.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
     verify(transaction, times(1)).put(putListCaptor.capture());
-    assertThat(putListCaptor.getValue()).containsExactly(simpleExpectedPut);
+    assertThat(putListCaptor.getValue()).containsExactly(expectedPut);
   }
 
   @Test
   public void get_PutInputListGiven_ShouldRunScalarDbPut() throws Exception {
     // Arrange
-    prepareSimplePut();
-    MutationBulkPutDataFetcher dataFetcher =
-        spy(
-            new MutationBulkPutDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    preparePutInputAndExpectedPut();
+    MutationBulkPutDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performPut(eq(environment), anyList());
 
     // Act
@@ -122,17 +126,14 @@ public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     verify(dataFetcher, times(1)).performPut(eq(environment), putListCaptor.capture());
-    assertThat(putListCaptor.getValue()).containsExactly(simpleExpectedPut);
+    assertThat(putListCaptor.getValue()).containsExactly(expectedPut);
   }
 
   @Test
   public void get_WhenPutSucceeds_ShouldReturnTrue() throws Exception {
     // Arrange
-    prepareSimplePut();
-    MutationBulkPutDataFetcher dataFetcher =
-        spy(
-            new MutationBulkPutDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    preparePutInputAndExpectedPut();
+    MutationBulkPutDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performPut(eq(environment), anyList());
 
     // Act
@@ -146,11 +147,8 @@ public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_WhenPutFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
-    prepareSimplePut();
-    MutationBulkPutDataFetcher dataFetcher =
-        spy(
-            new MutationBulkPutDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    preparePutInputAndExpectedPut();
+    MutationBulkPutDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     TransactionException exception = new TransactionException("error");
     doThrow(exception).when(dataFetcher).performPut(eq(environment), anyList());
 

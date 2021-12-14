@@ -41,8 +41,9 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
     return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
   }
 
+  @VisibleForTesting
   @SuppressWarnings("unchecked")
-  private Get createGet(Map<String, Object> getInput) {
+  Get createGet(Map<String, Object> getInput) {
     Map<String, Object> key = (Map<String, Object>) getInput.get("key");
     Get get =
         new Get(

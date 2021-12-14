@@ -50,8 +50,9 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
     return ImmutableMap.of(helper.getObjectTypeName(), list.build());
   }
 
+  @VisibleForTesting
   @SuppressWarnings("unchecked")
-  private Scan createScan(Map<String, Object> scanInput) {
+  Scan createScan(Map<String, Object> scanInput) {
     Scan scan =
         new Scan(
                 helper.createPartitionKeyFromKeyArgument(

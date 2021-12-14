@@ -1,9 +1,9 @@
 package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -11,65 +11,65 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.scalar.db.api.ConditionalExpression;
-import com.scalar.db.api.ConditionalExpression.Operator;
-import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DeleteIf;
-import com.scalar.db.api.DeleteIfExists;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
-import com.scalar.db.io.FloatValue;
-import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
-import graphql.schema.DataFetchingEnvironment;
-import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 
 public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
-  private TableGraphQlModel storageTableGraphQlModel;
-  private TableGraphQlModel transactionalTableGraphQlModel;
-  private Map<String, Object> simpleDeleteArgument;
-  private Delete simpleExpectedDelete;
+  private static final String COL1 = "c1";
+  private static final String COL2 = "c2";
+  private static final String COL3 = "c3";
+
+  private MutationDeleteDataFetcher dataFetcherForStorageTable;
+  private MutationDeleteDataFetcher dataFetcherForTransactionalTable;
+  private Delete expectedDelete;
+  @Captor private ArgumentCaptor<Delete> deleteCaptor;
 
   @Override
   public void doSetUp() throws Exception {
     // Arrange
     TableMetadata storageTableMetadata =
         TableMetadata.newBuilder()
-            .addColumn("c1", DataType.INT)
-            .addColumn("c2", DataType.TEXT)
-            .addColumn("c3", DataType.DOUBLE)
-            .addPartitionKey("c1")
-            .addClusteringKey("c2")
+            .addColumn(COL1, DataType.INT)
+            .addColumn(COL2, DataType.TEXT)
+            .addColumn(COL3, DataType.FLOAT)
+            .addPartitionKey(COL1)
+            .addClusteringKey(COL2)
             .build();
-    storageTableGraphQlModel =
+    TableGraphQlModel storageTableGraphQlModel =
         new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
+    dataFetcherForStorageTable =
+        new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
     TableMetadata transactionalTableMetadata =
         ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    transactionalTableGraphQlModel =
+    TableGraphQlModel transactionalTableGraphQlModel =
         new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
+    dataFetcherForTransactionalTable =
+        new MutationDeleteDataFetcher(
+            storage, new DataFetcherHelper(transactionalTableGraphQlModel));
   }
 
-  private void prepareSimpleDelete() {
+  private void prepareDeleteInputAndExpectedDelete() {
     // table1_delete(delete: {
     //   key: { c1: 1, c2: "A" },
     //   consistency: EVENTUAL
     // })
-    simpleDeleteArgument = ImmutableMap.of("key", ImmutableMap.of("c1", 1, "c2", "A"));
-    when(environment.getArgument("delete")).thenReturn(simpleDeleteArgument);
+    Map<String, Object> deleteInput = ImmutableMap.of("key", ImmutableMap.of(COL1, 1, COL2, "A"));
+    when(environment.getArgument("delete")).thenReturn(deleteInput);
 
-    simpleExpectedDelete =
-        new Delete(new Key("c1", 1), new Key("c2", "A"))
+    expectedDelete =
+        new Delete(new Key(COL1, 1), new Key(COL2, "A"))
             .forNamespace(ANY_NAMESPACE)
             .forTable(ANY_TABLE);
   }
@@ -77,139 +77,50 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_ForStorageTable_ShouldUseStorage() throws Exception {
     // Arrange
-    prepareSimpleDelete();
-    MutationDeleteDataFetcher dataFetcher =
-        spy(
-            new MutationDeleteDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    prepareDeleteInputAndExpectedDelete();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcherForStorageTable.get(environment);
 
     // Assert
-    verify(storage, times(1)).delete(simpleExpectedDelete);
+    verify(storage, times(1)).delete(expectedDelete);
     verify(transaction, never()).get(any());
   }
 
   @Test
   public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
     // Arrange
-    prepareSimpleDelete();
-    MutationDeleteDataFetcher dataFetcher =
-        spy(
-            new MutationDeleteDataFetcher(
-                storage, new DataFetcherHelper(transactionalTableGraphQlModel)));
+    prepareDeleteInputAndExpectedDelete();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcherForTransactionalTable.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
-    verify(transaction, times(1)).delete(simpleExpectedDelete);
+    verify(transaction, times(1)).delete(expectedDelete);
   }
 
-  private void testDeleteCommandIssued(Map<String, Object> deleteArgument, Delete expectedDelete)
-      throws Exception {
+  @Test
+  public void get_PutInputGiven_ShouldRunScalarDbDelete() throws Exception {
     // Arrange
-    when(environment.getArgument("delete")).thenReturn(deleteArgument);
-    MutationDeleteDataFetcher dataFetcher =
-        spy(
-            new MutationDeleteDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    prepareDeleteInputAndExpectedDelete();
+    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
+    doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
     dataFetcher.get(environment);
 
     // Assert
-    ArgumentCaptor<Delete> argument = ArgumentCaptor.forClass(Delete.class);
-    verify(dataFetcher, times(1)).performDelete(eq(environment), argument.capture());
-    assertThat(argument.getValue()).isEqualTo(expectedDelete);
+    verify(dataFetcher, times(1)).performDelete(eq(environment), deleteCaptor.capture());
+    assertThat(deleteCaptor.getValue()).isEqualTo(expectedDelete);
   }
 
   @Test
-  public void get_DeleteArgumentGiven_ShouldRunScalarDbDelete() throws Exception {
+  public void get_WhenPutSucceeds_ShouldReturnTrue() throws Exception {
     // Arrange
-    prepareSimpleDelete();
-
-    // Act Assert
-    testDeleteCommandIssued(simpleDeleteArgument, simpleExpectedDelete);
-  }
-
-  @Test
-  public void get_DeleteArgumentWithConsistencyGiven_ShouldRunScalarDbDeleteWithConsistency()
-      throws Exception {
-    // Arrange
-    prepareSimpleDelete();
-    Map<String, Object> putArgumentWithConsistency = new HashMap<>(simpleDeleteArgument);
-    putArgumentWithConsistency.put("consistency", "EVENTUAL");
-
-    // Act Assert
-    testDeleteCommandIssued(
-        putArgumentWithConsistency, simpleExpectedDelete.withConsistency(Consistency.EVENTUAL));
-  }
-
-  @Test
-  public void get_DeleteArgumentWithDeleteIfExistsGiven_ShouldRunScalarDbDeleteWithDeleteIfExists()
-      throws Exception {
-    // Arrange
-    prepareSimpleDelete();
-    Map<String, Object> deleteArgumentWithDeleteIfExists = new HashMap<>(simpleDeleteArgument);
-    deleteArgumentWithDeleteIfExists.put("condition", ImmutableMap.of("type", "DeleteIfExists"));
-
-    // Act Assert
-    testDeleteCommandIssued(
-        deleteArgumentWithDeleteIfExists, simpleExpectedDelete.withCondition(new DeleteIfExists()));
-  }
-
-  @Test
-  public void get_DeleteArgumentWithDeleteIfGiven_ShouldRunScalarDbDeleteWithDeleteIf()
-      throws Exception {
-    // Arrange
-    prepareSimpleDelete();
-    Map<String, Object> deleteArgumentWithDeleteIf = new HashMap<>(simpleDeleteArgument);
-    deleteArgumentWithDeleteIf.put(
-        "condition",
-        ImmutableMap.of(
-            "type",
-            "DeleteIf",
-            "expressions",
-            ImmutableList.of(
-                ImmutableMap.of("name", "c2", "intValue", 1, "operator", "EQ"),
-                ImmutableMap.of("name", "c3", "floatValue", 2.0F, "operator", "LTE"))));
-
-    // Act Assert
-    testDeleteCommandIssued(
-        deleteArgumentWithDeleteIf,
-        simpleExpectedDelete.withCondition(
-            new DeleteIf(
-                new ConditionalExpression("c2", new IntValue(1), Operator.EQ),
-                new ConditionalExpression("c3", new FloatValue(2.0F), Operator.LTE))));
-  }
-
-  @Test
-  public void
-      get_DeleteArgumentWithDeleteIfWithNullConditionsGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    prepareSimpleDelete();
-    Map<String, Object> deleteArgumentWithDeleteIf = new HashMap<>(simpleDeleteArgument);
-    deleteArgumentWithDeleteIf.put("condition", ImmutableMap.of("type", "DeleteIf"));
-    when(environment.getArgument("delete")).thenReturn(deleteArgumentWithDeleteIf);
-    MutationDeleteDataFetcher dataFetcher =
-        spy(
-            new MutationDeleteDataFetcher(
-                storage, new DataFetcherHelper(storageTableGraphQlModel)));
-
-    // Act Assert
-    assertThatThrownBy(() -> dataFetcher.get(environment))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void get_DeleteArgumentGiven_ShouldReturnTrue() throws Exception {
-    // Arrange
-    prepareSimpleDelete();
-    MutationDeleteDataFetcher dataFetcher =
-        new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
+    prepareDeleteInputAndExpectedDelete();
+    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
+    doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
     DataFetcherResult<Boolean> result = dataFetcher.get(environment);
@@ -220,15 +131,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_TransactionExceptionThrown_ShouldReturnFalseResultWithErrors() throws Exception {
+  public void get_WhenPutFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
-    prepareSimpleDelete();
-    MutationDeleteDataFetcher dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel)));
+    prepareDeleteInputAndExpectedDelete();
+    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     TransactionException exception = new TransactionException("error");
-    doThrow(exception)
-        .when(dataFetcher)
-        .performDelete(any(DataFetchingEnvironment.class), eq(simpleExpectedDelete));
+    doThrow(exception).when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
     DataFetcherResult<Boolean> result = dataFetcher.get(environment);
