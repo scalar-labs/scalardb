@@ -97,6 +97,6 @@ Note that you need to follow the above steps because it assumes the application 
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
-Configurations like Stream settings, Time To Live settings, PITR settings, tags, AWS Identity and Access Management (IAM) policies,  Amazon CloudWatch metrics and alarms, and auto scaling policies are not copied to the restored table.
+Note that some of the configurations such as PITR and auto scaling policies are reset to the default values for restored tables, please manually configure required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.```
 
 You can re-apply schemas with the schema loader because it enables features like  PITR and auto-scaling.
