@@ -95,7 +95,6 @@ You can restore tables from the [Amazon DynamoDB console](https://docs.aws.amazo
 
 Note that you need to follow the above steps because it assumes the application requires tables with the same names as before. In DynamoDB, a table can only be restored with an alias, so you can restore the table with an alias and delete the original table and rename the alias to the original name.
 
-If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
 Note that some of the configurations such as PITR and auto scaling policies are reset to the default values for restored tables, please manually configure required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.```
 
