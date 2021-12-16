@@ -63,7 +63,7 @@ Scalar DB Schema Loader enables PITR and auto-scaling by default.
 ### JDBC databases
 
 You can restore the backup with your favorite way for JDBC databases.
-Please refer the [documentation of MySQL](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html) and [documentation of PostgreSQL](https://www.postgresql.org/docs/8.1/backup.html#BACKUP-DUMP-RESTORE) for restoring backups in MySQL and PostgreSQL respectively.
+For example, if you use MySQL and `mysqldump` to create a backup file, use `mysql` command to restore the file as specified [in the MySQL doc](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html). If you use PostgreSQL and `pg_dump` to create a backup file, use `psql` command to restore the file as specified in [the PostgreSQL doc](https://www.postgresql.org/docs/current/backup-dump.html#BACKUP-DUMP-RESTORE).
 If you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL,
 you can restore to any point within the backup retention period with the automated backup feature.
 
