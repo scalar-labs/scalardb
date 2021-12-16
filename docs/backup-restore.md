@@ -75,7 +75,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 ### Cosmos DB
 
-Please follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
+You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.
 
 ### DynamoDB
