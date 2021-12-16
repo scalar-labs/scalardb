@@ -21,12 +21,12 @@ Or when you use Amazon RDS (Relational Database Service) or Azure Database for M
 
 One way to create a transactionally-consistent backup is to take a backup while Scalar DB cluster does not have outstanding transactions.
 If an underlying database supports a point-in-time snapshot/backup mechanism, you can take a snapshot during the period.
-If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a specific time (preferably the midtime) in the period since the system takes backups for each operation in such a case.
+If an underlying database supports a point-in-time restore/recovery mechanism, you can set a restore point to a time (preferably the midtime) in the period.
 
-To easily achieve transactionally-consistent backup for Scalar DB on a non-transactional database is to use the [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which is implemented `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your application.
-You can use the [Client-side tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool) to pause the application without losing ongoing transactions.
+To easily make Scalar DB drain outstanding requests and stop accepting new requests, it is recommended to use [Scalar DB server](https://github.com/scalar-labs/scalardb/tree/master/server) (which implements `scalar-admin` interface) or implement the [scalar-admin](https://github.com/scalar-labs/scalar-admin) interface properly in your Scalar DB applications.
+With [scalar-admin client tool](https://github.com/scalar-labs/scalar-admin/tree/scalar-admin-dockerfile#client-side-tool), you can pause nodes/servers/applications that implement the scalar-admin interface without losing ongoing transactions.
 
-Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between nodes (`scalar-admin` interface implemented application nodes or `Scalar DB server` nodes that requests a pause) by using clock synchronization such as NTP.
+Note that when you use a point-in-time-restore/recovery mechanism, it is recommended to minimize the clock drifts between clients and servers by using clock synchronization such as NTP.
 Otherwise, the time you get as a paused duration might be too different from the time in which the pause was actually conducted, which could restore to a point where ongoing transactions exist.
 Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use the midpoint time of the paused duration as a restore point since clock synchronization cannot perfectly synchronize clocks between nodes.
 
@@ -43,19 +43,19 @@ If you want to create a transactionally-consistent cluster-wide backup, pause th
 stop the Cassandra cluster and take the copies of all the nodes of the cluster, and start the cluster. 
 
 To avoid mistakes when doing backup operations, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy is also integrated with `scalar-admin` so it can issue a pause request to the application of a Cassandra cluster.
+Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
 **Cosmos DB**
 
 You must create a Cosmos DB account with a Continuous backup policy enabled to create point-in-time restore (PITR). Backups are created continuously after enabling this.
-For creating a transactionally-consistent restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+To specify a transactionally-consistent restore point, please pause the Scalar DB application of a Cosmos DB as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
 
 **DynamoDB**
 
-You can enable the point-in-time recovery (PITR) feature for tables in DynamoDB. Point-in-time recovery(PITR) creates a continuous backup for a table.
+You must enable the point-in-time recovery (PITR) feature for DynamoDB tables.
 For selecting a restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
-You can enable auto-scaling if you want. Auto-scaling helps to maintain throughput capacity based on workload. It helps in improving efficiency and reducing costs.
+Note that you need to reconfigure restored tables since the configurations like Stream settings, Time To Live settings, PITR settings, tags, AWS Identity and Access Management (IAM) policies,  Amazon CloudWatch metrics and alarms, and auto scaling policies are not copied to the restored table.
 Scalar DB Schema Loader enables PITR and auto-scaling by default.
 
 ## Restore Backup
@@ -63,7 +63,7 @@ Scalar DB Schema Loader enables PITR and auto-scaling by default.
 ### JDBC databases
 
 You can restore the backup with your favorite way for JDBC databases.
-You can use `mysql` command in MySQL and `psql` command in PostgreSQL to achieve that.
+Please refer the [documentation of MySQL](https://dev.mysql.com/doc/mysql-backup-excerpt/8.0/en/reloading-sql-format-dumps.html) and [documentation of PostgreSQL](https://www.postgresql.org/docs/8.1/backup.html#BACKUP-DUMP-RESTORE) for restoring backups in MySQL and PostgreSQL respectively.
 If you use Amazon RDS (Relational Database Service) or Azure Database for MySQL/PostgreSQL,
 you can restore to any point within the backup retention period with the automated backup feature.
 
@@ -83,7 +83,7 @@ It is recommended to use the midtime of paused duration as a restore point as we
 ### DynamoDB
 
 You can restore the table to a point in time using the DynamoDB console or the AWS Command Line Interface (AWS CLI). The point-in-time recovery process restores to a new table.
-The tables can only be restored one by one.
+Tables can only be restored one by one.
 
 You can restore tables from the [Amazon DynamoDB console](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/PointInTimeRecovery.Tutorial.html) using the following steps.
 
@@ -97,8 +97,8 @@ Note that you need to follow the above steps because it assumes the application 
 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
-DynamoDB will not enable features like PITR and auto-scaling by default after restoring. It is recommended to enable point-in-time recovery (PITR) for continuous backup creation.
-Auto-scaling dynamically adjusts provisioned throughput capacity on your behalf in response to actual traffic patterns. You can enable this feature if you need it.
+Configurations like Stream settings, Time To Live settings, PITR settings, tags, AWS Identity and Access Management (IAM) policies,  Amazon CloudWatch metrics and alarms, and auto scaling policies are not copied to the restored table.
+You must update these configurations as required after restoring the table; thus, please enable point-in-time recovery (PITR) for continuous backup creation.
 
 You can re-apply schemas with the schema loader because it enables features like  PITR and auto-scaling.
 _Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist._
