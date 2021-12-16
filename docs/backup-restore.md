@@ -98,6 +98,5 @@ Note that you need to follow the above steps because it assumes the application 
 If you want to restore multiple tables with a single command, you can create a script to restore multiple tables using the AWS CLI commands.
 
 Configurations like Stream settings, Time To Live settings, PITR settings, tags, AWS Identity and Access Management (IAM) policies,  Amazon CloudWatch metrics and alarms, and auto scaling policies are not copied to the restored table.
-You must update these configurations as required after restoring the table; thus, please enable point-in-time recovery (PITR) for continuous backup creation.
 
 You can re-apply schemas with the schema loader because it enables features like  PITR and auto-scaling.
