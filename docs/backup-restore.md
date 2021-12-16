@@ -101,4 +101,3 @@ Configurations like Stream settings, Time To Live settings, PITR settings, tags,
 You must update these configurations as required after restoring the table; thus, please enable point-in-time recovery (PITR) for continuous backup creation.
 
 You can re-apply schemas with the schema loader because it enables features like  PITR and auto-scaling.
-_Don't worry the schema loader only sets the missing configurations and doesn't recreate the schemas if the tables exist._
