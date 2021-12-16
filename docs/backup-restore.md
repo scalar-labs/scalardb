@@ -54,7 +54,7 @@ To specify a transactionally-consistent restore point, please pause the Scalar D
 **DynamoDB**
 
 You must enable the point-in-time recovery (PITR) feature for DynamoDB tables.
-For selecting a restore point, you can refer to [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
+To specify a transactionally-consistent restore point, please pause the Scalar DB application of a DynamoDB as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
 Note that you need to reconfigure restored tables since the configurations like Stream settings, Time To Live settings, PITR settings, tags, AWS Identity and Access Management (IAM) policies,  Amazon CloudWatch metrics and alarms, and auto scaling policies are not copied to the restored table.
 Scalar DB Schema Loader enables PITR and auto-scaling by default.
 
