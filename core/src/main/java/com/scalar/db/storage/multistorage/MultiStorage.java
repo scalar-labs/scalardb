@@ -15,7 +15,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -161,7 +161,7 @@ public class MultiStorage implements DistributedStorage {
   }
 
   private DistributedStorage getStorage(Operation operation) {
-    Utility.setTargetToIfNot(operation, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
     String fullTaleName = operation.forFullTableName().get();
     DistributedStorage storage = tableStorageMap.get(fullTaleName);
     if (storage != null) {

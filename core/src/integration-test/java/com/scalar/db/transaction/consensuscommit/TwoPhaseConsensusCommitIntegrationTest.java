@@ -18,8 +18,6 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CoordinatorException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
@@ -225,7 +223,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(
-      boolean isGet) throws ExecutionException, TransactionException {
+      boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -262,18 +260,18 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(true);
   }
 
   @Test
   public void scan_ScanGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommitted_ShouldRollforward(false);
   }
 
   private void selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(
-      boolean isGet) throws ExecutionException, TransactionException {
+      boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -310,13 +308,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(true);
   }
 
   @Test
   public void scan_ScanGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(false);
   }
 
@@ -363,7 +361,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -403,7 +401,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         true);
   }
@@ -411,14 +409,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         false);
   }
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -470,7 +468,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         true);
   }
@@ -478,14 +476,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         false);
   }
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -537,7 +535,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         true);
   }
@@ -545,13 +543,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         false);
   }
 
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
-      boolean isGet) throws ExecutionException, TransactionException {
+      boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -582,18 +580,18 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(true);
   }
 
   @Test
   public void scan_ScanGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(false);
   }
 
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(
-      boolean isGet) throws ExecutionException, TransactionException {
+      boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -630,13 +628,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(true);
   }
 
   @Test
   public void scan_ScanGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(false);
   }
 
@@ -683,7 +681,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long prepared_at = System.currentTimeMillis() - RecoveryHandler.TRANSACTION_LIFETIME_MILLIS;
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -723,7 +721,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   @Test
   public void get_GetGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-      throws ExecutionException, TransactionException {
+      throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         true);
   }
@@ -731,14 +729,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
         false);
   }
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -784,7 +782,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         true);
   }
@@ -792,14 +790,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
         false);
   }
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          boolean isGet) throws ExecutionException, TransactionException {
+          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
     long current = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -851,7 +849,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         true);
   }
@@ -859,7 +857,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException {
+          throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         false);
   }
@@ -1748,7 +1746,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       commit_WriteSkewOnNonExistingRecordsWithSerializableWithExtraWriteAndCommitStatusFailed_ShouldRollbackProperly()
-          throws TransactionException {
+          throws TransactionException, CoordinatorException {
     // Arrange
     State state = new State(ANY_ID_1, TransactionState.ABORTED);
     coordinator.putState(state);
@@ -2155,14 +2153,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldIllegalArgumentException() {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
 
     // Act Assert
     assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
-        .isInstanceOf(CrudRuntimeException.class);
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

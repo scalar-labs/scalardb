@@ -16,7 +16,7 @@ import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -74,7 +74,7 @@ public class DistributedStorageAdminService
           admin.createTable(
               request.getNamespace(),
               request.getTable(),
-              ProtoUtil.toTableMetadata(request.getTableMetadata()),
+              ProtoUtils.toTableMetadata(request.getTableMetadata()),
               request.getIfNotExists(),
               request.getOptionsMap());
           responseObserver.onNext(Empty.getDefaultInstance());
@@ -117,7 +117,7 @@ public class DistributedStorageAdminService
               admin.getTableMetadata(request.getNamespace(), request.getTable());
           GetTableMetadataResponse.Builder builder = GetTableMetadataResponse.newBuilder();
           if (tableMetadata != null) {
-            builder.setTableMetadata(ProtoUtil.toTableMetadata(tableMetadata));
+            builder.setTableMetadata(ProtoUtils.toTableMetadata(tableMetadata));
           }
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();

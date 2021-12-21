@@ -34,7 +34,7 @@ import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.GetResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionResponse.StartResponse;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -82,7 +82,7 @@ public class TwoPhaseCommitTransactionService
           TransactionState state = manager.getState(request.getTransactionId());
           responseObserver.onNext(
               GetTransactionStateResponse.newBuilder()
-                  .setState(ProtoUtil.toTransactionState(state))
+                  .setState(ProtoUtils.toTransactionState(state))
                   .build());
           responseObserver.onCompleted();
         },
@@ -96,7 +96,7 @@ public class TwoPhaseCommitTransactionService
         () -> {
           TransactionState state = manager.abort(request.getTransactionId());
           responseObserver.onNext(
-              AbortResponse.newBuilder().setState(ProtoUtil.toTransactionState(state)).build());
+              AbortResponse.newBuilder().setState(ProtoUtils.toTransactionState(state)).build());
           responseObserver.onCompleted();
         },
         responseObserver,
@@ -309,10 +309,10 @@ public class TwoPhaseCommitTransactionService
         GetRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Get get = ProtoUtil.toGet(request.getGet());
+            Get get = ProtoUtils.toGet(request.getGet());
             Optional<Result> result = transaction.get(get);
             GetResponse.Builder builder = GetResponse.newBuilder();
-            result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
+            result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
             responseBuilder.setGetResponse(builder);
           },
           responseBuilder,
@@ -323,10 +323,10 @@ public class TwoPhaseCommitTransactionService
         ScanRequest request, TwoPhaseCommitTransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Scan scan = ProtoUtil.toScan(request.getScan());
+            Scan scan = ProtoUtils.toScan(request.getScan());
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
-            results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
+            results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
             responseBuilder.setScanResponse(builder);
           },
           responseBuilder,
@@ -339,7 +339,7 @@ public class TwoPhaseCommitTransactionService
           () ->
               transaction.mutate(
                   request.getMutationList().stream()
-                      .map(ProtoUtil::toMutation)
+                      .map(ProtoUtils::toMutation)
                       .collect(Collectors.toList())),
           responseBuilder,
           "transaction.mutate");

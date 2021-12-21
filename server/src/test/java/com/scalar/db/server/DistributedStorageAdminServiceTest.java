@@ -22,7 +22,7 @@ import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import io.grpc.stub.StreamObserver;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +88,7 @@ public class DistributedStorageAdminServiceTest {
             .setNamespace("namespace")
             .setTable("table")
             .setTableMetadata(
-                ProtoUtil.toTableMetadata(
+                ProtoUtils.toTableMetadata(
                     TableMetadata.newBuilder()
                         .addColumn("col1", DataType.INT)
                         .addColumn("col2", DataType.INT)

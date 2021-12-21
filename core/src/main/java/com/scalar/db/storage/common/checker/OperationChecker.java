@@ -12,7 +12,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -35,8 +35,9 @@ public class OperationChecker {
 
     checkProjections(get, metadata);
 
-    if (Utility.isSecondaryIndexSpecified(get, metadata)) {
-      if (!new ColumnChecker(metadata, false).check(get.getPartitionKey().get().get(0))) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(get, metadata)) {
+      if (!new ColumnChecker(metadata, true, false, false)
+          .check(get.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + get);
       }
@@ -56,8 +57,9 @@ public class OperationChecker {
 
     checkProjections(scan, metadata);
 
-    if (Utility.isSecondaryIndexSpecified(scan, metadata)) {
-      if (!new ColumnChecker(metadata, false).check(scan.getPartitionKey().get().get(0))) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(scan, metadata)) {
+      if (!new ColumnChecker(metadata, true, false, false)
+          .check(scan.getPartitionKey().get().get(0))) {
         throw new IllegalArgumentException(
             "The partition key is not properly specified. Operation: " + scan);
       }
@@ -204,7 +206,7 @@ public class OperationChecker {
 
   private void checkValues(Put put, TableMetadata metadata) {
     for (Map.Entry<String, Value<?>> entry : put.getValues().entrySet()) {
-      if (!new ColumnChecker(metadata, false).check(entry.getValue())) {
+      if (!new ColumnChecker(metadata, false, false, true).check(entry.getValue())) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
       }
@@ -290,7 +292,7 @@ public class OperationChecker {
         return false;
       }
 
-      if (!new ColumnChecker(metadata, true).check(value)) {
+      if (!new ColumnChecker(metadata, true, true, false).check(value)) {
         return false;
       }
     }

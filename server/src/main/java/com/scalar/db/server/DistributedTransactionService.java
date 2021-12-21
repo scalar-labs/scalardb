@@ -28,7 +28,7 @@ import com.scalar.db.rpc.TransactionResponse.Error.ErrorCode;
 import com.scalar.db.rpc.TransactionResponse.GetResponse;
 import com.scalar.db.rpc.TransactionResponse.ScanResponse;
 import com.scalar.db.rpc.TransactionResponse.StartResponse;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -75,7 +75,7 @@ public class DistributedTransactionService
           TransactionState state = manager.getState(request.getTransactionId());
           responseObserver.onNext(
               GetTransactionStateResponse.newBuilder()
-                  .setState(ProtoUtil.toTransactionState(state))
+                  .setState(ProtoUtils.toTransactionState(state))
                   .build());
           responseObserver.onCompleted();
         },
@@ -90,7 +90,7 @@ public class DistributedTransactionService
         () -> {
           TransactionState state = manager.abort(request.getTransactionId());
           responseObserver.onNext(
-              AbortResponse.newBuilder().setState(ProtoUtil.toTransactionState(state)).build());
+              AbortResponse.newBuilder().setState(ProtoUtils.toTransactionState(state)).build());
           responseObserver.onCompleted();
         },
         responseObserver,
@@ -266,10 +266,10 @@ public class DistributedTransactionService
     private void get(GetRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Get get = ProtoUtil.toGet(request.getGet());
+            Get get = ProtoUtils.toGet(request.getGet());
             Optional<Result> result = transaction.get(get);
             GetResponse.Builder builder = GetResponse.newBuilder();
-            result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
+            result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
             responseBuilder.setGetResponse(builder);
           },
           responseBuilder,
@@ -279,10 +279,10 @@ public class DistributedTransactionService
     private void scan(ScanRequest request, TransactionResponse.Builder responseBuilder) {
       execute(
           () -> {
-            Scan scan = ProtoUtil.toScan(request.getScan());
+            Scan scan = ProtoUtils.toScan(request.getScan());
             List<Result> results = transaction.scan(scan);
             ScanResponse.Builder builder = ScanResponse.newBuilder();
-            results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
+            results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
             responseBuilder.setScanResponse(builder);
           },
           responseBuilder,
@@ -294,7 +294,7 @@ public class DistributedTransactionService
           () ->
               transaction.mutate(
                   request.getMutationList().stream()
-                      .map(ProtoUtil::toMutation)
+                      .map(ProtoUtils::toMutation)
                       .collect(Collectors.toList())),
           responseBuilder,
           "transaction.mutate");

@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

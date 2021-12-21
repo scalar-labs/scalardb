@@ -1,11 +1,11 @@
 package com.scalar.db.storage.common;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -61,7 +61,7 @@ public class ResultImpl implements Result {
   @Override
   @Nonnull
   public Map<String, Value<?>> getValues() {
-    return Collections.unmodifiableMap(values);
+    return ImmutableMap.copyOf(values);
   }
 
   @Override

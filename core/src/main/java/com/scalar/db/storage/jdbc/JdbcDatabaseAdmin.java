@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -126,7 +126,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
 
   @Inject
   public JdbcDatabaseAdmin(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config, config.getIsolation());
+    dataSource = JdbcUtils.initDataSource(config);
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }

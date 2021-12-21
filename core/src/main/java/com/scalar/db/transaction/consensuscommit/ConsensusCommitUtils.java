@@ -139,4 +139,33 @@ public final class ConsensusCommitUtils {
     tableMetadata.getSecondaryIndexNames().forEach(builder::addSecondaryIndex);
     return builder.build();
   }
+
+  /**
+   * Returns whether the specified column is transactional or not.
+   *
+   * @param columnName a column name
+   * @param tableMetadata a transactional table metadata
+   * @return whether the specified column is transactional or not
+   */
+  public static boolean isTransactionalMetaColumn(String columnName, TableMetadata tableMetadata) {
+    return isTransactionalMetaColumn(columnName, tableMetadata.getColumnNames());
+  }
+
+  /**
+   * Returns whether the specified column is transactional or not.
+   *
+   * @param columnName a column name
+   * @param allColumnNames a set of all the column names
+   * @return whether the specified column is transactional or not
+   */
+  public static boolean isTransactionalMetaColumn(String columnName, Set<String> allColumnNames) {
+    if (TRANSACTION_META_COLUMNS.containsKey(columnName)) {
+      return true;
+    }
+    if (columnName.startsWith(Attribute.BEFORE_PREFIX)) {
+      // if the column name without the "before_" prefix exists, it's a transactional meta column
+      return allColumnNames.contains(columnName.substring(Attribute.BEFORE_PREFIX.length()));
+    }
+    return false;
+  }
 }

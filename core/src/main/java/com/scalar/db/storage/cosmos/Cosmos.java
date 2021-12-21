@@ -18,7 +18,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -98,7 +98,7 @@ public class Cosmos implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
 
     List<Record> records = selectStatementHandler.handle(get);
@@ -116,7 +116,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
 
     List<Record> records = selectStatementHandler.handle(scan);
@@ -127,7 +127,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
 
     putStatementHandler.handle(put);
@@ -140,7 +140,7 @@ public class Cosmos implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
 
     deleteStatementHandler.handle(delete);
@@ -164,7 +164,7 @@ public class Cosmos implements DistributedStorage {
       return;
     }
 
-    Utility.setTargetToIfNot(mutations, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
     for (Mutation mutation : mutations) {
       operationChecker.check(mutation);

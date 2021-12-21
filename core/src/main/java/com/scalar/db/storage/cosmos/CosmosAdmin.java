@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;

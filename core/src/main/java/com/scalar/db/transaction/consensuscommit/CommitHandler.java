@@ -9,7 +9,6 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -103,8 +102,7 @@ public class CommitHandler {
             "committing state in coordinator failed. " + "the transaction is aborted", e);
       }
     }
-    LOGGER.info(
-        "transaction " + id + " is committed successfully at " + System.currentTimeMillis());
+    LOGGER.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());
   }
 
   private void commitState(String id) throws CoordinatorException {
@@ -139,7 +137,7 @@ public class CommitHandler {
           // successfully COMMITTED or ABORTED
           return state.get().getState();
         }
-        LOGGER.warn("coordinator status doesn't exist");
+        LOGGER.warn("coordinator status for {} doesn't exist", id);
       } catch (CoordinatorException e1) {
         LOGGER.warn("can't get the state", e1);
       }

@@ -30,6 +30,7 @@ import org.mockito.MockitoAnnotations;
 public class JdbcDatabaseTest {
 
   @Mock private BasicDataSource dataSource;
+  @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
 
   @Mock private ResultInterpreter resultInterpreter;
@@ -43,7 +44,8 @@ public class JdbcDatabaseTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcDatabase = new JdbcDatabase(dataSource, RdbEngine.MYSQL, jdbcService);
+    jdbcDatabase =
+        new JdbcDatabase(dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }

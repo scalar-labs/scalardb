@@ -1,6 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;

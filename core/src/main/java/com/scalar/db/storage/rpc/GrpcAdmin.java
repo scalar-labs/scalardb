@@ -17,7 +17,7 @@ import com.scalar.db.rpc.GetTableMetadataResponse;
 import com.scalar.db.rpc.NamespaceExistsRequest;
 import com.scalar.db.rpc.NamespaceExistsResponse;
 import com.scalar.db.rpc.TruncateTableRequest;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableSupplier;
 import io.grpc.ManagedChannel;
 import io.grpc.Status.Code;
@@ -129,7 +129,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                     CreateTableRequest.newBuilder()
                         .setNamespace(namespace)
                         .setTable(table)
-                        .setTableMetadata(ProtoUtil.toTableMetadata(metadata))
+                        .setTableMetadata(ProtoUtils.toTableMetadata(metadata))
                         .setIfNotExists(ifNotExists)
                         .putAllOptions(options)
                         .build()));
@@ -178,7 +178,7 @@ public class GrpcAdmin implements DistributedStorageAdmin {
           if (!response.hasTableMetadata()) {
             return null;
           }
-          return ProtoUtil.toTableMetadata(response.getTableMetadata());
+          return ProtoUtils.toTableMetadata(response.getTableMetadata());
         });
   }
 

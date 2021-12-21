@@ -27,9 +27,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
@@ -176,7 +174,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    Assertions.assertThat(((TransactionResult) result.get()).getState())
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -193,7 +192,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    Assertions.assertThat(((TransactionResult) results.get(0)).getState())
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -294,11 +294,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -346,11 +346,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -444,11 +444,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -518,11 +518,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -589,11 +589,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -694,11 +694,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -792,11 +792,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -929,11 +929,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -1003,7 +1003,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult result = (TransactionResult) r.get();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     assertThat(getBalance(result)).isEqualTo(expected);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
@@ -1029,7 +1029,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     ConsensusCommit another = manager.start();
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult actual = (TransactionResult) r.get();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     assertThat(getBalance(actual)).isEqualTo(expected);
     Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
@@ -2282,7 +2282,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
     // Arrange
     ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
@@ -2293,7 +2293,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction.abort();
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
