@@ -29,7 +29,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
   protected static final String CONFIG_FILE = "config.properties";
   DistributedStorageAdmin admin;
   ConsensusCommitAdmin consensusCommitAdmin;
-  List<Table> tables;
+  protected List<Table> tables;
   private boolean initialized;
 
   @Before
@@ -42,12 +42,16 @@ public abstract class SchemaLoaderIntegrationTestBase {
       consensusCommitAdmin =
           new ConsensusCommitAdmin(
               admin, new ConsensusCommitConfig(databaseConfig.getProperties()));
-      tables = SchemaParser.parse(Paths.get(SCHEMA_FILE), Collections.emptyMap());
+      parsingTables();
       initialized = true;
     }
   }
 
   protected void initialize() throws Exception {}
+
+  protected void parsingTables() throws Exception {
+    tables = SchemaParser.parse(Paths.get(SCHEMA_FILE), Collections.emptyMap());
+  }
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
@@ -105,25 +109,8 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void createTables_GivenProperSchemaFileAndCommandArgs_ShouldCreateTables(
       List<String> args) throws Exception {
-    // Arrange
-    ProcessBuilder processBuilder = new ProcessBuilder(args);
-
     // Act
-    Process process = processBuilder.start();
-    try {
-      try (final BufferedReader input =
-          new BufferedReader(
-              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
-        String line;
-        while ((line = input.readLine()) != null) {
-          System.out.println(line);
-        }
-      }
-
-    } catch (Exception e) {
-      System.err.println(e.toString());
-    }
-    int exitCode = process.waitFor();
+    int exitCode = executeCommandWithArgs(args);
 
     // Assert
     assertTableCreation(exitCode);
@@ -143,6 +130,14 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
   private void deleteTables_GivenProperSchemaFileAndCommandArgs_ShouldDeleteTables(
       List<String> args) throws Exception {
+    // Act
+    int exitCode = executeCommandWithArgs(args);
+
+    // Assert
+    assertTableDeletion(exitCode);
+  }
+
+  private int executeCommandWithArgs(List<String> args) throws Exception {
     // Arrange
     ProcessBuilder processBuilder = new ProcessBuilder(args);
 
@@ -157,14 +152,11 @@ public abstract class SchemaLoaderIntegrationTestBase {
           System.out.println(line);
         }
       }
-
     } catch (Exception e) {
       System.err.println(e.toString());
     }
-    int exitCode = process.waitFor();
 
-    // Assert
-    assertTableDeletion(exitCode);
+    return process.waitFor();
   }
 
   private void assertTableCreation(int exitCode) throws ExecutionException {
