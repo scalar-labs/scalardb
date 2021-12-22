@@ -1,10 +1,14 @@
 package com.scalar.db.api;
 
+import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import java.util.List;
 import java.util.Optional;
@@ -64,9 +68,11 @@ public interface TwoPhaseCommitTransaction {
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  Optional<Result> get(Get get) throws CrudException;
+  Optional<Result> get(Get get) throws CrudConflictException, CrudException;
 
   /**
    * Retrieves results from the storage through a transaction with the specified {@link Scan}
@@ -75,9 +81,11 @@ public interface TwoPhaseCommitTransaction {
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  List<Result> scan(Scan scan) throws CrudException;
+  List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
 
   /**
    * Inserts/Updates an entry to the storage through a transaction with the specified {@link Put}
@@ -85,9 +93,11 @@ public interface TwoPhaseCommitTransaction {
    * a transaction if you want to implement conditional mutation.
    *
    * @param put a {@code Put} command
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  void put(Put put) throws CrudException;
+  void put(Put put) throws CrudConflictException, CrudException;
 
   /**
    * Inserts/Updates multiple entries to the storage through a transaction with the specified list
@@ -95,9 +105,11 @@ public interface TwoPhaseCommitTransaction {
    * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param puts a list of {@code Put} commands
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  void put(List<Put> puts) throws CrudException;
+  void put(List<Put> puts) throws CrudConflictException, CrudException;
 
   /**
    * Deletes an entry from the storage through a transaction with the specified {@link Delete}
@@ -105,9 +117,11 @@ public interface TwoPhaseCommitTransaction {
    * in a transaction if you want to implement conditional mutation.
    *
    * @param delete a {@code Delete} command
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  void delete(Delete delete) throws CrudException;
+  void delete(Delete delete) throws CrudConflictException, CrudException;
 
   /**
    * Deletes entries from the storage through a transaction with the specified list of {@link
@@ -115,41 +129,51 @@ public interface TwoPhaseCommitTransaction {
    * conditions in a transaction if you want to implement conditional mutation.
    *
    * @param deletes a list of {@code Delete} commands
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  void delete(List<Delete> deletes) throws CrudException;
+  void delete(List<Delete> deletes) throws CrudConflictException, CrudException;
 
   /**
    * Mutates entries of the storage through a transaction with the specified list of {@link
    * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
+   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CrudException if the operation failed
    */
-  void mutate(List<? extends Mutation> mutations) throws CrudException;
+  void mutate(List<? extends Mutation> mutations) throws CrudConflictException, CrudException;
 
   /**
    * Prepares a transaction.
    *
+   * @throws PreparationConflictException if transaction conflict happened. You can retry the
+   *     transaction in this case
    * @throws PreparationException if the operation fails
    */
-  void prepare() throws PreparationException;
+  void prepare() throws PreparationConflictException, PreparationException;
 
   /**
    * Validates a transaction. Depending on the concurrency control algorithm, you need a validation
    * phase for a transaction.
    *
+   * @throws ValidationConflictException if transaction conflict happened. You can retry the
+   *     transaction in this case
    * @throws ValidationException if the operation fails
    */
-  void validate() throws ValidationException;
+  void validate() throws ValidationConflictException, ValidationException;
 
   /**
    * Commits a transaction.
    *
+   * @throws CommitConflictException if transaction conflict happened. You can retry the transaction
+   *     in this case
    * @throws CommitException if the operation fails
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
-  void commit() throws CommitException, UnknownTransactionStatusException;
+  void commit() throws CommitConflictException, CommitException, UnknownTransactionStatusException;
 
   /**
    * Rolls back a transaction.
