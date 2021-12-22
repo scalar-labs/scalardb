@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 public class SchemaOperator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaOperator.class);
+  public static final String NAMESPACE_PREFIX = "namespace-prefix";
 
   private final DistributedStorageAdmin admin;
   private final ConsensusCommitAdmin consensusCommitAdmin;

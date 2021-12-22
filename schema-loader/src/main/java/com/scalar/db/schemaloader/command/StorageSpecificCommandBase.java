@@ -26,10 +26,20 @@ public abstract class StorageSpecificCommandBase {
       defaultValue = "false")
   private boolean deleteTables;
 
+  @Option(
+      names = {"--prefix"},
+      description = "Namespace prefix",
+      hidden = true)
+  protected String prefix;
+
   protected void execute(Properties props, Map<String, String> metaOptions)
       throws SchemaLoaderException {
     SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props, false);
     LOGGER.info("Schema path: " + schemaFile);
+
+    if (prefix != null) {
+      metaOptions.put(SchemaOperator.NAMESPACE_PREFIX, prefix);
+    }
 
     try {
       if (deleteTables) {

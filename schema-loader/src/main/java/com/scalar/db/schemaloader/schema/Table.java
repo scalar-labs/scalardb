@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
+import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,6 +65,10 @@ public class Table {
       throw new SchemaException("Table full name must contains table name and namespace");
     }
     namespace = fullName[0];
+    if (metaOptions.containsKey(SchemaOperator.NAMESPACE_PREFIX)) {
+      namespace = metaOptions.get(SchemaOperator.NAMESPACE_PREFIX) + namespace;
+    }
+
     tableName = fullName[1];
     tableMetadata = buildTableMetadata(tableDefinition);
     options = buildOptions(tableDefinition, metaOptions);
