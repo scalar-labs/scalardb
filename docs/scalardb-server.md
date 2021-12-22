@@ -95,6 +95,9 @@ scalar.db.storage=grpc
 
 # The type of the transaction manager
 scalar.db.transaction_manager=grpc
+
+# The deadline duration for gRPC connections. The default is 60000 milliseconds (60 seconds)
+#scalar.db.grpc.deadline_duration_millis=
 ```
 
 ## Further documentation
