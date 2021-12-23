@@ -1,7 +1,6 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.schemaloader.SchemaLoader;
-import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
@@ -72,22 +71,12 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       defaultValue = "false")
   private boolean deleteTables;
 
-  @Option(
-      names = {"--prefix"},
-      description = "Namespace prefix",
-      hidden = true)
-  private String prefix;
-
   @Override
   public Integer call() throws Exception {
     LOGGER.info("Config path: " + configPath);
     LOGGER.info("Schema path: " + schemaFile);
 
     Map<String, String> metaOptions = new HashMap<>();
-    if (prefix != null) {
-      metaOptions.put(SchemaOperator.NAMESPACE_PREFIX, prefix);
-    }
-
     if (replicationStrategy != null) {
       metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
     }

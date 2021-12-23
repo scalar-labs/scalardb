@@ -1,28 +1,17 @@
 package com.scalar.db.schemaloader.dynamo;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.storage.dynamo.DynamoConfig;
 import com.scalar.db.storage.dynamo.DynamoEnv;
-import java.io.FileOutputStream;
 import java.util.List;
-import java.util.Properties;
 
 public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
-  private static final DynamoConfig config = DynamoEnv.getDynamoConfig();
+  private static final DynamoConfig dynamoConfig = DynamoEnv.getDynamoConfig();
 
   @Override
-  protected void initialize() throws Exception {
-    Properties properties = config.getProperties();
-    try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
-      properties.store(fileOutputStream, null);
-    }
-  }
-
-  @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return config;
+  protected void initialize() {
+    config = dynamoConfig;
   }
 
   @Override
@@ -56,7 +45,7 @@ public class DynamoSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
         "-p",
         config.getPassword().get(),
         "--endpoint-override",
-        config.getEndpointOverride().get(),
+        dynamoConfig.getEndpointOverride().get(),
         "--no-scaling",
         "--no-backup");
   }

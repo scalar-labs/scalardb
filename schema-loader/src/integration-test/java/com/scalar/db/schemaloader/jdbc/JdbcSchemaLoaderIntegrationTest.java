@@ -1,28 +1,15 @@
 package com.scalar.db.schemaloader.jdbc;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
-import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
-import java.io.FileOutputStream;
 import java.util.List;
-import java.util.Properties;
 
 public class JdbcSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
-  private static final JdbcConfig config = JdbcEnv.getJdbcConfig();
 
   @Override
-  protected void initialize() throws Exception {
-    Properties properties = config.getProperties();
-    try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
-      properties.store(fileOutputStream, null);
-    }
-  }
-
-  @Override
-  protected DatabaseConfig getDatabaseConfig() {
-    return config;
+  protected void initialize() {
+    config = JdbcEnv.getJdbcConfig();
   }
 
   @Override

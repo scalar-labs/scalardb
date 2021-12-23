@@ -2,7 +2,6 @@ package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
-import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
@@ -56,7 +55,6 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
 
     Map<String, String> metaOptions = new HashMap<>();
     if (prefix != null) {
-      metaOptions.put(SchemaOperator.NAMESPACE_PREFIX, prefix);
       props.setProperty(
           CosmosConfig.TABLE_METADATA_DATABASE, prefix + CosmosAdmin.METADATA_DATABASE);
       props.setProperty(

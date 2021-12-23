@@ -13,17 +13,19 @@ import com.scalar.db.schemaloader.schema.Table;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("CatchAndPrintStackTrace")
 public abstract class SchemaLoaderIntegrationTestBase {
   protected static final String SCHEMA_FILE =
       System.getProperty("user.dir") + "/schema-loader/src/integration-test/resources/schema.json";
@@ -31,18 +33,22 @@ public abstract class SchemaLoaderIntegrationTestBase {
   DistributedStorageAdmin admin;
   ConsensusCommitAdmin consensusCommitAdmin;
   protected List<Table> tables;
+  protected DatabaseConfig config;
   private boolean initialized;
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      DatabaseConfig databaseConfig = getDatabaseConfig();
-      StorageFactory factory = new StorageFactory(databaseConfig);
+      Properties properties = config.getProperties();
+      try (final FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE)) {
+        properties.store(fileOutputStream, null);
+      }
+      StorageFactory factory = new StorageFactory(config);
       admin = factory.getAdmin();
       consensusCommitAdmin =
-          new ConsensusCommitAdmin(
-              admin, new ConsensusCommitConfig(databaseConfig.getProperties()));
+          new ConsensusCommitAdmin(admin, new ConsensusCommitConfig(config.getProperties()));
       parsingTables();
       initialized = true;
     }
@@ -53,8 +59,6 @@ public abstract class SchemaLoaderIntegrationTestBase {
   protected void parsingTables() throws Exception {
     tables = SchemaParser.parse(Paths.get(SCHEMA_FILE), Collections.emptyMap());
   }
-
-  protected abstract DatabaseConfig getDatabaseConfig();
 
   protected abstract List<String> getStorageSpecificCreationCommandArgs();
 
@@ -144,17 +148,13 @@ public abstract class SchemaLoaderIntegrationTestBase {
 
     // Act
     Process process = processBuilder.start();
-    try {
-      try (final BufferedReader input =
-          new BufferedReader(
-              new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
-        String line;
-        while ((line = input.readLine()) != null) {
-          System.out.println(line);
-        }
+    try (final BufferedReader input =
+        new BufferedReader(
+            new InputStreamReader(process.getErrorStream(), Charset.defaultCharset()))) {
+      String line;
+      while ((line = input.readLine()) != null) {
+        System.out.println(line);
       }
-    } catch (Exception e) {
-      e.printStackTrace(System.err);
     }
 
     return process.waitFor();
