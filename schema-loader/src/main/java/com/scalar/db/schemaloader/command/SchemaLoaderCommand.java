@@ -76,7 +76,7 @@ public class SchemaLoaderCommand implements Callable<Integer> {
       names = {"--prefix"},
       description = "Namespace prefix",
       hidden = true)
-  protected String prefix;
+  private String prefix;
 
   @Override
   public Integer call() throws Exception {

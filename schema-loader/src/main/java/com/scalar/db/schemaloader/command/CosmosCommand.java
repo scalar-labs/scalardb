@@ -2,6 +2,7 @@ package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.SchemaLoaderException;
+import com.scalar.db.schemaloader.core.SchemaOperator;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
@@ -39,6 +40,12 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
   private Boolean noScaling;
 
+  @Option(
+      names = {"--prefix"},
+      description = "Namespace prefix",
+      hidden = true)
+  private String prefix;
+
   @Override
   public Integer call() throws SchemaLoaderException {
 
@@ -47,14 +54,14 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
     props.setProperty(DatabaseConfig.PASSWORD, key);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
 
+    Map<String, String> metaOptions = new HashMap<>();
     if (prefix != null) {
+      metaOptions.put(SchemaOperator.NAMESPACE_PREFIX, prefix);
       props.setProperty(
           CosmosConfig.TABLE_METADATA_DATABASE, prefix + CosmosAdmin.METADATA_DATABASE);
       props.setProperty(
           ConsensusCommitConfig.COORDINATOR_NAMESPACE, prefix + Coordinator.NAMESPACE);
     }
-
-    Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {
       metaOptions.put(CosmosAdmin.REQUEST_UNIT, ru);
     }
