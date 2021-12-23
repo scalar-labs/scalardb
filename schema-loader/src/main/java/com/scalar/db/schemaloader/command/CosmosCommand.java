@@ -30,6 +30,13 @@ public class CosmosCommand implements Callable<Integer> {
       required = true)
   private String uri;
 
+  // For backward compatibility
+  @Option(
+      names = {"-u", "--user"},
+      description = "DB username",
+      hidden = true)
+  private String username;
+
   @Option(
       names = {"-p", "--password"},
       description = "Cosmos DB key",
