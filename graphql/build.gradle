@@ -1,5 +1,6 @@
 plugins {
     id 'application'
+    id 'com.palantir.docker' version '0.25.0'
 }
 
 dependencies {
@@ -21,6 +22,11 @@ dependencies {
 application {
     mainClassName = 'com.scalar.db.graphql.server.GraphQlServer'
     startScripts.applicationName = 'scalardb-graphql-server'
+}
+
+docker {
+    name "ghcr.io/scalar-labs/scalardb-graphql:${project.version}"
+    files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
 archivesBaseName = "scalardb-graphql"
