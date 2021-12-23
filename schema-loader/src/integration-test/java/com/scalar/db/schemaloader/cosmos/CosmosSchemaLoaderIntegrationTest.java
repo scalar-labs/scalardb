@@ -10,6 +10,8 @@ import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.storage.cosmos.CosmosEnv;
 import java.io.FileOutputStream;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -29,7 +31,10 @@ public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
     tables =
         SchemaParser.parse(
             Paths.get(SCHEMA_FILE),
-            ImmutableMap.of(SchemaOperator.NAMESPACE_PREFIX, CosmosEnv.getDatabasePrefix().get()));
+            CosmosEnv.getDatabasePrefix().isPresent()
+                ? ImmutableMap.of(
+                    SchemaOperator.NAMESPACE_PREFIX, CosmosEnv.getDatabasePrefix().get())
+                : Collections.emptyMap());
   }
 
   @Override
@@ -39,33 +44,41 @@ public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
 
   @Override
   protected List<String> getStorageSpecificCreationCommandArgs() {
-    return ImmutableList.of(
-        "java",
-        "-jar",
-        "scalardb-schema-loader.jar",
-        "--cosmos",
-        "-h",
-        config.getContactPoints().get(0),
-        "--schema-file",
-        SCHEMA_FILE,
-        "-p",
-        config.getPassword().get(),
-        "--prefix",
-        CosmosEnv.getDatabasePrefix().get());
+    List<String> args =
+        new ArrayList<>(
+            ImmutableList.of(
+                "java",
+                "-jar",
+                "scalardb-schema-loader.jar",
+                "--cosmos",
+                "-h",
+                config.getContactPoints().get(0),
+                "--schema-file",
+                SCHEMA_FILE,
+                "-p",
+                config.getPassword().get()));
+    if (CosmosEnv.getDatabasePrefix().isPresent()) {
+      args.addAll(ImmutableList.of("--prefix", CosmosEnv.getDatabasePrefix().get()));
+    }
+    return args;
   }
 
   @Override
   protected List<String> getSchemaLoaderCreationCommandArgs() {
-    return ImmutableList.of(
-        "java",
-        "-jar",
-        "scalardb-schema-loader.jar",
-        "--config",
-        CONFIG_FILE,
-        "--schema-file",
-        SCHEMA_FILE,
-        "--coordinator",
-        "--prefix",
-        CosmosEnv.getDatabasePrefix().get());
+    List<String> args =
+        new ArrayList<>(
+            ImmutableList.of(
+                "java",
+                "-jar",
+                "scalardb-schema-loader.jar",
+                "--config",
+                CONFIG_FILE,
+                "--schema-file",
+                SCHEMA_FILE,
+                "--coordinator"));
+    if (CosmosEnv.getDatabasePrefix().isPresent()) {
+      args.addAll(ImmutableList.of("--prefix", CosmosEnv.getDatabasePrefix().get()));
+    }
+    return args;
   }
 }

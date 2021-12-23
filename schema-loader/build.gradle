@@ -209,7 +209,6 @@ task spotbugsIntegrationTest(type: SpotBugsTask) {
     reports { html.enabled = true }
 }
 
-
 check.dependsOn += spotbugsMain
 check.dependsOn += spotbugsTest
 check.dependsOn += spotbugsIntegrationTest

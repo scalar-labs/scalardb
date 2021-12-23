@@ -23,6 +23,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("CatchAndPrintStackTrace")
 public abstract class SchemaLoaderIntegrationTestBase {
   protected static final String SCHEMA_FILE =
       System.getProperty("user.dir") + "/schema-loader/src/integration-test/resources/schema.json";
@@ -153,7 +154,7 @@ public abstract class SchemaLoaderIntegrationTestBase {
         }
       }
     } catch (Exception e) {
-      System.err.println(e.toString());
+      e.printStackTrace(System.err);
     }
 
     return process.waitFor();
