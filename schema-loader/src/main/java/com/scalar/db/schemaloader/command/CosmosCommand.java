@@ -24,6 +24,13 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
       required = true)
   private String uri;
 
+  // For backward compatibility
+  @Option(
+      names = {"-u", "--user"},
+      description = "DB username",
+      hidden = true)
+  private String username;
+
   @Option(
       names = {"-p", "--password"},
       description = "Cosmos DB key",
