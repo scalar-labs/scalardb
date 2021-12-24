@@ -49,36 +49,35 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class ConsensusCommitIntegrationTestBase {
 
-  protected static final String TEST_NAME = "cc";
-  protected static final String NAMESPACE_1 = "integration_testing_" + TEST_NAME + "1";
-  protected static final String NAMESPACE_2 = "integration_testing_" + TEST_NAME + "2";
-  protected static final String TABLE_1 = "test_table1";
-  protected static final String TABLE_2 = "test_table2";
-  protected static final String ACCOUNT_ID = "account_id";
-  protected static final String ACCOUNT_TYPE = "account_type";
-  protected static final String BALANCE = "balance";
-  protected static final int INITIAL_BALANCE = 1000;
-  protected static final int NUM_ACCOUNTS = 4;
-  protected static final int NUM_TYPES = 4;
-  protected static final String ANY_ID_1 = "id1";
-  protected static final String ANY_ID_2 = "id2";
+  private static final String TEST_NAME = "cc";
+  private static final String NAMESPACE_1 = "integration_testing_" + TEST_NAME + "1";
+  private static final String NAMESPACE_2 = "integration_testing_" + TEST_NAME + "2";
+  private static final String TABLE_1 = "test_table1";
+  private static final String TABLE_2 = "test_table2";
+  private static final String ACCOUNT_ID = "account_id";
+  private static final String ACCOUNT_TYPE = "account_type";
+  private static final String BALANCE = "balance";
+  private static final int INITIAL_BALANCE = 1000;
+  private static final int NUM_ACCOUNTS = 4;
+  private static final int NUM_TYPES = 4;
+  private static final String ANY_ID_1 = "id1";
+  private static final String ANY_ID_2 = "id2";
 
   private static boolean initialized;
-  protected static DistributedStorage originalStorage;
-  protected static DistributedStorageAdmin admin;
-  protected static ConsensusCommitConfig consensusCommitConfig;
-  protected static ConsensusCommitAdmin consensusCommitAdmin;
-  protected static String namespace1;
-  protected static String namespace2;
+  private static DistributedStorage originalStorage;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitConfig consensusCommitConfig;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
+  private static String namespace1;
+  private static String namespace2;
 
-  protected ConsensusCommitManager manager;
-  protected DistributedStorage storage;
-  protected Coordinator coordinator;
-  protected RecoveryHandler recovery;
+  private ConsensusCommitManager manager;
+  private DistributedStorage storage;
+  private Coordinator coordinator;
+  private RecoveryHandler recovery;
 
   @Before
   public void setUp() throws Exception {

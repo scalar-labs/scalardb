@@ -58,9 +58,9 @@ public class ConsensusCommitWithMultiStorageIntegrationTest
     // the coordinator namespace to storage1
     props.setProperty(
         MultiStorageConfig.NAMESPACE_MAPPING,
-        NAMESPACE_1
+        getNamespace1()
             + ":storage1,"
-            + NAMESPACE_2
+            + getNamespace2()
             + ":storage2,"
             + Coordinator.NAMESPACE
             + ":storage1");

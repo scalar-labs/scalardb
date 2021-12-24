@@ -14,17 +14,17 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
 
   @Override
   protected String getNamespace1() {
-    return getNamespace(NAMESPACE1);
+    return getNamespace(super.getNamespace1());
   }
 
   @Override
   protected String getNamespace2() {
-    return getNamespace(NAMESPACE2);
+    return getNamespace(super.getNamespace2());
   }
 
   @Override
   protected String getNamespace3() {
-    return getNamespace(NAMESPACE3);
+    return getNamespace(super.getNamespace3());
   }
 
   private String getNamespace(String namespace) {

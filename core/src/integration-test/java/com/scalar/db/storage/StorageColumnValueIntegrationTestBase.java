@@ -30,28 +30,28 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageColumnValueIntegrationTestBase {
 
-  protected static final String TEST_NAME = "col_val";
-  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
-  protected static final String TABLE = "test_table";
-  protected static final String PARTITION_KEY = "pkey";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
-  protected static final String COL_NAME6 = "c6";
-  protected static final String COL_NAME7 = "c7";
+  private static final String TEST_NAME = "col_val";
+  private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
+  private static final String TABLE = "test_table";
+  private static final String PARTITION_KEY = "pkey";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
+  private static final String COL_NAME6 = "c6";
+  private static final String COL_NAME7 = "c7";
 
   private static final int ATTEMPT_COUNT = 50;
   private static final Random RANDOM = new Random();
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
-  protected static String namespace;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
+  private static String namespace;
 
   private static long seed;
 

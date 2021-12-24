@@ -43,15 +43,15 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
-  protected static final String TEST_NAME = "mul_ckey";
-  protected static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
-  protected static final String PARTITION_KEY = "pkey";
-  protected static final String FIRST_CLUSTERING_KEY = "ckey1";
-  protected static final String SECOND_CLUSTERING_KEY = "ckey2";
-  protected static final String COL_NAME = "col";
+  private static final String TEST_NAME = "mul_ckey";
+  private static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
+  private static final String PARTITION_KEY = "pkey";
+  private static final String FIRST_CLUSTERING_KEY = "ckey1";
+  private static final String SECOND_CLUSTERING_KEY = "ckey2";
+  private static final String COL_NAME = "col";
 
   private static final int FIRST_CLUSTERING_KEY_NUM = 5;
   private static final int SECOND_CLUSTERING_KEY_NUM = 20;
@@ -61,12 +61,12 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
   private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
   private static String namespaceBaseName;
 
   // Key: firstClusteringKeyType, Value: secondClusteringKeyType
-  protected static ListMultimap<DataType, DataType> clusteringKeyTypes;
+  private static ListMultimap<DataType, DataType> clusteringKeyTypes;
 
   private static long seed;
 
@@ -276,7 +276,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+  private void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -345,7 +345,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -429,7 +429,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -508,7 +508,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -580,7 +580,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -648,7 +648,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -710,7 +710,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -772,7 +772,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+  private void scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -837,7 +837,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -952,7 +952,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -1069,7 +1069,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -1169,7 +1169,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -1268,7 +1268,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -1353,7 +1353,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
@@ -1452,7 +1452,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         });
   }
 
-  protected void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+  private void scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
       List<ClusteringKey> clusteringKeys,
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,

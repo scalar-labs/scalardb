@@ -28,14 +28,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageSecondaryIndexIntegrationTestBase {
 
-  protected static final String TEST_NAME = "secondary_idx";
-  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
-  protected static final String PARTITION_KEY = "pkey";
-  protected static final String INDEX_COL_NAME = "idx_col";
-  protected static final String COL_NAME = "col";
+  private static final String TEST_NAME = "secondary_idx";
+  private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
+  private static final String PARTITION_KEY = "pkey";
+  private static final String INDEX_COL_NAME = "idx_col";
+  private static final String COL_NAME = "col";
 
   private static final int ATTEMPT_COUNT = 50;
   private static final int DATA_NUM = 10;
@@ -43,10 +43,10 @@ public abstract class StorageSecondaryIndexIntegrationTestBase {
   private static final Random RANDOM = new Random();
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
-  protected static String namespace;
-  protected static Set<DataType> secondaryIndexTypes;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
+  private static String namespace;
+  private static Set<DataType> secondaryIndexTypes;
 
   private static long seed;
 

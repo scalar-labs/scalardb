@@ -26,7 +26,7 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
       names = {"-u", "--user"},
       description = "DB username",
       hidden = true)
-  private String username;
+  private String unusedUsername;
 
   @Option(
       names = {"-p", "--password"},
