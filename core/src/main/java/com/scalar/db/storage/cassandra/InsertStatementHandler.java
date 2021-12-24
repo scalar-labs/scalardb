@@ -4,6 +4,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
@@ -58,7 +59,10 @@ public class InsertStatementHandler extends MutateStatementHandler {
   }
 
   private Insert prepare(Put put) {
-    Insert insert = insertInto(put.forNamespace().get(), put.forTable().get());
+    Insert insert =
+        insertInto(
+            Metadata.quoteIfNecessary(put.forNamespace().get()),
+            Metadata.quoteIfNecessary(put.forTable().get()));
 
     put.getPartitionKey().forEach(v -> insert.value(v.getName(), bindMarker()));
     put.getClusteringKey().ifPresent(k -> k.forEach(v -> insert.value(v.getName(), bindMarker())));

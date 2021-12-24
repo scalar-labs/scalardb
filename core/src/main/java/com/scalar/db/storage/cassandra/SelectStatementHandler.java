@@ -9,6 +9,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
@@ -114,7 +115,9 @@ public class SelectStatementHandler extends StatementHandler {
     Select.Selection selection = select();
 
     setProjections(selection, sel.getProjections());
-    return selection.from(sel.forNamespace().get(), sel.forTable().get());
+    return selection.from(
+        Metadata.quoteIfNecessary(sel.forNamespace().get()),
+        Metadata.quoteIfNecessary(sel.forTable().get()));
   }
 
   private void setProjections(Select.Selection selection, List<String> projections) {
