@@ -30,8 +30,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SelectStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "keyspace_name";
+  private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
