@@ -9,13 +9,10 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +23,13 @@ public class RecoveryHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
-  private final ConsensusCommitConfig config;
-  @Nullable private final ExecutorService parallelExecutorService;
+  private final ParallelExecutor parallelExecutor;
 
   public RecoveryHandler(
-      DistributedStorage storage,
-      Coordinator coordinator,
-      ConsensusCommitConfig config,
-      @Nullable ExecutorService parallelExecutorService) {
+      DistributedStorage storage, Coordinator coordinator, ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
-    this.config = config;
-    this.parallelExecutorService = parallelExecutorService;
+    this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   // lazy recovery in read phase
@@ -74,8 +66,7 @@ public class RecoveryHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      ScalarDbUtils.executeTasks(
-          tasks, parallelExecutorService, config.isParallelRollbackEnabled(), false);
+      parallelExecutor.rollback(tasks);
     } catch (Exception e) {
       LOGGER.warn("rolling back records failed", e);
       // ignore since records are recovered lazily

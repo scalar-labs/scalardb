@@ -52,7 +52,7 @@ public class CommitHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new CommitHandler(storage, coordinator, recovery, config, null);
+    handler = new CommitHandler(storage, coordinator, recovery, new ParallelExecutor(config));
   }
 
   private Put preparePut1() {

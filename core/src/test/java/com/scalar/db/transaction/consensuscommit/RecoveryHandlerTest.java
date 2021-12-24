@@ -35,7 +35,7 @@ public class RecoveryHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = spy(new RecoveryHandler(storage, coordinator, config, null));
+    handler = spy(new RecoveryHandler(storage, coordinator, new ParallelExecutor(config)));
   }
 
   private void configureResult(Result mock, long preparedAt) {

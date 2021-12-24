@@ -5,8 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
@@ -15,9 +13,6 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +23,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private final DistributedStorage storage;
   private final ConsensusCommitConfig config;
   private final Coordinator coordinator;
-  @Nullable private final ExecutorService parallelExecutorService;
+  private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private Optional<String> namespace;
@@ -39,21 +34,9 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = new Coordinator(storage, config);
-
-    if (config.isParallelPreparationEnabled()
-        || config.isParallelCommitEnabled()
-        || config.isParallelRollbackEnabled()) {
-      parallelExecutorService =
-          Executors.newFixedThreadPool(
-              config.getParallelExecutorCount(),
-              new ThreadFactoryBuilder().setNameFormat("parallel-executor-%d").build());
-    } else {
-      parallelExecutorService = null;
-    }
-    this.recovery = new RecoveryHandler(storage, coordinator, config, parallelExecutorService);
-    this.commit =
-        new CommitHandler(storage, coordinator, recovery, config, parallelExecutorService);
-
+    this.parallelExecutor = new ParallelExecutor(config);
+    this.recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    this.commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
     this.namespace = storage.getNamespace();
     this.tableName = storage.getTable();
   }
@@ -68,7 +51,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
-    parallelExecutorService = null;
+    parallelExecutor = null;
     this.recovery = recovery;
     this.commit = commit;
     this.namespace = storage.getNamespace();
@@ -200,14 +183,9 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     }
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   @Override
   public void close() {
     storage.close();
-
-    if (parallelExecutorService != null) {
-      parallelExecutorService.shutdown();
-      Uninterruptibles.awaitTerminationUninterruptibly(parallelExecutorService);
-    }
+    parallelExecutor.close();
   }
 }

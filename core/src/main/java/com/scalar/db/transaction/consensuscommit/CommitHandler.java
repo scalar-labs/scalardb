@@ -11,13 +11,10 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,20 +25,17 @@ public class CommitHandler {
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final RecoveryHandler recovery;
-  private final ConsensusCommitConfig config;
-  @Nullable private final ExecutorService parallelExecutorService;
+  private final ParallelExecutor parallelExecutor;
 
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
       RecoveryHandler recovery,
-      ConsensusCommitConfig config,
-      @Nullable ExecutorService parallelExecutorService) {
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.recovery = checkNotNull(recovery);
-    this.config = config;
-    this.parallelExecutorService = parallelExecutorService;
+    this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
@@ -86,8 +80,7 @@ public class CommitHandler {
     for (PartitionedMutations.Key key : orderedKeys) {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
-    ScalarDbUtils.executeTasks(
-        tasks, parallelExecutorService, config.isParallelPreparationEnabled(), false);
+    parallelExecutor.prepare(tasks);
   }
 
   public void preCommitValidation(Snapshot snapshot, boolean abortIfError)
@@ -140,8 +133,7 @@ public class CommitHandler {
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }
-      ScalarDbUtils.executeTasks(
-          tasks, parallelExecutorService, config.isParallelCommitEnabled(), false);
+      parallelExecutor.commit(tasks);
     } catch (Exception e) {
       LOGGER.warn("committing records failed", e);
       // ignore since records are recovered lazily

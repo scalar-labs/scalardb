@@ -74,6 +74,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   protected static ConsensusCommitAdmin consensusCommitAdmin;
   protected static String namespace1;
   protected static String namespace2;
+  protected static ParallelExecutor parallelExecutor;
 
   protected ConsensusCommitManager manager;
   protected DistributedStorage storage;
@@ -93,15 +94,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
       namespace2 = getNamespace2();
       createTables();
       originalStorage = factory.getStorage();
+      parallelExecutor = new ParallelExecutor(consensusCommitConfig);
       initialized = true;
     }
 
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    recovery = spy(new RecoveryHandler(storage, coordinator, consensusCommitConfig, null));
-    CommitHandler commit =
-        spy(new CommitHandler(storage, coordinator, recovery, consensusCommitConfig, null));
+    recovery = spy(new RecoveryHandler(storage, coordinator, parallelExecutor));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
   }
@@ -152,6 +153,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     deleteTables();
     admin.close();
     originalStorage.close();
+    parallelExecutor.close();
   }
 
   private static void deleteTables() throws ExecutionException {
