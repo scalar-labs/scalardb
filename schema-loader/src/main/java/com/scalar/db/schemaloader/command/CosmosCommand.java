@@ -47,11 +47,19 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
   private Boolean noScaling;
 
+  // For test
   @Option(
-      names = {"--prefix"},
-      description = "Namespace prefix",
+      names = {"--table-metadata-database-prefix"},
+      description = "Table metadata database prefix",
       hidden = true)
-  private String prefix;
+  private String tableMetadataDatabasePrefix;
+
+  // For test
+  @Option(
+      names = {"--coordinator-namespace-prefix"},
+      description = "Coordinator namespace prefix",
+      hidden = true)
+  private String coordinatorNamespacePrefix;
 
   @Override
   public Integer call() throws SchemaLoaderException {
@@ -61,13 +69,19 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
     props.setProperty(DatabaseConfig.PASSWORD, key);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
 
-    Map<String, String> metaOptions = new HashMap<>();
-    if (prefix != null) {
+    // For test
+    if (tableMetadataDatabasePrefix != null) {
       props.setProperty(
-          CosmosConfig.TABLE_METADATA_DATABASE, prefix + CosmosAdmin.METADATA_DATABASE);
-      props.setProperty(
-          ConsensusCommitConfig.COORDINATOR_NAMESPACE, prefix + Coordinator.NAMESPACE);
+          CosmosConfig.TABLE_METADATA_DATABASE,
+          tableMetadataDatabasePrefix + CosmosAdmin.METADATA_DATABASE);
     }
+    if (coordinatorNamespacePrefix != null) {
+      props.setProperty(
+          ConsensusCommitConfig.COORDINATOR_NAMESPACE,
+          coordinatorNamespacePrefix + Coordinator.NAMESPACE);
+    }
+
+    Map<String, String> metaOptions = new HashMap<>();
     if (ru != null) {
       metaOptions.put(CosmosAdmin.REQUEST_UNIT, ru);
     }
