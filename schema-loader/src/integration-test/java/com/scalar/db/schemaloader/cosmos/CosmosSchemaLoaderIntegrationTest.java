@@ -88,17 +88,4 @@ public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTe
     }
     return listBuilder.build();
   }
-
-  @Override
-  protected List<String> getSchemaLoaderCreationCommandArgs() {
-    return ImmutableList.of(
-        "java",
-        "-jar",
-        "scalardb-schema-loader.jar",
-        "--config",
-        CONFIG_FILE,
-        "--schema-file",
-        SCHEMA_FILE,
-        "--coordinator");
-  }
 }

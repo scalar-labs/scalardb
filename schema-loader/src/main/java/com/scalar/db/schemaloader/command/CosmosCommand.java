@@ -13,6 +13,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+@SuppressWarnings("UnusedVariable")
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
     description = "Create/Delete Cosmos DB schemas")
