@@ -1,34 +1,36 @@
 package com.scalar.db.graphql.datafetcher;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
+import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
+import graphql.VisibleForTesting;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
+public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
-  public MutationDeleteDataFetcher(DistributedStorage storage, DataFetcherHelper helper) {
+  public MutationBulkPutDataFetcher(DistributedStorage storage, DataFetcherHelper helper) {
     this.storage = storage;
     this.helper = helper;
   }
 
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
-    Map<String, Object> deleteInput = environment.getArgument("delete");
-    Delete delete = helper.createDelete(deleteInput);
+    List<Map<String, Object>> putInput = environment.getArgument("put");
+    List<Put> puts = putInput.stream().map(helper::createPut).collect(Collectors.toList());
 
     DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
     try {
-      performDelete(environment, delete);
+      performPut(environment, puts);
       result.data(true);
     } catch (TransactionException | ExecutionException e) {
       result.data(false).error(new AbortExecutionException(e));
@@ -38,13 +40,13 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
   }
 
   @VisibleForTesting
-  void performDelete(DataFetchingEnvironment environment, Delete delete)
+  void performPut(DataFetchingEnvironment environment, List<Put> puts)
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
     if (transaction != null) {
-      transaction.delete(delete);
+      transaction.put(puts);
     } else {
-      storage.delete(delete);
+      storage.put(puts);
     }
   }
 }

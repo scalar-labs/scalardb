@@ -14,30 +14,51 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<String, Object>>>> {
+public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<String, Object>>>> {
+  private final DistributedStorage storage;
+  private final DataFetcherHelper helper;
 
-  public QueryScanDataFetcher(DistributedStorage storage, TableGraphQlModel tableModel) {
-    super(storage, tableModel);
+  public QueryScanDataFetcher(DistributedStorage storage, DataFetcherHelper helper) {
+    this.storage = storage;
+    this.helper = helper;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public Map<String, List<Map<String, Object>>> get(DataFetchingEnvironment environment)
       throws Exception {
     Map<String, Object> scanInput = environment.getArgument("scan");
+    Scan scan = createScan(scanInput);
+
+    // TODO: scan.withProjections()
+    LinkedHashSet<String> fieldNames = helper.getFieldNames();
+    ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
+    for (Result result : performScan(environment, scan)) {
+      ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
+      for (String fieldName : fieldNames) {
+        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
+      }
+      list.add(map.build());
+    }
+
+    return ImmutableMap.of(helper.getObjectTypeName(), list.build());
+  }
+
+  @VisibleForTesting
+  @SuppressWarnings("unchecked")
+  Scan createScan(Map<String, Object> scanInput) {
     Scan scan =
         new Scan(
-                createPartitionKeyFromKeyArgument(
+                helper.createPartitionKeyFromKeyArgument(
                     (Map<String, Object>) scanInput.get("partitionKey")))
-            .forNamespace(tableModel.getNamespaceName())
-            .forTable(tableModel.getTableName());
+            .forNamespace(helper.getNamespaceName())
+            .forTable(helper.getTableName());
 
     List<Map<String, Object>> startInput = (List<Map<String, Object>>) scanInput.get("start");
     Boolean startInclusiveInput = (Boolean) scanInput.get("startInclusive");
@@ -45,7 +66,9 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
       Key key =
           new Key(
               startInput.stream()
-                  .map(start -> createValueFromMap((String) start.get("name"), start))
+                  .map(
+                      start ->
+                          DataFetcherHelper.createValueFromMap((String) start.get("name"), start))
                   .collect(toList()));
       if (startInclusiveInput != null) {
         scan.withStart(key, startInclusiveInput);
@@ -60,7 +83,7 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
       Key key =
           new Key(
               endInput.stream()
-                  .map(end -> createValueFromMap((String) end.get("name"), end))
+                  .map(end -> DataFetcherHelper.createValueFromMap((String) end.get("name"), end))
                   .collect(toList()));
       if (endInclusiveInput != null) {
         scan.withEnd(key, endInclusiveInput);
@@ -88,24 +111,13 @@ public class QueryScanDataFetcher extends DataFetcherBase<Map<String, List<Map<S
       scan.withConsistency(Consistency.valueOf(consistencyInput));
     }
 
-    // TODO: scan.withProjections()
-    LinkedHashSet<String> fieldNames = tableModel.getFieldNames();
-    ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
-    for (Result result : performScan(environment, scan)) {
-      ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-      for (String fieldName : fieldNames) {
-        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
-      }
-      list.add(map.build());
-    }
-
-    return ImmutableMap.of(tableModel.getObjectType().getName(), list.build());
+    return scan;
   }
 
   @VisibleForTesting
   List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
     if (transaction != null) {
       return transaction.scan(scan);
     } else {
