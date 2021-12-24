@@ -72,10 +72,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
     // })
     Map<String, Object> putInput =
         ImmutableMap.of(
-            "key",
-            ImmutableMap.of(COL1, 1, COL2, "A"),
-            "values",
-            ImmutableMap.of(COL3, 2.0F));
+            "key", ImmutableMap.of(COL1, 1, COL2, "A"), "values", ImmutableMap.of(COL3, 2.0F));
     when(environment.getArgument("put")).thenReturn(putInput);
 
     expectedPut =

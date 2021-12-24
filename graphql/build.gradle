@@ -1,3 +1,7 @@
+plugins {
+    id 'com.github.spotbugs' version '4.7.1'
+}
+
 dependencies {
     implementation project(':core')
     implementation group: 'com.graphql-java', name: 'graphql-java', version: "${graphqlJavaVersion}"
@@ -6,4 +10,24 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    // for SpotBugs
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        importOrder()
+        removeUnusedImports()
+        googleJavaFormat()
+    }
+}
+
+spotbugsMain.reports {
+    html.enabled = true
+}
+
+spotbugsTest.reports {
+    html.enabled = true
 }
