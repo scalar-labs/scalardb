@@ -123,6 +123,7 @@ public class GraphQlFactoryTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void createGraphQL_AllParametersGiven_ShouldReturnGraphQLWithTransaction()
       throws Exception {
     // Arrange
