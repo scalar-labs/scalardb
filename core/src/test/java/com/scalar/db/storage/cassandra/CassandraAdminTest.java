@@ -67,7 +67,7 @@ public class CassandraAdminTest {
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(clusterManager).getMetadata(namespace, table);
+    verify(clusterManager).getMetadata(namespace, Metadata.quoteIfNecessary(table));
   }
 
   @Test

@@ -5,6 +5,7 @@ import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import com.datastax.driver.core.ClusteringOrder;
 import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.CreateKeyspace;
@@ -58,7 +59,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   @Override
   public void createNamespace(String namespace, Map<String, String> options)
       throws ExecutionException {
-    CreateKeyspace query = SchemaBuilder.createKeyspace(namespace);
+    CreateKeyspace query = SchemaBuilder.createKeyspace(Metadata.quoteIfNecessary(namespace));
     String replicationFactor = options.getOrDefault(REPLICATION_FACTOR, "1");
     ReplicationStrategy replicationStrategy =
         options.containsKey(REPLICATION_STRATEGY)
@@ -83,7 +84,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropTable(String namespace, String table) throws ExecutionException {
-    String dropTableQuery = SchemaBuilder.dropTable(namespace, table).getQueryString();
+    String dropTableQuery =
+        SchemaBuilder.dropTable(
+                Metadata.quoteIfNecessary(namespace), Metadata.quoteIfNecessary(table))
+            .getQueryString();
     try {
       clusterManager.getSession().execute(dropTableQuery);
     } catch (RuntimeException e) {
@@ -94,7 +98,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void dropNamespace(String namespace) throws ExecutionException {
-    String dropKeyspace = SchemaBuilder.dropKeyspace(namespace).getQueryString();
+    String dropKeyspace =
+        SchemaBuilder.dropKeyspace(Metadata.quoteIfNecessary(namespace)).getQueryString();
     try {
       clusterManager.getSession().execute(dropKeyspace);
     } catch (RuntimeException e) {
@@ -104,7 +109,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @Override
   public void truncateTable(String namespace, String table) throws ExecutionException {
-    String truncateTableQuery = QueryBuilder.truncate(namespace, table).getQueryString();
+    String truncateTableQuery =
+        QueryBuilder.truncate(
+                Metadata.quoteIfNecessary(namespace), Metadata.quoteIfNecessary(table))
+            .getQueryString();
     try {
       clusterManager.getSession().execute(truncateTableQuery);
     } catch (RuntimeException e) {
@@ -117,7 +125,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
       com.datastax.driver.core.TableMetadata metadata =
-          clusterManager.getMetadata(namespace, table);
+          clusterManager.getMetadata(
+              Metadata.quoteIfNecessary(namespace), Metadata.quoteIfNecessary(table));
       if (metadata == null) {
         return null;
       }
@@ -158,7 +167,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
+          clusterManager
+              .getSession()
+              .getCluster()
+              .getMetadata()
+              .getKeyspace(Metadata.quoteIfNecessary(namespace));
       if (keyspace == null) {
         return Collections.emptySet();
       }
@@ -174,7 +187,11 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public boolean namespaceExists(String namespace) throws ExecutionException {
     try {
       KeyspaceMetadata keyspace =
-          clusterManager.getSession().getCluster().getMetadata().getKeyspace(namespace);
+          clusterManager
+              .getSession()
+              .getCluster()
+              .getMetadata()
+              .getKeyspace(Metadata.quoteIfNecessary(namespace));
       return keyspace != null;
     } catch (RuntimeException e) {
       throw new ExecutionException("checking if the namespace exists failed", e);
@@ -185,15 +202,19 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   void createTableInternal(
       String fullKeyspace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
-    Create createTable = SchemaBuilder.createTable(fullKeyspace, table);
+    Create createTable =
+        SchemaBuilder.createTable(
+            Metadata.quoteIfNecessary(fullKeyspace), Metadata.quoteIfNecessary(table));
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =
-          createTable.addPartitionKey(pk, toCassandraDataType(metadata.getColumnDataType(pk)));
+          createTable.addPartitionKey(
+              Metadata.quoteIfNecessary(pk), toCassandraDataType(metadata.getColumnDataType(pk)));
     }
     for (String ck : metadata.getClusteringKeyNames()) {
       createTable =
-          createTable.addClusteringColumn(ck, toCassandraDataType(metadata.getColumnDataType(ck)));
+          createTable.addClusteringColumn(
+              Metadata.quoteIfNecessary(ck), toCassandraDataType(metadata.getColumnDataType(ck)));
     }
     for (String column : metadata.getColumnNames()) {
       if (metadata.getPartitionKeyNames().contains(column)
@@ -201,14 +222,17 @@ public class CassandraAdmin implements DistributedStorageAdmin {
         continue;
       }
       createTable =
-          createTable.addColumn(column, toCassandraDataType(metadata.getColumnDataType(column)));
+          createTable.addColumn(
+              Metadata.quoteIfNecessary(column),
+              toCassandraDataType(metadata.getColumnDataType(column)));
     }
     // Add clustering order
     Create.Options createTableWithOptions = createTable.withOptions();
     for (String ck : metadata.getClusteringKeyNames()) {
       Direction direction =
           metadata.getClusteringOrder(ck) == Order.ASC ? Direction.ASC : Direction.DESC;
-      createTableWithOptions = createTableWithOptions.clusteringOrder(ck, direction);
+      createTableWithOptions =
+          createTableWithOptions.clusteringOrder(Metadata.quoteIfNecessary(ck), direction);
     }
     // Add compaction strategy
     CompactionStrategy compactionStrategy =
@@ -242,7 +266,9 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     for (String index : secondaryIndexNames) {
       String indexName = String.format("%s_%s_%s", table, INDEX_NAME_PREFIX, index);
       SchemaStatement createIndex =
-          SchemaBuilder.createIndex(indexName).onTable(fullKeyspace, table).andColumn(index);
+          SchemaBuilder.createIndex(indexName)
+              .onTable(Metadata.quoteIfNecessary(fullKeyspace), Metadata.quoteIfNecessary(table))
+              .andColumn(Metadata.quoteIfNecessary(index));
       try {
         clusterManager.getSession().execute(createIndex.getQueryString());
       } catch (RuntimeException e) {
