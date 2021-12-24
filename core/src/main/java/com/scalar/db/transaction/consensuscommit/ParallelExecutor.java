@@ -11,7 +11,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class ParallelExecutor {
 
   private final ConsensusCommitConfig config;
