@@ -17,6 +17,9 @@ dependencies {
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    // for SpotBugs
+    compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
+    testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
 }
 
 application {

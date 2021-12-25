@@ -1,6 +1,7 @@
 package com.scalar.db.graphql.server;
 
 import com.google.common.base.Strings;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 class ServerConfig {
   public static final String PREFIX = "scalar.db.graphql.";
   public static final String PORT = PREFIX + "port";
