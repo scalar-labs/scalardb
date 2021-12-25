@@ -22,9 +22,8 @@ class ServerConfig {
   public static final String GRAPHIQL = PREFIX + "graphiql";
 
   public static final int DEFAULT_PORT = 8080;
-  private static final String DEFAULT_PATH = "/graphql";
   public static final boolean DEFAULT_GRAPHIQL = true;
-
+  private static final String DEFAULT_PATH = "/graphql";
   private static final Logger LOGGER = LoggerFactory.getLogger(ServerConfig.class);
   private final Properties props;
   private int port;
@@ -103,5 +102,7 @@ class ServerConfig {
     return namespaces;
   }
 
-  public boolean getGraphiql() { return graphiql; }
+  public boolean getGraphiql() {
+    return graphiql;
+  }
 }
