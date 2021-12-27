@@ -1,12 +1,109 @@
 plugins {
-    id 'java'
     id 'com.palantir.docker' version '0.25.0'
-    id 'com.github.spotbugs' version '4.7.1'
     id 'net.ltgt.errorprone' version '2.0.2'
     id 'com.github.johnrengelman.shadow' version '7.1.0'
+    id 'com.github.spotbugs-base' version '4.7.1'
 }
 
 archivesBaseName = "scalardb-schema-loader"
+
+sourceSets {
+    integrationTestAll {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestCassandra {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/cassandra/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestCosmos {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/cosmos/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestDynamo {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/dynamo/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestJdbc {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/jdbc/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestMultiStorage {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/multistorage/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+    integrationTestScalarDbServer {
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/schemaloader/*.java'
+            include '**/com/scalar/db/schemaloader/server/*.java'
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations {
+    integrationTestAllImplementation.extendsFrom testImplementation
+    integrationTestAllRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestAllCompileOnly.extendsFrom testCompileOnly
+    integrationTestCassandraImplementation.extendsFrom testImplementation
+    integrationTestCassandraRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCassandraCompileOnly.extendsFrom testCompileOnly
+    integrationTestCosmosImplementation.extendsFrom testImplementation
+    integrationTestCosmosRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestCosmosCompileOnly.extendsFrom testCompileOnly
+    integrationTestDynamoImplementation.extendsFrom testImplementation
+    integrationTestDynamoRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestDynamoCompileOnly.extendsFrom testCompileOnly
+    integrationTestJdbcImplementation.extendsFrom testImplementation
+    integrationTestJdbcRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestJdbcCompileOnly.extendsFrom testCompileOnly
+    integrationTestMultiStorageImplementation.extendsFrom testImplementation
+    integrationTestMultiStorageRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestMultiStorageCompileOnly.extendsFrom testCompileOnly
+    integrationTestScalarDbServerImplementation.extendsFrom testImplementation
+    integrationTestScalarDbServerRuntimeOnly.extendsFrom testRuntimeOnly
+    integrationTestScalarDbServerCompileOnly.extendsFrom testCompileOnly
+}
+
+evaluationDependsOn ':core'
+evaluationDependsOn ':server'
 
 dependencies {
     implementation project(':core')
@@ -14,12 +111,15 @@ dependencies {
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
     implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
 
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: "${mockitoVersion}"
+    testImplementation project(':core').sourceSets.integrationTestAll.output
+    testImplementation project(':server')
+    testImplementation project(':server').sourceSets.integrationTestScalarDbServer.output
 
     // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
@@ -34,7 +134,7 @@ javadoc {
 }
 
 docker {
-    dependsOn(shadowJar)
+    dependsOn shadowJar
     name "ghcr.io/scalar-labs/scalardb-schema-loader:${project.version}"
     files tasks.shadowJar.outputs
 }
@@ -48,6 +148,87 @@ shadowJar {
     mergeServiceFiles()
 }
 
+// The fat jar path
+def schemaLoaderJarPath = "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar"
+
+task integrationTestCassandra(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests for Cassandra.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCassandra.output.classesDirs
+    classpath = sourceSets.integrationTestCassandra.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
+task integrationTestCosmos(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests for Cosmos DB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestCosmos.output.classesDirs
+    classpath = sourceSets.integrationTestCosmos.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
+task integrationTestDynamo(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests for DynamoDB.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestDynamo.output.classesDirs
+    classpath = sourceSets.integrationTestDynamo.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
+task integrationTestJdbc(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests for a JDBC database.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestJdbc.output.classesDirs
+    classpath = sourceSets.integrationTestJdbc.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
+task integrationTestMultiStorage(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests for multi-storage.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestMultiStorage.output.classesDirs
+    classpath = sourceSets.integrationTestMultiStorage.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
+task integrationTestScalarDbServer(type: Test) {
+    dependsOn shadowJar
+    description = 'Runs the schema loader integration tests with Scalar DB Server.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTestScalarDbServer.output.classesDirs
+    classpath = sourceSets.integrationTestScalarDbServer.runtimeClasspath
+    outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
+    options {
+        systemProperties(System.getProperties())
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
+    }
+}
+
 spotless {
     java {
         target 'src/*/java/**/*.java'
@@ -57,13 +238,35 @@ spotless {
     }
 }
 
-spotbugsMain.reports {
-    html.enabled = true
+import com.github.spotbugs.snom.SpotBugsTask
+
+task spotbugsMain(type: SpotBugsTask) {
+    dependsOn 'classes'
+    classDirs = sourceSets.main.output
+    sourceDirs = sourceSets.main.allSource.sourceDirectories
+    auxClassPaths = sourceSets.main.compileClasspath
+    reports { html.enabled = true }
 }
 
-spotbugsTest.reports {
-    html.enabled = true
+task spotbugsTest(type: SpotBugsTask) {
+    dependsOn 'testClasses'
+    classDirs = sourceSets.test.output
+    sourceDirs = sourceSets.test.allSource.sourceDirectories
+    auxClassPaths = sourceSets.test.compileClasspath
+    reports { html.enabled = true }
 }
+
+task spotbugsIntegrationTest(type: SpotBugsTask) {
+    dependsOn 'integrationTestAllClasses'
+    classDirs = sourceSets.integrationTestAll.output
+    sourceDirs = sourceSets.integrationTestAll.allSource.sourceDirectories
+    auxClassPaths = sourceSets.integrationTestAll.compileClasspath
+    reports { html.enabled = true }
+}
+
+check.dependsOn += spotbugsMain
+check.dependsOn += spotbugsTest
+check.dependsOn += spotbugsIntegrationTest
 
 // for archiving and uploading to maven central
 if (!project.gradle.startParameter.taskNames.isEmpty() &&
