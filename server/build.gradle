@@ -22,6 +22,8 @@ configurations {
     integrationTestScalarDbServerCompileOnly.extendsFrom testCompileOnly
 }
 
+evaluationDependsOn ':core'
+
 dependencies {
     implementation project(':core')
     implementation project(':rpc')
@@ -31,7 +33,7 @@ dependencies {
     implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
     implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4jVersion}"
     implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: "${protobufVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
     implementation(group: 'com.scalar-labs', name: 'scalar-admin', version: "${scalarAdminVersion}") {
         exclude group: 'io.grpc'
         exclude group: 'org.slf4j'
