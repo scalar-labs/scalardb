@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
@@ -9,7 +10,6 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 
 import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
@@ -116,8 +116,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     setProjections(selection, sel.getProjections());
     return selection.from(
-        Metadata.quoteIfNecessary(sel.forNamespace().get()),
-        Metadata.quoteIfNecessary(sel.forTable().get()));
+        quoteIfNecessary(sel.forNamespace().get()), quoteIfNecessary(sel.forTable().get()));
   }
 
   private void setProjections(Select.Selection selection, List<String> projections) {
