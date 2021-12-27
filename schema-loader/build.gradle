@@ -102,6 +102,7 @@ configurations {
     integrationTestScalarDbServerCompileOnly.extendsFrom testCompileOnly
 }
 
+evaluationDependsOn ':core'
 evaluationDependsOn ':server'
 
 dependencies {
@@ -147,6 +148,9 @@ shadowJar {
     mergeServiceFiles()
 }
 
+// The fat jar path
+def schemaLoaderJarPath = "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar"
+
 task integrationTestCassandra(type: Test) {
     dependsOn shadowJar
     description = 'Runs the schema loader integration tests for Cassandra.'
@@ -156,7 +160,7 @@ task integrationTestCassandra(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -169,7 +173,7 @@ task integrationTestCosmos(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -182,7 +186,7 @@ task integrationTestDynamo(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -195,7 +199,7 @@ task integrationTestJdbc(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -208,7 +212,7 @@ task integrationTestMultiStorage(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
@@ -221,7 +225,7 @@ task integrationTestScalarDbServer(type: Test) {
     outputs.upToDateWhen { false }  // ensures integration tests are run every time when called
     options {
         systemProperties(System.getProperties())
-        systemProperty("scalardb.schemaloader.jar_path", "${project.buildDir}/libs/${archivesBaseName}-${project.version}.jar")
+        systemProperty("scalardb.schemaloader.jar_path", schemaLoaderJarPath)
     }
 }
 
