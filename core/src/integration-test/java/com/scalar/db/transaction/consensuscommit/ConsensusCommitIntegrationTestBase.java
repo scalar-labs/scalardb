@@ -73,6 +73,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   private static ConsensusCommitAdmin consensusCommitAdmin;
   private static String namespace1;
   private static String namespace2;
+  private static ParallelExecutor parallelExecutor;
 
   private ConsensusCommitManager manager;
   private DistributedStorage storage;
@@ -92,14 +93,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
       namespace2 = getNamespace2();
       createTables();
       originalStorage = factory.getStorage();
+      parallelExecutor = new ParallelExecutor(consensusCommitConfig);
       initialized = true;
     }
 
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    recovery = spy(new RecoveryHandler(storage, coordinator));
-    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
+    recovery = spy(new RecoveryHandler(storage, coordinator, parallelExecutor));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
   }
@@ -150,6 +152,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     deleteTables();
     admin.close();
     originalStorage.close();
+    parallelExecutor.close();
   }
 
   private static void deleteTables() throws ExecutionException {
@@ -288,7 +291,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -340,7 +343,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -393,7 +396,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
@@ -438,7 +441,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -512,7 +515,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -582,7 +586,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
@@ -644,7 +648,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -688,7 +692,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -741,7 +745,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
@@ -786,7 +790,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -860,7 +864,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -922,7 +927,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
@@ -1175,7 +1180,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
@@ -1251,7 +1256,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     ConsensusCommit another = manager.start();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
@@ -1319,7 +1324,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
@@ -1552,7 +1557,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 

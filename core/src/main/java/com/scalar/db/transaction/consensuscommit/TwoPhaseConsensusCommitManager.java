@@ -30,6 +30,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   private final DistributedStorage storage;
   private final ConsensusCommitConfig config;
   private final Coordinator coordinator;
+  private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
 
@@ -44,8 +45,10 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     this.config = config;
 
     coordinator = new Coordinator(storage, config);
-    recovery = new RecoveryHandler(storage, coordinator);
-    commit = new CommitHandler(storage, coordinator, recovery);
+    parallelExecutor = new ParallelExecutor(config);
+    recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
+
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(
@@ -67,6 +70,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
+    parallelExecutor = null;
     this.recovery = recovery;
     this.commit = commit;
     if (config.isActiveTransactionsManagementEnabled()) {
@@ -204,6 +208,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   @Override
   public void close() {
     storage.close();
+    parallelExecutor.close();
   }
 
   void removeTransaction(String txId) {
