@@ -58,8 +58,8 @@ public class CassandraAdminTest {
   @Test
   public void getTableMetadata_ClusterManagerShouldBeCalledProperly() throws ExecutionException {
     // Arrange
-    String namespace = "ns";
-    String table = "table";
+    String namespace = "sample_ns";
+    String table = "sample_table";
 
     CassandraAdmin admin = new CassandraAdmin(clusterManager, config);
 
@@ -67,7 +67,7 @@ public class CassandraAdminTest {
     admin.getTableMetadata(namespace, table);
 
     // Assert
-    verify(clusterManager).getMetadata(namespace, Metadata.quoteIfNecessary(table));
+    verify(clusterManager).getMetadata(namespace, table);
   }
 
   @Test
