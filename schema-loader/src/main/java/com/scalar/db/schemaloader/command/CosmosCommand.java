@@ -22,11 +22,12 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
   private String uri;
 
   // For backward compatibility
+  @SuppressWarnings("UnusedVariable")
   @Option(
       names = {"-u", "--user"},
       description = "DB username",
       hidden = true)
-  private String unusedUsername;
+  private String username;
 
   @Option(
       names = {"-p", "--password"},
