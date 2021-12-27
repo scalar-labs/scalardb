@@ -41,17 +41,18 @@ public class GraphQlServer implements Callable<Integer> {
     }
 
     DatabaseConfig databaseConfig = new DatabaseConfig(config.getProperties());
-    DistributedStorageAdmin storageAdmin = new StorageFactory(databaseConfig).getAdmin();
     GraphQlHandler.Builder handlerBuilder =
         GraphQlHandler.newBuilder()
             .path(config.getPath())
             .databaseConfig(databaseConfig)
             .setGraphiqlEnabled(config.getGraphiql());
+    DistributedStorageAdmin storageAdmin = new StorageFactory(databaseConfig).getAdmin();
     for (String namespace : config.getNamespaces()) {
       for (String table : storageAdmin.getNamespaceTableNames(namespace)) {
         handlerBuilder.table(namespace, table);
       }
     }
+    storageAdmin.close();
 
     Server server = new Server(config.getPort());
     server.setHandler(handlerBuilder.build());
