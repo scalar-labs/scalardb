@@ -120,7 +120,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader
+            cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -162,7 +162,7 @@ jobs:
             mkdir -p /tmp/gradle_integration_test_reports/core
             mkdir -p /tmp/gradle_integration_test_reports/schema-loader
             cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
-            cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader
+            cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -444,8 +444,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -486,8 +488,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/server
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/server/
+            cp -a schema-loader/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:

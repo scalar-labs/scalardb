@@ -35,7 +35,7 @@ subprojects {
         grpcVersion = '1.38.0'
         protocVersion = '3.17.2'
         protobufVersion = '3.17.2'
-        picoCliVersion = '4.1.4'
+        picocliVersion = '4.1.4'
         scalarAdminVersion = '1.0.0'
         dropwizardMetricsVersion = '4.2.2'
         prometheusVersion = '0.12.0'
