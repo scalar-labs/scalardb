@@ -12,7 +12,7 @@ public class ConsensusCommitConfigTest {
   private static final String ANY_HOST = "localhost";
 
   @Test
-  public void constructor_PropertiesWithOnlyContactPointsGiven_ShouldLoadProperly() {
+  public void constructor_NoPropertiesGiven_ShouldLoadAsDefaultValues() {
     // Arrange
     Properties props = new Properties();
 
@@ -24,6 +24,11 @@ public class ConsensusCommitConfigTest {
     assertThat(config.getSerializableStrategy()).isEqualTo(SerializableStrategy.EXTRA_READ);
     assertThat(config.isActiveTransactionsManagementEnabled()).isEqualTo(true);
     assertThat(config.getCoordinatorNamespace()).isNotPresent();
+    assertThat(config.getParallelExecutorCount())
+        .isEqualTo(ConsensusCommitConfig.DEFAULT_PARALLEL_EXECUTOR_COUNT);
+    assertThat(config.isParallelPreparationEnabled()).isEqualTo(false);
+    assertThat(config.isParallelCommitEnabled()).isEqualTo(false);
+    assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
   }
 
   @Test
@@ -116,7 +121,7 @@ public class ConsensusCommitConfigTest {
   }
 
   @Test
-  public void constructor_PropertiesWithCoordinatorNamespaceGiven_ShouldLoadAsDefaultValue() {
+  public void constructor_PropertiesWithCoordinatorNamespaceGiven_ShouldLoadProperly() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
@@ -128,5 +133,45 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getCoordinatorNamespace()).isPresent();
     assertThat(config.getCoordinatorNamespace().get()).isEqualTo("changed_coordinator");
+  }
+
+  @Test
+  public void constructor_ParallelExecutionRelatedPropertiesGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(ConsensusCommitConfig.PARALLEL_EXECUTOR_COUNT, "100");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_PREPARATION_ENABLED, "true");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_COMMIT_ENABLED, "true");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_ROLLBACK_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getParallelExecutorCount()).isEqualTo(100);
+    assertThat(config.isParallelPreparationEnabled()).isEqualTo(true);
+    assertThat(config.isParallelCommitEnabled()).isEqualTo(true);
+    assertThat(config.isParallelRollbackEnabled()).isEqualTo(true);
+  }
+
+  @Test
+  public void
+      constructor_ParallelExecutionRelatedPropertiesWithoutParallelRollbackPropertyGiven_ShouldUseParallelCommitValueForParallelRollback() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(ConsensusCommitConfig.PARALLEL_EXECUTOR_COUNT, "100");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_PREPARATION_ENABLED, "false");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_COMMIT_ENABLED, "true");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getParallelExecutorCount()).isEqualTo(100);
+    assertThat(config.isParallelPreparationEnabled()).isEqualTo(false);
+    assertThat(config.isParallelCommitEnabled()).isEqualTo(true);
+    assertThat(config.isParallelRollbackEnabled()).isEqualTo(true); // use the parallel commit value
   }
 }

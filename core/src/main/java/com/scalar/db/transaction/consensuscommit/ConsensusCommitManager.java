@@ -23,6 +23,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private final DistributedStorage storage;
   private final ConsensusCommitConfig config;
   private final Coordinator coordinator;
+  private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private Optional<String> namespace;
@@ -33,8 +34,9 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = new Coordinator(storage, config);
-    this.recovery = new RecoveryHandler(storage, coordinator);
-    this.commit = new CommitHandler(storage, coordinator, recovery);
+    this.parallelExecutor = new ParallelExecutor(config);
+    this.recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    this.commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
     this.namespace = storage.getNamespace();
     this.tableName = storage.getTable();
   }
@@ -49,6 +51,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
+    parallelExecutor = null;
     this.recovery = recovery;
     this.commit = commit;
     this.namespace = storage.getNamespace();
@@ -183,5 +186,6 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   @Override
   public void close() {
     storage.close();
+    parallelExecutor.close();
   }
 }
