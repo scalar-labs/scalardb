@@ -80,8 +80,8 @@ public class OperationCheckerTest {
   public void whenCheckingOperationWithWrongTable_shouldThrowIllegalArgumentException()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -97,8 +97,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingGetOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -110,8 +110,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingGetOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, "v4");
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -125,8 +125,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText("p3", "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, "p3", "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -140,8 +140,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidPartitionKeyType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addText(PKEY1, "1").addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, "1", PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -155,8 +155,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, "c3", "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -170,8 +170,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithInvalidClusteringKeyType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addText(CKEY1, "2").addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, "2", CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -185,7 +185,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingGetOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
@@ -199,9 +199,9 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -221,7 +221,7 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithoutAnyClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key startClusteringKey = null;
     Key endClusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
@@ -243,7 +243,7 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithPartialClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key startClusteringKey = new Key(CKEY1, 1);
     Key endClusteringKey = new Key(CKEY1, 9);
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
@@ -265,8 +265,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithoutAnyEndClusteringKey_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
@@ -287,9 +287,9 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithReverseOrderings_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -309,9 +309,9 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithPartialOrdering_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -330,9 +330,9 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithEmptyOrdering_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -351,9 +351,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidProjections_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, "v4");
     int limit = 10;
     Scan scan =
@@ -375,9 +375,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText("p3", "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, "p3", "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -399,9 +399,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, "c3", "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, "c3", "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =
@@ -423,8 +423,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidClusteringKeyRange_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     Key endClusteringKey = new Key(CKEY1, 2);
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
@@ -447,9 +447,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithNegativeLimitNumber_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
     Scan scan =
@@ -470,9 +470,9 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingScanOperationWithInvalidOrderings_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
     Scan scan =
@@ -494,9 +494,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingScanOperationWithInvalidPartialOrdering_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val9").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key startClusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, CKEY2, "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = -10;
     Scan scan =
@@ -516,8 +516,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingPutOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -532,8 +532,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingPutOperationWithoutAnyCondition_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -549,8 +549,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText("c3", "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, "c3", "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -567,8 +567,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, "c3", "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -585,7 +585,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
     List<Value<?>> values =
         Arrays.asList(
@@ -602,8 +602,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingPutOperationWithInvalidValues_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
@@ -619,8 +619,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingPutOperationWithInvalidValueType_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -637,8 +637,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithInvalidPutIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -657,8 +657,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithDeleteIfExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -674,8 +674,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingPutOperationWithDeleteIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -692,8 +692,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithPartitionKeyWithNullTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, null).build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = Key.newBuilder().add(PKEY1, 1).add(PKEY2, (String) null).build();
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -709,8 +709,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithPartitionKeyWithEmptyTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -726,8 +726,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithClusteringKeyWithNullTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, null).build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = Key.newBuilder().add(CKEY1, 2).add(CKEY2, (String) null).build();
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -743,8 +743,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithClusteringKeyWithEmptyTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "");
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
@@ -871,8 +871,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingDeleteOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new IntValue(1), ConditionalExpression.Operator.EQ));
@@ -886,8 +886,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingDeleteOperationWithoutAnyCondition_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = null;
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -900,8 +900,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidPartitionKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText("p3", "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, "p3", "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -915,8 +915,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, "c3", "val1");
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -930,7 +930,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithoutAnyClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
     MutationCondition condition = new DeleteIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
@@ -944,8 +944,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingDeleteOperationWithPutIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIf();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -959,8 +959,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithPutIfExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIfExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -974,8 +974,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithPutIfNotExistsCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIfNotExists();
     Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
@@ -989,8 +989,8 @@ public class OperationCheckerTest {
   public void
       whenCheckingDeleteOperationWithInvalidDeleteIfCondition_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
@@ -1005,8 +1005,8 @@ public class OperationCheckerTest {
   @Test
   public void whenCheckingMutateOperationWithAllValidArguments_shouldNotThrowAnyException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val1").build();
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
     ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey, clusteringKey);
@@ -1030,9 +1030,9 @@ public class OperationCheckerTest {
   public void
       whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
-    Key partitionKey2 = Key.newBuilder().addInt(PKEY1, 2).addText(PKEY2, "val2").build();
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val3").build();
+    Key partitionKey1 = new Key(PKEY1, 1, PKEY2, "val1");
+    Key partitionKey2 = new Key(PKEY1, 2, PKEY2, "val2");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val3");
     Put put = new Put(partitionKey1, clusteringKey).withValue(COL1, 1);
     ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey2, clusteringKey);
@@ -1091,7 +1091,7 @@ public class OperationCheckerTest {
       whenCheckingGetOperationWithIndexedColumnAsPartitionKeyWithClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(COL1, 1);
-    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val2").build();
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
     ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
@@ -1171,8 +1171,8 @@ public class OperationCheckerTest {
       whenCheckingScanOperationWithIndexedColumnAsPartitionKeyWithClusteringKey_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(COL1, 1);
-    Key startClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val1").build();
-    Key endClusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText("c3", "val9").build();
+    Key startClusteringKey = new Key(CKEY1, 2, "c3", "val1");
+    Key endClusteringKey = new Key(CKEY1, 2, "c3", "val9");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
     int limit = 10;
     Scan scan =

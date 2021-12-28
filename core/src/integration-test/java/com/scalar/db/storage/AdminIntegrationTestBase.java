@@ -353,8 +353,8 @@ public abstract class AdminIntegrationTestBase {
   @Test
   public void truncateTable_ShouldTruncateProperly() throws ExecutionException, IOException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addText(COL_NAME2, "aaa").addInt(COL_NAME1, 1).build();
-    Key clusteringKey = Key.newBuilder().addInt(COL_NAME4, 2).addText(COL_NAME3, "bbb").build();
+    Key partitionKey = new Key(COL_NAME2, "aaa", COL_NAME1, 1);
+    Key clusteringKey = new Key(COL_NAME4, 2, COL_NAME3, "bbb");
     storage.put(
         new Put(partitionKey, clusteringKey)
             .withValue(COL_NAME5, 3)
