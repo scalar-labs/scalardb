@@ -1,10 +1,10 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.Isolation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Isolation;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.util.Properties;
 import javax.annotation.Nullable;
