@@ -25,6 +25,7 @@ public class CosmosCommand extends StorageSpecificCommand implements Callable<In
   private String uri;
 
   // For backward compatibility
+  @SuppressWarnings("UnusedVariable")
   @Option(
       names = {"-u", "--user"},
       description = "DB username",

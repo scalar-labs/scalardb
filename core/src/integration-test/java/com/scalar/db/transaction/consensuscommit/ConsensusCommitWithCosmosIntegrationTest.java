@@ -14,14 +14,17 @@ public class ConsensusCommitWithCosmosIntegrationTest extends ConsensusCommitInt
 
   @Override
   protected String getNamespace1() {
-    Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + NAMESPACE_1).orElse(NAMESPACE_1);
+    return getNamespace(super.getNamespace1());
   }
 
   @Override
   protected String getNamespace2() {
+    return getNamespace(super.getNamespace2());
+  }
+
+  private String getNamespace(String namespace) {
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + NAMESPACE_2).orElse(NAMESPACE_2);
+    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override

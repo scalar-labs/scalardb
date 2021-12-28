@@ -14,8 +14,9 @@ public class CosmosMultiplePartitionKeyIntegrationTest
 
   @Override
   protected String getNamespaceBaseName() {
+    String namespaceBaseName = super.getNamespaceBaseName();
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + NAMESPACE_BASE_NAME).orElse(NAMESPACE_BASE_NAME);
+    return databasePrefix.map(prefix -> prefix + namespaceBaseName).orElse(namespaceBaseName);
   }
 
   @Override
