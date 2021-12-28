@@ -28,31 +28,30 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class AdminIntegrationTestBase {
 
-  protected static final String TEST_NAME = "admin";
-  protected static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
-  protected static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
-  protected static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
-  protected static final String TABLE1 = "test_table1";
-  protected static final String TABLE2 = "test_table2";
-  protected static final String TABLE3 = "test_table3";
-  protected static final String TABLE4 = "test_table4";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
-  protected static final String COL_NAME6 = "c6";
-  protected static final String COL_NAME7 = "c7";
-  protected static final String COL_NAME8 = "c8";
-  protected static final String COL_NAME9 = "c9";
-  protected static final String COL_NAME10 = "c10";
-  protected static final String COL_NAME11 = "c11";
+  private static final String TEST_NAME = "admin";
+  private static final String NAMESPACE1 = "integration_testing_" + TEST_NAME + "1";
+  private static final String NAMESPACE2 = "integration_testing_" + TEST_NAME + "2";
+  private static final String NAMESPACE3 = "integration_testing_" + TEST_NAME + "3";
+  private static final String TABLE1 = "test_table1";
+  private static final String TABLE2 = "test_table2";
+  private static final String TABLE3 = "test_table3";
+  private static final String TABLE4 = "test_table4";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
+  private static final String COL_NAME6 = "c6";
+  private static final String COL_NAME7 = "c7";
+  private static final String COL_NAME8 = "c8";
+  private static final String COL_NAME9 = "c9";
+  private static final String COL_NAME10 = "c10";
+  private static final String COL_NAME11 = "c11";
 
-  protected static final TableMetadata TABLE_METADATA =
+  private static final TableMetadata TABLE_METADATA =
       TableMetadata.newBuilder()
           .addColumn(COL_NAME1, DataType.INT)
           .addColumn(COL_NAME2, DataType.TEXT)
@@ -74,11 +73,11 @@ public abstract class AdminIntegrationTestBase {
           .build();
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
-  protected static String namespace1;
-  protected static String namespace2;
-  protected static String namespace3;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
+  private static String namespace1;
+  private static String namespace2;
+  private static String namespace3;
 
   @Before
   public void setUp() throws Exception {

@@ -35,14 +35,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
 
-  protected static final String TEST_NAME = "mul_pkey";
-  protected static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
-  protected static final String FIRST_PARTITION_KEY = "pkey1";
-  protected static final String SECOND_PARTITION_KEY = "pkey2";
-  protected static final String COL_NAME = "col";
+  private static final String TEST_NAME = "mul_pkey";
+  private static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
+  private static final String FIRST_PARTITION_KEY = "pkey1";
+  private static final String SECOND_PARTITION_KEY = "pkey2";
+  private static final String COL_NAME = "col";
 
   private static final int FIRST_PARTITION_KEY_NUM = 5;
   private static final int SECOND_PARTITION_KEY_NUM = 5;
@@ -52,12 +52,12 @@ public abstract class StorageMultiplePartitionKeyIntegrationTestBase {
   private static final int THREAD_NUM = 10;
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
   private static String namespaceBaseName;
 
   // Key: firstPartitionKeyType, Value: secondPartitionKeyType
-  protected static ListMultimap<DataType, DataType> partitionKeyTypes;
+  private static ListMultimap<DataType, DataType> partitionKeyTypes;
 
   private static long seed;
 
