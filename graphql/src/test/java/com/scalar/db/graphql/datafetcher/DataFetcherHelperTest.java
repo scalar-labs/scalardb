@@ -36,7 +36,7 @@ public class DataFetcherHelperTest {
   private static final String COL3 = "c3";
   private static final String COL4 = "c4";
   private static final String COL5 = "c5";
-  private static final String COL6 = "c5";
+  private static final String COL6 = "c6";
   private static final int ANY_INTEGER = 1;
   private static final String ANY_STRING = "A";
   private static final float ANY_FLOAT = 2.0F;
@@ -75,27 +75,13 @@ public class DataFetcherHelperTest {
   private void preparePutInputAndExpectedPut() {
     // table1_put(put: {
     //   key: { c1: 1, c2: "A", c3: 2.0, c4: 3.0 },
-    //   values: { c5: 10, c6: false }
+    //   values: { c5: 4, c6: false }
     // })
     putInput = new HashMap<>();
     putInput.put(
         "key",
-        new HashMap<String, Object>() {
-          {
-            put(COL1, ANY_INTEGER);
-            put(COL2, ANY_STRING);
-            put(COL3, ANY_FLOAT);
-            put(COL4, ANY_DOUBLE);
-          }
-        });
-    putInput.put(
-        "values",
-        new HashMap<String, Object>() {
-          {
-            put(COL5, ANY_LONG);
-            put(COL6, ANY_BOOLEAN);
-          }
-        });
+        ImmutableMap.of(COL1, ANY_INTEGER, COL2, ANY_STRING, COL3, ANY_FLOAT, COL4, ANY_DOUBLE));
+    putInput.put("values", ImmutableMap.of(COL5, ANY_LONG, COL6, ANY_BOOLEAN));
 
     expectedPut =
         new Put(
@@ -206,22 +192,8 @@ public class DataFetcherHelperTest {
     deleteInput = new HashMap<>();
     deleteInput.put(
         "key",
-        new HashMap<String, Object>() {
-          {
-            put(COL1, ANY_INTEGER);
-            put(COL2, ANY_STRING);
-            put(COL3, ANY_FLOAT);
-            put(COL4, ANY_DOUBLE);
-          }
-        });
-    deleteInput.put(
-        "values",
-        new HashMap<String, Object>() {
-          {
-            put(COL5, ANY_LONG);
-            put(COL6, ANY_BOOLEAN);
-          }
-        });
+        ImmutableMap.of(COL1, ANY_INTEGER, COL2, ANY_STRING, COL3, ANY_FLOAT, COL4, ANY_DOUBLE));
+    deleteInput.put("values", ImmutableMap.of(COL5, ANY_LONG, COL6, ANY_BOOLEAN));
 
     expectedDelete =
         new Delete(

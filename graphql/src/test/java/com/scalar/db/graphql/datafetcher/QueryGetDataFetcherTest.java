@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
@@ -68,14 +69,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     //   key: { c1: 1, c2: "A" }
     // })
     getInput = new HashMap<>();
-    getInput.put(
-        "key",
-        new HashMap<String, Object>() {
-          {
-            put(COL1, 1);
-            put(COL2, "A");
-          }
-        });
+    getInput.put("key", ImmutableMap.of(COL1, 1, COL2, "A"));
     when(environment.getArgument("get")).thenReturn(getInput);
 
     expectedGet =
