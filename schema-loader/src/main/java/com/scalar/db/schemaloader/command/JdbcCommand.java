@@ -11,7 +11,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --jdbc",
     description = "Create/Delete JDBC schemas")
-public class JdbcCommand extends StorageSpecificCommandBase implements Callable<Integer> {
+public class JdbcCommand extends StorageSpecificCommand implements Callable<Integer> {
 
   @Option(
       names = {"-j", "--jdbc-url"},
@@ -33,17 +33,15 @@ public class JdbcCommand extends StorageSpecificCommandBase implements Callable<
 
   @Override
   public Integer call() throws Exception {
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, url);
     props.setProperty(DatabaseConfig.USERNAME, user);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
-    Map<String, String> metaOptions = Collections.emptyMap();
+    Map<String, String> options = Collections.emptyMap();
 
-    execute(props, metaOptions);
-
+    execute(props, options);
     return 0;
   }
 }

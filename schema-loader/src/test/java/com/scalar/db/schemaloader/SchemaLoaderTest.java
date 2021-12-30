@@ -1,305 +1,536 @@
 package com.scalar.db.schemaloader;
 
-import static org.mockito.Mockito.times;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SchemaLoaderTest {
+
+  private AutoCloseable closeable;
+  private MockedStatic<SchemaLoader> schemaLoaderMockedStatic;
+
   @Mock private SchemaOperator operator;
+  @Mock private SchemaParser parser;
+
   @Mock private Path configFilePath;
   @Mock private Properties configProperties;
   @Mock private Path schemaFilePath;
-
-  private AutoCloseable closeable;
-  private MockedStatic<SchemaOperatorFactory> schemaOperatorFactoryMockedStatic;
+  @Mock private Path serializedSchemaJson;
+  @Mock private Map<String, String> options;
 
   @Before
-  public void setUp() {
+  public void setUp() throws SchemaLoaderException {
     closeable = MockitoAnnotations.openMocks(this);
-    schemaOperatorFactoryMockedStatic = Mockito.mockStatic(SchemaOperatorFactory.class);
-    schemaOperatorFactoryMockedStatic
-        .when(
-            () ->
-                SchemaOperatorFactory.getSchemaOperator(
-                    Mockito.any(Path.class), Mockito.anyBoolean()))
-        .thenReturn(operator);
-    schemaOperatorFactoryMockedStatic
-        .when(
-            () ->
-                SchemaOperatorFactory.getSchemaOperator(
-                    Mockito.any(Properties.class), Mockito.anyBoolean()))
-        .thenReturn(operator);
+
+    // Arrange
+    schemaLoaderMockedStatic = mockStatic(SchemaLoader.class, CALLS_REAL_METHODS);
+    schemaLoaderMockedStatic.when(() -> SchemaLoader.getSchemaOperator(any())).thenReturn(operator);
+    schemaLoaderMockedStatic
+        .when(() -> SchemaLoader.getSchemaParser(any(), anyMap()))
+        .thenReturn(parser);
+
+    when(parser.parse()).thenReturn(Collections.emptyList());
   }
 
   @After
   public void tearDown() throws Exception {
-    schemaOperatorFactoryMockedStatic.close();
+    schemaLoaderMockedStatic.close();
     closeable.close();
   }
 
   @Test
-  public void load_WithProperFilePathsArguments_ShouldCallCreateTables() throws Exception {
+  public void
+      load_WithConfigFileAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.load(configFilePath, schemaFilePath, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, true);
 
     // Assert
-    verify(operator).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
   }
 
   @Test
   public void
-      load_WithProperConfigFilePathAndNullPathSchemaArguments_ShouldJustCallCreateCoordinator()
+      load_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.load(configFilePath, (Path) null, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, schemaFilePath, options, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
   }
 
   @Test
   public void
-      load_WithProperConfigFilePathAndNullStringSchemaArguments_ShouldJustCallCreateCoordinator()
+      load_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.load(configFilePath, (String) null, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, (Path) null, options, true);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
-  }
-
-  @Test
-  public void load_WithProperPropertiesAndFilePathArguments_ShouldCallCreateTables()
-      throws Exception {
-    // Act
-    SchemaLoader.load(configProperties, schemaFilePath, Collections.emptyMap(), true);
-
-    // Assert
-    verify(operator).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
   }
 
   @Test
   public void
-      load_WithProperPropertiesConfigAndNullPathSchemaArguments_ShouldJustCallCreateCoordinator()
+      load_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
-    Path schemaPath = null;
 
     // Act
-    SchemaLoader.load(configProperties, schemaPath, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, (Path) null, options, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
   }
 
   @Test
   public void
-      load_WithProperPropertiesConfigAndNullStringSchemaArguments_ShouldJustCallCreateCoordinator()
+      load_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
-    String serializedSchema = null;
 
     // Act
-    SchemaLoader.load(configProperties, serializedSchema, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, serializedSchemaJson, options, true);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
   }
 
   @Test
-  public void load_WithProperFilePathAndJsonSchemaArguments_ShouldCallCreateTables()
-      throws Exception {
+  public void
+      load_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
     // Arrange
-    String schema =
-        "{\n"
-            + "  \"sample_db.sample_table\": {\n"
-            + "    \"transaction\": false,\n"
-            + "    \"partition-key\": [\n"
-            + "      \"c1\"\n"
-            + "    ],\n"
-            + "    \"clustering-key\": [],\n"
-            + "    \"columns\": {\n"
-            + "      \"c1\": \"INT\",\n"
-            + "      \"c2\": \"TEXT\",\n"
-            + "    }"
-            + "}";
 
     // Act
-    SchemaLoader.load(configFilePath, schema, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, serializedSchemaJson, options, false);
 
     // Assert
-    verify(operator).createTables(schema, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
   }
 
   @Test
-  public void load_WithProperPropertiesAndJsonSchemaArguments_ShouldCallCreateTables()
-      throws Exception {
+  public void
+      load_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
     // Arrange
-    String schema =
-        "{\n"
-            + "  \"sample_db.sample_table\": {\n"
-            + "    \"transaction\": false,\n"
-            + "    \"partition-key\": [\n"
-            + "      \"c1\"\n"
-            + "    ],\n"
-            + "    \"clustering-key\": [],\n"
-            + "    \"columns\": {\n"
-            + "      \"c1\": \"INT\",\n"
-            + "      \"c2\": \"TEXT\",\n"
-            + "    }"
-            + "}";
 
     // Act
-    SchemaLoader.load(configProperties, schema, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, (String) null, options, true);
 
     // Assert
-    verify(operator).createTables(schema, Collections.emptyMap());
-    verify(operator).createCoordinatorTable(Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
   }
 
   @Test
-  public void unload_WithProperFilePathsArguments_ShouldCallDeleteTables() throws Exception {
+  public void
+      load_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.unload(configFilePath, schemaFilePath, Collections.emptyMap(), true);
+    SchemaLoader.load(configFilePath, (String) null, options, false);
 
     // Assert
-    verify(operator).deleteTables(schemaFilePath, Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, schemaFilePath, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, schemaFilePath, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, (Path) null, options, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, (Path) null, options, false);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, serializedSchemaJson, options, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, serializedSchemaJson, options, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, (String) null, options, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      load_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.load(configProperties, (String) null, options, false);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).createTables(anyList());
+    verify(operator, never()).createCoordinatorTable(options);
+  }
+
+  @Test
+  public void
+      unload_WithConfigFileAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configFilePath, schemaFilePath, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
   public void
-      unload_WithProperConfigFilePathAndNullPathSchemaArguments_ShouldJustCallDropCoordinator()
+      unload_WithConfigFileAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.unload(configFilePath, (Path) null, Collections.emptyMap(), true);
+    SchemaLoader.unload(configFilePath, schemaFilePath, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigFileAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configFilePath, (Path) null, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
   public void
-      unload_WithProperConfigFilePathAndNullStringSchemaArguments_ShouldJustCallDropCoordinator()
+      unload_WithConfigFileAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.unload(configFilePath, (String) null, Collections.emptyMap(), true);
+    SchemaLoader.unload(configFilePath, (Path) null, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
-    verify(operator).dropCoordinatorTable();
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
   }
 
   @Test
-  public void unload_WithProperPropertiesAndFilePathArguments_ShouldCallDeleteTables()
-      throws Exception {
+  public void
+      unload_WithConfigFileAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
     // Act
-    SchemaLoader.unload(configProperties, schemaFilePath, Collections.emptyMap(), true);
+    SchemaLoader.unload(configFilePath, serializedSchemaJson, true);
 
     // Assert
-    verify(operator).deleteTables(schemaFilePath, Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
   public void
-      unload_WithProperConfigPropertiesAndNullPathSchemaArguments_ShouldJustCallDropCoordinator()
+      unload_WithConfigFileAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
-    Path schemaPath = null;
 
     // Act
-    SchemaLoader.unload(configProperties, schemaPath, Collections.emptyMap(), true);
+    SchemaLoader.unload(configFilePath, serializedSchemaJson, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configFilePath, (String) null, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
   public void
-      unload_WithProperConfigPropertiesAndNullStringSchemaArguments_ShouldJustCallDropCoordinator()
+      unload_WithConfigFileAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
           throws Exception {
     // Arrange
-    String serializedSchema = null;
 
     // Act
-    SchemaLoader.unload(configProperties, serializedSchema, Collections.emptyMap(), true);
+    SchemaLoader.unload(configFilePath, (String) null, false);
 
     // Assert
-    verify(operator, times(0)).createTables(schemaFilePath, Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, schemaFilePath, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
-  public void unload_WithProperFilePathAndJsonSchemaArguments_ShouldCallDeleteTables()
-      throws Exception {
+  public void
+      unload_WithConfigPropertiesAndSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
     // Arrange
-    String schema =
-        "{\n"
-            + "  \"sample_db.sample_table\": {\n"
-            + "    \"transaction\": false,\n"
-            + "    \"partition-key\": [\n"
-            + "      \"c1\"\n"
-            + "    ],\n"
-            + "    \"clustering-key\": [],\n"
-            + "    \"columns\": {\n"
-            + "      \"c1\": \"INT\",\n"
-            + "      \"c2\": \"TEXT\",\n"
-            + "    }"
-            + "}";
 
     // Act
-    SchemaLoader.unload(configFilePath, schema, Collections.emptyMap(), true);
+    SchemaLoader.unload(configProperties, schemaFilePath, false);
 
     // Assert
-    verify(operator).deleteTables(schema, Collections.emptyMap());
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndNullSchemaFileWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, (Path) null, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
   }
 
   @Test
-  public void unload_WithProperPropertiesAndJsonSchemaArguments_ShouldCallDeleteTables()
-      throws Exception {
+  public void
+      unload_WithConfigPropertiesAndNullSchemaFileWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
     // Arrange
-    String schema =
-        "{\n"
-            + "  \"sample_db.sample_table\": {\n"
-            + "    \"transaction\": false,\n"
-            + "    \"partition-key\": [\n"
-            + "      \"c1\"\n"
-            + "    ],\n"
-            + "    \"clustering-key\": [],\n"
-            + "    \"columns\": {\n"
-            + "      \"c1\": \"INT\",\n"
-            + "      \"c2\": \"TEXT\",\n"
-            + "    }"
-            + "}";
 
     // Act
-    SchemaLoader.unload(configProperties, schema, Collections.emptyMap(), true);
+    SchemaLoader.unload(configProperties, (Path) null, false);
 
     // Assert
-    verify(operator).deleteTables(schema, Collections.emptyMap());
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, serializedSchemaJson, true);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
     verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, serializedSchemaJson, false);
+
+    // Assert
+    verify(parser).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, (String) null, true);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator).dropCoordinatorTable();
+  }
+
+  @Test
+  public void
+      unload_WithConfigPropertiesAndNullSerializedSchemaJsonWithoutCreateCoordinatorTable_ShouldCallParserAndOperatorProperly()
+          throws Exception {
+    // Arrange
+
+    // Act
+    SchemaLoader.unload(configProperties, (String) null, false);
+
+    // Assert
+    verify(parser, never()).parse();
+    verify(operator).deleteTables(anyList());
+    verify(operator, never()).dropCoordinatorTable();
   }
 }

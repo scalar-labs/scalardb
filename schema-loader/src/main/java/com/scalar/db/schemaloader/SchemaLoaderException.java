@@ -1,6 +1,7 @@
 package com.scalar.db.schemaloader;
 
 public class SchemaLoaderException extends Exception {
+
   public SchemaLoaderException(String message) {
     super(message);
   }
