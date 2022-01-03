@@ -15,7 +15,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -26,6 +25,7 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Isolation;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import com.scalar.db.transaction.rpc.GrpcTransaction;
 import com.scalar.db.transaction.rpc.GrpcTransactionManager;

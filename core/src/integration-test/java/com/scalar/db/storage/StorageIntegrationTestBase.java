@@ -17,6 +17,8 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,22 +46,21 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageIntegrationTestBase {
 
-  protected static final String NAMESPACE = "integration_testing";
-  protected static final String TABLE = "test_table";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
+  private static final String NAMESPACE = "integration_testing";
+  private static final String TABLE = "test_table";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
 
   private static boolean initialized;
-  protected static DistributedStorage storage;
-  protected static DistributedStorageAdmin admin;
-  protected static String namespace;
+  private static DistributedStorage storage;
+  private static DistributedStorageAdmin admin;
+  private static String namespace;
 
   @Before
   public void setUp() throws Exception {
@@ -1147,6 +1149,58 @@ public abstract class StorageIntegrationTestBase {
     assertThatThrownBy(() -> scanAll(scan)).isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void scan_ScanLargeData_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
+    // Arrange
+    Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
+    List<Integer> expectedValues = new ArrayList<>();
+    for (int i = 0; i < 345; i++) {
+      Key clusteringKey = Key.newBuilder().addInt(COL_NAME4, i).build();
+      storage.put(new Put(partitionKey, clusteringKey));
+      expectedValues.add(i);
+    }
+    Scan scan = new Scan(partitionKey);
+
+    // Act
+    List<Result> results = scanAll(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(345);
+    assertScanResultWithoutOrdering(results, 1, COL_NAME4, expectedValues);
+  }
+
+  @Test
+  public void scan_ScanLargeDataWithOrdering_ShouldRetrieveExpectedValues()
+      throws ExecutionException, IOException {
+    // Arrange
+    Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
+    for (int i = 0; i < 345; i++) {
+      Key clusteringKey = Key.newBuilder().addInt(COL_NAME4, i).build();
+      storage.put(new Put(partitionKey, clusteringKey));
+    }
+    Scan scan = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
+
+    // Act
+    List<Result> results = new ArrayList<>();
+    try (Scanner scanner = storage.scan(scan)) {
+      Iterator<Result> iterator = scanner.iterator();
+      for (int i = 0; i < 234; i++) {
+        results.add(iterator.next());
+      }
+    }
+
+    // Assert
+    assertThat(results.size()).isEqualTo(234);
+    for (int i = 0; i < 234; i++) {
+      assertThat(results.get(i).getPartitionKey().isPresent()).isTrue();
+      assertThat(results.get(i).getClusteringKey().isPresent()).isTrue();
+
+      assertThat(results.get(i).getPartitionKey().get().get().get(0).getAsInt()).isEqualTo(1);
+      assertThat(results.get(i).getClusteringKey().get().get().get(0).getAsInt()).isEqualTo(i);
+    }
+  }
+
   private void populateRecords() {
     List<Put> puts = preparePuts();
     puts.forEach(p -> assertThatCode(() -> storage.put(p)).doesNotThrowAnyException());
@@ -1204,13 +1258,13 @@ public abstract class StorageIntegrationTestBase {
     return deletes;
   }
 
-  protected List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
+  private List<Result> scanAll(Scan scan) throws ExecutionException, IOException {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
   }
 
-  protected void assertScanResultWithoutOrdering(
+  private void assertScanResultWithoutOrdering(
       List<Result> actual,
       int expectedPartitionKeyValue,
       String checkedColumn,

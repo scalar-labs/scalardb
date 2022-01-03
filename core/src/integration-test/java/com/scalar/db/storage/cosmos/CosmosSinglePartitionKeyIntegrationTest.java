@@ -14,8 +14,9 @@ public class CosmosSinglePartitionKeyIntegrationTest
 
   @Override
   protected String getNamespace() {
+    String namespace = super.getNamespace();
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + NAMESPACE).orElse(NAMESPACE);
+    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override
