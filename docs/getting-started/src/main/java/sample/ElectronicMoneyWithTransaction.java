@@ -26,23 +26,28 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
     // Start a transaction
     DistributedTransaction tx = manager.start();
 
-    // Retrieve the current balance for id
-    Get get = new Get(new Key(ID, id));
-    Optional<Result> result = tx.get(get);
+    try {
+      // Retrieve the current balance for id
+      Get get = new Get(new Key(ID, id));
+      Optional<Result> result = tx.get(get);
 
-    // Calculate the balance
-    int balance = amount;
-    if (result.isPresent()) {
-      int current = result.get().getValue(BALANCE).get().getAsInt();
-      balance += current;
+      // Calculate the balance
+      int balance = amount;
+      if (result.isPresent()) {
+        int current = result.get().getValue(BALANCE).get().getAsInt();
+        balance += current;
+      }
+
+      // Update the balance
+      Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
+      tx.put(put);
+
+      // Commit the transaction (records are automatically recovered in case of failure)
+      tx.commit();
+    } catch (Exception e) {
+      tx.abort();
+      throw e;
     }
-
-    // Update the balance
-    Put put = new Put(new Key(ID, id)).withValue(BALANCE, balance);
-    tx.put(put);
-
-    // Commit the transaction (records are automatically recovered in case of failure)
-    tx.commit();
   }
 
   @Override
@@ -50,27 +55,32 @@ public class ElectronicMoneyWithTransaction extends ElectronicMoney {
     // Start a transaction
     DistributedTransaction tx = manager.start();
 
-    // Retrieve the current balances for ids
-    Get fromGet = new Get(new Key(ID, fromId));
-    Get toGet = new Get(new Key(ID, toId));
-    Optional<Result> fromResult = tx.get(fromGet);
-    Optional<Result> toResult = tx.get(toGet);
+    try {
+      // Retrieve the current balances for ids
+      Get fromGet = new Get(new Key(ID, fromId));
+      Get toGet = new Get(new Key(ID, toId));
+      Optional<Result> fromResult = tx.get(fromGet);
+      Optional<Result> toResult = tx.get(toGet);
 
-    // Calculate the balances (it assumes that both accounts exist)
-    int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
-    int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
-    if (newFromBalance < 0) {
-      throw new RuntimeException(fromId + " doesn't have enough balance.");
+      // Calculate the balances (it assumes that both accounts exist)
+      int newFromBalance = fromResult.get().getValue(BALANCE).get().getAsInt() - amount;
+      int newToBalance = toResult.get().getValue(BALANCE).get().getAsInt() + amount;
+      if (newFromBalance < 0) {
+        throw new RuntimeException(fromId + " doesn't have enough balance.");
+      }
+
+      // Update the balances
+      Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
+      Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
+      tx.put(fromPut);
+      tx.put(toPut);
+
+      // Commit the transaction (records are automatically recovered in case of failure)
+      tx.commit();
+    } catch (Exception e) {
+      tx.abort();
+      throw e;
     }
-
-    // Update the balances
-    Put fromPut = new Put(new Key(ID, fromId)).withValue(BALANCE, newFromBalance);
-    Put toPut = new Put(new Key(ID, toId)).withValue(BALANCE, newToBalance);
-    tx.put(fromPut);
-    tx.put(toPut);
-
-    // Commit the transaction (records are automatically recovered in case of failure)
-    tx.commit();
   }
 
   @Override

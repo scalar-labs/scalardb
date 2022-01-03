@@ -34,24 +34,24 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(value = {"MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
 
-  protected static final String TEST_NAME = "single_ckey";
-  protected static final String NAMESPACE = "integration_testing_" + TEST_NAME;
-  protected static final String PARTITION_KEY = "pkey";
-  protected static final String CLUSTERING_KEY = "ckey";
-  protected static final String COL_NAME = "col";
+  private static final String TEST_NAME = "single_ckey";
+  private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
+  private static final String PARTITION_KEY = "pkey";
+  private static final String CLUSTERING_KEY = "ckey";
+  private static final String COL_NAME = "col";
 
   private static final int CLUSTERING_KEY_NUM = 20;
 
   private static final Random RANDOM = new Random();
 
   private static boolean initialized;
-  protected static DistributedStorageAdmin admin;
-  protected static DistributedStorage storage;
-  protected static String namespace;
-  protected static Set<DataType> clusteringKeyTypes;
+  private static DistributedStorageAdmin admin;
+  private static DistributedStorage storage;
+  private static String namespace;
+  private static Set<DataType> clusteringKeyTypes;
 
   private static long seed;
 
@@ -153,7 +153,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+  private void scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -202,7 +202,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyRange_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyRange_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -273,7 +273,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -342,7 +342,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -399,7 +399,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyStartRange_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyStartRange_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -453,7 +453,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -502,7 +502,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyEndRange_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyEndRange_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,
@@ -554,7 +554,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
     }
   }
 
-  protected void scan_WithClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+  private void scan_WithClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
       List<Value<?>> clusteringKeyValues,
       DataType clusteringKeyType,
       Order clusteringOrder,

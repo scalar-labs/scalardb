@@ -1,11 +1,11 @@
-package com.scalar.db.storage.cosmos;
+package com.scalar.db.schemaloader.cosmos;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.storage.AdminIntegrationTestBase;
-import java.util.Map;
+import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
+import com.scalar.db.storage.cosmos.CosmosEnv;
 import java.util.Optional;
 
-public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
+public class CosmosSchemaLoaderIntegrationTest extends SchemaLoaderIntegrationTestBase {
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
@@ -22,18 +22,8 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
     return getNamespace(super.getNamespace2());
   }
 
-  @Override
-  protected String getNamespace3() {
-    return getNamespace(super.getNamespace3());
-  }
-
   private String getNamespace(String namespace) {
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
-  }
-
-  @Override
-  protected Map<String, String> getCreateOptions() {
-    return CosmosEnv.getCreateOptions();
   }
 }

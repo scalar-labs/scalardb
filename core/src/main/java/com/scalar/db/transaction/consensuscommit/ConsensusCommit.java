@@ -29,14 +29,14 @@ import org.slf4j.LoggerFactory;
  * A transaction manager that implements a transaction protocol on the basis of two-phase commit on
  * the consensus of an underlining storage.
  *
- * <p>When SERIALIZABLE is specified in {@link com.scalar.db.api.Isolation}, it makes schedule
- * strict serializable or serializable depending on underlining database operations. If a
- * transaction runs on linearizable operations, it makes it strict serializable. If a transaction
- * runs on serializable operations, it makes it serializable.
+ * <p>When SERIALIZABLE is specified in {@link Isolation}, it makes schedule strict serializable or
+ * serializable depending on underlining database operations. If a transaction runs on linearizable
+ * operations, it makes it strict serializable. If a transaction runs on serializable operations, it
+ * makes it serializable.
  *
- * <p>When SNAPSHOT is specified in {@link com.scalar.db.api.Isolation}, it makes it a weaker
- * variant of snapshot isolation (SI). This snapshot isolation could cause read skew anomalies in
- * addition to write skew and read-only anomalies, which are known to be usual SI anomalies.
+ * <p>When SNAPSHOT is specified in {@link Isolation}, it makes it a weaker variant of snapshot
+ * isolation (SI). This snapshot isolation could cause read skew anomalies in addition to write skew
+ * and read-only anomalies, which are known to be usual SI anomalies.
  */
 @NotThreadSafe
 public class ConsensusCommit implements DistributedTransaction {
