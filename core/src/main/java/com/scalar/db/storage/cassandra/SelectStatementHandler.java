@@ -123,7 +123,10 @@ public class SelectStatementHandler extends StatementHandler {
     if (projections.isEmpty()) {
       selection.all();
     } else {
-      projections.forEach(selection::column);
+      projections.forEach(
+          v -> {
+            selection.column(quoteIfNecessary(v));
+          });
     }
   }
 
@@ -141,7 +144,8 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private void setKey(Select.Where statement, Optional<Key> key) {
-    key.ifPresent(k -> k.forEach(v -> statement.and(eq(v.getName(), bindMarker()))));
+    key.ifPresent(
+        k -> k.forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
   }
 
   private void setStart(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
@@ -156,14 +160,14 @@ public class SelectStatementHandler extends StatementHandler {
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
+                        String clusteringKeyName = quoteIfNecessary(start.get(i).getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
-                            statement.and(gte(start.get(i).getName(), bindMarker()));
+                            statement.and(gte(clusteringKeyName, bindMarker()));
                           } else {
-                            statement.and(gt(start.get(i).getName(), bindMarker()));
+                            statement.and(gt(clusteringKeyName, bindMarker()));
                           }
                         } else {
-                          String clusteringKeyName = start.get(i).getName();
                           statement.and(eq(clusteringKeyName, bindMarker()));
                           traveledEqualKeySet.add(clusteringKeyName);
                         }
@@ -183,14 +187,14 @@ public class SelectStatementHandler extends StatementHandler {
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {
+                        String clusteringKeyName = quoteIfNecessary(end.get(i).getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
-                            statement.and(lte(end.get(i).getName(), bindMarker()));
+                            statement.and(lte(clusteringKeyName, bindMarker()));
                           } else {
-                            statement.and(lt(end.get(i).getName(), bindMarker()));
+                            statement.and(lt(clusteringKeyName, bindMarker()));
                           }
                         } else {
-                          String clusteringKeyName = end.get(i).getName();
                           if (!traveledEqualKeySet.contains(clusteringKeyName)) {
                             statement.and(eq(clusteringKeyName, bindMarker()));
                           }

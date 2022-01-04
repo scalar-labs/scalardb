@@ -69,6 +69,12 @@ public class SelectStatementHandlerTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Get prepareGetWithReservedKeywords() {
+    Key partitionKey = new Key("from", ANY_TEXT_1);
+    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    return new Get(partitionKey, clusteringKey).forNamespace("keyspace").forTable("table");
+  }
+
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
@@ -146,6 +152,31 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     get = prepareGetWithClusteringKey();
+
+    // Act
+    handler.prepare(get);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_GetOperationWithReservedKeywordsGiven_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "SELECT * FROM",
+                  "\"keyspace\"" + "." + "\"table\"",
+                  "WHERE",
+                  "\"from\"" + "=?",
+                  "AND",
+                  "\"to\"" + "=?;",
+                });
+    configureBehavior(expected);
+    get = prepareGetWithReservedKeywords();
 
     // Act
     handler.prepare(get);

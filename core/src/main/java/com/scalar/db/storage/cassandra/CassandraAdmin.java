@@ -122,7 +122,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {
       com.datastax.driver.core.TableMetadata metadata =
-          clusterManager.getMetadata(quoteIfNecessary(namespace), quoteIfNecessary(table));
+          clusterManager.getMetadata(namespace, table);
       if (metadata == null) {
         return null;
       }

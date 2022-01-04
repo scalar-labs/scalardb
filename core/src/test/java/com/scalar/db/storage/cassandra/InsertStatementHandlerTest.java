@@ -77,6 +77,15 @@ public class InsertStatementHandlerTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Put preparePutWithReservedKeywords() {
+    Key partitionKey = new Key("from", ANY_TEXT_1);
+    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    return new Put(partitionKey, clusteringKey)
+        .withValue("one", ANY_INT_1)
+        .forNamespace("keyspace")
+        .forTable("table");
+  }
+
   private InsertStatementHandler prepareSpiedInsertStatementHandler() {
     InsertStatementHandler spy = spy(new InsertStatementHandler(session));
     doReturn(prepared).when(spy).prepare(put);
@@ -158,6 +167,30 @@ public class InsertStatementHandlerTest {
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
+
+    // Act
+    handler.prepare(put);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_PutOperationWithReservedKeywordsGiven_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "INSERT INTO",
+                  "\"keyspace\"" + "." + "\"table\"",
+                  "(" + "\"from\"" + "," + "\"to\"" + "," + "\"one\"" + ")",
+                  "VALUES",
+                  "(?,?,?);",
+                });
+    configureBehavior(expected);
+    put = preparePutWithReservedKeywords();
 
     // Act
     handler.prepare(put);

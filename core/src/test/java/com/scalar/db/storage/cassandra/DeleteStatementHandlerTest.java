@@ -68,6 +68,12 @@ public class DeleteStatementHandlerTest {
         .forTable(ANY_TABLE_NAME);
   }
 
+  private Delete prepareDeleteWithReservedKeywords() {
+    Key partitionKey = new Key("from", ANY_TEXT_1);
+    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    return new Delete(partitionKey, clusteringKey).forNamespace("keyspace").forTable("table");
+  }
+
   private void configureBehavior(String expected) {
     when(session.prepare(expected == null ? anyString() : expected)).thenReturn(prepared);
 
@@ -127,7 +133,7 @@ public class DeleteStatementHandlerTest {
   }
 
   @Test
-  public void prepare_PutOperationWithClusteringKeyGiven_ShouldPrepareProperQuery() {
+  public void prepare_DeleteOperationWithClusteringKeyGiven_ShouldPrepareProperQuery() {
     // Arrange
     String expected =
         Joiner.on(" ")
@@ -144,6 +150,32 @@ public class DeleteStatementHandlerTest {
                 });
     configureBehavior(expected);
     del = prepareDeleteWithClusteringKey();
+
+    // Act
+    handler.prepare(del);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_DeleteOperationWithReservedKeywordsGiven_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "DELETE",
+                  "FROM",
+                  "\"keyspace\"" + "." + "\"table\"",
+                  "WHERE",
+                  "\"from\"" + "=?",
+                  "AND",
+                  "\"to\"" + "=?;"
+                });
+    configureBehavior(expected);
+    del = prepareDeleteWithReservedKeywords();
 
     // Act
     handler.prepare(del);
