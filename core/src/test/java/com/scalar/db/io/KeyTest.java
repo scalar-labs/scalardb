@@ -133,6 +133,54 @@ public class KeyTest {
   }
 
   @Test
+  public void constructor_WithMultipleNamesAndValues_ShouldReturnWhatsSet() {
+    // Arrange
+    Key key1 = new Key("key1", true, "key2", 5678);
+    Key key2 = new Key("key3", 1234L, "key4", 4.56f, "key5", 1.23);
+    Key key3 =
+        new Key(
+            "key6",
+            "string_key",
+            "key7",
+            "blob_key".getBytes(StandardCharsets.UTF_8),
+            "key8",
+            1357,
+            "key9",
+            2468);
+    Key key4 = new Key("key1", true, "key2", 5678, "key3", 1234L, "key4", 4.56f, "key5", 1.23);
+
+    // Act
+    List<Value<?>> values1 = key1.get();
+    List<Value<?>> values2 = key2.get();
+    List<Value<?>> values3 = key3.get();
+    List<Value<?>> values4 = key4.get();
+
+    // Assert
+    assertThat(values1.size()).isEqualTo(2);
+    assertThat(values1.get(0)).isEqualTo(new BooleanValue("key1", true));
+    assertThat(values1.get(1)).isEqualTo(new IntValue("key2", 5678));
+
+    assertThat(values2.size()).isEqualTo(3);
+    assertThat(values2.get(0)).isEqualTo(new BigIntValue("key3", 1234L));
+    assertThat(values2.get(1)).isEqualTo(new FloatValue("key4", 4.56f));
+    assertThat(values2.get(2)).isEqualTo(new DoubleValue("key5", 1.23));
+
+    assertThat(values3.size()).isEqualTo(4);
+    assertThat(values3.get(0)).isEqualTo(new TextValue("key6", "string_key"));
+    assertThat(values3.get(1))
+        .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values3.get(2)).isEqualTo(new IntValue("key8", 1357));
+    assertThat(values3.get(3)).isEqualTo(new IntValue("key9", 2468));
+
+    assertThat(values4.size()).isEqualTo(5);
+    assertThat(values4.get(0)).isEqualTo(new BooleanValue("key1", true));
+    assertThat(values4.get(1)).isEqualTo(new IntValue("key2", 5678));
+    assertThat(values4.get(2)).isEqualTo(new BigIntValue("key3", 1234L));
+    assertThat(values4.get(3)).isEqualTo(new FloatValue("key4", 4.56f));
+    assertThat(values4.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
+  }
+
+  @Test
   public void get_ProperKeysGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     TextValue key1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
@@ -151,13 +199,13 @@ public class KeyTest {
     // Arrange
     Key key =
         Key.newBuilder()
-            .addBoolean("key1", true)
-            .addInt("key2", 5678)
-            .addBigInt("key3", 1234L)
-            .addFloat("key4", 4.56f)
-            .addDouble("key5", 1.23)
-            .addText("key6", "string_key")
-            .addBlob("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
+            .add("key1", true)
+            .add("key2", 5678)
+            .add("key3", 1234L)
+            .add("key4", 4.56f)
+            .add("key5", 1.23)
+            .add("key6", "string_key")
+            .add("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
             .add(new IntValue("key8", 1357))
             .addAll(Arrays.asList(new IntValue("key9", 2468), new BigIntValue("key10", 1111L)))
             .build();
