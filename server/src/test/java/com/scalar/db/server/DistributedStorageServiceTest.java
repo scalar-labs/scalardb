@@ -120,7 +120,7 @@ public class DistributedStorageServiceTest {
   public void mutate_IsCalledWithSinglePut_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
@@ -141,7 +141,7 @@ public class DistributedStorageServiceTest {
   public void mutate_IsCalledWithMultiplePuts_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addAllMutation(
@@ -165,7 +165,7 @@ public class DistributedStorageServiceTest {
   public void mutate_IsCalledWithSingleDelete_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Delete(partitionKey)))
@@ -186,7 +186,7 @@ public class DistributedStorageServiceTest {
   public void mutate_IsCalledWithMultipleDeletes_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addAllMutation(
@@ -210,7 +210,7 @@ public class DistributedStorageServiceTest {
   public void mutate_IsCalledWithMixedPutAndDelete_StorageShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addAllMutation(
@@ -234,7 +234,7 @@ public class DistributedStorageServiceTest {
   public void mutate_StorageThrowsIllegalArgumentException_ShouldThrowInvalidArgumentError()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
@@ -256,7 +256,7 @@ public class DistributedStorageServiceTest {
   public void mutate_StorageThrowsNoMutationException_ShouldThrowFailedPreconditionError()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
@@ -278,7 +278,7 @@ public class DistributedStorageServiceTest {
   public void mutate_StorageThrowsExecutionException_ShouldThrowInternalError()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))
@@ -298,7 +298,7 @@ public class DistributedStorageServiceTest {
   @Test
   public void mutate_GateKeeperReturnsFalse_ShouldThrowUnavailableError() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     MutateRequest request =
         MutateRequest.newBuilder()
             .addMutation(ProtoUtils.toMutation(new Put(partitionKey)))

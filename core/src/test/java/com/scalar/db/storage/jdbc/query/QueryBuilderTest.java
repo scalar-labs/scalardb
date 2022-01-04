@@ -89,9 +89,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Collections.emptyList())
                 .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "bbb").build(),
-                    Optional.empty())
+                .where(new Key("p1", "aaa", "p2", "bbb"), Optional.empty())
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?"));
@@ -109,9 +107,7 @@ public class QueryBuilderTest {
             queryBuilder
                 .select(Arrays.asList("c1", "c2"))
                 .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "bbb").build()))
+                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "aaa", "c2", "bbb")))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?"));
@@ -153,9 +149,9 @@ public class QueryBuilderTest {
                 .from(NAMESPACE, TABLE, TABLE_METADATA)
                 .where(
                     new Key("p1", "aaa"),
-                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "aaa").build()),
+                    Optional.of(new Key("c1", "aaa", "c2", "aaa")),
                     true,
-                    Optional.of(Key.newBuilder().addText("c1", "aaa").addText("c2", "bbb").build()),
+                    Optional.of(new Key("c1", "aaa", "c2", "bbb")),
                     false)
                 .build()
                 .toString())
@@ -344,8 +340,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .insertInto(NAMESPACE, TABLE)
                 .values(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
-                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
+                    new Key("p1", "aaa", "p2", "ccc"),
+                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
                     values)
                 .build()
                 .toString())
@@ -383,8 +379,8 @@ public class QueryBuilderTest {
                 .update(NAMESPACE, TABLE)
                 .set(values)
                 .where(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
-                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()))
+                    new Key("p1", "aaa", "p2", "ccc"),
+                    Optional.of(new Key("c1", "bbb", "c2", "ddd")))
                 .build()
                 .toString())
         .isEqualTo(
@@ -443,8 +439,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .deleteFrom(NAMESPACE, TABLE)
                 .where(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
-                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()))
+                    new Key("p1", "aaa", "p2", "ccc"),
+                    Optional.of(new Key("c1", "bbb", "c2", "ddd")))
                 .build()
                 .toString())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?"));
@@ -588,8 +584,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
                 .values(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
-                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
+                    new Key("p1", "aaa", "p2", "ccc"),
+                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
                     values)
                 .build()
                 .toString())
@@ -684,8 +680,8 @@ public class QueryBuilderTest {
             queryBuilder
                 .upsertInto(NAMESPACE, TABLE)
                 .values(
-                    Key.newBuilder().addText("p1", "aaa").addText("p2", "ccc").build(),
-                    Optional.of(Key.newBuilder().addText("c1", "bbb").addText("c2", "ddd").build()),
+                    new Key("p1", "aaa", "p2", "ccc"),
+                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
                     Collections.emptyMap())
                 .build()
                 .toString())
