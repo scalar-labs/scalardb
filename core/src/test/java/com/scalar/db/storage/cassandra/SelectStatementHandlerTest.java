@@ -262,16 +262,8 @@ public class SelectStatementHandlerTest {
                 });
     configureBehavior(expected);
     scan = prepareScan();
-    scan.withStart(
-            Key.newBuilder()
-                .addText(ANY_NAME_2, ANY_TEXT_2)
-                .addText(ANY_NAME_3, ANY_TEXT_3)
-                .build())
-        .withEnd(
-            Key.newBuilder()
-                .addText(ANY_NAME_2, ANY_TEXT_2)
-                .addText(ANY_NAME_3, ANY_TEXT_4)
-                .build());
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     // Act
     handler.prepare(scan);
@@ -396,16 +388,8 @@ public class SelectStatementHandlerTest {
     // Arrange
     configureBehavior(null);
     scan = prepareScan();
-    scan.withStart(
-            Key.newBuilder()
-                .addText(ANY_NAME_2, ANY_TEXT_2)
-                .addText(ANY_NAME_3, ANY_TEXT_3)
-                .build())
-        .withEnd(
-            Key.newBuilder()
-                .addText(ANY_NAME_2, ANY_TEXT_2)
-                .addText(ANY_NAME_3, ANY_TEXT_4)
-                .build());
+    scan.withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+        .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     // Act
     handler.bind(prepared, scan);

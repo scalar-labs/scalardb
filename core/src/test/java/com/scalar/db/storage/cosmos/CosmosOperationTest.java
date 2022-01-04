@@ -53,8 +53,7 @@ public class CosmosOperationTest {
     // Arrange
     when(metadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
 
-    Key partitionKey =
-        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
@@ -71,8 +70,7 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey =
-        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
@@ -93,8 +91,7 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey =
-        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Delete delete =
         new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(delete, metadata);
@@ -113,11 +110,7 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        Key.newBuilder()
-            .addText(ANY_NAME_1, ANY_TEXT_1)
-            .addText(ANY_NAME_2, ANY_TEXT_2)
-            .addInt(ANY_NAME_3, ANY_INT_1)
-            .build();
+        new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
@@ -135,11 +128,7 @@ public class CosmosOperationTest {
         .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_1, ANY_NAME_2, ANY_NAME_3)));
 
     Key partitionKey =
-        Key.newBuilder()
-            .addText(ANY_NAME_1, ANY_TEXT_1)
-            .addText(ANY_NAME_2, ANY_TEXT_2)
-            .addInt(ANY_NAME_3, ANY_INT_1)
-            .build();
+        new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
     Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
@@ -158,8 +147,7 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames())
         .thenReturn(new LinkedHashSet<>(Collections.singletonList(ANY_NAME_2)));
 
-    Key partitionKey =
-        Key.newBuilder().addText(ANY_NAME_1, ANY_TEXT_1).addInt(ANY_NAME_3, ANY_INT_1).build();
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
