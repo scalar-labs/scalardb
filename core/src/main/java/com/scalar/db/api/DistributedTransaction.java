@@ -65,8 +65,7 @@ public interface DistributedTransaction {
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   Optional<Result> get(Get get) throws CrudConflictException, CrudException;
@@ -78,8 +77,7 @@ public interface DistributedTransaction {
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   List<Result> scan(Scan scan) throws CrudConflictException, CrudException;
@@ -90,8 +88,7 @@ public interface DistributedTransaction {
    * a transaction if you want to implement conditional mutation.
    *
    * @param put a {@code Put} command
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   void put(Put put) throws CrudConflictException, CrudException;
@@ -102,8 +99,7 @@ public interface DistributedTransaction {
    * such conditions in a transaction if you want to implement conditional mutation.
    *
    * @param puts a list of {@code Put} commands
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   void put(List<Put> puts) throws CrudConflictException, CrudException;
@@ -114,8 +110,7 @@ public interface DistributedTransaction {
    * in a transaction if you want to implement conditional mutation.
    *
    * @param delete a {@code Delete} command
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   void delete(Delete delete) throws CrudConflictException, CrudException;
@@ -126,8 +121,7 @@ public interface DistributedTransaction {
    * conditions in a transaction if you want to implement conditional mutation.
    *
    * @param deletes a list of {@code Delete} commands
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   void delete(List<Delete> deletes) throws CrudConflictException, CrudException;
@@ -137,8 +131,7 @@ public interface DistributedTransaction {
    * Mutation} commands.
    *
    * @param mutations a list of {@code Mutation} commands
-   * @throws CrudConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CrudConflictException if conflicts happened. You can retry the transaction in this case
    * @throws CrudException if the operation failed
    */
   void mutate(List<? extends Mutation> mutations) throws CrudConflictException, CrudException;
@@ -146,8 +139,8 @@ public interface DistributedTransaction {
   /**
    * Commits a transaction.
    *
-   * @throws CommitConflictException if transaction conflict happened. You can retry the transaction
-   *     in this case
+   * @throws CommitConflictException if conflicts happened. You can retry the transaction in this
+   *     case
    * @throws CommitException if the operation fails
    * @throws UnknownTransactionStatusException if the status of the commit is unknown
    */
