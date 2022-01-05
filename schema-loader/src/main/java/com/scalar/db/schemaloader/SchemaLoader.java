@@ -1,20 +1,23 @@
 package com.scalar.db.schemaloader;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.schemaloader.command.CassandraCommand;
 import com.scalar.db.schemaloader.command.CosmosCommand;
 import com.scalar.db.schemaloader.command.DynamoCommand;
 import com.scalar.db.schemaloader.command.JdbcCommand;
 import com.scalar.db.schemaloader.command.SchemaLoaderCommand;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorException;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
 import com.scalar.db.schemaloader.util.either.Either;
 import com.scalar.db.schemaloader.util.either.Left;
 import com.scalar.db.schemaloader.util.either.Right;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.annotation.Nullable;
@@ -166,26 +169,16 @@ public class SchemaLoader {
       Map<String, String> options,
       boolean createCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = getSchemaOperator(config);
+    // Parse the schema
+    List<TableSchema> tableSchemaList = getTableSchemaList(schema, options);
 
     // Create tables
+    SchemaOperator operator = getSchemaOperator(config);
     try {
-      if (schema.isLeft()) {
-        if (schema.getLeft() != null) {
-          operator.createTables(schema.getLeft(), options);
-        }
-      } else {
-        if (schema.getRight() != null) {
-          operator.createTables(schema.getRight(), options);
-        }
-      }
-
+      operator.createTables(tableSchemaList);
       if (createCoordinatorTable) {
         operator.createCoordinatorTable(options);
       }
-
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Creating tables failed.", e);
     } finally {
       operator.close();
     }
@@ -196,19 +189,15 @@ public class SchemaLoader {
    *
    * @param configProperties Scalar DB config properties.
    * @param schemaFilePath path to schema json file.
-   * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Properties configProperties,
-      @Nullable Path schemaFilePath,
-      Map<String, String> options,
-      boolean deleteCoordinatorTable)
+      Properties configProperties, @Nullable Path schemaFilePath, boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, options, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTable);
   }
 
   /**
@@ -216,19 +205,15 @@ public class SchemaLoader {
    *
    * @param configFilePath path to Scalar DB config file.
    * @param schemaFilePath path to schema json file.
-   * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Path configFilePath,
-      @Nullable Path schemaFilePath,
-      Map<String, String> options,
-      boolean deleteCoordinatorTable)
+      Path configFilePath, @Nullable Path schemaFilePath, boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Left<>(schemaFilePath);
-    unload(config, schema, options, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTable);
   }
 
   /**
@@ -236,19 +221,17 @@ public class SchemaLoader {
    *
    * @param configProperties Scalar DB config properties.
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
       Properties configProperties,
       @Nullable String serializedSchemaJson,
-      Map<String, String> options,
       boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Right<>(configProperties);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, options, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTable);
   }
 
   /**
@@ -256,19 +239,15 @@ public class SchemaLoader {
    *
    * @param configFilePath path to Scalar DB config file.
    * @param serializedSchemaJson serialized json string schema.
-   * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   public static void unload(
-      Path configFilePath,
-      @Nullable String serializedSchemaJson,
-      Map<String, String> options,
-      boolean deleteCoordinatorTable)
+      Path configFilePath, @Nullable String serializedSchemaJson, boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
     Either<Path, Properties> config = new Left<>(configFilePath);
     Either<Path, String> schema = new Right<>(serializedSchemaJson);
-    unload(config, schema, options, deleteCoordinatorTable);
+    unload(config, schema, deleteCoordinatorTable);
   }
 
   /**
@@ -276,55 +255,64 @@ public class SchemaLoader {
    *
    * @param config Scalar DB config.
    * @param schema schema definition.
-   * @param options specific options for deleting tables.
    * @param deleteCoordinatorTable delete coordinator table or not.
    * @throws SchemaLoaderException thrown when deleting tables failed.
    */
   private static void unload(
-      Either<Path, Properties> config,
-      Either<Path, String> schema,
-      Map<String, String> options,
-      boolean deleteCoordinatorTable)
+      Either<Path, Properties> config, Either<Path, String> schema, boolean deleteCoordinatorTable)
       throws SchemaLoaderException {
-    SchemaOperator operator = getSchemaOperator(config);
+    // Parse the schema
+    List<TableSchema> tableSchemaList = getTableSchemaList(schema, Collections.emptyMap());
 
     // Delete tables
+    SchemaOperator operator = getSchemaOperator(config);
     try {
-      if (schema.isLeft()) {
-        if (schema.getLeft() != null) {
-          operator.deleteTables(schema.getLeft(), options);
-        }
-      } else {
-        if (schema.getRight() != null) {
-          operator.deleteTables(schema.getRight(), options);
-        }
-      }
-
+      operator.deleteTables(tableSchemaList);
       if (deleteCoordinatorTable) {
         operator.dropCoordinatorTable();
       }
-    } catch (SchemaOperatorException e) {
-      throw new SchemaLoaderException("Deleting tables failed.", e);
     } finally {
       operator.close();
     }
   }
 
-  private static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
+  @VisibleForTesting
+  static SchemaOperator getSchemaOperator(Either<Path, Properties> config)
       throws SchemaLoaderException {
-    SchemaOperator operator;
+    DatabaseConfig databaseConfig;
     if (config.isLeft()) {
       try {
         assert config.getLeft() != null;
-        operator = SchemaOperatorFactory.getSchemaOperator(config.getLeft(), true);
-      } catch (SchemaOperatorException e) {
+        databaseConfig = new DatabaseConfig(new FileInputStream(config.getLeft().toFile()));
+      } catch (IOException e) {
         throw new SchemaLoaderException("Initializing schema operator failed.", e);
       }
     } else {
       assert config.getRight() != null;
-      operator = SchemaOperatorFactory.getSchemaOperator(config.getRight(), true);
+      databaseConfig = new DatabaseConfig(config.getRight());
     }
+    return new SchemaOperator(databaseConfig);
+  }
 
-    return operator;
+  private static List<TableSchema> getTableSchemaList(
+      Either<Path, String> schema, Map<String, String> options) throws SchemaLoaderException {
+    if ((schema.isLeft() && schema.getLeft() != null)
+        || (schema.isRight() && schema.getRight() != null)) {
+      SchemaParser schemaParser = getSchemaParser(schema, options);
+      return schemaParser.parse();
+    }
+    return Collections.emptyList();
+  }
+
+  @VisibleForTesting
+  static SchemaParser getSchemaParser(Either<Path, String> schema, Map<String, String> options)
+      throws SchemaLoaderException {
+    assert (schema.isLeft() && schema.getLeft() != null)
+        || (schema.isRight() && schema.getRight() != null);
+    if (schema.isLeft()) {
+      return new SchemaParser(schema.getLeft(), options);
+    } else {
+      return new SchemaParser(schema.getRight(), options);
+    }
   }
 }

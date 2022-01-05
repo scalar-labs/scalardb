@@ -8,6 +8,7 @@ import com.scalar.db.storage.dynamo.DynamoEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import org.junit.Ignore;
 
 public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -18,8 +19,8 @@ public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
   }
 
   @Override
-  protected List<String> getCommandArgsForCreation(String configFile, String schemaFile)
-      throws IOException {
+  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+      String configFile, String schemaFile) throws IOException {
     DynamoConfig config = new DynamoConfig(new File(configFile));
     return ImmutableList.of(
         "--dynamo",
@@ -36,4 +37,8 @@ public class DynamoSchemaLoaderWithStorageSpecificArgsIntegrationTest
         "--no-scaling",
         "--no-backup");
   }
+
+  @Ignore
+  @Override
+  public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }

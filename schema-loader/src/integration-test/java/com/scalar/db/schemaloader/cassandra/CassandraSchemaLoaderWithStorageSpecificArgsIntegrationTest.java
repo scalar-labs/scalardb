@@ -7,6 +7,7 @@ import com.scalar.db.storage.cassandra.CassandraEnv;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import org.junit.Ignore;
 
 public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -17,8 +18,8 @@ public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
   }
 
   @Override
-  protected List<String> getCommandArgsForCreation(String configFile, String schemaFile)
-      throws IOException {
+  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+      String configFile, String schemaFile) throws IOException {
     DatabaseConfig config = new DatabaseConfig(new File(configFile));
     return ImmutableList.of(
         "--cassandra",
@@ -31,4 +32,8 @@ public class CassandraSchemaLoaderWithStorageSpecificArgsIntegrationTest
         "-p",
         config.getPassword().get());
   }
+
+  @Ignore
+  @Override
+  public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }

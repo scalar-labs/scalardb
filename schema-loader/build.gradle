@@ -107,12 +107,10 @@ evaluationDependsOn ':server'
 
 dependencies {
     implementation project(':core')
-
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
     implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
     implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
-
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
@@ -120,7 +118,6 @@ dependencies {
     testImplementation project(':core').sourceSets.integrationTestAll.output
     testImplementation project(':server')
     testImplementation project(':server').sourceSets.integrationTestScalarDbServer.output
-
     // for SpotBugs
     compileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
     testCompileOnly group: 'com.github.spotbugs', name: 'spotbugs-annotations', version: "${spotbugsVersion}"
