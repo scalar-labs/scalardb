@@ -13,8 +13,11 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, Object>>> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(QueryGetDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -27,16 +30,24 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
   public Map<String, Map<String, Object>> get(DataFetchingEnvironment environment)
       throws Exception {
     Map<String, Object> getInput = environment.getArgument("get");
+    LOGGER.debug("got get argument: " + getInput);
     Get get = createGet(getInput);
 
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    performGet(environment, get)
-        .ifPresent(
-            result -> {
-              for (String fieldName : helper.getFieldNames()) {
-                result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
-              }
-            });
+    try {
+      performGet(environment, get)
+          .ifPresent(
+              result -> {
+                for (String fieldName : helper.getFieldNames()) {
+                  result
+                      .getValue(fieldName)
+                      .ifPresent(value -> builder.put(fieldName, value.get()));
+                }
+              });
+    } catch (TransactionException | ExecutionException e) {
+      LOGGER.warn("Scalar DB get operation failed", e);
+      throw e;
+    }
 
     return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
   }
@@ -64,8 +75,10 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
+      LOGGER.debug("running Get operation with transaction: " + get);
       return transaction.get(get);
     } else {
+      LOGGER.debug("running Get operation with storage: " + get);
       return storage.get(get);
     }
   }

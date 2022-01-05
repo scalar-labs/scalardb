@@ -11,8 +11,11 @@ import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(MutationDeleteDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -24,6 +27,7 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     Map<String, Object> deleteInput = environment.getArgument("delete");
+    LOGGER.debug("got delete argument: " + deleteInput);
     Delete delete = helper.createDelete(deleteInput);
 
     DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
@@ -31,6 +35,7 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
       performDelete(environment, delete);
       result.data(true);
     } catch (TransactionException | ExecutionException e) {
+      LOGGER.warn("Scalar DB delete operation failed", e);
       result.data(false).error(new AbortExecutionException(e));
     }
 
@@ -42,8 +47,10 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
+      LOGGER.debug("running Delete operation with transaction: " + delete);
       transaction.delete(delete);
     } else {
+      LOGGER.debug("running Delete operation with storage: " + delete);
       storage.delete(delete);
     }
   }

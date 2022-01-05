@@ -20,8 +20,11 @@ import graphql.schema.DataFetchingEnvironment;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<String, Object>>>> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(QueryScanDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -34,17 +37,23 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
   public Map<String, List<Map<String, Object>>> get(DataFetchingEnvironment environment)
       throws Exception {
     Map<String, Object> scanInput = environment.getArgument("scan");
+    LOGGER.debug("got scan argument: " + scanInput);
     Scan scan = createScan(scanInput);
 
     // TODO: scan.withProjections()
     LinkedHashSet<String> fieldNames = helper.getFieldNames();
     ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
-    for (Result result : performScan(environment, scan)) {
-      ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-      for (String fieldName : fieldNames) {
-        result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
+    try {
+      for (Result result : performScan(environment, scan)) {
+        ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
+        for (String fieldName : fieldNames) {
+          result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
+        }
+        list.add(map.build());
       }
-      list.add(map.build());
+    } catch (TransactionException | ExecutionException e) {
+      LOGGER.warn("Scalar DB scan operation failed", e);
+      throw e;
     }
 
     return ImmutableMap.of(helper.getObjectTypeName(), list.build());
@@ -119,8 +128,10 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
+      LOGGER.debug("running Scan operation with transaction: " + scan);
       return transaction.scan(scan);
     } else {
+      LOGGER.debug("running Scan operation with storage: " + scan);
       return ImmutableList.copyOf(storage.scan(scan));
     }
   }

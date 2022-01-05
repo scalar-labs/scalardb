@@ -13,8 +13,11 @@ import graphql.schema.DataFetchingEnvironment;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult<Boolean>> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(MutationBulkPutDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -26,6 +29,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     List<Map<String, Object>> putInput = environment.getArgument("put");
+    LOGGER.debug("got put argument: " + putInput);
     List<Put> puts = putInput.stream().map(helper::createPut).collect(Collectors.toList());
 
     DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
@@ -33,6 +37,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
       performPut(environment, puts);
       result.data(true);
     } catch (TransactionException | ExecutionException e) {
+      LOGGER.warn("Scalar DB put operation failed", e);
       result.data(false).error(new AbortExecutionException(e));
     }
 
@@ -44,8 +49,10 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
       throws TransactionException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
+      LOGGER.debug("running Put operations with transaction: " + puts);
       transaction.put(puts);
     } else {
+      LOGGER.debug("running Put operations with storage: " + puts);
       storage.put(puts);
     }
   }
