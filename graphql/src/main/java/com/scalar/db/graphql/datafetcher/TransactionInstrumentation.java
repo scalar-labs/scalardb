@@ -5,9 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.transaction.AbortException;
-import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.util.ActiveExpiringMap;
 import graphql.ExecutionResult;
@@ -77,42 +75,55 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     Argument txIdArg = directive.getArgument(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
     Argument commitArg =
         directive.getArgument(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
-    boolean isCommitTrue =
-        commitArg != null
-            && commitArg.getValue() != null
-            && ((BooleanValue) commitArg.getValue()).isValue();
+
+    DistributedTransaction transaction;
     if (txIdArg == null) {
       // start a new transaction
       try {
-        DistributedTransaction transaction = transactionManager.start();
-        activeTransactions.put(transaction.getId(), transaction);
-        graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
-        if (isCommitTrue) {
-          return new TransactionCommitInstrumentationContext(transaction);
-        }
+        transaction = transactionManager.start();
       } catch (TransactionException e) {
         throw new AbortExecutionException("Failed to start transaction.", e);
       }
     } else {
       // continue an existing transaction
       String txId = ((StringValue) txIdArg.getValue()).getValue();
-      if (txId != null) {
-        DistributedTransaction transaction =
-            activeTransactions
-                .get(txId)
-                .orElseThrow(
-                    () ->
-                        new AbortExecutionException(
-                            "The specified transaction "
-                                + txId
-                                + " is not found. It might have been expired"));
-        graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
-        if (isCommitTrue) {
-          return new TransactionCommitInstrumentationContext(transaction);
-        }
-      }
+      transaction =
+          activeTransactions
+              .get(txId)
+              .orElseThrow(
+                  () ->
+                      new AbortExecutionException(
+                          "The specified transaction "
+                              + txId
+                              + " is not found. It might have been expired"));
     }
-    return SimpleInstrumentationContext.noOp();
+    graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+
+    boolean isCommitTrue =
+        commitArg != null
+            && commitArg.getValue() != null
+            && ((BooleanValue) commitArg.getValue()).isValue();
+    if (isCommitTrue) {
+      return SimpleInstrumentationContext.whenCompleted(
+          (executionResult, throwable) -> {
+            activeTransactions.remove(transaction.getId());
+            try {
+              if (throwable == null) {
+                transaction.commit();
+              } else {
+                LOGGER.warn(
+                    "aborting the transaction since an error occurred during execution.",
+                    throwable);
+                transaction.abort();
+              }
+            } catch (TransactionException e) {
+              throw new AbortExecutionException(e);
+            }
+          });
+    } else {
+      activeTransactions.put(transaction.getId(), transaction);
+      return SimpleInstrumentationContext.noOp();
+    }
   }
 
   @Override
@@ -132,31 +143,5 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
 
     return CompletableFuture.completedFuture(
         new ExecutionResultImpl(executionResult.getData(), executionResult.getErrors(), withTxExt));
-  }
-
-  @VisibleForTesting
-  static class TransactionCommitInstrumentationContext
-      implements InstrumentationContext<ExecutionResult> {
-
-    private final DistributedTransaction transaction;
-
-    public TransactionCommitInstrumentationContext(DistributedTransaction transaction) {
-      this.transaction = transaction;
-    }
-
-    @Override
-    public void onDispatched(CompletableFuture<ExecutionResult> result) {}
-
-    @Override
-    public void onCompleted(ExecutionResult result, Throwable t) {
-      if (t != null) {
-        return;
-      }
-      try {
-        transaction.commit();
-      } catch (CommitException | UnknownTransactionStatusException e) {
-        throw new AbortExecutionException(e);
-      }
-    }
   }
 }

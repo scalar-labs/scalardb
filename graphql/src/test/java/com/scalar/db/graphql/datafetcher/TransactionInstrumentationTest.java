@@ -15,7 +15,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.graphql.datafetcher.TransactionInstrumentation.TransactionCommitInstrumentationContext;
 import com.scalar.db.graphql.schema.Constants;
 import graphql.ExecutionResult;
 import graphql.GraphQLContext;
@@ -114,7 +113,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, times(1)).start();
     verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(TransactionCommitInstrumentationContext.class);
+    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
   @Test
@@ -181,7 +180,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, never()).start();
     verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(TransactionCommitInstrumentationContext.class);
+    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
   @Test
