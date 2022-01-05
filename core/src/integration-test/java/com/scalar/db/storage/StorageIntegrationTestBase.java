@@ -1153,10 +1153,10 @@ public abstract class StorageIntegrationTestBase {
   public void scan_ScanLargeData_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
+    Key partitionKey = new Key(COL_NAME1, 1);
     List<Integer> expectedValues = new ArrayList<>();
     for (int i = 0; i < 345; i++) {
-      Key clusteringKey = Key.newBuilder().addInt(COL_NAME4, i).build();
+      Key clusteringKey = new Key(COL_NAME4, i);
       storage.put(new Put(partitionKey, clusteringKey));
       expectedValues.add(i);
     }
@@ -1174,9 +1174,9 @@ public abstract class StorageIntegrationTestBase {
   public void scan_ScanLargeDataWithOrdering_ShouldRetrieveExpectedValues()
       throws ExecutionException, IOException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt(COL_NAME1, 1).build();
+    Key partitionKey = new Key(COL_NAME1, 1);
     for (int i = 0; i < 345; i++) {
-      Key clusteringKey = Key.newBuilder().addInt(COL_NAME4, i).build();
+      Key clusteringKey = new Key(COL_NAME4, i);
       storage.put(new Put(partitionKey, clusteringKey));
     }
     Scan scan = new Scan(partitionKey).withOrdering(new Ordering(COL_NAME4, Order.ASC));
