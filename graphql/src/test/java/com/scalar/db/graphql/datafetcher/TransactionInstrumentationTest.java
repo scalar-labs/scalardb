@@ -144,7 +144,7 @@ public class TransactionInstrumentationTest {
                     Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
                     new StringValue(ANY_TX_ID)))
             .build());
-    instrumentation.transactionMap.put(ANY_TX_ID, transaction);
+    instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
     // Act
     InstrumentationContext<ExecutionResult> context =
@@ -172,7 +172,7 @@ public class TransactionInstrumentationTest {
                 new Argument(
                     Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME, new BooleanValue(true)))
             .build());
-    instrumentation.transactionMap.put(ANY_TX_ID, transaction);
+    instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
     // Act
     InstrumentationContext<ExecutionResult> context =
