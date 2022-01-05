@@ -18,7 +18,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar",
     description = "Create/Delete schemas in the storage defined in the config file")
 public class SchemaLoaderCommand implements Callable<Integer> {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoaderCommand.class);
 
   @Option(
@@ -76,32 +75,31 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     LOGGER.info("Config path: " + configPath);
     LOGGER.info("Schema path: " + schemaFile);
 
-    Map<String, String> metaOptions = new HashMap<>();
-    if (replicationStrategy != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
-    }
-    if (compactionStrategy != null) {
-      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
-    }
-    if (replicaFactor != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
-    }
-    if (ru != null) {
-      metaOptions.put(DynamoAdmin.REQUEST_UNIT, ru);
-    }
-    if (noScaling != null) {
-      metaOptions.put(DynamoAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (noBackup != null) {
-      metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
-
     if (!deleteTables) {
-      SchemaLoader.load(configPath, schemaFile, metaOptions, coordinator);
-    } else {
-      SchemaLoader.unload(configPath, schemaFile, metaOptions, coordinator);
-    }
+      Map<String, String> options = new HashMap<>();
+      if (replicationStrategy != null) {
+        options.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
+      }
+      if (compactionStrategy != null) {
+        options.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
+      }
+      if (replicaFactor != null) {
+        options.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
+      }
+      if (ru != null) {
+        options.put(DynamoAdmin.REQUEST_UNIT, ru);
+      }
+      if (noScaling != null) {
+        options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
+      }
+      if (noBackup != null) {
+        options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+      }
 
+      SchemaLoader.load(configPath, schemaFile, options, coordinator);
+    } else {
+      SchemaLoader.unload(configPath, schemaFile, coordinator);
+    }
     return 0;
   }
 }

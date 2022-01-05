@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import org.junit.Ignore;
 
 public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
     extends SchemaLoaderIntegrationTestBase {
@@ -33,8 +34,8 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
   }
 
   @Override
-  protected List<String> getCommandArgsForCreation(String configFile, String schemaFile)
-      throws IOException {
+  protected List<String> getCommandArgsForCreationWithCoordinatorTable(
+      String configFile, String schemaFile) throws IOException {
     DatabaseConfig config = new DatabaseConfig(new File(configFile));
     ImmutableList.Builder<String> builder =
         ImmutableList.<String>builder()
@@ -55,4 +56,8 @@ public class CosmosSchemaLoaderWithStorageSpecificArgsIntegrationTest
                     .add(prefix));
     return builder.build();
   }
+
+  @Ignore
+  @Override
+  public void createTablesThenDeleteTables_ShouldExecuteProperly() {}
 }
