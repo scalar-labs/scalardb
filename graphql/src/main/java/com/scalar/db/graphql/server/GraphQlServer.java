@@ -7,15 +7,11 @@ import java.io.FileInputStream;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import org.eclipse.jetty.server.Server;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "scalardb-graphql", description = "Starts Scalar DB GraphQL server.")
 public class GraphQlServer implements Callable<Integer> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(GraphQlServer.class);
-
   @CommandLine.Option(
       names = {"--properties", "--config"},
       required = true,
