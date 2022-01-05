@@ -8,6 +8,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class CassandraWithReservedKeywordsIntegrationTest extends StorageIntegrationTestBase {
   @Override
   protected void initialize() {
+    // reserved keywords in Cassandra
     NAMESPACE = "keyspace";
     TABLE = "table";
     COL_NAME1 = "from";

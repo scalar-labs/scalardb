@@ -119,6 +119,7 @@ public abstract class StorageIntegrationTestBase {
     deleteTable();
     admin.close();
     storage.close();
+    initialized = false;
   }
 
   private static void deleteTable() throws ExecutionException {
