@@ -1,4 +1,4 @@
-package com.scalar.db.schemaloader.schema;
+package com.scalar.db.schemaloader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -9,24 +9,23 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.annotation.concurrent.Immutable;
 
-public class Table {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
+@Immutable
+@SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+public class TableSchema {
 
   private static final String COLUMNS = "columns";
   private static final String TRANSACTION = "transaction";
   private static final String PARTITION_KEY = "partition-key";
   private static final String CLUSTERING_KEY = "clustering-key";
   private static final String SECONDARY_INDEX = "secondary-index";
-
   private static final ImmutableMap<String, DataType> DATA_MAP_TYPE =
       ImmutableMap.<String, DataType>builder()
           .put("BOOLEAN", DataType.BOOLEAN)
@@ -44,37 +43,40 @@ public class Table {
   private String tableName;
   private TableMetadata tableMetadata;
   private Map<String, String> options;
-  private boolean isTransactionTable = false;
+  private boolean isTransactionalTable = false;
   private Set<String> traveledKeys;
 
   @VisibleForTesting
-  Table() {}
+  TableSchema() {}
 
   @VisibleForTesting
-  Table(Set<String> traveledKeys) {
+  TableSchema(Set<String> traveledKeys) {
     this.traveledKeys = traveledKeys;
   }
 
-  public Table(String tableFullName, JsonObject tableDefinition, Map<String, String> metaOptions)
-      throws SchemaException {
+  public TableSchema(String tableFullName, JsonObject tableDefinition, Map<String, String> options)
+      throws SchemaLoaderException {
     traveledKeys = new HashSet<>();
 
     String[] fullName = tableFullName.split("\\.", -1);
     if (fullName.length < 2) {
-      throw new SchemaException("Table full name must contains table name and namespace");
+      throw new SchemaLoaderException(
+          "Parsing the schema JSON failed. Table full name must contains table name and namespace");
     }
     namespace = fullName[0];
     tableName = fullName[1];
     tableMetadata = buildTableMetadata(tableDefinition);
-    options = buildOptions(tableDefinition, metaOptions);
+    this.options = buildOptions(tableDefinition, options);
   }
 
-  protected TableMetadata buildTableMetadata(JsonObject tableDefinition) throws SchemaException {
+  protected TableMetadata buildTableMetadata(JsonObject tableDefinition)
+      throws SchemaLoaderException {
     TableMetadata.Builder tableBuilder = TableMetadata.newBuilder();
 
     // Add partition keys
     if (!tableDefinition.keySet().contains(PARTITION_KEY)) {
-      throw new SchemaException("Table must contains partition key");
+      throw new SchemaLoaderException(
+          "Parsing the schema JSON failed. Table must contains partition key");
     }
     JsonArray partitionKeys = tableDefinition.get(PARTITION_KEY).getAsJsonArray();
     traveledKeys.add(PARTITION_KEY);
@@ -100,7 +102,8 @@ public class Table {
           order = clusteringKeyFull[1];
           tableBuilder.addClusteringKey(clusteringKey, ORDER_MAP.get(order.toUpperCase()));
         } else {
-          throw new SchemaException("Invalid clustering keys");
+          throw new SchemaLoaderException(
+              "Parsing the schema JSON failed. Invalid clustering keys");
         }
       }
     }
@@ -109,16 +112,16 @@ public class Table {
     if (tableDefinition.keySet().contains(TRANSACTION)) {
       transaction = tableDefinition.get(TRANSACTION).getAsBoolean();
       traveledKeys.add(TRANSACTION);
-      LOGGER.debug("transaction: " + transaction);
     }
 
     if (transaction) {
-      isTransactionTable = true;
+      isTransactionalTable = true;
     }
 
     // Add columns
     if (!tableDefinition.keySet().contains(COLUMNS)) {
-      throw new SchemaException("Table must contains columns");
+      throw new SchemaLoaderException(
+          "Parsing the schema JSON failed. Table must contains columns");
     }
     JsonObject columns = tableDefinition.get(COLUMNS).getAsJsonObject();
     traveledKeys.add(COLUMNS);
@@ -126,7 +129,8 @@ public class Table {
       String columnName = column.getKey();
       DataType columnDataType = DATA_MAP_TYPE.get(column.getValue().getAsString().toUpperCase());
       if (columnDataType == null) {
-        throw new SchemaException("Invalid column type for column " + columnName);
+        throw new SchemaLoaderException(
+            "Parsing the schema JSON failed. Invalid column type for column " + columnName);
       }
       tableBuilder.addColumn(columnName, columnDataType);
     }
@@ -144,19 +148,19 @@ public class Table {
   }
 
   protected Map<String, String> buildOptions(
-      JsonObject tableDefinition, Map<String, String> metaOptions) {
-    Map<String, String> options = new HashMap<>(metaOptions);
+      JsonObject tableDefinition, Map<String, String> options) {
+    Map<String, String> ret = new HashMap<>(options);
     for (Map.Entry<String, JsonElement> option : tableDefinition.entrySet()) {
       if (!traveledKeys.contains(option.getKey())) {
         // For backward compatibility
         if (option.getKey().equals("network-strategy")) {
-          options.put(CassandraAdmin.REPLICATION_STRATEGY, option.getValue().getAsString());
+          ret.put(CassandraAdmin.REPLICATION_STRATEGY, option.getValue().getAsString());
         } else {
-          options.put(option.getKey(), option.getValue().getAsString());
+          ret.put(option.getKey(), option.getValue().getAsString());
         }
       }
     }
-    return options;
+    return ret;
   }
 
   public String getNamespace() {
@@ -175,7 +179,7 @@ public class Table {
     return options;
   }
 
-  public boolean isTransactionTable() {
-    return isTransactionTable;
+  public boolean isTransactionalTable() {
+    return isTransactionalTable;
   }
 }
