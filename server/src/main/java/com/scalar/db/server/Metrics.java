@@ -8,7 +8,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.Timer.Context;
 import com.codahale.metrics.jmx.JmxReporter;
 import com.google.common.annotations.VisibleForTesting;
-import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.util.ThrowableRunnable;
 import com.scalar.db.util.ThrowableSupplier;
 import io.prometheus.client.CollectorRegistry;
