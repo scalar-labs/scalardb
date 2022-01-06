@@ -56,7 +56,12 @@ class GraphQlHandler extends AbstractHandler {
   GraphQlHandler(
       String path, DatabaseConfig databaseConfig, List<String[]> tables, boolean isGraphiqlEnabled)
       throws IOException, ExecutionException {
-    this.path = path;
+    // ensure the path starts with /
+    if (path.startsWith("/")) {
+      this.path = path;
+    } else {
+      this.path = "/" + path;
+    }
     this.isGraphiqlEnabled = isGraphiqlEnabled;
 
     GraphQlFactory.Builder builder =
