@@ -23,7 +23,8 @@ public class ServerConfig {
 
   public static final int DEFAULT_PORT = 8080;
   public static final boolean DEFAULT_GRAPHIQL = true;
-  private static final String DEFAULT_PATH = "/graphql";
+  public static final String DEFAULT_PATH = "/graphql";
+
   private final Properties props;
   private int port;
   private String path;
@@ -52,7 +53,7 @@ public class ServerConfig {
 
   private void load() {
     port = ConfigUtils.getInt(props, PORT, DEFAULT_PORT);
-    path = props.getProperty(PATH, DEFAULT_PATH);
+    path = ConfigUtils.getString(props, PATH, DEFAULT_PATH);
     namespaces =
         new LinkedHashSet<>(
             Arrays.asList(ConfigUtils.getStringArray(props, NAMESPACES, new String[0])));
