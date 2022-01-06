@@ -4,8 +4,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.graphql.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
-import java.io.FileInputStream;
-import java.util.Properties;
+import java.io.File;
 import java.util.concurrent.Callable;
 import org.eclipse.jetty.server.Server;
 import picocli.CommandLine;
@@ -36,11 +35,7 @@ public class GraphQlServer implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     if (configFile != null) {
-      Properties properties = new Properties();
-      try (FileInputStream fis = new FileInputStream(configFile)) {
-        properties.load(fis);
-      }
-      config = new ServerConfig(properties);
+      config = new ServerConfig(new File(configFile));
     }
 
     DatabaseConfig databaseConfig = new DatabaseConfig(config.getProperties());
