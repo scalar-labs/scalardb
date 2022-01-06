@@ -11,8 +11,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
@@ -102,7 +102,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param name name of the {@code Value}
    * @param value content of the {@code Value}
    */
-  public Key(String name, @Nullable String value) {
+  public Key(String name, String value) {
     values = Collections.singletonList(new TextValue(name, value));
   }
 
@@ -112,8 +112,102 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param name name of the {@code Value}
    * @param value content of the {@code Value}
    */
-  public Key(String name, @Nullable byte[] value) {
+  public Key(String name, byte[] value) {
     values = Collections.singletonList(new BlobValue(name, value));
+  }
+
+  /**
+   * Constructs a {@code Key} with multiple {@link Value}s
+   *
+   * @param n1 name of the 1st {@code Value}
+   * @param v1 content of the 1st {@code Value}
+   * @param n2 name of the 2nd {@code Value}
+   * @param v2 content of the 2nd {@code Value}
+   */
+  public Key(String n1, Object v1, String n2, Object v2) {
+    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2));
+  }
+
+  /**
+   * Constructs a {@code Key} with multiple {@link Value}s
+   *
+   * @param n1 name of the 1st {@code Value}
+   * @param v1 content of the 1st {@code Value}
+   * @param n2 name of the 2nd {@code Value}
+   * @param v2 content of the 2nd {@code Value}
+   * @param n3 name of the 3rd {@code Value}
+   * @param v3 content of the 3rd {@code Value}
+   */
+  public Key(String n1, Object v1, String n2, Object v2, String n3, Object v3) {
+    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3));
+  }
+
+  /**
+   * Constructs a {@code Key} with multiple {@link Value}s
+   *
+   * @param n1 name of the 1st {@code Value}
+   * @param v1 content of the 1st {@code Value}
+   * @param n2 name of the 2nd {@code Value}
+   * @param v2 content of the 2nd {@code Value}
+   * @param n3 name of the 3rd {@code Value}
+   * @param v3 content of the 3rd {@code Value}
+   * @param n4 name of the 4th {@code Value}
+   * @param v4 content of the 4th {@code Value}
+   */
+  public Key(
+      String n1, Object v1, String n2, Object v2, String n3, Object v3, String n4, Object v4) {
+    values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3), toValue(n4, v4));
+  }
+
+  /**
+   * Constructs a {@code Key} with multiple {@link Value}s
+   *
+   * @param n1 name of the 1st {@code Value}
+   * @param v1 content of the 1st {@code Value}
+   * @param n2 name of the 2nd {@code Value}
+   * @param v2 content of the 2nd {@code Value}
+   * @param n3 name of the 3rd {@code Value}
+   * @param v3 content of the 3rd {@code Value}
+   * @param n4 name of the 4th {@code Value}
+   * @param v4 content of the 4th {@code Value}
+   * @param n5 name of the 5th {@code Value}
+   * @param v5 content of the 5th {@code Value}
+   */
+  public Key(
+      String n1,
+      Object v1,
+      String n2,
+      Object v2,
+      String n3,
+      Object v3,
+      String n4,
+      Object v4,
+      String n5,
+      Object v5) {
+    values =
+        Arrays.asList(
+            toValue(n1, v1), toValue(n2, v2), toValue(n3, v3), toValue(n4, v4), toValue(n5, v5));
+  }
+
+  private Value<?> toValue(String name, Object value) {
+    if (value instanceof Boolean) {
+      return new BooleanValue(name, (Boolean) value);
+    } else if (value instanceof Integer) {
+      return new IntValue(name, (Integer) value);
+    } else if (value instanceof Long) {
+      return new BigIntValue(name, (Long) value);
+    } else if (value instanceof Float) {
+      return new FloatValue(name, (Float) value);
+    } else if (value instanceof Double) {
+      return new DoubleValue(name, (Double) value);
+    } else if (value instanceof String) {
+      return new TextValue(name, (String) value);
+    } else if (value instanceof byte[]) {
+      return new BlobValue(name, (byte[]) value);
+    } else {
+      throw new IllegalArgumentException(
+          "Unsupported type, name: " + name + ", type: " + value.getClass().getName());
+    }
   }
 
   /**
@@ -137,7 +231,7 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
   @Override
   public int hashCode() {
-    return values.hashCode();
+    return Objects.hash(values);
   }
 
   /**
@@ -200,37 +294,128 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
     private Builder() {}
 
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     boolean)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
     public Builder addBoolean(String name, boolean value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, boolean value) {
       values.add(new BooleanValue(name, value));
       return this;
     }
 
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     int)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
     public Builder addInt(String name, int value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, int value) {
       values.add(new IntValue(name, value));
       return this;
     }
 
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     long)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
     public Builder addBigInt(String name, long value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, long value) {
       values.add(new BigIntValue(name, value));
       return this;
     }
 
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     float)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
     public Builder addFloat(String name, float value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, float value) {
       values.add(new FloatValue(name, value));
       return this;
     }
 
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     double)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
     public Builder addDouble(String name, double value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, double value) {
       values.add(new DoubleValue(name, value));
       return this;
     }
 
-    public Builder addText(String name, @Nullable String value) {
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use @{@link #add(String,
+     *     String)} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
+    public Builder addText(String name, String value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, String value) {
       values.add(new TextValue(name, value));
       return this;
     }
 
-    public Builder addBlob(String name, @Nullable byte[] value) {
+    /**
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
+     *     byte[])} instead
+     */
+    @SuppressWarnings("InlineMeSuggester")
+    @Deprecated
+    public Builder addBlob(String name, byte[] value) {
+      return add(name, value);
+    }
+
+    public Builder add(String name, byte[] value) {
       values.add(new BlobValue(name, value));
       return this;
     }

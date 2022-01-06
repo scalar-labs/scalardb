@@ -64,7 +64,7 @@ public class ResultInterpreterTest {
     when(resultSet.getBoolean(ANY_COLUMN_NAME_1)).thenReturn(true);
     when(resultSet.getInt(ANY_COLUMN_NAME_2)).thenReturn(Integer.MAX_VALUE);
     when(resultSet.getLong(ANY_COLUMN_NAME_3)).thenReturn(BigIntValue.MAX_VALUE);
-    when(resultSet.getFloat(ANY_COLUMN_NAME_4)).thenReturn(Float.MAX_VALUE);
+    when(resultSet.getDouble(ANY_COLUMN_NAME_4)).thenReturn((double) Float.MAX_VALUE);
     when(resultSet.getDouble(ANY_COLUMN_NAME_5)).thenReturn(Double.MAX_VALUE);
     when(resultSet.getString(ANY_COLUMN_NAME_6)).thenReturn("string");
     when(resultSet.getBytes(ANY_COLUMN_NAME_7))

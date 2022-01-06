@@ -1,10 +1,10 @@
 package com.scalar.db.server;
 
-import com.scalar.db.api.Isolation;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Isolation;
 import com.scalar.db.transaction.consensuscommit.SerializableStrategy;
 import java.util.Properties;
 import javax.annotation.Nullable;
@@ -72,7 +72,7 @@ public final class ServerEnv {
     properties.setProperty(DatabaseConfig.PASSWORD, password);
     properties.setProperty(DatabaseConfig.STORAGE, storage);
     if (isolation != null) {
-      properties.setProperty(DatabaseConfig.ISOLATION_LEVEL, isolation.name());
+      properties.setProperty(ConsensusCommitConfig.ISOLATION_LEVEL, isolation.name());
     }
     if (serializableStrategy != null) {
       properties.setProperty(

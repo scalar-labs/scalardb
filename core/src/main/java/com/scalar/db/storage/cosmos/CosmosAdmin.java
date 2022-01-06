@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosClient;
@@ -26,7 +26,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,6 +37,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -86,8 +86,8 @@ public class CosmosAdmin implements DistributedStorageAdmin {
   public void createTable(
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
+    checkMetadata(metadata);
     try {
-      checkMetadata(metadata);
       createContainer(namespace, table, metadata);
       addTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
@@ -95,10 +95,11 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private void checkMetadata(TableMetadata metadata) throws ExecutionException {
+  private void checkMetadata(TableMetadata metadata) {
     for (String clusteringKeyName : metadata.getClusteringKeyNames()) {
       if (metadata.getColumnDataType(clusteringKeyName) == DataType.BLOB) {
-        throw new ExecutionException("BLOB type is not supported for clustering keys in Cosmos DB");
+        throw new IllegalArgumentException(
+            "Currently, BLOB type is not supported for clustering keys in Cosmos DB");
       }
     }
   }
@@ -344,11 +345,13 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private TableMetadata convertToTableMetadata(CosmosTableMetadata cosmosTableMetadata) {
+  private TableMetadata convertToTableMetadata(CosmosTableMetadata cosmosTableMetadata)
+      throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    cosmosTableMetadata
-        .getColumns()
-        .forEach((name, type) -> builder.addColumn(name, convertDataType(type)));
+
+    for (Entry<String, String> entry : cosmosTableMetadata.getColumns().entrySet()) {
+      builder.addColumn(entry.getKey(), convertDataType(entry.getValue()));
+    }
     cosmosTableMetadata.getPartitionKeyNames().forEach(builder::addPartitionKey);
     cosmosTableMetadata
         .getClusteringKeyNames()
@@ -360,7 +363,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     return builder.build();
   }
 
-  private DataType convertDataType(String columnType) {
+  private DataType convertDataType(String columnType) throws ExecutionException {
     switch (columnType) {
       case "int":
         return DataType.INT;
@@ -370,15 +373,14 @@ public class CosmosAdmin implements DistributedStorageAdmin {
         return DataType.FLOAT;
       case "double":
         return DataType.DOUBLE;
-      case "text": // for backwards compatibility
-      case "varchar":
+      case "text":
         return DataType.TEXT;
       case "boolean":
         return DataType.BOOLEAN;
       case "blob":
         return DataType.BLOB;
       default:
-        throw new UnsupportedTypeException(columnType);
+        throw new ExecutionException("unknown column type: " + columnType);
     }
   }
 

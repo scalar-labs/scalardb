@@ -11,8 +11,10 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.Key;
@@ -31,6 +33,7 @@ import org.mockito.MockitoAnnotations;
 public class JdbcTransactionManagerTest {
 
   @Mock private BasicDataSource dataSource;
+  @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
   @Mock private Connection connection;
   @Mock private SQLException sqlException;
@@ -40,7 +43,9 @@ public class JdbcTransactionManagerTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    manager = new JdbcTransactionManager(dataSource, RdbEngine.MYSQL, jdbcService);
+    manager =
+        new JdbcTransactionManager(
+            dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }
@@ -91,6 +96,23 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
+  public void get_withConflictError_shouldThrowCrudConflictException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.get(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.start();
+              Get get = new Get(new Key("p1", "val"));
+              transaction.get(get);
+            })
+        .isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
   public void whenScanOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
       throws Exception {
     // Arrange
@@ -107,6 +129,23 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
+  public void scan_withConflictError_shouldThrowCrudConflictException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.scan(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.start();
+              Scan scan = new Scan(new Key("p1", "val"));
+              transaction.scan(scan);
+            })
+        .isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
   public void whenPutOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
       throws Exception {
     // Arrange
@@ -120,6 +159,23 @@ public class JdbcTransactionManagerTest {
               transaction.put(put);
             })
         .isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void put_withConflictError_shouldThrowCrudConflictException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.start();
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              transaction.put(put);
+            })
+        .isInstanceOf(CrudConflictException.class);
   }
 
   @Test
@@ -140,6 +196,23 @@ public class JdbcTransactionManagerTest {
   }
 
   @Test
+  public void delete_withConflictError_shouldThrowCrudConflictException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.delete(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.start();
+              Delete delete = new Delete(new Key("p1", "val1"));
+              transaction.delete(delete);
+            })
+        .isInstanceOf(CrudConflictException.class);
+  }
+
+  @Test
   public void
       whenMutateOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
@@ -155,6 +228,24 @@ public class JdbcTransactionManagerTest {
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudException.class);
+  }
+
+  @Test
+  public void mutate_withConflictError_shouldThrowCrudConflictException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              JdbcTransaction transaction = manager.start();
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Delete delete = new Delete(new Key("p1", "val1"));
+              transaction.mutate(Arrays.asList(put, delete));
+            })
+        .isInstanceOf(CrudConflictException.class);
   }
 
   @Test

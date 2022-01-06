@@ -22,10 +22,12 @@ import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -110,9 +112,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
 
   /**
    * Retrieves a result from the storage through a transaction with the specified {@link Get}
-   * command with a primary key and returns the result. Note that the current implementation clears
-   * the specified projections in {@link Get} to project all the values including metadata properly,
-   * but the behavior might be changed at some point.
+   * command with a primary key and returns the result.
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
@@ -123,9 +123,10 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     setTargetToIfNot(get);
+    List<String> projections = new ArrayList<>(get.getProjections());
     get.clearProjections(); // project all
     try {
-      return crud.get(get);
+      return crud.get(get).map(r -> new FilteredResult(r, projections));
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
@@ -135,9 +136,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   /**
    * Retrieves results from the storage through a transaction with the specified {@link Scan}
    * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys. Note that the current implementation clears the
-   * specified projections in {@link Scan} to project all the values including metadata properly,
-   * but the behavior might be changed at some point.
+   * specifying a range of clustering keys.
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
@@ -148,9 +147,12 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     setTargetToIfNot(scan);
+    List<String> projections = new ArrayList<>(scan.getProjections());
     scan.clearProjections(); // project all
     try {
-      return crud.scan(scan);
+      return crud.scan(scan).stream()
+          .map(r -> new FilteredResult(r, projections))
+          .collect(Collectors.toList());
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
       throw e;
@@ -353,12 +355,12 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.info("recover uncommitted record");
+    LOGGER.debug("recover uncommitted records: " + results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }
 
   private void setTargetToIfNot(Operation operation) {
-    Utility.setTargetToIfNot(operation, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
   }
 }

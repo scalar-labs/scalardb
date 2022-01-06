@@ -66,6 +66,7 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/java')
+            include '**/com/scalar/db/storage/*.java'
             include '**/com/scalar/db/storage/multistorage/*.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitIntegrationTestBase.java'
             include '**/com/scalar/db/transaction/consensuscommit/ConsensusCommitWithMultiStorageIntegrationTest.java'
@@ -160,6 +161,7 @@ task integrationTestCosmos(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
+    maxParallelForks = 3
 }
 
 task integrationTestDynamo(type: Test) {
@@ -171,6 +173,7 @@ task integrationTestDynamo(type: Test) {
     options {
         systemProperties(System.getProperties())
     }
+    maxParallelForks = 10
 }
 
 task integrationTestJdbc(type: Test) {

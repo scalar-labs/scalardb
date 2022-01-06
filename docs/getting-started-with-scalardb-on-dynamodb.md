@@ -14,20 +14,23 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 
 ## Configure Scalar DB
     
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with AWS region, `username` with your AWS access key id, `password` with your AWS access secret key and `storage` with `dynamo`.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` with AWS region, `username` with your AWS access key ID, `password` with your AWS secret access key, and `storage` with `dynamo`.
 ```
-# Comma separated contact points
+# The AWS region
 scalar.db.contact_points=<REGION>
 
-# Port number for all the contact points. Default port number for each database is used if empty.
-#scalar.db.contact_port=
+# The AWS access key ID and secret access key
+scalar.db.username=<ACCESS_KEY_ID>
+scalar.db.password=<SECRET_ACCESS_KEY>
 
-# Credential information to access the database
-scalar.db.username=<AWS_ACCESS_KEY_ID>
-scalar.db.password=<AWS_ACCESS_SECRET_KEY>
-
-# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
+# DynamoDB storage implementation
 scalar.db.storage=dynamo
+
+# Override the DynamoDB endpoint to use a local instance instead of an AWS service
+#scalar.db.dynamo.endpoint-override=
+
+# The namespace name for the table metadata (used as a table prefix of the table metadata)
+#scalar.db.dynamo.table_metadata.namespace=
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.

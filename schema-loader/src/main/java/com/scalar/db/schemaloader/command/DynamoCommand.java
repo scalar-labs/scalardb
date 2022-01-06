@@ -1,29 +1,20 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
-import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --dynamo",
     description = "Create/Delete DynamoDB schemas")
-public class DynamoCommand implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(DynamoCommand.class);
+public class DynamoCommand extends StorageSpecificCommand implements Callable<Integer> {
 
   @Option(
       names = {"-u", "--user"},
@@ -56,52 +47,30 @@ public class DynamoCommand implements Callable<Integer> {
       description = "Endpoint with which the DynamoDB SDK should communicate")
   private String endpointOverride;
 
-  @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
-
-  @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
-
   @Override
-  public Integer call() throws Exception {
-    LOGGER.info("Schema path: " + schemaFile.toString());
-
+  public Integer call() throws SchemaLoaderException {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, awsRegion);
     props.setProperty(DatabaseConfig.USERNAME, awsKeyId);
     props.setProperty(DatabaseConfig.PASSWORD, awsSecKey);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
 
-    Map<String, String> metaOptions = new HashMap<>();
-    if (ru != null) {
-      metaOptions.put(DynamoAdmin.REQUEST_UNIT, ru);
-    }
-    if (noScaling != null) {
-      metaOptions.put(DynamoAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (noBackup != null) {
-      metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
     if (endpointOverride != null) {
       props.setProperty(DynamoConfig.ENDPOINT_OVERRIDE, endpointOverride);
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
-    List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
-
-    if (deleteTables) {
-      operator.deleteTables(tableList);
-    } else {
-      operator.createTables(tableList, metaOptions);
+    Map<String, String> options = new HashMap<>();
+    if (ru != null) {
+      options.put(DynamoAdmin.REQUEST_UNIT, ru);
+    }
+    if (noScaling != null) {
+      options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
+    }
+    if (noBackup != null) {
+      options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
     }
 
-    operator.close();
+    execute(props, options);
     return 0;
   }
 }

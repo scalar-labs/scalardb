@@ -1,11 +1,11 @@
 package com.scalar.db.storage.common;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -38,6 +38,9 @@ public class ResultImpl implements Result {
   }
 
   private Optional<Key> getKey(LinkedHashSet<String> names) {
+    if (names.isEmpty()) {
+      return Optional.empty();
+    }
     Key.Builder builder = Key.newBuilder();
     for (String name : names) {
       Value<?> value = values.get(name);
@@ -58,7 +61,7 @@ public class ResultImpl implements Result {
   @Override
   @Nonnull
   public Map<String, Value<?>> getValues() {
-    return Collections.unmodifiableMap(values);
+    return ImmutableMap.copyOf(values);
   }
 
   @Override

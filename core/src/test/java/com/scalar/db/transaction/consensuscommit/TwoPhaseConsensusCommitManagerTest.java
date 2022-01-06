@@ -6,9 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;

@@ -1,11 +1,9 @@
 package com.scalar.db.storage.cassandra;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
@@ -13,7 +11,8 @@ import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,7 +34,6 @@ public class ResultInterpreterTest {
   private static final String ANY_COLUMN_NAME_7 = "col7";
 
   @Mock private Row row;
-  @Mock private TableMetadata tableMetadata;
 
   @Before
   public void setUp() throws Exception {
@@ -57,19 +55,24 @@ public class ResultInterpreterTest {
     when(row.getBytes(ANY_COLUMN_NAME_7))
         .thenReturn((ByteBuffer) ByteBuffer.allocate(bytesValue.length).put(bytesValue).flip());
 
-    Map<String, DataType> columnDefinitions = new HashMap<>();
-    columnDefinitions.put(ANY_NAME_1, DataType.text());
-    columnDefinitions.put(ANY_NAME_2, DataType.text());
-    columnDefinitions.put(ANY_COLUMN_NAME_1, DataType.cboolean());
-    columnDefinitions.put(ANY_COLUMN_NAME_2, DataType.cint());
-    columnDefinitions.put(ANY_COLUMN_NAME_3, DataType.bigint());
-    columnDefinitions.put(ANY_COLUMN_NAME_4, DataType.cfloat());
-    columnDefinitions.put(ANY_COLUMN_NAME_5, DataType.cdouble());
-    columnDefinitions.put(ANY_COLUMN_NAME_6, DataType.text());
-    columnDefinitions.put(ANY_COLUMN_NAME_7, DataType.blob());
+    List<String> projections = Collections.emptyList();
 
-    ResultInterpreter spy = spy(new ResultInterpreter(tableMetadata));
-    doReturn(columnDefinitions).when(spy).getColumnDefinitions(row);
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addColumn(ANY_NAME_1, com.scalar.db.io.DataType.TEXT)
+            .addColumn(ANY_NAME_2, com.scalar.db.io.DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_1, com.scalar.db.io.DataType.BOOLEAN)
+            .addColumn(ANY_COLUMN_NAME_2, com.scalar.db.io.DataType.INT)
+            .addColumn(ANY_COLUMN_NAME_3, com.scalar.db.io.DataType.BIGINT)
+            .addColumn(ANY_COLUMN_NAME_4, com.scalar.db.io.DataType.FLOAT)
+            .addColumn(ANY_COLUMN_NAME_5, com.scalar.db.io.DataType.DOUBLE)
+            .addColumn(ANY_COLUMN_NAME_6, com.scalar.db.io.DataType.TEXT)
+            .addColumn(ANY_COLUMN_NAME_7, com.scalar.db.io.DataType.BLOB)
+            .addPartitionKey(ANY_NAME_1)
+            .addClusteringKey(ANY_NAME_2)
+            .build();
+
+    ResultInterpreter spy = spy(new ResultInterpreter(projections, metadata));
 
     // Act
     Result result = spy.interpret(row);

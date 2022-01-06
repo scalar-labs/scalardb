@@ -1,34 +1,36 @@
 package com.scalar.db.schemaloader.command;
 
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.schemaloader.SchemaLoaderException;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
-import java.nio.file.Path;
+import com.scalar.db.storage.cosmos.CosmosConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
     description = "Create/Delete Cosmos DB schemas")
-public class CosmosCommand implements Callable<Integer> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(CosmosCommand.class);
+public class CosmosCommand extends StorageSpecificCommand implements Callable<Integer> {
 
   @Option(
       names = {"-h", "--host"},
       description = "Cosmos DB account URI",
       required = true)
   private String uri;
+
+  // For backward compatibility
+  @SuppressWarnings("UnusedVariable")
+  @Option(
+      names = {"-u", "--user"},
+      description = "DB username",
+      hidden = true)
+  private String username;
 
   @Option(
       names = {"-p", "--password"},
@@ -38,52 +40,54 @@ public class CosmosCommand implements Callable<Integer> {
 
   @Option(
       names = {"-r", "--ru"},
-      description = "Base resource unit",
-      defaultValue = "400")
+      description = "Base resource unit")
   private String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
   private Boolean noScaling;
 
+  // For test
   @Option(
-      names = {"-f", "--schema-file"},
-      description = "Path to the schema json file",
-      required = true)
-  private Path schemaFile;
+      names = {"--table-metadata-database-prefix"},
+      description = "Table metadata database prefix",
+      hidden = true)
+  private String tableMetadataDatabasePrefix;
 
+  // For test
   @Option(
-      names = {"-D", "--delete-all"},
-      description = "Delete tables",
-      defaultValue = "false")
-  private boolean deleteTables;
+      names = {"--coordinator-namespace-prefix"},
+      description = "Coordinator namespace prefix",
+      hidden = true)
+  private String coordinatorNamespacePrefix;
 
   @Override
-  public Integer call() throws Exception {
-    LOGGER.info("Schema path: " + schemaFile);
-
+  public Integer call() throws SchemaLoaderException {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, uri);
     props.setProperty(DatabaseConfig.PASSWORD, key);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
 
-    Map<String, String> metaOptions = new HashMap<>();
+    // For test
+    if (tableMetadataDatabasePrefix != null) {
+      props.setProperty(
+          CosmosConfig.TABLE_METADATA_DATABASE,
+          tableMetadataDatabasePrefix + CosmosAdmin.METADATA_DATABASE);
+    }
+    if (coordinatorNamespacePrefix != null) {
+      props.setProperty(
+          ConsensusCommitConfig.COORDINATOR_NAMESPACE,
+          coordinatorNamespacePrefix + Coordinator.NAMESPACE);
+    }
+
+    Map<String, String> options = new HashMap<>();
     if (ru != null) {
-      metaOptions.put(CosmosAdmin.REQUEST_UNIT, ru);
+      options.put(CosmosAdmin.REQUEST_UNIT, ru);
     }
     if (noScaling != null) {
-      metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
+      options.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(props);
-    List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
-
-    if (deleteTables) {
-      operator.deleteTables(tableList);
-    } else {
-      operator.createTables(tableList, metaOptions);
-    }
-
-    operator.close();
+    execute(props, options);
     return 0;
   }
 }

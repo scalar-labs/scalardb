@@ -259,16 +259,8 @@ public class SelectStatementHandlerTest {
 
     Scan scan =
         prepareScan()
-            .withStart(
-                Key.newBuilder()
-                    .addText(ANY_NAME_2, ANY_TEXT_2)
-                    .addText(ANY_NAME_3, ANY_TEXT_3)
-                    .build())
-            .withEnd(
-                Key.newBuilder()
-                    .addText(ANY_NAME_2, ANY_TEXT_2)
-                    .addText(ANY_NAME_3, ANY_TEXT_4)
-                    .build());
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_3))
+            .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_TEXT_4));
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
