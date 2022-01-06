@@ -13,7 +13,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
     implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
     implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4jVersion}"
-    implementation group: 'info.picocli', name: 'picocli', version: "${picoCliVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
     implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: "${jettyVersion}"
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
