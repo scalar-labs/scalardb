@@ -34,7 +34,11 @@ public class MultiStorageConfig {
   private String defaultStorage;
 
   public MultiStorageConfig(File propertiesFile) throws IOException {
-    this(new FileInputStream(propertiesFile));
+    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
+      props = new Properties();
+      props.load(stream);
+    }
+    load();
   }
 
   public MultiStorageConfig(InputStream stream) throws IOException {
