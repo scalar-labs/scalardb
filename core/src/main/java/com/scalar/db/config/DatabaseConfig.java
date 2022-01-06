@@ -64,7 +64,11 @@ public class DatabaseConfig {
       PREFIX + "table_metadata.cache_expiration_time_secs";
 
   public DatabaseConfig(File propertiesFile) throws IOException {
-    this(new FileInputStream(propertiesFile));
+    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
+      props = new Properties();
+      props.load(stream);
+    }
+    load();
   }
 
   public DatabaseConfig(InputStream stream) throws IOException {
