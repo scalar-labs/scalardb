@@ -21,6 +21,12 @@ public class GraphQlServer implements Callable<Integer> {
 
   private ServerConfig config;
 
+  public GraphQlServer() {}
+
+  public GraphQlServer(ServerConfig config) {
+    this.config = config;
+  }
+
   public static void main(String[] args) {
     int exitCode = new CommandLine(new GraphQlServer()).execute(args);
     System.exit(exitCode);
