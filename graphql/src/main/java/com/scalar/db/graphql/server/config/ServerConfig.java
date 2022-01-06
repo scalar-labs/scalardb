@@ -11,8 +11,6 @@ import java.util.LinkedHashSet;
 import java.util.Properties;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
@@ -26,7 +24,6 @@ public class ServerConfig {
   public static final int DEFAULT_PORT = 8080;
   public static final boolean DEFAULT_GRAPHIQL = true;
   private static final String DEFAULT_PATH = "/graphql";
-  private static final Logger LOGGER = LoggerFactory.getLogger(ServerConfig.class);
   private final Properties props;
   private int port;
   private String path;
