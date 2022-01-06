@@ -32,6 +32,9 @@ public class ConsensusCommitConfig {
   public static final String PARALLEL_COMMIT_ENABLED = PREFIX + "parallel_commit.enabled";
   public static final String PARALLEL_ROLLBACK_ENABLED = PREFIX + "parallel_rollback.enabled";
 
+  public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
+  public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
+
   public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 30;
 
   private final Properties props;
@@ -44,6 +47,8 @@ public class ConsensusCommitConfig {
   private boolean parallelPreparationEnabled;
   private boolean parallelCommitEnabled;
   private boolean parallelRollbackEnabled;
+  private boolean asyncCommitEnabled;
+  private boolean asyncRollbackEnabled;
 
   // for two-phase consensus commit
   public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
@@ -53,7 +58,11 @@ public class ConsensusCommitConfig {
   private boolean activeTransactionsManagementEnabled;
 
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
-    this(new FileInputStream(propertiesFile));
+    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
+      props = new Properties();
+      props.load(stream);
+    }
+    load();
   }
 
   public ConsensusCommitConfig(InputStream stream) throws IOException {
@@ -109,6 +118,9 @@ public class ConsensusCommitConfig {
     parallelCommitEnabled = getBoolean(getProperties(), PARALLEL_COMMIT_ENABLED, false);
     parallelRollbackEnabled =
         getBoolean(getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
+
+    asyncCommitEnabled = getBoolean(getProperties(), ASYNC_COMMIT_ENABLED, false);
+    asyncRollbackEnabled = getBoolean(getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
   }
 
   public Isolation getIsolation() {
@@ -141,5 +153,13 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelRollbackEnabled() {
     return parallelRollbackEnabled;
+  }
+
+  public boolean isAsyncCommitEnabled() {
+    return asyncCommitEnabled;
+  }
+
+  public boolean isAsyncRollbackEnabled() {
+    return asyncRollbackEnabled;
   }
 }

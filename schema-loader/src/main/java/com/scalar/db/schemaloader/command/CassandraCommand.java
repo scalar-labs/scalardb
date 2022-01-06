@@ -15,7 +15,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cassandra",
     description = "Create/Delete Cassandra schemas")
-public class CassandraCommand extends StorageSpecificCommandBase implements Callable<Integer> {
+public class CassandraCommand extends StorageSpecificCommand implements Callable<Integer> {
 
   @Option(
       names = {"-h", "--host"},
@@ -25,20 +25,19 @@ public class CassandraCommand extends StorageSpecificCommandBase implements Call
 
   @Option(
       names = {"-P", "--port"},
-      description = "Cassandra Port",
-      defaultValue = "9042")
+      description = "Cassandra Port")
   private String port;
 
   @Option(
       names = {"-u", "--user"},
       description = "Cassandra user",
-      defaultValue = "cassandra")
+      required = true)
   private String user;
 
   @Option(
       names = {"-p", "--password"},
       description = "Cassandra password",
-      defaultValue = "cassandra")
+      required = true)
   private String password;
 
   @Option(
@@ -58,27 +57,27 @@ public class CassandraCommand extends StorageSpecificCommandBase implements Call
 
   @Override
   public Integer call() throws SchemaLoaderException {
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, hostIp);
-    props.setProperty(DatabaseConfig.CONTACT_PORT, port);
+    if (port != null) {
+      props.setProperty(DatabaseConfig.CONTACT_PORT, port);
+    }
     props.setProperty(DatabaseConfig.USERNAME, user);
     props.setProperty(DatabaseConfig.PASSWORD, password);
     props.setProperty(DatabaseConfig.STORAGE, "cassandra");
 
-    Map<String, String> metaOptions = new HashMap<>();
+    Map<String, String> options = new HashMap<>();
     if (replicationStrategy != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
+      options.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
     }
     if (compactionStrategy != null) {
-      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
+      options.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
     }
     if (replicationFactor != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
+      options.put(CassandraAdmin.REPLICATION_FACTOR, replicationFactor);
     }
 
-    execute(props, metaOptions);
-
+    execute(props, options);
     return 0;
   }
 }

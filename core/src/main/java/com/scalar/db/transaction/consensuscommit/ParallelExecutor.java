@@ -1,5 +1,6 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.exception.storage.ExecutionException;
@@ -33,17 +34,24 @@ public class ParallelExecutor {
     }
   }
 
+  @VisibleForTesting
+  ParallelExecutor(
+      ConsensusCommitConfig config, @Nullable ExecutorService parallelExecutorService) {
+    this.config = config;
+    this.parallelExecutorService = parallelExecutorService;
+  }
+
   public void prepare(List<ThrowableRunnable<ExecutionException>> tasks) throws ExecutionException {
     executeTasks(tasks, config.isParallelPreparationEnabled(), false);
   }
 
   public void commit(List<ThrowableRunnable<ExecutionException>> tasks) throws ExecutionException {
-    executeTasks(tasks, config.isParallelCommitEnabled(), false);
+    executeTasks(tasks, config.isParallelCommitEnabled(), config.isAsyncCommitEnabled());
   }
 
   public void rollback(List<ThrowableRunnable<ExecutionException>> tasks)
       throws ExecutionException {
-    executeTasks(tasks, config.isParallelRollbackEnabled(), false);
+    executeTasks(tasks, config.isParallelRollbackEnabled(), config.isAsyncRollbackEnabled());
   }
 
   private void executeTasks(
