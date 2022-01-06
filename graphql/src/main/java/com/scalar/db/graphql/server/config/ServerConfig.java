@@ -1,4 +1,4 @@
-package com.scalar.db.graphql.server;
+package com.scalar.db.graphql.server.config;
 
 import com.scalar.db.config.ConfigUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
-class ServerConfig {
+public class ServerConfig {
   public static final String PREFIX = "scalar.db.graphql.";
   public static final String PORT = PREFIX + "port";
   public static final String PATH = PREFIX + "path";

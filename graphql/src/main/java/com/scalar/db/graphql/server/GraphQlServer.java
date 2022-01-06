@@ -2,6 +2,7 @@ package com.scalar.db.graphql.server;
 
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.config.DatabaseConfig;
+import com.scalar.db.graphql.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
 import java.io.FileInputStream;
 import java.util.Properties;
