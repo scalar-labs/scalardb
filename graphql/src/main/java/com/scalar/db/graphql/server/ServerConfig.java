@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.server;
 
-import com.google.common.base.Strings;
+import com.scalar.db.config.ConfigUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
@@ -54,42 +54,12 @@ class ServerConfig {
   }
 
   private void load() {
-    port = getInt(PORT, DEFAULT_PORT);
+    port = ConfigUtils.getInt(props, PORT, DEFAULT_PORT);
     path = props.getProperty(PATH, DEFAULT_PATH);
-    namespaces = new LinkedHashSet<>(Arrays.asList(getStringArray(NAMESPACES)));
-    graphiql = getBoolean(GRAPHIQL, DEFAULT_GRAPHIQL);
-  }
-
-  private int getInt(String name, int defaultValue) {
-    String value = props.getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException ignored) {
-      LOGGER.warn(
-          "the specified value of '{}' is not a number. using the default value: {}",
-          name,
-          defaultValue);
-      return defaultValue;
-    }
-  }
-
-  private String[] getStringArray(String name) {
-    String value = props.getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return new String[] {};
-    }
-    return value.split("\\s*,\\s*");
-  }
-
-  private boolean getBoolean(String name, boolean defaultValue) {
-    String value = props.getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    return Boolean.parseBoolean(value);
+    namespaces =
+        new LinkedHashSet<>(
+            Arrays.asList(ConfigUtils.getStringArray(props, NAMESPACES, new String[0])));
+    graphiql = ConfigUtils.getBoolean(props, GRAPHIQL, DEFAULT_GRAPHIQL);
   }
 
   public Properties getProperties() {
