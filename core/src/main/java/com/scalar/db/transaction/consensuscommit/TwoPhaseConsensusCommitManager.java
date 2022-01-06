@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.CoordinatorException;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
@@ -52,7 +53,14 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
           new ActiveExpiringMap<>(
               TRANSACTION_LIFETIME_MILLIS,
               TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+              t -> {
+                LOGGER.warn("the transaction is expired. transactionId: " + t.getId());
+                try {
+                  t.rollback();
+                } catch (RollbackException e) {
+                  LOGGER.warn("rollback failed", e);
+                }
+              });
     } else {
       activeTransactions = null;
     }
