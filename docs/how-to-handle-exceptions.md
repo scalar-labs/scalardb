@@ -1,12 +1,8 @@
-# A Guide on How to Write a Good Transaction
-
-This document sets out some guidelines for writing transactions for Scalar DB.
-
-## Handling exceptions
+# A Guide on How to Handle Exceptions
 
 Handling exceptions correctly in Scalar DB is very important.
 If you mishandle exceptions, your data could become inconsistent.
-This section explains how to handle exceptions properly in Scalar DB.
+This document explains how to handle exceptions properly in Scalar DB.
 
 Let's look at the following example code to see how to handle exceptions in Scalar DB.
 
@@ -91,7 +87,7 @@ In such a case, you need to check if the transaction is committed successfully o
 How to identify a transaction status is delegated to users.
 You may want to create a transaction status table and update it transactionally with other application data so that you can get the status of a transaction from the status table.
 
-### For Two-phase Commit Transactions
+## For Two-phase Commit Transactions
 
 You need to handle more exceptions when you use [Two-phase Commit Transactions](two-phase-commit-transactions.md) because you additionally need to call the `prepare()` API (and the `validate()` API when required).
 
@@ -102,22 +98,6 @@ If you catch `PreparationConflictException`, like the `CrudConflictException` ca
 Also, the `validate()` API could throw `ValidationException` and `ValidationConflictException`.
 If you catch `ValidationException`, like the `CrudException` case, you should cancel the transaction or retry the transaction after the failure/error is fixed.
 If you catch `ValidationConflictException`, like the `CrudConflictException` case, you can retry the transaction.
-
-## Guidelines for the `Consensus Commit` transaction manager
-
-### Limitations
-
-- Blind writes are not allowed. So you must read a record before writing it in a transaction
-- Currently, reading already written records is not allowed
-- Currently, scan operations are not allowed for now in the `EXTRA_WRITE` serializable strategy in the `SERIALIZABLE` isolation level
-
-### For Two-phase Commit Transactions
-
-- You can call `prepare()` of coordinator and participants in parallel. Likewise, you can call `validate()` of coordinator and participants in parallel
-- `commit()` and `rollback()` must be called in coordinator first and then in participants
-- Don't forget to call `validate()` when you use the `EXTRA_READ` serializable strategy in the `SERIALIZABLE` isolation level
-
-Please see [Two-phase Commit Transactions](two-phase-commit-transactions.md) for the details.
 
 ## References
 
