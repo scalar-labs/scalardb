@@ -9,6 +9,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
+import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
 import com.scalar.db.rpc.AbortResponse;
@@ -68,7 +69,14 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
           new ActiveExpiringMap<>(
               TRANSACTION_LIFETIME_MILLIS,
               TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
-              t -> LOGGER.warn("the transaction is expired. transactionId: " + t.getId()));
+              t -> {
+                LOGGER.warn("the transaction is expired. transactionId: " + t.getId());
+                try {
+                  t.rollback();
+                } catch (RollbackException e) {
+                  LOGGER.warn("rollback failed", e);
+                }
+              });
     } else {
       activeTransactions = null;
     }
