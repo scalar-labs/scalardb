@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory;
 
 public class TransactionInstrumentation extends SimpleInstrumentation {
   private static final Logger LOGGER = LoggerFactory.getLogger(TransactionInstrumentation.class);
-  @VisibleForTesting static final String EXTENSIONS_TRANSACTION_KEY = "transaction";
-  @VisibleForTesting static final String EXTENSIONS_TX_ID_KEY = "txId";
+  private static final String EXTENSIONS_TRANSACTION_KEY = "transaction";
+  private static final String EXTENSIONS_TX_ID_KEY = "txId";
   private static final long TRANSACTION_LIFETIME_MILLIS = 60000;
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 

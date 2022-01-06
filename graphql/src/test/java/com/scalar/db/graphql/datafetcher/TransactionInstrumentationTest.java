@@ -241,8 +241,8 @@ public class TransactionInstrumentationTest {
     assertThat(instrumentedExecutionResult.getErrors()).isEqualTo(originalErrors);
     Map<Object, Object> ext = instrumentedExecutionResult.getExtensions();
     assertThat(ext).containsAllEntriesOf(originalExt);
-    assertThat(ext).containsKey(TransactionInstrumentation.EXTENSIONS_TRANSACTION_KEY);
-    assertThat((Map<Object, Object>) ext.get(TransactionInstrumentation.EXTENSIONS_TRANSACTION_KEY))
-        .containsOnly(entry(TransactionInstrumentation.EXTENSIONS_TX_ID_KEY, transaction.getId()));
+    assertThat(ext).containsKey("transaction");
+    assertThat((Map<Object, Object>) ext.get("transaction"))
+        .containsOnly(entry("txId", transaction.getId()));
   }
 }
