@@ -34,7 +34,11 @@ class ServerConfig {
   private boolean graphiql;
 
   public ServerConfig(File propertiesFile) throws IOException {
-    this(new FileInputStream(propertiesFile));
+    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
+      props = new Properties();
+      props.load(stream);
+    }
+    load();
   }
 
   public ServerConfig(InputStream stream) throws IOException {
