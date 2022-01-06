@@ -11,18 +11,18 @@ The library is available on [Maven Central](https://search.maven.org/search?q=a:
 You can install it in your application using your build tool such as Gradle and Maven. 
 
 To add a dependency on Scalar DB using Gradle, use the following:
-```
+```gradle
 dependencies {
-    implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.3.0'
+    implementation group: 'com.scalar-labs', name: 'scalardb', version: '3.4.1'
 }
 ```
 
 To add a dependency using Maven:
-```
+```xml
 <dependency>
   <groupId>com.scalar-labs</groupId>
   <artifactId>scalardb</artifactId>
-  <version>3.3.0</version>
+  <version>3.4.1</version>
 </dependency>
 ```
 
@@ -40,6 +40,7 @@ To add a dependency using Maven:
     * [scalardb](https://javadoc.io/doc/com.scalar-labs/scalardb/latest/index.html) - A library that makes non-ACID distributed databases/storages ACID-compliant
     * [scalardb-rpc](https://javadoc.io/doc/com.scalar-labs/scalardb-rpc/latest/index.html) - Scalar DB RPC libraries
     * [scalardb-server](https://javadoc.io/doc/com.scalar-labs/scalardb-server/latest/index.html) - Scalar DB Server that is the gRPC interfarce of Scalar DB
+    * [scalardb-schema-loader](https://javadoc.io/doc/com.scalar-labs/scalardb-schema-loader/latest/index.html) - Scalar DB Schema Loader that creates and deletes Scalar DB schemas
 * [Jepsen tests](https://github.com/scalar-labs/scalar-jepsen)
 * [TLA+](https://github.com/scalar-labs/scalardb/tree/master/tla+/consensus-commit)
 * Sample applications by contributors/collaborators

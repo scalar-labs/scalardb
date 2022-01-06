@@ -10,6 +10,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,7 +58,8 @@ public class ConcatenationVisitorTest {
     assertThat(values[3]).isEqualTo(String.valueOf(ANY_FLOAT));
     assertThat(values[4]).isEqualTo(String.valueOf(ANY_DOUBLE));
     assertThat(values[5]).isEqualTo(ANY_TEXT);
-    assertThat(values[6]).isEqualTo(new String(ANY_BLOB, StandardCharsets.UTF_8));
+    assertThat(values[6])
+        .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
   }
 
   @Test
@@ -120,6 +122,7 @@ public class ConcatenationVisitorTest {
     ANY_BLOB_VALUE.accept(visitor);
 
     // Assert
-    assertThat(visitor.build()).isEqualTo(new String(ANY_BLOB, StandardCharsets.UTF_8));
+    assertThat(visitor.build())
+        .isEqualTo(Base64.getUrlEncoder().withoutPadding().encodeToString(ANY_BLOB));
   }
 }

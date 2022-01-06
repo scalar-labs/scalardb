@@ -12,14 +12,12 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
@@ -221,21 +219,6 @@ public class CrudHandlerTest {
     // Assert
     verify(snapshot, never())
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
-  }
-
-  @Test
-  public void scan_ClusteringKeyNotGivenInResult_ShouldThrowRuntimeException()
-      throws ExecutionException {
-    // Arrange
-    Scan scan = prepareScan();
-    result = prepareResult(false, TransactionState.COMMITTED);
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
-    // this is needed for forEach
-    // doCallRealMethod().when(scanner).forEach(any(Consumer.class));
-    when(storage.scan(scan)).thenReturn(scanner);
-
-    // Act Assert
-    assertThatThrownBy(() -> handler.scan(scan)).isInstanceOf(CrudRuntimeException.class);
   }
 
   @Test

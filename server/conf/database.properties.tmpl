@@ -1,0 +1,29 @@
+# Comma separated contact points. For DynamoDB, the region is specified by this parameter.
+scalar.db.contact_points={{ default .Env.SCALAR_DB_CONTACT_POINTS "" }}
+
+# Port number for all the contact points. Default port number for each database is used if empty.
+scalar.db.contact_port={{ default .Env.SCALAR_DB_CONTACT_PORT "" }}
+
+# Credential information to access the database. For Cosmos DB, username isn't used. For DynamoDB, AWS_ACCESS_KEY_ID is specified by the username and AWS_ACCESS_SECRET_KEY is specified by the password.
+scalar.db.username={{ default .Env.SCALAR_DB_USERNAME "" }}
+scalar.db.password={{ default .Env.SCALAR_DB_PASSWORD "" }}
+
+# Storage implementation. "cassandra" or "cosmos" or "dynamo" or "jdbc" or "grpc" can be set. Default storage is "cassandra".
+scalar.db.storage={{ default .Env.SCALAR_DB_STORAGE "cassandra" }}
+
+# The type of the transaction manager. "consensus-commit" or "jdbc" or "grpc" can be set. The default is "consensus-commit"
+scalar.db.transaction_manager={{ default .Env.SCALAR_DB_TRANSACTION_MANAGER "consensus-commit" }}
+
+# Default isolation level for ConsensusCommit. Either SNAPSHOT or SERIALIZABLE can be specified. SNAPSHOT is used by default.
+scalar.db.consensus_commit.isolation_level={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_ISOLATION_LEVEL "" }}
+
+# For backward compatibility
+scalar.db.isolation_level={{ default .Env.SCALAR_DB_ISOLATION_LEVEL "" }}
+
+# Default serializable strategy for ConsensusCommit transaction manager.
+# Either EXTRA_READ or EXTRA_WRITE can be specified. EXTRA_READ is used by default.
+# If SNAPSHOT is specified, this is ignored.
+scalar.db.consensus_commit.serializable_strategy={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY "" }}
+
+# Port number for grpc server. Default port number is 60051.
+scalar.db.server.port={{ default .Env.SCALAR_DB_SERVER_PORT "" }}

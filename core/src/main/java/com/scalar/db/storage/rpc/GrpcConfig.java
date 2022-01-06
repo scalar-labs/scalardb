@@ -1,21 +1,19 @@
 package com.scalar.db.storage.rpc;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
+import static com.scalar.db.config.ConfigUtils.getLong;
+
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class GrpcConfig extends DatabaseConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(GrpcConfig.class);
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "grpc.";
   public static final String DEADLINE_DURATION_MILLIS = PREFIX + "deadline_duration_millis";
@@ -52,32 +50,10 @@ public class GrpcConfig extends DatabaseConfig {
 
     super.load();
 
-    deadlineDurationMillis = getLong(DEADLINE_DURATION_MILLIS, DEFAULT_DEADLINE_DURATION_MILLIS);
-
-    String activeTransactionsManagementEnabledValue =
-        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED);
-    if (Utility.isBooleanString(activeTransactionsManagementEnabledValue)) {
-      activeTransactionsManagementEnabled =
-          Boolean.parseBoolean(activeTransactionsManagementEnabledValue);
-    } else {
-      activeTransactionsManagementEnabled = true;
-    }
-  }
-
-  private long getLong(String name, long defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    try {
-      return Long.parseLong(value);
-    } catch (NumberFormatException ignored) {
-      LOGGER.warn(
-          "the specified value of '{}' is not a number. using the default value: {}",
-          name,
-          defaultValue);
-      return defaultValue;
-    }
+    deadlineDurationMillis =
+        getLong(getProperties(), DEADLINE_DURATION_MILLIS, DEFAULT_DEADLINE_DURATION_MILLIS);
+    activeTransactionsManagementEnabled =
+        getBoolean(getProperties(), ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, true);
   }
 
   public long getDeadlineDurationMillis() {

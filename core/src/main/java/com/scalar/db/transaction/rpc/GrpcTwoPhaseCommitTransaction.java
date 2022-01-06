@@ -13,7 +13,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -78,21 +78,21 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     updateTransactionExpirationTime();
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     return stream.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     updateTransactionExpirationTime();
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     return stream.scan(scan);
   }
 
   @Override
   public void put(Put put) throws CrudException {
     updateTransactionExpirationTime();
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     stream.mutate(put);
   }
 
@@ -104,7 +104,7 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   @Override
   public void delete(Delete delete) throws CrudException {
     updateTransactionExpirationTime();
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     stream.mutate(delete);
   }
 
@@ -116,7 +116,7 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
     updateTransactionExpirationTime();
-    Utility.setTargetToIfNot(mutations, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     stream.mutate(mutations);
   }
 

@@ -13,7 +13,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -60,7 +60,7 @@ public class SelectStatementHandler extends StatementHandler {
     CosmosOperation cosmosOperation = new CosmosOperation(operation, tableMetadata);
     cosmosOperation.checkArgument(Get.class);
 
-    if (Utility.isSecondaryIndexSpecified(operation, tableMetadata)) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(operation, tableMetadata)) {
       return executeReadWithIndex(operation, tableMetadata);
     }
 
@@ -90,7 +90,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     String query;
     CosmosQueryRequestOptions options;
-    if (Utility.isSecondaryIndexSpecified(scan, tableMetadata)) {
+    if (ScalarDbUtils.isSecondaryIndexSpecified(scan, tableMetadata)) {
       query = makeQueryWithIndex(scan, tableMetadata);
       options = new CosmosQueryRequestOptions();
     } else {

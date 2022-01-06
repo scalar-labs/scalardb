@@ -1,15 +1,14 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransactionManager;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
@@ -24,6 +23,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private final DistributedStorage storage;
   private final ConsensusCommitConfig config;
   private final Coordinator coordinator;
+  private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
   private Optional<String> namespace;
@@ -34,8 +34,9 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = new Coordinator(storage, config);
-    this.recovery = new RecoveryHandler(storage, coordinator);
-    this.commit = new CommitHandler(storage, coordinator, recovery);
+    this.parallelExecutor = new ParallelExecutor(config);
+    this.recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    this.commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
     this.namespace = storage.getNamespace();
     this.tableName = storage.getTable();
   }
@@ -50,6 +51,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
+    parallelExecutor = null;
     this.recovery = recovery;
     this.commit = commit;
     this.namespace = storage.getNamespace();
@@ -94,51 +96,61 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
 
   @Deprecated
   @Override
-  public synchronized ConsensusCommit start(Isolation isolation) {
-    return start(isolation, config.getSerializableStrategy());
+  public ConsensusCommit start(com.scalar.db.api.Isolation isolation) {
+    return start(Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   @Deprecated
   @Override
-  public synchronized ConsensusCommit start(String txId, Isolation isolation) {
-    return start(txId, isolation, config.getSerializableStrategy());
+  public ConsensusCommit start(String txId, com.scalar.db.api.Isolation isolation) {
+    return start(txId, Isolation.valueOf(isolation.name()), config.getSerializableStrategy());
   }
 
   @Deprecated
   @Override
-  public synchronized ConsensusCommit start(
-      Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
+  public ConsensusCommit start(
+      com.scalar.db.api.Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
+    return start(Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+  }
+
+  @Deprecated
+  @Override
+  public ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
+    return start(Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+  }
+
+  @Deprecated
+  @Override
+  public ConsensusCommit start(String txId, com.scalar.db.api.SerializableStrategy strategy) {
+    return start(txId, Isolation.SERIALIZABLE, (SerializableStrategy) strategy);
+  }
+
+  @Deprecated
+  @Override
+  public ConsensusCommit start(
+      String txId,
+      com.scalar.db.api.Isolation isolation,
+      com.scalar.db.api.SerializableStrategy strategy) {
+    return start(txId, Isolation.valueOf(isolation.name()), (SerializableStrategy) strategy);
+  }
+
+  @VisibleForTesting
+  ConsensusCommit start(Isolation isolation, SerializableStrategy strategy) {
     String txId = UUID.randomUUID().toString();
     return start(txId, isolation, strategy);
   }
 
-  @Deprecated
-  @Override
-  public synchronized ConsensusCommit start(com.scalar.db.api.SerializableStrategy strategy) {
-    String txId = UUID.randomUUID().toString();
-    return start(txId, Isolation.SERIALIZABLE, strategy);
-  }
-
-  @Deprecated
-  @Override
-  public synchronized ConsensusCommit start(
-      String txId, com.scalar.db.api.SerializableStrategy strategy) {
-    return start(txId, Isolation.SERIALIZABLE, strategy);
-  }
-
-  @Deprecated
-  @Override
-  public synchronized ConsensusCommit start(
-      String txId, Isolation isolation, com.scalar.db.api.SerializableStrategy strategy) {
+  @VisibleForTesting
+  ConsensusCommit start(String txId, Isolation isolation, SerializableStrategy strategy) {
     checkArgument(!Strings.isNullOrEmpty(txId));
-    checkArgument(isolation != null);
+    checkNotNull(isolation);
     if (!config.getIsolation().equals(isolation)
         || !config.getSerializableStrategy().equals(strategy)) {
       LOGGER.warn(
           "Setting different isolation level or serializable strategy from the ones"
               + "in DatabaseConfig might cause unexpected anomalies.");
     }
-    Snapshot snapshot = new Snapshot(txId, isolation, (SerializableStrategy) strategy);
+    Snapshot snapshot = new Snapshot(txId, isolation, strategy);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     namespace.ifPresent(consensus::withNamespace);
@@ -174,5 +186,6 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   @Override
   public void close() {
     storage.close();
+    parallelExecutor.close();
   }
 }

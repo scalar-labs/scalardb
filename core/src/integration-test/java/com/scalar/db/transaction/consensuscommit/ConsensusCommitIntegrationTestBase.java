@@ -16,7 +16,6 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
@@ -28,9 +27,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
@@ -38,6 +35,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.TestUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,41 +49,42 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings(
-    value = {"MS_CANNOT_BE_FINAL", "MS_PKGPROTECT", "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class ConsensusCommitIntegrationTestBase {
 
-  protected static final String NAMESPACE_1 = "integration_testing1";
-  protected static final String NAMESPACE_2 = "integration_testing2";
-  protected static final String TABLE_1 = "tx_test_table1";
-  protected static final String TABLE_2 = "tx_test_table2";
-  protected static final String ACCOUNT_ID = "account_id";
-  protected static final String ACCOUNT_TYPE = "account_type";
-  protected static final String BALANCE = "balance";
-  protected static final int INITIAL_BALANCE = 1000;
-  protected static final int NUM_ACCOUNTS = 4;
-  protected static final int NUM_TYPES = 4;
-  protected static final String ANY_ID_1 = "id1";
-  protected static final String ANY_ID_2 = "id2";
+  private static final String TEST_NAME = "cc";
+  private static final String NAMESPACE_1 = "integration_testing_" + TEST_NAME + "1";
+  private static final String NAMESPACE_2 = "integration_testing_" + TEST_NAME + "2";
+  private static final String TABLE_1 = "test_table1";
+  private static final String TABLE_2 = "test_table2";
+  private static final String ACCOUNT_ID = "account_id";
+  private static final String ACCOUNT_TYPE = "account_type";
+  private static final String BALANCE = "balance";
+  private static final int INITIAL_BALANCE = 1000;
+  private static final int NUM_ACCOUNTS = 4;
+  private static final int NUM_TYPES = 4;
+  private static final String ANY_ID_1 = "id1";
+  private static final String ANY_ID_2 = "id2";
 
   private static boolean initialized;
-  protected static DistributedStorage originalStorage;
-  protected static DistributedStorageAdmin admin;
-  protected static ConsensusCommitConfig consensusCommitConfig;
-  protected static ConsensusCommitAdmin consensusCommitAdmin;
-  protected static String namespace1;
-  protected static String namespace2;
+  private static DistributedStorage originalStorage;
+  private static DistributedStorageAdmin admin;
+  private static ConsensusCommitConfig consensusCommitConfig;
+  private static ConsensusCommitAdmin consensusCommitAdmin;
+  private static String namespace1;
+  private static String namespace2;
+  private static ParallelExecutor parallelExecutor;
 
-  protected ConsensusCommitManager manager;
-  protected DistributedStorage storage;
-  protected Coordinator coordinator;
-  protected RecoveryHandler recovery;
+  private ConsensusCommitManager manager;
+  private DistributedStorage storage;
+  private Coordinator coordinator;
+  private RecoveryHandler recovery;
 
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      DatabaseConfig config = getDatabaseConfig();
+      DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
       StorageFactory factory = new StorageFactory(config);
       admin = factory.getAdmin();
       consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
@@ -94,14 +93,15 @@ public abstract class ConsensusCommitIntegrationTestBase {
       namespace2 = getNamespace2();
       createTables();
       originalStorage = factory.getStorage();
+      parallelExecutor = new ParallelExecutor(consensusCommitConfig);
       initialized = true;
     }
 
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    recovery = spy(new RecoveryHandler(storage, coordinator));
-    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery));
+    recovery = spy(new RecoveryHandler(storage, coordinator, parallelExecutor));
+    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
   }
@@ -152,6 +152,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     deleteTables();
     admin.close();
     originalStorage.close();
+    parallelExecutor.close();
   }
 
   private static void deleteTables() throws ExecutionException {
@@ -175,7 +176,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-    Assertions.assertThat(((TransactionResult) result.get()).getState())
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -192,7 +194,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    Assertions.assertThat(((TransactionResult) results.get(0)).getState())
+    Assertions.assertThat(
+            ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -288,16 +291,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -340,16 +343,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -393,7 +396,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
@@ -438,16 +441,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -512,16 +515,17 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -582,17 +586,17 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -644,7 +648,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -688,16 +692,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -741,7 +745,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     verify(coordinator, never()).putState(any(Coordinator.State.class));
   }
 
@@ -786,16 +790,16 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
     verify(coordinator).putState(new Coordinator.State(ANY_ID_2, TransactionState.ABORTED));
-    verify(recovery).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -860,7 +864,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollforward(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2))
+        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -922,17 +927,17 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollback(any(Selection.class), any(TransactionResult.class));
+    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) r.get();
+      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) results.get(0);
+      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -1002,7 +1007,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult result = (TransactionResult) r.get();
+    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     assertThat(getBalance(result)).isEqualTo(expected);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
@@ -1028,7 +1033,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     ConsensusCommit another = manager.start();
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult actual = (TransactionResult) r.get();
+    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
     assertThat(getBalance(actual)).isEqualTo(expected);
     Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
@@ -1175,7 +1180,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
@@ -1251,7 +1256,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     ConsensusCommit another = manager.start();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
@@ -1319,7 +1324,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
@@ -1552,7 +1557,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollback(any(Snapshot.class));
+    verify(recovery).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
@@ -2281,7 +2286,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudRuntimeException() {
+  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
     // Arrange
     ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
@@ -2292,7 +2297,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     transaction.abort();
 
     // Assert
-    assertThat(thrown).isInstanceOf(CrudRuntimeException.class);
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

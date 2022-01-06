@@ -48,7 +48,7 @@ public class GrpcStorageTest {
   public void get_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Get get = new Get(partitionKey);
     when(blockingStub.get(any())).thenReturn(GetResponse.newBuilder().build());
 
@@ -62,7 +62,7 @@ public class GrpcStorageTest {
   @Test
   public void get_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Get get = new Get(partitionKey);
     when(blockingStub.get(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -73,7 +73,7 @@ public class GrpcStorageTest {
   @Test
   public void get_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Get get = new Get(partitionKey);
     when(blockingStub.get(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
@@ -85,7 +85,7 @@ public class GrpcStorageTest {
   public void put_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Put put = new Put(partitionKey);
 
     // Act
@@ -98,7 +98,7 @@ public class GrpcStorageTest {
   @Test
   public void put_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Put put = new Put(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -109,7 +109,7 @@ public class GrpcStorageTest {
   @Test
   public void put_StubThrowFailedPreconditionError_ShouldThrowNoMutationException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Put put = new Put(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
@@ -120,7 +120,7 @@ public class GrpcStorageTest {
   @Test
   public void put_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Put put = new Put(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
@@ -132,8 +132,8 @@ public class GrpcStorageTest {
   public void puts_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
 
     // Act
@@ -146,8 +146,8 @@ public class GrpcStorageTest {
   @Test
   public void puts_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -158,8 +158,8 @@ public class GrpcStorageTest {
   @Test
   public void puts_StubThrowFailedPreconditionError_ShouldThrowNoMutationException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
@@ -170,8 +170,8 @@ public class GrpcStorageTest {
   @Test
   public void puts_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Put> puts = Arrays.asList(new Put(partitionKey2), new Put(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
@@ -183,7 +183,7 @@ public class GrpcStorageTest {
   public void delete_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Delete delete = new Delete(partitionKey);
 
     // Act
@@ -196,7 +196,7 @@ public class GrpcStorageTest {
   @Test
   public void delete_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Delete delete = new Delete(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -207,7 +207,7 @@ public class GrpcStorageTest {
   @Test
   public void delete_StubThrowFailedPreconditionError_ShouldThrowNoMutationException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Delete delete = new Delete(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
@@ -218,7 +218,7 @@ public class GrpcStorageTest {
   @Test
   public void delete_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     Delete delete = new Delete(partitionKey);
     when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
@@ -230,8 +230,8 @@ public class GrpcStorageTest {
   public void deletes_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
 
     // Act
@@ -244,8 +244,8 @@ public class GrpcStorageTest {
   @Test
   public void deletes_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -256,8 +256,8 @@ public class GrpcStorageTest {
   @Test
   public void deletes_StubThrowFailedPreconditionError_ShouldThrowNoMutationException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
@@ -268,8 +268,8 @@ public class GrpcStorageTest {
   @Test
   public void deletes_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey1 = Key.newBuilder().addInt("col1", 1).build();
-    Key partitionKey2 = Key.newBuilder().addInt("col1", 2).build();
+    Key partitionKey1 = new Key("col1", 1);
+    Key partitionKey2 = new Key("col1", 2);
     List<Delete> deletes = Arrays.asList(new Delete(partitionKey2), new Delete(partitionKey1));
     when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 
@@ -281,7 +281,7 @@ public class GrpcStorageTest {
   public void mutate_isCalledWithProperArguments_StubShouldBeCalledProperly()
       throws ExecutionException {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
 
     // Act
@@ -294,7 +294,7 @@ public class GrpcStorageTest {
   @Test
   public void mutate_StubThrowInvalidArgumentError_ShouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
     when(blockingStub.mutate(any())).thenThrow(Status.INVALID_ARGUMENT.asRuntimeException());
 
@@ -306,7 +306,7 @@ public class GrpcStorageTest {
   @Test
   public void mutate_StubThrowFailedPreconditionError_ShouldThrowNoMutationException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
     when(blockingStub.mutate(any())).thenThrow(Status.FAILED_PRECONDITION.asRuntimeException());
 
@@ -317,7 +317,7 @@ public class GrpcStorageTest {
   @Test
   public void mutate_StubThrowInternalError_ShouldThrowExecutionException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().addInt("col1", 1).build();
+    Key partitionKey = new Key("col1", 1);
     List<Mutation> mutations = Arrays.asList(new Put(partitionKey), new Delete(partitionKey));
     when(blockingStub.mutate(any())).thenThrow(Status.INTERNAL.asRuntimeException());
 

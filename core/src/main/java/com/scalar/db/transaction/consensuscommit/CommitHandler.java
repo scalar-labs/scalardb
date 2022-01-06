@@ -2,14 +2,18 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CoordinatorException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.util.ThrowableRunnable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
@@ -21,12 +25,17 @@ public class CommitHandler {
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final RecoveryHandler recovery;
+  private final ParallelExecutor parallelExecutor;
 
   public CommitHandler(
-      DistributedStorage storage, Coordinator coordinator, RecoveryHandler recovery) {
+      DistributedStorage storage,
+      Coordinator coordinator,
+      RecoveryHandler recovery,
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.recovery = checkNotNull(recovery);
+    this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   public void commit(Snapshot snapshot) throws CommitException, UnknownTransactionStatusException {
@@ -53,6 +62,9 @@ public class CommitHandler {
       if (e instanceof NoMutationException) {
         throw new CommitConflictException("preparing record exists", e);
       }
+      if (e instanceof RetriableExecutionException) {
+        throw new CommitConflictException("conflict happened when preparing records", e);
+      }
       throw new CommitException("preparing records failed", e);
     }
   }
@@ -63,9 +75,12 @@ public class CommitHandler {
     snapshot.to(composer);
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
-    for (PartitionedMutations.Key key : mutations.getOrderedKeys()) {
-      storage.mutate(mutations.get(key));
+    ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+    List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+    for (PartitionedMutations.Key key : orderedKeys) {
+      tasks.add(() -> storage.mutate(mutations.get(key)));
     }
+    parallelExecutor.prepare(tasks);
   }
 
   public void preCommitValidation(Snapshot snapshot, boolean abortIfError)
@@ -99,8 +114,7 @@ public class CommitHandler {
             "committing state in coordinator failed. " + "the transaction is aborted", e);
       }
     }
-    LOGGER.info(
-        "transaction " + id + " is committed successfully at " + System.currentTimeMillis());
+    LOGGER.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());
   }
 
   private void commitState(String id) throws CoordinatorException {
@@ -114,10 +128,12 @@ public class CommitHandler {
       snapshot.to(composer);
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
-      // TODO : make it configurable if it's synchronous or asynchronous
-      for (PartitionedMutations.Key key : mutations.getOrderedKeys()) {
-        storage.mutate(mutations.get(key));
+      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+      List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+      for (PartitionedMutations.Key key : orderedKeys) {
+        tasks.add(() -> storage.mutate(mutations.get(key)));
       }
+      parallelExecutor.commit(tasks);
     } catch (Exception e) {
       LOGGER.warn("committing records failed", e);
       // ignore since records are recovered lazily
@@ -135,7 +151,7 @@ public class CommitHandler {
           // successfully COMMITTED or ABORTED
           return state.get().getState();
         }
-        LOGGER.warn("coordinator status doesn't exist");
+        LOGGER.warn("coordinator status for {} doesn't exist", id);
       } catch (CoordinatorException e1) {
         LOGGER.warn("can't get the state", e1);
       }
@@ -149,12 +165,6 @@ public class CommitHandler {
   }
 
   public void rollbackRecords(Snapshot snapshot) {
-    try {
-      // TODO : make it configurable if it's synchronous or asynchronous
-      recovery.rollback(snapshot);
-    } catch (Exception e) {
-      LOGGER.warn("rolling back records failed", e);
-      // ignore since records are recovered lazily
-    }
+    recovery.rollbackRecords(snapshot);
   }
 }

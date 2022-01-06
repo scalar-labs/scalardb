@@ -1,8 +1,9 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.datastax.driver.core.ClusteringOrder;
+import com.datastax.driver.core.ColumnMetadata;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.Create;
@@ -19,7 +20,6 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.storage.UnsupportedTypeException;
 import com.scalar.db.io.DataType;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -34,6 +34,8 @@ public class CassandraAdmin implements DistributedStorageAdmin {
   public static final String REPLICATION_STRATEGY = "replication-strategy";
   public static final String COMPACTION_STRATEGY = "compaction-strategy";
   public static final String REPLICATION_FACTOR = "replication-factor";
+  @VisibleForTesting static final String INDEX_NAME_PREFIX = "index";
+
   private final ClusterManager clusterManager;
 
   @Inject
@@ -125,11 +127,12 @@ public class CassandraAdmin implements DistributedStorageAdmin {
     }
   }
 
-  private TableMetadata createTableMetadata(com.datastax.driver.core.TableMetadata metadata) {
+  private TableMetadata createTableMetadata(com.datastax.driver.core.TableMetadata metadata)
+      throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
-    metadata
-        .getColumns()
-        .forEach(c -> builder.addColumn(c.getName(), fromCassandraDataType(c.getType().getName())));
+    for (ColumnMetadata column : metadata.getColumns()) {
+      builder.addColumn(column.getName(), fromCassandraDataType(column.getType().getName()));
+    }
     metadata.getPartitionKey().forEach(c -> builder.addPartitionKey(c.getName()));
     for (int i = 0; i < metadata.getClusteringColumns().size(); i++) {
       String clusteringColumnName = metadata.getClusteringColumns().get(i).getName();
@@ -263,7 +266,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
    * @return Scalar DB datatype that is equivalent {@link com.datastax.driver.core.DataType}
    */
   private DataType fromCassandraDataType(
-      com.datastax.driver.core.DataType.Name cassandraDataTypeName) {
+      com.datastax.driver.core.DataType.Name cassandraDataTypeName) throws ExecutionException {
     switch (cassandraDataTypeName) {
       case INT:
         return DataType.INT;
@@ -280,7 +283,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       case BLOB:
         return DataType.BLOB;
       default:
-        throw new UnsupportedTypeException(
+        throw new ExecutionException(
             String.format("%s is not yet supported", cassandraDataTypeName));
     }
   }
@@ -307,7 +310,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       case BLOB:
         return com.datastax.driver.core.DataType.blob();
       default:
-        throw new UnsupportedOperationException(String.format("%s is not yet supported", dataType));
+        throw new AssertionError();
     }
   }
 

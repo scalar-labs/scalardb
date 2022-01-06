@@ -18,17 +18,17 @@ import org.junit.Test;
 
 public class MultiStorageAdminIntegrationTest {
 
-  protected static final String NAMESPACE1 = "integration_testing1";
-  protected static final String NAMESPACE2 = "integration_testing2";
-  protected static final String NAMESPACE3 = "integration_testing3";
-  protected static final String TABLE1 = "test_table1";
-  protected static final String TABLE2 = "test_table2";
-  protected static final String TABLE3 = "test_table3";
-  protected static final String COL_NAME1 = "c1";
-  protected static final String COL_NAME2 = "c2";
-  protected static final String COL_NAME3 = "c3";
-  protected static final String COL_NAME4 = "c4";
-  protected static final String COL_NAME5 = "c5";
+  private static final String NAMESPACE1 = "integration_testing1";
+  private static final String NAMESPACE2 = "integration_testing2";
+  private static final String NAMESPACE3 = "integration_testing3";
+  private static final String TABLE1 = "test_table1";
+  private static final String TABLE2 = "test_table2";
+  private static final String TABLE3 = "test_table3";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
 
   private static DistributedStorageAdmin admin1;
   private static DistributedStorageAdmin admin2;

@@ -241,8 +241,154 @@ public class JdbcDatabaseAdminTest {
       throws ExecutionException, SQLException {
     createTable_forX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
-        Optional.empty(),
         "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
+        "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
+        "CREATE SCHEMA IF NOT EXISTS `scalardb`",
+        "CREATE TABLE IF NOT EXISTS `scalardb`.`metadata`("
+            + "`full_table_name` VARCHAR(128),"
+            + "`column_name` VARCHAR(128),"
+            + "`data_type` VARCHAR(20) NOT NULL,"
+            + "`key_type` VARCHAR(20),"
+            + "`clustering_order` VARCHAR(10),"
+            + "`indexed` BOOLEAN NOT NULL,"
+            + "`ordinal_position` INTEGER NOT NULL,"
+            + "PRIMARY KEY (`full_table_name`, `column_name`))",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO `scalardb`.`metadata` VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+  }
+
+  @Test
+  public void createTable_forPostgresql_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    createTable_forX_shouldExecuteCreateTableStatement(
+        RdbEngine.POSTGRESQL,
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
+        "CREATE TABLE IF NOT EXISTS \"scalardb\".\"metadata\"("
+            + "\"full_table_name\" VARCHAR(128),"
+            + "\"column_name\" VARCHAR(128),"
+            + "\"data_type\" VARCHAR(20) NOT NULL,"
+            + "\"key_type\" VARCHAR(20),"
+            + "\"clustering_order\" VARCHAR(10),"
+            + "\"indexed\" BOOLEAN NOT NULL,"
+            + "\"ordinal_position\" INTEGER NOT NULL,"
+            + "PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,false,1)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',true,2)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',true,3)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,false,4)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,false,5)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,false,6)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,false,7)");
+  }
+
+  @Test
+  public void createTable_forSqlServer_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    createTable_forX_shouldExecuteCreateTableStatement(
+        RdbEngine.SQL_SERVER,
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
+        "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
+        "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
+        "CREATE SCHEMA [scalardb]",
+        "CREATE TABLE [scalardb].[metadata]("
+            + "[full_table_name] VARCHAR(128),"
+            + "[column_name] VARCHAR(128),"
+            + "[data_type] VARCHAR(20) NOT NULL,"
+            + "[key_type] VARCHAR(20),"
+            + "[clustering_order] VARCHAR(10),"
+            + "[indexed] BIT NOT NULL,"
+            + "[ordinal_position] INTEGER NOT NULL,"
+            + "PRIMARY KEY ([full_table_name], [column_name]))",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO [scalardb].[metadata] VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+  }
+
+  @Test
+  public void createTable_forOracle_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    createTable_forX_shouldExecuteCreateTableStatement(
+        RdbEngine.ORACLE,
+        "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
+        "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
+        "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
+        "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
+        "ALTER USER \"scalardb\" quota unlimited on USERS",
+        "CREATE TABLE \"scalardb\".\"metadata\"(\"full_table_name\" VARCHAR2(128),\"column_name\" VARCHAR2(128),\"data_type\" VARCHAR2(20) NOT NULL,\"key_type\" VARCHAR2(20),\"clustering_order\" VARCHAR2(10),\"indexed\" NUMBER(1) NOT NULL,\"ordinal_position\" INTEGER NOT NULL,PRIMARY KEY (\"full_table_name\", \"column_name\"))",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c3','BOOLEAN','PARTITION',NULL,0,1)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c1','TEXT','CLUSTERING','ASC',1,2)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c4','BLOB','CLUSTERING','ASC',1,3)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c2','BIGINT',NULL,NULL,0,4)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c5','INT',NULL,NULL,0,5)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c6','DOUBLE',NULL,NULL,0,6)",
+        "INSERT INTO \"scalardb\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
+  }
+
+  private void createTable_forX_shouldExecuteCreateTableStatement(
+      RdbEngine rdbEngine, String... expectedSqlStatements)
+      throws SQLException, ExecutionException {
+    // Arrange
+    String namespace = "my_ns";
+    String table = "foo_table";
+    TableMetadata metadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("c3")
+            .addClusteringKey("c1")
+            .addClusteringKey("c4")
+            .addColumn("c1", DataType.TEXT)
+            .addColumn("c2", DataType.BIGINT)
+            .addColumn("c3", DataType.BOOLEAN)
+            .addColumn("c4", DataType.BLOB)
+            .addColumn("c5", DataType.INT)
+            .addColumn("c6", DataType.DOUBLE)
+            .addColumn("c7", DataType.FLOAT)
+            .addSecondaryIndex("c1")
+            .addSecondaryIndex("c4")
+            .build();
+
+    List<Statement> mockedStatements = new ArrayList<>();
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      mockedStatements.add(mock(Statement.class));
+    }
+    when(connection.createStatement())
+        .thenReturn(
+            mockedStatements.get(0),
+            mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
+    when(dataSource.getConnection()).thenReturn(connection);
+
+    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+
+    // Act
+    admin.createTable(namespace, table, metadata, new HashMap<>());
+
+    // Assert
+    for (int i = 0; i < expectedSqlStatements.length; i++) {
+      verify(mockedStatements.get(i)).execute(expectedSqlStatements[i]);
+    }
+  }
+
+  @Test
+  public void createTable_WithClusteringOrderForMysql_shouldExecuteCreateTableStatement()
+      throws ExecutionException, SQLException {
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
+        RdbEngine.MYSQL,
+        Optional.empty(),
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `scalardb`",
@@ -265,12 +411,13 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void createTable_forPostgresql_shouldExecuteCreateTableStatement()
+  public void createTable_WithClusteringOrderForPostgresql_shouldExecuteCreateTableStatement()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
         Optional.empty(),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"scalardb\"",
@@ -293,13 +440,13 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void createTable_forSqlServer_shouldExecuteCreateTableStatement()
+  public void createTable_WithClusteringOrderForSqlServer_shouldExecuteCreateTableStatement()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
         Optional.empty(),
         "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,"
-            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
+            + "[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [scalardb]",
@@ -322,13 +469,14 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void createTable_forOracle_shouldExecuteCreateTableStatement()
+  public void createTable_WithClusteringOrderForOracle_shouldExecuteCreateTableStatement()
       throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
         Optional.empty(),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"scalardb\" IDENTIFIED BY \"oracle\"",
@@ -344,12 +492,13 @@ public class JdbcDatabaseAdminTest {
   }
 
   @Test
-  public void createTable_forMysqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
-      throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+  public void
+      createTable_WithClusteringOrderForMysqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
+          throws ExecutionException, SQLException {
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.MYSQL,
         Optional.of("changed"),
-        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3`,`c1`,`c4`))",
+        "CREATE TABLE `my_ns`.`foo_table`(`c3` BOOLEAN,`c1` VARCHAR(64),`c4` VARBINARY(64),`c2` BIGINT,`c5` INT,`c6` DOUBLE,`c7` DOUBLE, PRIMARY KEY (`c3` ASC,`c1` DESC,`c4` ASC))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON `my_ns`.`foo_table` (`c4`)",
         "CREATE INDEX index_my_ns_foo_table_c1 ON `my_ns`.`foo_table` (`c1`)",
         "CREATE SCHEMA IF NOT EXISTS `changed`",
@@ -373,12 +522,13 @@ public class JdbcDatabaseAdminTest {
 
   @Test
   public void
-      createTable_forPostgresqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
+      createTable_WithClusteringOrderForPostgresqlWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
           throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.POSTGRESQL,
         Optional.of("changed"),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" BOOLEAN,\"c1\" VARCHAR(10485760),\"c4\" BYTEA,\"c2\" BIGINT,\"c5\" INT,\"c6\" DOUBLE PRECISION,\"c7\" FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\"))",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE SCHEMA IF NOT EXISTS \"changed\"",
@@ -402,12 +552,12 @@ public class JdbcDatabaseAdminTest {
 
   @Test
   public void
-      createTable_forSqlServerWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
+      createTable_WithClusteringOrderForSqlServerWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
           throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.SQL_SERVER,
         Optional.of("changed"),
-        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3],[c1],[c4]))",
+        "CREATE TABLE [my_ns].[foo_table]([c3] BIT,[c1] VARCHAR(8000) COLLATE Latin1_General_BIN,[c4] VARBINARY(8000),[c2] BIGINT,[c5] INT,[c6] FLOAT,[c7] FLOAT(24), PRIMARY KEY ([c3] ASC,[c1] DESC,[c4] ASC))",
         "CREATE INDEX index_my_ns_foo_table_c4 ON [my_ns].[foo_table] ([c4])",
         "CREATE INDEX index_my_ns_foo_table_c1 ON [my_ns].[foo_table] ([c1])",
         "CREATE SCHEMA [changed]",
@@ -431,13 +581,14 @@ public class JdbcDatabaseAdminTest {
 
   @Test
   public void
-      createTable_forOracleWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
+      createTable_WithClusteringOrderForOracleWithTableMetadataSchemaChanged_shouldExecuteCreateTableStatement()
           throws ExecutionException, SQLException {
-    createTable_forX_shouldExecuteCreateTableStatement(
+    createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
         RdbEngine.ORACLE,
         Optional.of("changed"),
         "CREATE TABLE \"my_ns\".\"foo_table\"(\"c3\" NUMBER(1),\"c1\" VARCHAR2(64),\"c4\" RAW(64),\"c2\" NUMBER(19),\"c5\" INT,\"c6\" BINARY_DOUBLE,\"c7\" BINARY_FLOAT, PRIMARY KEY (\"c3\",\"c1\",\"c4\")) ROWDEPENDENCIES",
         "ALTER TABLE \"my_ns\".\"foo_table\" INITRANS 3 MAXTRANS 255",
+        "CREATE UNIQUE INDEX \"my_ns.foo_table_clustering_order_idx\" ON \"my_ns\".\"foo_table\" (\"c3\" ASC,\"c1\" DESC,\"c4\" ASC)",
         "CREATE INDEX index_my_ns_foo_table_c4 ON \"my_ns\".\"foo_table\" (\"c4\")",
         "CREATE INDEX index_my_ns_foo_table_c1 ON \"my_ns\".\"foo_table\" (\"c1\")",
         "CREATE USER \"changed\" IDENTIFIED BY \"oracle\"",
@@ -452,7 +603,7 @@ public class JdbcDatabaseAdminTest {
         "INSERT INTO \"changed\".\"metadata\" VALUES ('my_ns.foo_table','c7','FLOAT',NULL,NULL,0,7)");
   }
 
-  private void createTable_forX_shouldExecuteCreateTableStatement(
+  private void createTable_WithClusteringOrderForX_shouldExecuteCreateTableStatement(
       RdbEngine rdbEngine, Optional<String> tableMetadataSchema, String... expectedSqlStatements)
       throws SQLException, ExecutionException {
     // Arrange

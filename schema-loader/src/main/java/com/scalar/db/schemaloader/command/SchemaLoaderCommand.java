@@ -1,16 +1,12 @@
 package com.scalar.db.schemaloader.command;
 
-import com.scalar.db.schemaloader.core.SchemaOperator;
-import com.scalar.db.schemaloader.core.SchemaOperatorFactory;
-import com.scalar.db.schemaloader.schema.SchemaParser;
-import com.scalar.db.schemaloader.schema.Table;
+import com.scalar.db.schemaloader.SchemaLoader;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import org.slf4j.Logger;
@@ -22,7 +18,6 @@ import picocli.CommandLine.Option;
     name = "java -jar scalardb-schema-loader-<version>.jar",
     description = "Create/Delete schemas in the storage defined in the config file")
 public class SchemaLoaderCommand implements Callable<Integer> {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLoaderCommand.class);
 
   @Option(
@@ -80,46 +75,31 @@ public class SchemaLoaderCommand implements Callable<Integer> {
     LOGGER.info("Config path: " + configPath);
     LOGGER.info("Schema path: " + schemaFile);
 
-    Map<String, String> metaOptions = new HashMap<>();
-    if (replicationStrategy != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
-    }
-    if (compactionStrategy != null) {
-      metaOptions.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
-    }
-    if (replicaFactor != null) {
-      metaOptions.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
-    }
-    if (ru != null) {
-      metaOptions.put(DynamoAdmin.REQUEST_UNIT, ru);
-    }
-    if (noScaling != null) {
-      metaOptions.put(DynamoAdmin.NO_SCALING, noScaling.toString());
-    }
-    if (noBackup != null) {
-      metaOptions.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
-    }
-
-    SchemaOperator operator = SchemaOperatorFactory.getSchemaOperator(configPath);
-
-    if (coordinator) {
-      operator.createCoordinatorTable(metaOptions);
-    }
-
-    if (schemaFile != null) {
-      List<Table> tableList = SchemaParser.parse(schemaFile.toString(), metaOptions);
-      if (deleteTables) {
-        operator.deleteTables(tableList);
-      } else {
-        operator.createTables(tableList, metaOptions);
+    if (!deleteTables) {
+      Map<String, String> options = new HashMap<>();
+      if (replicationStrategy != null) {
+        options.put(CassandraAdmin.REPLICATION_STRATEGY, replicationStrategy.toString());
       }
-    }
+      if (compactionStrategy != null) {
+        options.put(CassandraAdmin.COMPACTION_STRATEGY, compactionStrategy.toString());
+      }
+      if (replicaFactor != null) {
+        options.put(CassandraAdmin.REPLICATION_FACTOR, replicaFactor);
+      }
+      if (ru != null) {
+        options.put(DynamoAdmin.REQUEST_UNIT, ru);
+      }
+      if (noScaling != null) {
+        options.put(DynamoAdmin.NO_SCALING, noScaling.toString());
+      }
+      if (noBackup != null) {
+        options.put(DynamoAdmin.NO_BACKUP, noBackup.toString());
+      }
 
-    if (coordinator && deleteTables) {
-      operator.dropCoordinatorTable();
+      SchemaLoader.load(configPath, schemaFile, options, coordinator);
+    } else {
+      SchemaLoader.unload(configPath, schemaFile, coordinator);
     }
-
-    operator.close();
     return 0;
   }
 }

@@ -10,6 +10,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.TransactionException;
@@ -18,6 +19,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
+import com.scalar.db.storage.TestUtils;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.jdbc.JdbcEnv;
 import java.util.ArrayList;
@@ -31,8 +33,9 @@ import org.junit.Test;
 
 public class JdbcTransactionIntegrationTest {
 
-  private static final String NAMESPACE = "integration_testing";
-  private static final String TABLE = "tx_test_table";
+  private static final String TEST_NAME = "jdbc_tx";
+  private static final String NAMESPACE = "integration_testing_" + TEST_NAME;
+  private static final String TABLE = "test_table";
   private static final String ACCOUNT_ID = "account_id";
   private static final String ACCOUNT_TYPE = "account_type";
   private static final String BALANCE = "balance";
@@ -45,7 +48,8 @@ public class JdbcTransactionIntegrationTest {
 
   @BeforeClass
   public static void setUpBeforeClass() throws ExecutionException {
-    JdbcConfig config = JdbcEnv.getJdbcConfig();
+    DatabaseConfig databaseConfig = TestUtils.addSuffix(JdbcEnv.getJdbcConfig(), TEST_NAME);
+    JdbcConfig config = new JdbcConfig(databaseConfig.getProperties());
     StorageFactory factory = new StorageFactory(config);
     admin = factory.getAdmin();
     admin.createNamespace(NAMESPACE, true);

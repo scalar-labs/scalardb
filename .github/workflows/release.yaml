@@ -33,9 +33,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Create containers
-        run: gradle docker
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
@@ -43,12 +40,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      - name: Create containers
+        run: gradle docker
+
       - name: Push containers
         run: |
           docker push ghcr.io/scalar-labs/scalardb-server:${{ steps.version.outputs.version }}
           docker push ghcr.io/scalar-labs/scalardb-schema-loader:${{ steps.version.outputs.version }}
 
-      - name: Upload scalardb, scalardb-server, and scalardb-rpc to Maven Central Repository
+      - name: Upload scalardb, scalardb-server, scalardb-rpc, and scalardb-schema-loader to Maven Central Repository
         run: |
           echo "${{secrets.SIGNING_SECRET_KEY_RING}}" | base64 -d > ~/.gradle/secring.gpg
           gradle publish \

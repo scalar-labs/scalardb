@@ -1,24 +1,31 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.common.TableMetadataManager;
-import com.scalar.db.util.Utility;
+import com.scalar.db.storage.dynamo.bytes.BytesUtils;
+import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
+import com.scalar.db.util.ScalarDbUtils;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
@@ -31,7 +38,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 /**
  * A handler class for select statement
  *
- * @author Yuji Ito
+ * @author Yuji Ito, Toshihiro Suzuki
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
@@ -54,7 +61,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     TableMetadata tableMetadata = metadataManager.getTableMetadata(operation);
     try {
-      if (Utility.isSecondaryIndexSpecified(operation, tableMetadata)) {
+      if (ScalarDbUtils.isSecondaryIndexSpecified(operation, tableMetadata)) {
         return executeQueryWithIndex((Selection) operation, tableMetadata);
       }
 
@@ -126,28 +133,20 @@ public class SelectStatementHandler extends StatementHandler {
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
     QueryRequest.Builder builder = QueryRequest.builder().tableName(dynamoOperation.getTableName());
 
-    getIndexName(scan)
-        .ifPresent(
-            name -> {
-              String indexTableName = dynamoOperation.getIndexName(name);
-              builder.indexName(indexTableName);
-            });
-
-    setConditions(builder, scan, tableMetadata);
-
-    // When multiple clustering keys exist, the ordering and the limitation will be applied later
-    if (dynamoOperation.isSingleClusteringKey() && !scan.getOrderings().isEmpty()) {
-      scan.getOrderings()
-          .forEach(
-              o -> {
-                if (dynamoOperation.getMetadata().getClusteringKeyNames().contains(o.getName())
-                    && o.getOrder() == Scan.Ordering.Order.DESC) {
-                  builder.scanIndexForward(false);
-                }
-              });
+    if (!setConditions(builder, scan, tableMetadata)) {
+      // if setConditions() fails, return empty list
+      return new ArrayList<>();
     }
 
-    if (dynamoOperation.isSingleClusteringKey() && scan.getLimit() > 0) {
+    if (!scan.getOrderings().isEmpty()) {
+      Ordering ordering = scan.getOrderings().get(0);
+      if (ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getName())) {
+        // reverse scan
+        builder.scanIndexForward(false);
+      }
+    }
+
+    if (scan.getLimit() > 0) {
       builder.limit(scan.getLimit());
     }
 
@@ -160,11 +159,7 @@ public class SelectStatementHandler extends StatementHandler {
     }
 
     QueryResponse queryResponse = client.query(builder.build());
-    List<Map<String, AttributeValue>> ret = new ArrayList<>(queryResponse.items());
-    if (!dynamoOperation.isSingleClusteringKey()) {
-      ret = new ItemSorter(scan, tableMetadata).sort(ret);
-    }
-    return ret;
+    return new ArrayList<>(queryResponse.items());
   }
 
   private void projectionExpression(DynamoDbRequest.Builder builder, Selection selection) {
@@ -188,170 +183,286 @@ public class SelectStatementHandler extends StatementHandler {
     }
   }
 
-  private Optional<String> getIndexName(Scan scan) {
-    if (scan.getStartClusteringKey().isPresent()) {
-      List<Value<?>> start = scan.getStartClusteringKey().get().get();
-      return Optional.of(start.get(start.size() - 1).getName());
-    }
-
-    if (scan.getEndClusteringKey().isPresent()) {
-      List<Value<?>> end = scan.getEndClusteringKey().get().get();
-      return Optional.of(end.get(end.size() - 1).getName());
-    }
-
-    return Optional.empty();
-  }
-
-  private void setConditions(QueryRequest.Builder builder, Scan scan, TableMetadata tableMetadata) {
+  private boolean setConditions(
+      QueryRequest.Builder builder, Scan scan, TableMetadata tableMetadata) {
     List<String> conditions = new ArrayList<>();
-    List<String> filters = new ArrayList<>();
-
-    conditions.add(getPartitionKeyCondition());
-
-    boolean isRangeEnabled = setRangeCondition(scan, conditions);
-    setStartCondition(scan, conditions, filters, isRangeEnabled);
-    setEndCondition(scan, conditions, filters, isRangeEnabled);
-    String keyConditions = String.join(" AND ", conditions);
-
-    Map<String, AttributeValue> bindMap = getPartitionKeyBindMap(scan, tableMetadata);
-    if (isRangeEnabled) {
-      bindMap.putAll(getRangeBindMap(scan));
-    }
-    bindMap.putAll(getStartBindMap(scan, isRangeEnabled));
-    bindMap.putAll(getEndBindMap(scan, isRangeEnabled));
-
-    if (!filters.isEmpty()) {
-      String filterExpression = String.join(" AND ", filters);
-      builder.filterExpression(filterExpression);
-    }
-
-    builder.keyConditionExpression(keyConditions).expressionAttributeValues(bindMap);
-  }
-
-  private String getPartitionKeyCondition() {
-    return DynamoOperation.PARTITION_KEY + " = " + DynamoOperation.PARTITION_KEY_ALIAS;
-  }
-
-  private Map<String, AttributeValue> getPartitionKeyBindMap(
-      Scan scan, TableMetadata tableMetadata) {
     Map<String, AttributeValue> bindMap = new HashMap<>();
+
+    setConditionForPartitionKey(scan, tableMetadata, conditions, bindMap);
+
+    // If the scan is for DESC clustering order, use the end clustering key as a start key and the
+    // start clustering key as an end key
+    boolean scanForDescClusteringOrder = isScanForDescClusteringOrder(scan, tableMetadata);
+    Optional<Key> startKey =
+        scanForDescClusteringOrder ? scan.getEndClusteringKey() : scan.getStartClusteringKey();
+    boolean startInclusive =
+        scanForDescClusteringOrder ? scan.getEndInclusive() : scan.getStartInclusive();
+    Optional<Key> endKey =
+        scanForDescClusteringOrder ? scan.getStartClusteringKey() : scan.getEndClusteringKey();
+    boolean endInclusive =
+        scanForDescClusteringOrder ? scan.getStartInclusive() : scan.getEndInclusive();
+
+    if (startKey.isPresent() && endKey.isPresent()) {
+      if (!setBetweenCondition(
+          startKey.get(),
+          startInclusive,
+          endKey.get(),
+          endInclusive,
+          tableMetadata,
+          conditions,
+          bindMap)) {
+        return false;
+      }
+    } else {
+      if (startKey.isPresent()) {
+        if (startKey.get().size() == 1) {
+          if (!setStartCondition(
+              startKey.get(), startInclusive, tableMetadata, conditions, bindMap)) {
+            return false;
+          }
+        } else {
+          // if a start key with multiple values specified and no end key specified, use between
+          // condition and use a key based on the start key without the last value as an end key
+          if (!setBetweenCondition(
+              startKey.get(),
+              startInclusive,
+              getKeyWithoutLastValue(startKey.get()),
+              true,
+              tableMetadata,
+              conditions,
+              bindMap)) {
+            return false;
+          }
+        }
+      }
+
+      if (endKey.isPresent()) {
+        if (endKey.get().size() == 1) {
+          setEndCondition(endKey.get(), endInclusive, tableMetadata, conditions, bindMap);
+        } else {
+          // if an end key with multiple values specified and no start key specified, use between
+          // condition and use a key based on the end key without the last value as a start key
+          if (!setBetweenCondition(
+              getKeyWithoutLastValue(endKey.get()),
+              true,
+              endKey.get(),
+              endInclusive,
+              tableMetadata,
+              conditions,
+              bindMap)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    builder
+        .keyConditionExpression(String.join(" AND ", conditions))
+        .expressionAttributeValues(bindMap);
+    return true;
+  }
+
+  private Key getKeyWithoutLastValue(Key originalKey) {
+    Key.Builder keyBuilder = Key.newBuilder();
+    for (int i = 0; i < originalKey.get().size() - 1; i++) {
+      keyBuilder.add(originalKey.get().get(i));
+    }
+    return keyBuilder.build();
+  }
+
+  private void setConditionForPartitionKey(
+      Scan scan,
+      TableMetadata tableMetadata,
+      List<String> conditions,
+      Map<String, AttributeValue> bindMap) {
+    conditions.add(DynamoOperation.PARTITION_KEY + " = " + DynamoOperation.PARTITION_KEY_ALIAS);
+
     DynamoOperation dynamoOperation = new DynamoOperation(scan, tableMetadata);
-    String partitionKey = dynamoOperation.getConcatenatedPartitionKey();
+    ByteBuffer concatenatedPartitionKey = dynamoOperation.getConcatenatedPartitionKey();
+    bindMap.put(
+        DynamoOperation.PARTITION_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteBuffer(concatenatedPartitionKey)).build());
+  }
+
+  private boolean setBetweenCondition(
+      Key startKey,
+      boolean startInclusive,
+      Key endKey,
+      boolean endInclusive,
+      TableMetadata tableMetadata,
+      List<String> conditions,
+      Map<String, AttributeValue> bindMap) {
+
+    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
+    if (!startInclusive) {
+      // if exclusive scan for the start key, we use the closest next bytes of the start key bytes
+      Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(startKeyBytes);
+      if (!closestNextBytes.isPresent()) {
+        // if we can't find the closest next bytes of the start key bytes, return false. That means
+        // we should return empty results in this case
+        return false;
+      }
+      startKeyBytes = closestNextBytes.get();
+    }
+
+    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
+    boolean fullClusteringKeySpecified =
+        endKey.size() == tableMetadata.getClusteringKeyNames().size();
+    if (fullClusteringKeySpecified) {
+      if (!endInclusive) {
+        // if full end key specified, and it's an exclusive scan for the end key, we use the closest
+        // previous bytes of the end key bytes for the between condition
+        Optional<ByteBuffer> closestPreviousBytes = BytesUtils.getClosestPreviousBytes(endKeyBytes);
+        if (!closestPreviousBytes.isPresent()) {
+          // if we can't find the closest previous bytes of the end key bytes, return false. That
+          // means we should return empty results in this case
+          return false;
+        }
+        endKeyBytes = closestPreviousBytes.get();
+      }
+    } else {
+      if (endInclusive) {
+        // if partial end key specified, and it's an inclusive scan for the end key, we use the
+        // closest next bytes of the end key bytes for the between condition
+        Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(endKeyBytes);
+        if (!closestNextBytes.isPresent()) {
+          // if we can't find the closest next bytes of the end key bytes, set start condition with
+          // the start key
+          return setStartCondition(startKey, startInclusive, tableMetadata, conditions, bindMap);
+        }
+        endKeyBytes = closestNextBytes.get();
+      }
+    }
+
+    byte[] start = BytesUtils.toBytes(startKeyBytes);
+    byte[] end = BytesUtils.toBytes(endKeyBytes);
+    if (UnsignedBytes.lexicographicalComparator().compare(start, end) > 0) {
+      // if the start key bytes are greater than the end key bytes, return false. That means we
+      // should return empty results in this case. This situation could happen when full clustering
+      // keys specified and scanning exclusively
+      return false;
+    }
+
+    conditions.add(
+        DynamoOperation.CLUSTERING_KEY
+            + " BETWEEN "
+            + DynamoOperation.START_CLUSTERING_KEY_ALIAS
+            + " AND "
+            + DynamoOperation.END_CLUSTERING_KEY_ALIAS);
 
     bindMap.put(
-        DynamoOperation.PARTITION_KEY_ALIAS, AttributeValue.builder().s(partitionKey).build());
+        DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteArray(start)).build());
+    bindMap.put(
+        DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+        AttributeValue.builder().b(SdkBytes.fromByteArray(end)).build());
 
-    return bindMap;
+    return true;
   }
 
-  private boolean setRangeCondition(Scan scan, List<String> conditions) {
-    if (!scan.getStartClusteringKey().isPresent() || !scan.getEndClusteringKey().isPresent()) {
-      return false;
-    }
+  private boolean setStartCondition(
+      Key startKey,
+      boolean startInclusive,
+      TableMetadata tableMetadata,
+      List<String> conditions,
+      Map<String, AttributeValue> bindMap) {
+    ByteBuffer startKeyBytes = getKeyBytes(startKey, tableMetadata);
 
-    List<Value<?>> start = scan.getStartClusteringKey().get().get();
-    List<Value<?>> end = scan.getEndClusteringKey().get().get();
-    String startKeyName = start.get(start.size() - 1).getName();
-    String endKeyName = end.get(end.size() - 1).getName();
-
-    if (startKeyName.equals(endKeyName)) {
-      if (!scan.getStartInclusive() || !scan.getEndInclusive()) {
-        throw new IllegalArgumentException("DynamoDB does NOT support scan with exclusive range.");
-      }
-      conditions.add(startKeyName + DynamoOperation.RANGE_CONDITION);
-      return true;
+    boolean fullClusteringKeySpecified =
+        startKey.size() == tableMetadata.getClusteringKeyNames().size();
+    if (fullClusteringKeySpecified) {
+      conditions.add(
+          DynamoOperation.CLUSTERING_KEY
+              + (startInclusive ? " >= " : " > ")
+              + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
+      bindMap.put(
+          DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+          AttributeValue.builder().b(SdkBytes.fromByteBuffer(startKeyBytes)).build());
     } else {
-      return false;
+      if (startInclusive) {
+        conditions.add(
+            DynamoOperation.CLUSTERING_KEY + " >= " + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
+        bindMap.put(
+            DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+            AttributeValue.builder().b(SdkBytes.fromByteBuffer(startKeyBytes)).build());
+      } else {
+        // if partial start key specified, and it's an exclusive scan for the start key, we use
+        // the closest next bytes of the start key bytes for the grater than or equal condition
+        Optional<ByteBuffer> closestNextBytes = BytesUtils.getClosestNextBytes(startKeyBytes);
+        if (closestNextBytes.isPresent()) {
+          conditions.add(
+              DynamoOperation.CLUSTERING_KEY + " >= " + DynamoOperation.START_CLUSTERING_KEY_ALIAS);
+          bindMap.put(
+              DynamoOperation.START_CLUSTERING_KEY_ALIAS,
+              AttributeValue.builder().b(SdkBytes.fromByteBuffer(closestNextBytes.get())).build());
+        } else {
+          // if we can't find the closest next bytes of the start key bytes, return false. That
+          // means we should return empty results in this case
+          return false;
+        }
+      }
     }
-  }
-
-  private void setStartCondition(
-      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
-    scan.getStartClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> start = k.get();
-              for (int i = 0; i < start.size(); i++) {
-                Value<?> value = start.get(i);
-                List<String> elements = new ArrayList<>();
-                elements.add(value.getName());
-                if (i < start.size() - 1) {
-                  elements.add("=");
-                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
-                  filters.add(String.join(" ", elements));
-                } else if (!isRangeEnabled) {
-                  if (scan.getStartInclusive()) {
-                    elements.add(">=");
-                  } else {
-                    elements.add(">");
-                  }
-                  elements.add(DynamoOperation.START_CLUSTERING_KEY_ALIAS + i);
-                  conditions.add(String.join(" ", elements));
-                }
-              }
-            });
+    return true;
   }
 
   private void setEndCondition(
-      Scan scan, List<String> conditions, List<String> filters, boolean isRangeEnabled) {
-    scan.getEndClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> end = k.get();
-              for (int i = 0; i < end.size(); i++) {
-                Value<?> value = end.get(i);
-                List<String> elements = new ArrayList<>();
-                elements.add(value.getName());
-                if (i < end.size() - 1) {
-                  elements.add("=");
-                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
-                  filters.add(String.join(" ", elements));
-                } else if (!isRangeEnabled) {
-                  if (scan.getEndInclusive()) {
-                    elements.add("<=");
-                  } else {
-                    elements.add("<");
-                  }
-                  elements.add(DynamoOperation.END_CLUSTERING_KEY_ALIAS + i);
-                  conditions.add(String.join(" ", elements));
-                }
-              }
-            });
+      Key endKey,
+      boolean endInclusive,
+      TableMetadata tableMetadata,
+      List<String> conditions,
+      Map<String, AttributeValue> bindMap) {
+    ByteBuffer endKeyBytes = getKeyBytes(endKey, tableMetadata);
+
+    boolean fullClusteringKeySpecified =
+        endKey.size() == tableMetadata.getClusteringKeyNames().size();
+    if (fullClusteringKeySpecified) {
+      conditions.add(
+          DynamoOperation.CLUSTERING_KEY
+              + (endInclusive ? " <= " : " < ")
+              + DynamoOperation.END_CLUSTERING_KEY_ALIAS);
+      bindMap.put(
+          DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+          AttributeValue.builder().b(SdkBytes.fromByteBuffer(endKeyBytes)).build());
+    } else {
+      if (endInclusive) {
+        // if partial end key specified, and it's an inclusive scan for the end key, we use the
+        // closest next bytes of the end key bytes for the less than condition
+        BytesUtils.getClosestNextBytes(endKeyBytes)
+            .ifPresent(
+                k -> {
+                  conditions.add(
+                      DynamoOperation.CLUSTERING_KEY
+                          + " < "
+                          + DynamoOperation.END_CLUSTERING_KEY_ALIAS);
+                  bindMap.put(
+                      DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+                      AttributeValue.builder().b(SdkBytes.fromByteBuffer(k)).build());
+                });
+      } else {
+        conditions.add(
+            DynamoOperation.CLUSTERING_KEY + " < " + DynamoOperation.END_CLUSTERING_KEY_ALIAS);
+        bindMap.put(
+            DynamoOperation.END_CLUSTERING_KEY_ALIAS,
+            AttributeValue.builder().b(SdkBytes.fromByteBuffer(endKeyBytes)).build());
+      }
+    }
   }
 
-  private Map<String, AttributeValue> getRangeBindMap(Scan scan) {
-    ValueBinder binder = new ValueBinder(DynamoOperation.RANGE_KEY_ALIAS);
-    List<Value<?>> start = scan.getStartClusteringKey().get().get();
-    List<Value<?>> end = scan.getEndClusteringKey().get().get();
-    start.get(start.size() - 1).accept(binder);
-    end.get(end.size() - 1).accept(binder);
-
-    return binder.build();
+  private ByteBuffer getKeyBytes(Key key, TableMetadata tableMetadata) {
+    return new KeyBytesEncoder().encode(key, tableMetadata.getClusteringOrders());
   }
 
-  private Map<String, AttributeValue> getStartBindMap(Scan scan, boolean isRangeEnabled) {
-    ValueBinder binder = new ValueBinder(DynamoOperation.START_CLUSTERING_KEY_ALIAS);
-    scan.getStartClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> start = k.get();
-              int size = isRangeEnabled ? start.size() - 1 : start.size();
-              IntStream.range(0, size).forEach(i -> start.get(i).accept(binder));
-            });
-
-    return binder.build();
-  }
-
-  private Map<String, AttributeValue> getEndBindMap(Scan scan, boolean isRangeEnabled) {
-    ValueBinder binder = new ValueBinder(DynamoOperation.END_CLUSTERING_KEY_ALIAS);
-    scan.getEndClusteringKey()
-        .ifPresent(
-            k -> {
-              List<Value<?>> end = k.get();
-              int size = isRangeEnabled ? end.size() - 1 : end.size();
-              IntStream.range(0, size).forEach(i -> end.get(i).accept(binder));
-            });
-
-    return binder.build();
+  private boolean isScanForDescClusteringOrder(Scan scan, TableMetadata tableMetadata) {
+    if (scan.getStartClusteringKey().isPresent()) {
+      Key startClusteringKey = scan.getStartClusteringKey().get();
+      String lastValueName = startClusteringKey.get().get(startClusteringKey.size() - 1).getName();
+      return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
+    }
+    if (scan.getEndClusteringKey().isPresent()) {
+      Key endClusteringKey = scan.getEndClusteringKey().get();
+      String lastValueName = endClusteringKey.get().get(endClusteringKey.size() - 1).getName();
+      return tableMetadata.getClusteringOrder(lastValueName) == Order.DESC;
+    }
+    return false;
   }
 }
