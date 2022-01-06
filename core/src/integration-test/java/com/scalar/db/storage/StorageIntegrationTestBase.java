@@ -46,16 +46,16 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings({"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"})
+@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageIntegrationTestBase {
 
-  protected static String NAMESPACE = "integration_testing";
-  protected static String TABLE = "test_table";
-  protected static String COL_NAME1 = "c1";
-  protected static String COL_NAME2 = "c2";
-  protected static String COL_NAME3 = "c3";
-  protected static String COL_NAME4 = "c4";
-  protected static String COL_NAME5 = "c5";
+  private static final String NAMESPACE = "integration_testing";
+  private static final String TABLE = "test_table";
+  private static final String COL_NAME1 = "c1";
+  private static final String COL_NAME2 = "c2";
+  private static final String COL_NAME3 = "c3";
+  private static final String COL_NAME4 = "c4";
+  private static final String COL_NAME5 = "c5";
 
   private static boolean initialized;
   private static DistributedStorage storage;
