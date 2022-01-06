@@ -1,4 +1,4 @@
-package com.scalar.db.graphql.server.config;
+package com.scalar.db.graphql.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
