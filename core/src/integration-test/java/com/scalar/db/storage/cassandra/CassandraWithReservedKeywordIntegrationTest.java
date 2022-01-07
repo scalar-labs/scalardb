@@ -5,7 +5,7 @@ import com.scalar.db.storage.StorageWithReservedKeywordIntegrationTestBase;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-public class CassandraWithReservedKeywordsIntegrationTest
+public class CassandraWithReservedKeywordIntegrationTest
     extends StorageWithReservedKeywordIntegrationTestBase {
   @Override
   protected void initialize() {

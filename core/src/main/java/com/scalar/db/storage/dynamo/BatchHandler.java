@@ -10,6 +10,7 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.storage.common.TableMetadataManager;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.concurrent.ThreadSafe;
@@ -105,27 +106,27 @@ public class BatchHandler {
     Update.Builder updateBuilder = Update.builder();
     String expression;
     String condition = null;
-    Map<String, String> columnMap;
+    Map<String, String> expressionAttributeNameMap = new HashMap<>();
     Map<String, AttributeValue> bindMap;
 
     if (!put.getCondition().isPresent()) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
-      columnMap = dynamoMutation.getColumnMapWithKey();
+      expressionAttributeNameMap.putAll(dynamoMutation.getColumnMapWithKey());
       bindMap = dynamoMutation.getValueBindMapWithKey();
     } else if (put.getCondition().get() instanceof PutIfNotExists) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
-      columnMap = dynamoMutation.getColumnMapWithKey();
+      expressionAttributeNameMap.putAll(dynamoMutation.getColumnMapWithKey());
       bindMap = dynamoMutation.getValueBindMapWithKey();
       condition = dynamoMutation.getIfNotExistsCondition();
     } else if (put.getCondition().get() instanceof PutIfExists) {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition();
-      columnMap = dynamoMutation.getColumnMap();
+      expressionAttributeNameMap.putAll(dynamoMutation.getColumnMap());
       bindMap = dynamoMutation.getValueBindMap();
     } else {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
-      columnMap = dynamoMutation.getColumnMap();
+      expressionAttributeNameMap.putAll(dynamoMutation.getColumnMap());
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());
     }
@@ -135,10 +136,14 @@ public class BatchHandler {
         .key(dynamoMutation.getKeyMap())
         .updateExpression(expression)
         .conditionExpression(condition)
-        .expressionAttributeNames(columnMap)
-        .expressionAttributeValues(bindMap)
-        .build();
+        .expressionAttributeValues(bindMap);
 
+    Map<String, String> conditionAttributeNameMap = dynamoMutation.getConditionAttributeNameMap();
+    if (!conditionAttributeNameMap.isEmpty()) {
+      expressionAttributeNameMap.putAll(dynamoMutation.getConditionAttributeNameMap());
+    }
+
+    updateBuilder.expressionAttributeNames(expressionAttributeNameMap);
     return updateBuilder.build();
   }
 
@@ -160,6 +165,11 @@ public class BatchHandler {
       }
 
       deleteBuilder.conditionExpression(condition);
+    }
+
+    Map<String, String> conditionAttributeNameMap = dynamoMutation.getConditionAttributeNameMap();
+    if (!conditionAttributeNameMap.isEmpty()) {
+      deleteBuilder.expressionAttributeNames(dynamoMutation.getConditionAttributeNameMap());
     }
 
     return deleteBuilder.build();

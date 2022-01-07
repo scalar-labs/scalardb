@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static com.scalar.db.storage.cosmos.CosmosAdmin.quoteKeyword;
+
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -205,11 +207,11 @@ public class SelectStatementHandler extends StatementHandler {
     Value<?> keyValue = operation.getPartitionKey().get().get(0);
     String fieldName;
     if (tableMetadata.getClusteringKeyNames().contains(keyValue.getName())) {
-      fieldName = "r.clusteringKey.";
+      fieldName = "r.clusteringKey";
     } else {
-      fieldName = "r.values.";
+      fieldName = "r.values";
     }
-    Field<Object> field = DSL.field(fieldName + keyValue.getName());
+    Field<Object> field = DSL.field(fieldName + quoteKeyword(keyValue.getName()));
 
     ValueBinder binder = new ValueBinder();
     binder.set(v -> select.where(field.eq(v)));

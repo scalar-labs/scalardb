@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-public class CosmosWithReservedKeywordsIntegrationTest
+public class CosmosWithReservedKeywordIntegrationTest
     extends StorageWithReservedKeywordIntegrationTestBase {
   @Override
   protected void initialize() {

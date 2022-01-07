@@ -306,7 +306,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
       CosmosPagedIterable<Record> records =
           container.queryItems(
-              "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + table + " t",
+              "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + " t",
               new CosmosQueryRequestOptions(),
               Record.class);
       records.forEach(
@@ -318,6 +318,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     } catch (RuntimeException e) {
       throw new ExecutionException("truncating the container failed", e);
     }
+  }
+
+  public static String quoteKeyword(String keyword) {
+    return "[\"" + keyword + "\"]";
   }
 
   @Override

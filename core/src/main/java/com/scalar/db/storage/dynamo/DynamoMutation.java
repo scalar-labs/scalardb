@@ -16,8 +16,11 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @Immutable
 public class DynamoMutation extends DynamoOperation {
 
+  private final Map<String, String> conditionAttributeNameMap;
+
   DynamoMutation(Mutation mutation, TableMetadata metadata) {
     super(mutation, metadata);
+    conditionAttributeNameMap = new HashMap<>();
   }
 
   @Nonnull
@@ -58,8 +61,13 @@ public class DynamoMutation extends DynamoOperation {
     ConditionExpressionBuilder builder = new ConditionExpressionBuilder(CONDITION_VALUE_ALIAS);
     Mutation mutation = (Mutation) getOperation();
     mutation.getCondition().ifPresent(c -> c.accept(builder));
+    conditionAttributeNameMap.putAll(builder.getConditionAttributeNameMap());
 
     return builder.build();
+  }
+
+  public Map<String, String> getConditionAttributeNameMap() {
+    return conditionAttributeNameMap;
   }
 
   @Nonnull

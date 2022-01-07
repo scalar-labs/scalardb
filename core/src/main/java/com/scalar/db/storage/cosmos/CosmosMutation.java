@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static com.scalar.db.storage.cosmos.CosmosAdmin.quoteKeyword;
+
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
@@ -90,7 +92,8 @@ public class CosmosMutation extends CosmosOperation {
                 k.get()
                     .forEach(
                         v -> {
-                          Field<Object> field = DSL.field("r.clusteringKey." + v.getName());
+                          Field<Object> field =
+                              DSL.field("r.clusteringKey" + quoteKeyword(v.getName()));
                           binder.set(s -> select.and(field.equal(s)));
                           v.accept(binder);
                         });

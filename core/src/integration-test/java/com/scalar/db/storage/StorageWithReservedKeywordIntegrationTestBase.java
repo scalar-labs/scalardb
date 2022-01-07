@@ -254,6 +254,35 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
+  public void put_PutWithIfGivenWhenSuchRecordExists_ShouldUpdateRecord()
+      throws ExecutionException {
+    // Arrange
+    int pKey = 0;
+    int cKey = 0;
+    List<Put> puts = preparePuts();
+    Get get = prepareGet(pKey, cKey);
+
+    // Act Assert
+    storage.put(puts.get(0));
+    puts.get(0)
+        .withCondition(
+            new PutIf(
+                new ConditionalExpression(
+                    COL_NAME3, new IntValue(pKey + cKey), ConditionalExpression.Operator.EQ)));
+    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+    assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> actual = storage.get(get);
+    assertThat(actual.isPresent()).isTrue();
+    Result result = actual.get();
+    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
+    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
+    assertThat(result.getValue(COL_NAME3))
+        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MAX_VALUE)));
+  }
+
+  @Test
   public void put_MultiplePutGiven_ShouldStoreProperly() throws IOException, ExecutionException {
     // Arrange
     int pKey = 0;
@@ -334,6 +363,31 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
     assertThat(results.size()).isEqualTo(0);
+  }
+
+  @Test
+  public void delete_DeleteWithIfGivenWhenSuchRecordExists_ShouldDeleteProperly()
+      throws ExecutionException {
+    // Arrange
+    populateRecords();
+    int pKey = 0;
+    int cKey = 0;
+    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key clusteringKey = new Key(COL_NAME4, cKey);
+
+    // Act
+    Delete delete = prepareDelete(pKey, cKey);
+    delete.withCondition(
+        new DeleteIf(
+            new ConditionalExpression(
+                COL_NAME2,
+                new TextValue(Integer.toString(pKey)),
+                ConditionalExpression.Operator.EQ)));
+    assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
+
+    // Assert
+    Optional<Result> actual = storage.get(new Get(partitionKey, clusteringKey));
+    assertThat(actual.isPresent()).isFalse();
   }
 
   @Test
