@@ -16,12 +16,12 @@
       "c5": "BOOLEAN",
       "c6": "INT"
     },
-    "ru": 5000,
-    "compaction-strategy": "LCS",
     "secondary-index": [
       "c2",
       "c4"
-    ]
+    ],
+    "ru": 5000,
+    "compaction-strategy": "LCS"
   },
   "sample_db.sample_table1": {
     "transaction": true,

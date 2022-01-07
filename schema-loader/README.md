@@ -5,16 +5,16 @@ Also, it automatically adds the Scalar DB transaction metadata (used in the Cons
 
 There are two ways to specify general CLI options in Schema Loader:
   - Pass a Scalar DB configuration file and database/storage-specific options additionally.
-  - Pass the options without a Scalar DB configuration.
+  - Pass the options without a Scalar DB configuration (Deprecated).
 
 Note that this tool supports only basic options to create/delete a table.
-If you want to use advanced features of the database, please alter your table after creating it with this tool.
+If you want to use advanced features of the database, please alter your tables after creating them with this tool.
 
 # Usage
 
 ## Install
 
-The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB
+The release versions of `schema-loader` can be downloaded from [releases](https://github.com/scalar-labs/scalardb/releases) page of Scalar DB.
 
 ## Build
 
@@ -41,7 +41,7 @@ $ ./gradlew schema-loader:docker
 
 ### Available commands
 
-For using config file:
+For using a config file:
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar [-D] [--coordinator]
        [--no-backup] [--no-scaling] -c=<configPath>
@@ -68,7 +68,7 @@ Create/Delete schemas in the storage defined in the config file
       --ru=<ru>       Base resource unit (supported in DynamoDB, Cosmos DB)
 ```
 
-For Cosmos DB:
+For Cosmos DB (Deprecated. Please use the command using a config file instead):
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cosmos [-D]
        [--no-scaling] -f=<schemaFile> -h=<uri> -p=<key> [-r=<ru>]
@@ -82,7 +82,7 @@ Create/Delete Cosmos DB schemas
   -r, --ru=<ru>          Base resource unit
 ```
 
-For DynamoDB:
+For DynamoDB (Deprecated. Please use the command using a config file instead):
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --dynamo [-D]
        [--no-backup] [--no-scaling] [--endpoint-override=<endpointOverride>]
@@ -103,7 +103,7 @@ Create/Delete DynamoDB schemas
   -u, --user=<awsKeyId>      AWS access key ID
 ```
 
-For Cassandra:
+For Cassandra (Deprecated. Please use the command using a config file instead):
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --cassandra [-D]
        [-c=<compactionStrategy>] -f=<schemaFile> -h=<hostIp>
@@ -127,7 +127,7 @@ Create/Delete Cassandra schemas
   -u, --user=<user>     Cassandra user
 ```
 
-For a JDBC database:
+For a JDBC database (Deprecated. Please use the command using a config file instead):
 ```console
 Usage: java -jar scalardb-schema-loader-<version>.jar --jdbc [-D]
        -f=<schemaFile> -j=<url> -p=<password> -u=<user>
@@ -143,13 +143,13 @@ Create/Delete JDBC schemas
 
 ### Create namespaces and tables
 
-For using config file based from Scalar DB (Sample config file can be found [here](../conf/database.properties)):
+For using a config file (Sample config file can be found [here](../conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator]
 ```
   - if `--coordinator` is specified, the coordinator table will be created.
 
-For using CLI arguments fully for configuration:
+For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
 # For Cosmos DB
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json [-r BASE_RESOURCE_UNIT]
@@ -180,13 +180,13 @@ $ java -jar scalardb-schema-loader-<version>.jar --jdbc -j <JDBC URL> -u <USER> 
 
 ### Delete tables
 
-For using config file:
+For using config file (Sample config file can be found [here](../conf/database.properties)):
 ```console
 $ java -jar scalardb-schema-loader-<version>.jar --config <PATH_TO_CONFIG_FILE> -f schema.json [--coordinator] -D 
 ```
   - if `--coordinator` is specified, the coordinator table will be deleted.
   
-For using CLI arguments:
+For using CLI arguments fully for configuration (Deprecated. Please use the command using a config file instead):
 ```console
 # For Cosmos DB
 $ java -jar scalardb-schema-loader-<version>.jar --cosmos -h <COSMOS_DB_ACCOUNT_URI> -p <COSMOS_DB_KEY> -f schema.json -D
@@ -349,8 +349,8 @@ public class SchemaLoaderSample {
   public static int main(String... args) throws SchemaLoaderException {
     Path configFilePath = Paths.get("database.properties");
     Path schemaFilePath = Paths.get("sample_schema.json");
-    boolean createCoordinatorTable = true;
-    boolean deleteCoordinatorTable = true;
+    boolean createCoordinatorTable = true; // whether creating the coordinator table or not
+    boolean deleteCoordinatorTable = true; // whether deleting the coordinator table or not
 
     Map<String, String> options = new HashMap<>();
 
@@ -367,7 +367,7 @@ public class SchemaLoaderSample {
     SchemaLoader.load(configFilePath, schemaFilePath, options, createCoordinatorTable);
 
     // Delete tables
-    SchemaLoader.unload(configFilePath, schemaFilePath, options, deleteCoordinatorTable);
+    SchemaLoader.unload(configFilePath, schemaFilePath, deleteCoordinatorTable);
 
     return 0;
   }
@@ -375,19 +375,19 @@ public class SchemaLoaderSample {
 ```
 
 You can also create and delete a schema by passing a serialized schema JSON string (the raw text of a schema file).
-```
+```java
 // Create tables
 SchemaLoader.load(configFilePath, serializedSchemaJson, options, createCoordinatorTable);
 
 // Delete tables
-SchemaLoader.unload(configFilePath, serializedSchemaJson, options, deleteCoordinatorTable);
+SchemaLoader.unload(configFilePath, serializedSchemaJson, deleteCoordinatorTable);
 ```
 
 For Scalar DB configuration, a `Properties` object can be used as well.
-```
+```java
 // Create tables
 SchemaLoader.load(properties, serializedSchemaJson, options, createCoordinatorTable);
 
 // Delete tables
-SchemaLoader.unload(properties, serializedSchemaJson, options, deleteCoordinatorTable);
+SchemaLoader.unload(properties, serializedSchemaJson, deleteCoordinatorTable);
 ```

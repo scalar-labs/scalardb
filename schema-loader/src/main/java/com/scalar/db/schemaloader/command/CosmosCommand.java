@@ -16,7 +16,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "java -jar scalardb-schema-loader-<version>.jar --cosmos",
     description = "Create/Delete Cosmos DB schemas")
-public class CosmosCommand extends StorageSpecificCommandBase implements Callable<Integer> {
+public class CosmosCommand extends StorageSpecificCommand implements Callable<Integer> {
 
   @Option(
       names = {"-h", "--host"},
@@ -40,8 +40,7 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
 
   @Option(
       names = {"-r", "--ru"},
-      description = "Base resource unit",
-      defaultValue = "400")
+      description = "Base resource unit")
   private String ru;
 
   @Option(names = "--no-scaling", description = "Disable auto-scaling for Cosmos DB")
@@ -63,7 +62,6 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
 
   @Override
   public Integer call() throws SchemaLoaderException {
-
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, uri);
     props.setProperty(DatabaseConfig.PASSWORD, key);
@@ -81,16 +79,15 @@ public class CosmosCommand extends StorageSpecificCommandBase implements Callabl
           coordinatorNamespacePrefix + Coordinator.NAMESPACE);
     }
 
-    Map<String, String> metaOptions = new HashMap<>();
+    Map<String, String> options = new HashMap<>();
     if (ru != null) {
-      metaOptions.put(CosmosAdmin.REQUEST_UNIT, ru);
+      options.put(CosmosAdmin.REQUEST_UNIT, ru);
     }
     if (noScaling != null) {
-      metaOptions.put(CosmosAdmin.NO_SCALING, noScaling.toString());
+      options.put(CosmosAdmin.NO_SCALING, noScaling.toString());
     }
 
-    execute(props, metaOptions);
-
+    execute(props, options);
     return 0;
   }
 }

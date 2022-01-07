@@ -176,7 +176,7 @@ public class Coordinator {
         return false;
       }
       State other = (State) o;
-      // NOTICE: createdAt and metadata are not taken into account
+      // NOTICE: createdAt is not taken into account
       return (getId().equals(other.getId()) && getState().equals(other.getState()));
     }
 

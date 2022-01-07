@@ -58,7 +58,11 @@ public class ConsensusCommitConfig {
   private boolean activeTransactionsManagementEnabled;
 
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
-    this(new FileInputStream(propertiesFile));
+    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
+      props = new Properties();
+      props.load(stream);
+    }
+    load();
   }
 
   public ConsensusCommitConfig(InputStream stream) throws IOException {
