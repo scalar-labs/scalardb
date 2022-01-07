@@ -1,10 +1,8 @@
-package com.scalar.db.server.config;
+package com.scalar.db.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.server.LockFreeGateKeeper;
-import com.scalar.db.server.SynchronizedGateKeeper;
 import java.util.Properties;
 import org.junit.Test;
 

@@ -1,11 +1,8 @@
-package com.scalar.db.server.config;
+package com.scalar.db.server;
 
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getString;
 
-import com.scalar.db.server.GateKeeper;
-import com.scalar.db.server.LockFreeGateKeeper;
-import com.scalar.db.server.SynchronizedGateKeeper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.FileInputStream;
