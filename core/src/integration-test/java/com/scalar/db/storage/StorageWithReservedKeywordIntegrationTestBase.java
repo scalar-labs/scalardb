@@ -122,8 +122,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void get_GetWithPartitionKeyAndClusteringKeyGiven_ShouldRetrieveSingleResult()
-      throws ExecutionException {
+  public void
+      get_GetWithReservedKeywordAndPartitionKeyAndClusteringKeyGiven_ShouldRetrieveSingleResult()
+          throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -140,7 +141,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void get_GetWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+  public void get_GetWithReservedKeywordAndProjectionsGiven_ShouldRetrieveSpecifiedValues()
       throws ExecutionException {
     // Arrange
     populateRecords();
@@ -165,7 +166,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithProjectionsGiven_ShouldRetrieveSpecifiedValues()
+  public void scan_ScanWithReservedKeywordAndProjectionsGiven_ShouldRetrieveSpecifiedValues()
       throws IOException, ExecutionException {
     // Arrange
     populateRecords();
@@ -192,8 +193,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanWithPartitionKeyGivenAndResultsIteratedWithOne_ShouldReturnWhatsPut()
-      throws ExecutionException, IOException {
+  public void
+      scan_ScanWithReservedKeywordAndPartitionKeyGivenAndResultsIteratedWithOne_ShouldReturnWhatsPut()
+          throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -226,7 +228,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void put_SinglePutGiven_ShouldStoreProperly() throws ExecutionException {
+  public void put_WithReservedKeywordAndSinglePutGiven_ShouldStoreProperly()
+      throws ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
@@ -254,7 +257,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void put_PutWithIfGivenWhenSuchRecordExists_ShouldUpdateRecord()
+  public void put_PutWithReservedKeywordAndIfGivenWhenSuchRecordExists_ShouldUpdateRecord()
       throws ExecutionException {
     // Arrange
     int pKey = 0;
@@ -283,7 +286,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutGiven_ShouldStoreProperly() throws IOException, ExecutionException {
+  public void put_WithReservedKeywordAndMultiplePutGiven_ShouldStoreProperly()
+      throws IOException, ExecutionException {
     // Arrange
     int pKey = 0;
     int cKey = 0;
@@ -301,8 +305,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void put_MultiplePutWithDifferentConditionsGiven_ShouldStoreProperly()
-      throws IOException, ExecutionException {
+  public void
+      put_WithReservedKeywordAndMultiplePutWithDifferentConditionsGiven_ShouldStoreProperly()
+          throws IOException, ExecutionException {
     // Arrange
     List<Put> puts = preparePuts();
     storage.put(puts.get(1));
@@ -323,8 +328,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void delete_DeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
-      throws IOException, ExecutionException {
+  public void
+      delete_WithReservedKeywordAndDeleteWithPartitionKeyAndClusteringKeyGiven_ShouldDeleteSingleRecordProperly()
+          throws IOException, ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -341,8 +347,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void delete_MultipleDeleteWithDifferentConditionsGiven_ShouldDeleteProperly()
-      throws IOException, ExecutionException {
+  public void
+      delete_WithReservedKeywordAndMultipleDeleteWithDifferentConditionsGiven_ShouldDeleteProperly()
+          throws IOException, ExecutionException {
     // Arrange
     List<Put> puts = preparePuts();
     List<Delete> deletes = prepareDeletes();
@@ -366,8 +373,9 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void delete_DeleteWithIfGivenWhenSuchRecordExists_ShouldDeleteProperly()
-      throws ExecutionException {
+  public void
+      delete_WithReservedKeywordAndDeleteWithIfGivenWhenSuchRecordExists_ShouldDeleteProperly()
+          throws ExecutionException {
     // Arrange
     populateRecords();
     int pKey = 0;
@@ -391,7 +399,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void get_GetGivenForIndexedColumn_ShouldGet() throws ExecutionException {
+  public void get_WithReservedKeywordAndGetGivenForIndexedColumn_ShouldGet()
+      throws ExecutionException {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
@@ -407,7 +416,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   @Test
-  public void scan_ScanGivenForIndexedColumn_ShouldScan() throws ExecutionException, IOException {
+  public void scan_WithReservedKeywordAndScanGivenForIndexedColumn_ShouldScan()
+      throws ExecutionException, IOException {
     // Arrange
     populateRecords();
     int c3 = 3;

@@ -44,7 +44,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
 
-  private static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#exp_att_";
+  static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#exp_att_";
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new

@@ -119,7 +119,7 @@ public class SelectStatementHandlerTest {
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
-        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
+        "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
@@ -191,7 +191,7 @@ public class SelectStatementHandlerTest {
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
-        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
+        "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();

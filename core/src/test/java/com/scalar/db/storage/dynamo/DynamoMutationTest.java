@@ -126,10 +126,12 @@ public class DynamoMutationTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            ANY_NAME_3
+            ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
+                + ANY_NAME_3
                 + " = "
                 + DynamoOperation.CONDITION_VALUE_ALIAS
                 + "0 AND "
+                + ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
                 + ANY_NAME_4
                 + " > "
                 + DynamoOperation.CONDITION_VALUE_ALIAS

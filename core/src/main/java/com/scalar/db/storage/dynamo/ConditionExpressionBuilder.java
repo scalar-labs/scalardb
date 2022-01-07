@@ -26,7 +26,7 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
   private final String alias;
   private int index;
   private final Map<String, String> conditionAttributeNameMap;
-  private static final String ATTRIBUTE_NAME_PREFIX = "#con_att_";
+  static final String ATTRIBUTE_NAME_PREFIX = "#con_att_";
 
   public ConditionExpressionBuilder(String alias) {
     this.expressions = new ArrayList<>();

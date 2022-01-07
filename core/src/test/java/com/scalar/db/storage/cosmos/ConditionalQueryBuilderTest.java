@@ -70,12 +70,14 @@ public class ConditionalQueryBuilderTest {
         .isEqualTo(
             "select * from Record r where (r.id = '"
                 + ANY_ID
-                + "' and r.values."
+                + "' and r.values[\""
                 + ANY_NAME_1
+                + "\"]"
                 + " = "
                 + ANY_INT
-                + " and r.values."
+                + " and r.values[\""
                 + ANY_NAME_2
+                + "\"]"
                 + " > "
                 + ANY_INT
                 + ")");
@@ -94,8 +96,8 @@ public class ConditionalQueryBuilderTest {
     condition.accept(builder);
 
     // Assert
-    verify(select).and(DSL.field("r.values." + ANY_NAME_1).equal(ANY_INT));
-    verify(select).and(DSL.field("r.values." + ANY_NAME_2).greaterThan(ANY_INT));
+    verify(select).and(DSL.field("r.values[\"" + ANY_NAME_1 + "\"]").equal(ANY_INT));
+    verify(select).and(DSL.field("r.values[\"" + ANY_NAME_2 + "\"]").greaterThan(ANY_INT));
   }
 
   @Test
@@ -137,7 +139,7 @@ public class ConditionalQueryBuilderTest {
     condition.accept(builder);
 
     // Assert
-    verify(select).and(DSL.field("r.values." + ANY_NAME_1).equal(ANY_INT));
-    verify(select).and(DSL.field("r.values." + ANY_NAME_2).greaterThan(ANY_INT));
+    verify(select).and(DSL.field("r.values[\"" + ANY_NAME_1 + "\"]").equal(ANY_INT));
+    verify(select).and(DSL.field("r.values[\"" + ANY_NAME_2 + "\"]").greaterThan(ANY_INT));
   }
 }
