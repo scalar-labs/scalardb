@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common;
+package com.scalar.db.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -10,7 +10,6 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
@@ -25,7 +24,6 @@ import org.mockito.MockitoAnnotations;
 public class TableMetadataManagerTest {
 
   @Mock private DistributedStorageAdmin admin;
-  @Mock DatabaseConfig config;
 
   @Before
   public void setUp() throws Exception {
@@ -36,8 +34,7 @@ public class TableMetadataManagerTest {
   public void getTableMetadata_CalledOnce_ShouldCallDistributedStorageAdminOnce()
       throws ExecutionException {
     // Arrange
-    when(config.getTableMetadataCacheExpirationTimeSecs()).thenReturn(-1L);
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, config);
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, -1);
 
     TableMetadata expectedTableMetadata =
         TableMetadata.newBuilder()
@@ -54,7 +51,6 @@ public class TableMetadataManagerTest {
             new Get(new Key("c1", "aaa")).forNamespace("ns").forTable("tbl"));
 
     // Assert
-    verify(config).getTableMetadataCacheExpirationTimeSecs();
     verify(admin).getTableMetadata(anyString(), anyString());
     assertThat(actualTableMetadata).isEqualTo(expectedTableMetadata);
   }
@@ -63,8 +59,7 @@ public class TableMetadataManagerTest {
   public void getTableMetadata_CalledTwice_ShouldCallDistributedStorageAdminOnlyOnce()
       throws ExecutionException {
     // Arrange
-    when(config.getTableMetadataCacheExpirationTimeSecs()).thenReturn(-1L);
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, config);
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, -1);
 
     TableMetadata expectedTableMetadata =
         TableMetadata.newBuilder()
@@ -82,7 +77,6 @@ public class TableMetadataManagerTest {
     TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
 
     // Assert
-    verify(config).getTableMetadataCacheExpirationTimeSecs();
     verify(admin).getTableMetadata(anyString(), anyString());
     assertThat(actualTableMetadata).isEqualTo(expectedTableMetadata);
   }
@@ -91,8 +85,7 @@ public class TableMetadataManagerTest {
   public void getTableMetadata_CalledAfterCacheExpiration_ShouldCallDistributedStorageAdminAgain()
       throws ExecutionException {
     // Arrange
-    when(config.getTableMetadataCacheExpirationTimeSecs()).thenReturn(1L); // one second
-    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, config);
+    TableMetadataManager tableMetadataManager = new TableMetadataManager(admin, 1L); // one second
 
     TableMetadata expectedTableMetadata =
         TableMetadata.newBuilder()
@@ -112,7 +105,6 @@ public class TableMetadataManagerTest {
     TableMetadata actualTableMetadata = tableMetadataManager.getTableMetadata(get);
 
     // Assert
-    verify(config).getTableMetadataCacheExpirationTimeSecs();
     verify(admin, times(2)).getTableMetadata(anyString(), anyString());
     assertThat(actualTableMetadata).isEqualTo(expectedTableMetadata);
   }

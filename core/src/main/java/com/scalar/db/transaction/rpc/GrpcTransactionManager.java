@@ -14,10 +14,10 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.DistributedTransactionGrpc;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
@@ -71,7 +71,9 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
             .build();
     stub = DistributedTransactionGrpc.newStub(channel);
     blockingStub = DistributedTransactionGrpc.newBlockingStub(channel);
-    metadataManager = new TableMetadataManager(new GrpcAdmin(channel, config), config);
+    metadataManager =
+        new TableMetadataManager(
+            new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

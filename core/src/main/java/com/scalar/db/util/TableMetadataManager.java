@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common;
+package com.scalar.db.util;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -6,7 +6,6 @@ import com.google.common.cache.LoadingCache;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,11 +17,10 @@ public class TableMetadataManager {
 
   private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;
 
-  public TableMetadataManager(DistributedStorageAdmin admin, DatabaseConfig config) {
+  public TableMetadataManager(DistributedStorageAdmin admin, long cacheExpirationTimeSecs) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-    long tableMetadataCacheExpirationTimeSecs = config.getTableMetadataCacheExpirationTimeSecs();
-    if (tableMetadataCacheExpirationTimeSecs > 0) {
-      builder.expireAfterWrite(tableMetadataCacheExpirationTimeSecs, TimeUnit.SECONDS);
+    if (cacheExpirationTimeSecs > 0) {
+      builder.expireAfterWrite(cacheExpirationTimeSecs, TimeUnit.SECONDS);
     }
     tableMetadataCache =
         builder.build(

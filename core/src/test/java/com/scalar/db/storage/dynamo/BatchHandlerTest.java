@@ -19,7 +19,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;

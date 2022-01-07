@@ -17,9 +17,9 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -59,7 +59,10 @@ public class Cassandra implements DistributedStorage {
     batch = new BatchHandler(session, handlers);
     LOGGER.info("Cassandra object is created properly.");
 
-    metadataManager = new TableMetadataManager(new CassandraAdmin(clusterManager, config), config);
+    metadataManager =
+        new TableMetadataManager(
+            new CassandraAdmin(clusterManager, config),
+            config.getTableMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
 
     namespace = Optional.empty();
