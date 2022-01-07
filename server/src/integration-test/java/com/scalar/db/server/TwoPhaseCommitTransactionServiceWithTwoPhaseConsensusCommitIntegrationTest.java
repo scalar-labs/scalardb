@@ -28,7 +28,6 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitAdmin;

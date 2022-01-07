@@ -2,7 +2,6 @@ package com.scalar.db.server;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.storage.AdminIntegrationTestBase;
 import java.io.IOException;
 import org.junit.AfterClass;

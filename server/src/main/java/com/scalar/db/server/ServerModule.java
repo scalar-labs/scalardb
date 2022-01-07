@@ -1,4 +1,4 @@
-package com.scalar.db.server.service;
+package com.scalar.db.server;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -8,9 +8,6 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.server.GateKeeper;
-import com.scalar.db.server.Metrics;
-import com.scalar.db.server.config.ServerConfig;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import com.scalar.db.storage.rpc.GrpcConfig;
