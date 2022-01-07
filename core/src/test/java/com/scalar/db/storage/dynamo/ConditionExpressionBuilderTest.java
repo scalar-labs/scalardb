@@ -54,10 +54,10 @@ public class ConditionExpressionBuilderTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
+            ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
                 + ANY_NAME_1
                 + " = :cval0 AND "
-                + ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
+                + ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
                 + ANY_NAME_2
                 + " > :cval1");
   }
@@ -109,10 +109,10 @@ public class ConditionExpressionBuilderTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
+            ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
                 + ANY_NAME_1
                 + " = :cval0 AND "
-                + ConditionExpressionBuilder.ATTRIBUTE_NAME_PREFIX
+                + ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
                 + ANY_NAME_2
                 + " > :cval1");
   }

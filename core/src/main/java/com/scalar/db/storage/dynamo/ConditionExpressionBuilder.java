@@ -26,7 +26,7 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
   private final String alias;
   private int index;
   private final Map<String, String> conditionAttributeNameMap;
-  static final String ATTRIBUTE_NAME_PREFIX = "#con_att_";
+  static final String CONDITION_ATTRIBUTE_NAME_PREFIX = "#con_att_";
 
   public ConditionExpressionBuilder(String alias) {
     this.expressions = new ArrayList<>();
@@ -96,7 +96,7 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
 
   private String createConditionWith(ConditionalExpression e) {
     List<String> elements;
-    String elementName = ATTRIBUTE_NAME_PREFIX + e.getName();
+    String elementName = CONDITION_ATTRIBUTE_NAME_PREFIX + e.getName();
     conditionAttributeNameMap.put(elementName, e.getName());
     switch (e.getOperator()) {
       case EQ:
