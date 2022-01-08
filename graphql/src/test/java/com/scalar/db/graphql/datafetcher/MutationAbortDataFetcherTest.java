@@ -34,7 +34,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_WhenTransactionFound_ShouldRemoveTransactionFromContext() throws Exception {
     // Act
-    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     assertThat(graphQlContext.hasKey(Constants.CONTEXT_TRANSACTION_KEY)).isFalse();
