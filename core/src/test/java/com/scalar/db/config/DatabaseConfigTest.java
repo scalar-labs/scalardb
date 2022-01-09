@@ -9,8 +9,8 @@ import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
@@ -235,7 +235,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
   }
 
   @Test
@@ -340,7 +340,7 @@ public class DatabaseConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(JdbcTransactionManager.class);
   }
 

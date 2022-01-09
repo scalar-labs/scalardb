@@ -51,7 +51,7 @@ public class JdbcDatabase implements DistributedStorage {
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(new JdbcDatabaseAdmin(tableMetadataDataSource, config), config);
+        new TableMetadataManager(new JdbcAdmin(tableMetadataDataSource, config), config);
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
