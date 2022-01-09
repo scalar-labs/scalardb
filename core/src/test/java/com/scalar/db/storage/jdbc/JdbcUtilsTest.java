@@ -123,4 +123,35 @@ public class JdbcUtilsTest {
 
     tableMetadataDataSource.close();
   }
+
+  @Test
+  public void initDataSourceForAdmin_ShouldReturnProperDataSource() throws SQLException {
+    // Arrange
+    Properties properties = new Properties();
+    properties.setProperty(DatabaseConfig.CONTACT_POINTS, "jdbc:sqlserver://localhost:1433");
+    properties.setProperty(DatabaseConfig.USERNAME, "user");
+    properties.setProperty(DatabaseConfig.PASSWORD, "sqlserver");
+    properties.setProperty(DatabaseConfig.STORAGE, "jdbc");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MIN_IDLE, "100");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_IDLE, "200");
+    properties.setProperty(JdbcConfig.ADMIN_CONNECTION_POOL_MAX_TOTAL, "300");
+
+    JdbcConfig config = new JdbcConfig(properties);
+
+    // Act
+    BasicDataSource adminDataSource = JdbcUtils.initDataSourceForAdmin(config);
+
+    // Assert
+    assertThat(adminDataSource.getUrl()).isEqualTo("jdbc:sqlserver://localhost:1433");
+    assertThat(adminDataSource.getDriver().getClass().getName())
+        .isEqualTo("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+    assertThat(adminDataSource.getUsername()).isEqualTo("user");
+    assertThat(adminDataSource.getPassword()).isEqualTo("sqlserver");
+
+    assertThat(adminDataSource.getMinIdle()).isEqualTo(100);
+    assertThat(adminDataSource.getMaxIdle()).isEqualTo(200);
+    assertThat(adminDataSource.getMaxTotal()).isEqualTo(300);
+
+    adminDataSource.close();
+  }
 }
