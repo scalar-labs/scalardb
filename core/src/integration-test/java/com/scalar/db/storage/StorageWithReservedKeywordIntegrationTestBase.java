@@ -42,19 +42,17 @@ import org.junit.Test;
 
 @SuppressFBWarnings({"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"})
 public abstract class StorageWithReservedKeywordIntegrationTestBase {
-
-  protected static String NAMESPACE = "integration_testing";
-  protected static String TABLE = "test_table";
-  protected static String COL_NAME1 = "c1";
-  protected static String COL_NAME2 = "c2";
-  protected static String COL_NAME3 = "c3";
-  protected static String COL_NAME4 = "c4";
-  protected static String COL_NAME5 = "c5";
-
   private static boolean initialized;
   private static DistributedStorage storage;
   private static DistributedStorageAdmin admin;
+
   private static String namespace;
+  private static String tableName;
+  private static String columnName1;
+  private static String columnName2;
+  private static String columnName3;
+  private static String columnName4;
+  private static String columnName5;
 
   @Before
   public void setUp() throws Exception {
@@ -63,38 +61,54 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
       StorageFactory factory = new StorageFactory(getDatabaseConfig());
       admin = factory.getAdmin();
       namespace = getNamespace();
+      tableName = getTableName();
+      columnName1 = getColumnName1();
+      columnName2 = getColumnName2();
+      columnName3 = getColumnName3();
+      columnName4 = getColumnName4();
+      columnName5 = getColumnName5();
       createTable();
       storage = factory.getStorage();
       initialized = true;
     }
 
     truncateTable();
-    storage.with(namespace, TABLE);
+    storage.with(namespace, tableName);
   }
 
-  protected void initialize() throws Exception {}
+  protected void initialize() {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
-  protected String getNamespace() {
-    return NAMESPACE;
-  }
+  protected abstract String getNamespace();
+
+  protected abstract String getTableName();
+
+  protected abstract String getColumnName1();
+
+  protected abstract String getColumnName2();
+
+  protected abstract String getColumnName3();
+
+  protected abstract String getColumnName4();
+
+  protected abstract String getColumnName5();
 
   private void createTable() throws ExecutionException {
     Map<String, String> options = getCreateOptions();
     admin.createNamespace(namespace, true, options);
     admin.createTable(
         namespace,
-        TABLE,
+        tableName,
         TableMetadata.newBuilder()
-            .addColumn(COL_NAME1, DataType.INT)
-            .addColumn(COL_NAME2, DataType.TEXT)
-            .addColumn(COL_NAME3, DataType.INT)
-            .addColumn(COL_NAME4, DataType.INT)
-            .addColumn(COL_NAME5, DataType.BOOLEAN)
-            .addPartitionKey(COL_NAME1)
-            .addClusteringKey(COL_NAME4)
-            .addSecondaryIndex(COL_NAME3)
+            .addColumn(columnName1, DataType.INT)
+            .addColumn(columnName2, DataType.TEXT)
+            .addColumn(columnName3, DataType.INT)
+            .addColumn(columnName4, DataType.INT)
+            .addColumn(columnName5, DataType.BOOLEAN)
+            .addPartitionKey(columnName1)
+            .addClusteringKey(columnName4)
+            .addSecondaryIndex(columnName3)
             .build(),
         true,
         options);
@@ -105,7 +119,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   private void truncateTable() throws ExecutionException {
-    admin.truncateTable(namespace, TABLE);
+    admin.truncateTable(namespace, tableName);
   }
 
   @AfterClass
@@ -117,7 +131,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   private static void deleteTable() throws ExecutionException {
-    admin.dropTable(namespace, TABLE);
+    admin.dropTable(namespace, tableName);
     admin.dropNamespace(namespace);
   }
 
@@ -135,9 +149,10 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get().getValue(columnName1))
+        .isEqualTo(Optional.of(new IntValue(columnName1, pKey)));
+    assertThat(actual.get().getValue(columnName4))
+        .isEqualTo(Optional.of(new IntValue(columnName4, 0)));
   }
 
   @Test
@@ -150,19 +165,20 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Act
     Get get = prepareGet(pKey, cKey);
-    get.withProjection(COL_NAME1).withProjection(COL_NAME2).withProjection(COL_NAME3);
+    get.withProjection(columnName1).withProjection(columnName2).withProjection(columnName3);
     Optional<Result> actual = storage.get(get);
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
-    assertThat(actual.get().getValue(COL_NAME5).isPresent()).isFalse();
+    assertThat(actual.get().getValue(columnName1))
+        .isEqualTo(Optional.of(new IntValue(columnName1, pKey)));
+    assertThat(actual.get().getValue(columnName2))
+        .isEqualTo(Optional.of(new TextValue(columnName2, Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(columnName3))
+        .isEqualTo(Optional.of(new IntValue(columnName3, pKey + cKey)));
+    assertThat(actual.get().getValue(columnName4).isPresent())
+        .isTrue(); // since it's clustering key
+    assertThat(actual.get().getValue(columnName5).isPresent()).isFalse();
   }
 
   @Test
@@ -174,21 +190,21 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Act
     Scan scan =
-        new Scan(new Key(COL_NAME1, pKey))
-            .withProjection(COL_NAME1)
-            .withProjection(COL_NAME2)
-            .withProjection(COL_NAME3);
+        new Scan(new Key(columnName1, pKey))
+            .withProjection(columnName1)
+            .withProjection(columnName2)
+            .withProjection(columnName3);
     List<Result> actual = scanAll(scan);
 
     // Assert
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertScanResultWithoutOrdering(actual, pKey, columnName4, Arrays.asList(0, 1, 2));
     actual.forEach(
         a -> {
-          assertThat(a.getValue(COL_NAME1).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME2).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME3).isPresent()).isTrue();
-          assertThat(a.getValue(COL_NAME4).isPresent()).isTrue(); // since it's clustering key
-          assertThat(a.getValue(COL_NAME5).isPresent()).isFalse();
+          assertThat(a.getValue(columnName1).isPresent()).isTrue();
+          assertThat(a.getValue(columnName2).isPresent()).isTrue();
+          assertThat(a.getValue(columnName3).isPresent()).isTrue();
+          assertThat(a.getValue(columnName4).isPresent()).isTrue(); // since it's clustering key
+          assertThat(a.getValue(columnName5).isPresent()).isFalse();
         });
   }
 
@@ -201,7 +217,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
 
     // Act
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan = new Scan(new Key(columnName1, pKey));
     Scanner scanner = storage.scan(scan);
 
     // Assert
@@ -222,7 +238,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     result = scanner.one();
     assertThat(result.isPresent()).isFalse();
 
-    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertScanResultWithoutOrdering(results, pKey, columnName4, Arrays.asList(0, 1, 2));
 
     scanner.close();
   }
@@ -234,8 +250,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = new Key(columnName1, pKey);
+    Key clusteringKey = new Key(columnName4, cKey);
     Get get = new Get(partitionKey, clusteringKey);
 
     // Act
@@ -244,16 +260,16 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(actual.get().getValue(COL_NAME2))
-        .isEqualTo(Optional.of(new TextValue(COL_NAME2, Integer.toString(pKey + cKey))));
-    assertThat(actual.get().getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
-    assertThat(actual.get().getValue(COL_NAME4))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(actual.get().getValue(COL_NAME5))
-        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, cKey % 2 == 0)));
+    assertThat(actual.get().getValue(columnName1))
+        .isEqualTo(Optional.of(new IntValue(columnName1, pKey)));
+    assertThat(actual.get().getValue(columnName2))
+        .isEqualTo(Optional.of(new TextValue(columnName2, Integer.toString(pKey + cKey))));
+    assertThat(actual.get().getValue(columnName3))
+        .isEqualTo(Optional.of(new IntValue(columnName3, pKey + cKey)));
+    assertThat(actual.get().getValue(columnName4))
+        .isEqualTo(Optional.of(new IntValue(columnName4, cKey)));
+    assertThat(actual.get().getValue(columnName5))
+        .isEqualTo(Optional.of(new BooleanValue(columnName5, cKey % 2 == 0)));
   }
 
   @Test
@@ -271,18 +287,20 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
         .withCondition(
             new PutIf(
                 new ConditionalExpression(
-                    COL_NAME3, new IntValue(pKey + cKey), ConditionalExpression.Operator.EQ)));
-    puts.get(0).withValue(COL_NAME3, Integer.MAX_VALUE);
+                    columnName3, new IntValue(pKey + cKey), ConditionalExpression.Operator.EQ)));
+    puts.get(0).withValue(columnName3, Integer.MAX_VALUE);
     assertThatCode(() -> storage.put(puts.get(0))).doesNotThrowAnyException();
 
     // Assert
     Optional<Result> actual = storage.get(get);
     assertThat(actual.isPresent()).isTrue();
     Result result = actual.get();
-    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, pKey)));
-    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
-    assertThat(result.getValue(COL_NAME3))
-        .isEqualTo(Optional.of(new IntValue(COL_NAME3, Integer.MAX_VALUE)));
+    assertThat(result.getValue(columnName1))
+        .isEqualTo(Optional.of(new IntValue(columnName1, pKey)));
+    assertThat(result.getValue(columnName4))
+        .isEqualTo(Optional.of(new IntValue(columnName4, cKey)));
+    assertThat(result.getValue(columnName3))
+        .isEqualTo(Optional.of(new IntValue(columnName3, Integer.MAX_VALUE)));
   }
 
   @Test
@@ -292,7 +310,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     int pKey = 0;
     int cKey = 0;
     List<Put> puts = preparePuts();
-    Scan scan = new Scan(new Key(COL_NAME1, pKey));
+    Scan scan = new Scan(new Key(columnName1, pKey));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1), puts.get(2))))
@@ -301,7 +319,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     // Assert
     List<Result> results = scanAll(scan);
     assertScanResultWithoutOrdering(
-        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
+        results, pKey, columnName4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
   }
 
   @Test
@@ -316,15 +334,15 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
         .withCondition(
             new PutIf(
                 new ConditionalExpression(
-                    COL_NAME2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
+                    columnName2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
 
     // Act
     assertThatCode(() -> storage.put(Arrays.asList(puts.get(0), puts.get(1))))
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
-    assertScanResultWithoutOrdering(results, 0, COL_NAME4, Arrays.asList(0, 1));
+    List<Result> results = scanAll(new Scan(new Key(columnName1, 0)));
+    assertScanResultWithoutOrdering(results, 0, columnName4, Arrays.asList(0, 1));
   }
 
   @Test
@@ -335,7 +353,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
+    Key partitionKey = new Key(columnName1, pKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
@@ -343,7 +361,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(partitionKey));
-    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(cKey + 1, cKey + 2));
+    assertScanResultWithoutOrdering(results, pKey, columnName4, Arrays.asList(cKey + 1, cKey + 2));
   }
 
   @Test
@@ -360,7 +378,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
         .withCondition(
             new DeleteIf(
                 new ConditionalExpression(
-                    COL_NAME2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
+                    columnName2, new TextValue("1"), ConditionalExpression.Operator.EQ)));
 
     // Act
     assertThatCode(
@@ -368,7 +386,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
         .doesNotThrowAnyException();
 
     // Assert
-    List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
+    List<Result> results = scanAll(new Scan(new Key(columnName1, 0)));
     assertThat(results.size()).isEqualTo(0);
   }
 
@@ -380,15 +398,15 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     populateRecords();
     int pKey = 0;
     int cKey = 0;
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = new Key(columnName1, pKey);
+    Key clusteringKey = new Key(columnName4, cKey);
 
     // Act
     Delete delete = prepareDelete(pKey, cKey);
     delete.withCondition(
         new DeleteIf(
             new ConditionalExpression(
-                COL_NAME2,
+                columnName2,
                 new TextValue(Integer.toString(pKey)),
                 ConditionalExpression.Operator.EQ)));
     assertThatCode(() -> storage.delete(delete)).doesNotThrowAnyException();
@@ -404,15 +422,17 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     // Arrange
     storage.put(preparePuts().get(0)); // (0,0)
     int c3 = 0;
-    Get get = new Get(new Key(COL_NAME3, c3));
+    Get get = new Get(new Key(columnName3, c3));
 
     // Act
     Optional<Result> actual = storage.get(get);
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(actual.get().getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
-    assertThat(actual.get().getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(actual.get().getValue(columnName1))
+        .isEqualTo(Optional.of(new IntValue(columnName1, 0)));
+    assertThat(actual.get().getValue(columnName4))
+        .isEqualTo(Optional.of(new IntValue(columnName4, 0)));
   }
 
   @Test
@@ -421,7 +441,7 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     // Arrange
     populateRecords();
     int c3 = 3;
-    Scan scan = new Scan(new Key(COL_NAME3, c3));
+    Scan scan = new Scan(new Key(columnName3, c3));
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -432,11 +452,11 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
         new ArrayList<>(
             Arrays.asList(Arrays.asList(1, 2), Arrays.asList(2, 1), Arrays.asList(3, 0)));
     for (Result result : actual) {
-      assertThat(result.getValue(COL_NAME1).isPresent()).isTrue();
-      assertThat(result.getValue(COL_NAME4).isPresent()).isTrue();
+      assertThat(result.getValue(columnName1).isPresent()).isTrue();
+      assertThat(result.getValue(columnName4).isPresent()).isTrue();
 
-      int col1Val = result.getValue(COL_NAME1).get().getAsInt();
-      int col4Val = result.getValue(COL_NAME4).get().getAsInt();
+      int col1Val = result.getValue(columnName1).get().getAsInt();
+      int col4Val = result.getValue(columnName4).get().getAsInt();
       List<Integer> col1AndCol4 = Arrays.asList(col1Val, col4Val);
       assertThat(expectedValues).contains(col1AndCol4);
       expectedValues.remove(col1AndCol4);
@@ -451,8 +471,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   private Get prepareGet(int pKey, int cKey) {
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = new Key(columnName1, pKey);
+    Key clusteringKey = new Key(columnName4, cKey);
     return new Get(partitionKey, clusteringKey);
   }
 
@@ -465,13 +485,13 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(COL_NAME1, i);
-                          Key clusteringKey = new Key(COL_NAME4, j);
+                          Key partitionKey = new Key(columnName1, i);
+                          Key clusteringKey = new Key(columnName4, j);
                           Put put =
                               new Put(partitionKey, clusteringKey)
-                                  .withValue(COL_NAME2, Integer.toString(i + j))
-                                  .withValue(COL_NAME3, i + j)
-                                  .withValue(COL_NAME5, j % 2 == 0);
+                                  .withValue(columnName2, Integer.toString(i + j))
+                                  .withValue(columnName3, i + j)
+                                  .withValue(columnName5, j % 2 == 0);
                           puts.add(put);
                         }));
 
@@ -479,8 +499,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   }
 
   private Delete prepareDelete(int pKey, int cKey) {
-    Key partitionKey = new Key(COL_NAME1, pKey);
-    Key clusteringKey = new Key(COL_NAME4, cKey);
+    Key partitionKey = new Key(columnName1, pKey);
+    Key clusteringKey = new Key(columnName4, cKey);
     return new Delete(partitionKey, clusteringKey);
   }
 
@@ -493,8 +513,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
                 IntStream.range(0, 3)
                     .forEach(
                         j -> {
-                          Key partitionKey = new Key(COL_NAME1, i);
-                          Key clusteringKey = new Key(COL_NAME4, j);
+                          Key partitionKey = new Key(columnName1, i);
+                          Key clusteringKey = new Key(columnName4, j);
                           Delete delete = new Delete(partitionKey, clusteringKey);
                           deletes.add(delete);
                         }));
@@ -517,8 +537,8 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     assertThat(actual.size()).isEqualTo(expectedValues.size());
 
     for (Result result : actual) {
-      assertThat(result.getValue(COL_NAME1))
-          .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
+      assertThat(result.getValue(columnName1))
+          .isEqualTo(Optional.of(new IntValue(columnName1, expectedPartitionKeyValue)));
       assertThat(result.getValue(checkedColumn).isPresent()).isTrue();
 
       int actualClusteringKeyValue = result.getValue(checkedColumn).get().getAsInt();

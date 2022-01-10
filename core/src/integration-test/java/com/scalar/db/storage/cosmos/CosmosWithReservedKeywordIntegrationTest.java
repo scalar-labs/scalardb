@@ -2,24 +2,11 @@ package com.scalar.db.storage.cosmos;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.StorageWithReservedKeywordIntegrationTestBase;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public class CosmosWithReservedKeywordIntegrationTest
     extends StorageWithReservedKeywordIntegrationTestBase {
-  @Override
-  protected void initialize() {
-    // reserved keywords in Cosmos
-    NAMESPACE = "between";
-    TABLE = "distinct";
-    COL_NAME1 = "from";
-    COL_NAME2 = "to";
-    COL_NAME3 = "value";
-    COL_NAME4 = "like";
-    COL_NAME5 = "top";
-  }
 
   @Override
   protected DatabaseConfig getDatabaseConfig() {
@@ -28,9 +15,45 @@ public class CosmosWithReservedKeywordIntegrationTest
 
   @Override
   protected String getNamespace() {
-    String namespace = super.getNamespace();
+    String namespace = "reserved_keyword_test";
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
     return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
+  }
+
+  @Override
+  protected String getTableName() {
+    // a reserved keyword in Cosmos DB
+    return "distinct";
+  }
+
+  @Override
+  protected String getColumnName1() {
+    // a reserved keyword in Cosmos DB
+    return "from";
+  }
+
+  @Override
+  protected String getColumnName2() {
+    // a reserved keyword in Cosmos DB
+    return "to";
+  }
+
+  @Override
+  protected String getColumnName3() {
+    // a reserved keyword in Cosmos DB
+    return "value";
+  }
+
+  @Override
+  protected String getColumnName4() {
+    // a reserved keyword in Cosmos DB
+    return "like";
+  }
+
+  @Override
+  protected String getColumnName5() {
+    // a reserved keyword in Cosmos DB
+    return "top";
   }
 
   @Override

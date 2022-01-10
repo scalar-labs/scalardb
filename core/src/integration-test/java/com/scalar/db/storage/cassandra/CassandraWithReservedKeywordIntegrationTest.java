@@ -2,21 +2,50 @@ package com.scalar.db.storage.cassandra;
 
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.storage.StorageWithReservedKeywordIntegrationTestBase;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public class CassandraWithReservedKeywordIntegrationTest
     extends StorageWithReservedKeywordIntegrationTestBase {
+
   @Override
-  protected void initialize() {
-    // reserved keywords in Cassandra
-    NAMESPACE = "keyspace";
-    TABLE = "table";
-    COL_NAME1 = "from";
-    COL_NAME2 = "to";
-    COL_NAME3 = "one";
-    COL_NAME4 = "two";
-    COL_NAME5 = "password";
+  protected String getNamespace() {
+    // a reserved keyword in Cassandra
+    return "keyspace";
+  }
+
+  @Override
+  protected String getTableName() {
+    // a reserved keyword in Cassandra
+    return "table";
+  }
+
+  @Override
+  protected String getColumnName1() {
+    // a reserved keyword in Cassandra
+    return "from";
+  }
+
+  @Override
+  protected String getColumnName2() {
+    // a reserved keyword in Cassandra
+    return "to";
+  }
+
+  @Override
+  protected String getColumnName3() {
+    // a reserved keyword in Cassandra
+    return "one";
+  }
+
+  @Override
+  protected String getColumnName4() {
+    // a reserved keyword in Cassandra
+    return "two";
+  }
+
+  @Override
+  protected String getColumnName5() {
+    // a reserved keyword in Cassandra
+    return "password";
   }
 
   @Override
