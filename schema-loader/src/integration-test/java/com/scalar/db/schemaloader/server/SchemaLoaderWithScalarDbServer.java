@@ -4,8 +4,8 @@ import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.schemaloader.SchemaLoaderIntegrationTestBase;
 import com.scalar.db.server.ScalarDbServer;
+import com.scalar.db.server.ServerConfig;
 import com.scalar.db.server.ServerEnv;
-import com.scalar.db.server.config.ServerConfig;
 import java.io.IOException;
 import org.junit.AfterClass;
 

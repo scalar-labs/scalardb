@@ -4,14 +4,11 @@ import com.google.common.base.Strings;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.server.config.ServerConfig;
-import com.scalar.db.server.service.ServerModule;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
-import java.io.FileInputStream;
+import java.io.File;
 import java.io.IOException;
-import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -50,11 +47,7 @@ public class ScalarDbServer implements Callable<Integer> {
 
   public void start() throws IOException {
     if (configFile != null) {
-      Properties properties = new Properties();
-      try (FileInputStream fis = new FileInputStream(configFile)) {
-        properties.load(fis);
-      }
-      config = new ServerConfig(properties);
+      config = new ServerConfig(new File(configFile));
     }
 
     Injector injector =
