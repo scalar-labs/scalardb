@@ -32,7 +32,7 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 
 @SuppressFBWarnings({"OBL_UNSATISFIED_OBLIGATION", "ODR_OPEN_DATABASE_RESOURCE"})
-public class JdbcDatabaseAdminTest {
+public class JdbcAdminTest {
 
   @Mock private BasicDataSource dataSource;
   @Mock private Connection connection;
@@ -148,7 +148,7 @@ public class JdbcDatabaseAdminTest {
     if (tableMetadataSchema.isPresent()) {
       when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
     }
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     TableMetadata actualMetadata = admin.getTableMetadata(namespace, table);
@@ -215,7 +215,7 @@ public class JdbcDatabaseAdminTest {
       throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
     List<Statement> mockedStatements = new ArrayList<>();
 
     for (int i = 0; i < expectedSqlStatements.length; i++) {
@@ -371,7 +371,7 @@ public class JdbcDatabaseAdminTest {
             mockedStatements.subList(1, mockedStatements.size()).toArray(new Statement[0]));
     when(dataSource.getConnection()).thenReturn(connection);
 
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     admin.createTable(namespace, table, metadata, new HashMap<>());
@@ -638,7 +638,7 @@ public class JdbcDatabaseAdminTest {
     if (tableMetadataSchema.isPresent()) {
       when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
     }
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     admin.createTable(namespace, table, metadata, new HashMap<>());
@@ -683,7 +683,7 @@ public class JdbcDatabaseAdminTest {
     // Arrange
     String namespace = "my_ns";
     String table = "foo_table";
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     Statement truncateTableStatement = mock(Statement.class);
     when(connection.createStatement()).thenReturn(truncateTableStatement);
@@ -835,7 +835,7 @@ public class JdbcDatabaseAdminTest {
     if (tableMetadataSchema.isPresent()) {
       when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
     }
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     admin.dropTable(namespace, table);
@@ -978,7 +978,7 @@ public class JdbcDatabaseAdminTest {
     if (tableMetadataSchema.isPresent()) {
       when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
     }
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     admin.dropTable(namespace, table);
@@ -1017,7 +1017,7 @@ public class JdbcDatabaseAdminTest {
       RdbEngine rdbEngine, String expectedDropSchemaStatement) throws Exception {
     // Arrange
     String namespace = "my_ns";
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     Connection connection = mock(Connection.class);
     Statement dropSchemaStatement = mock(Statement.class);
@@ -1127,7 +1127,7 @@ public class JdbcDatabaseAdminTest {
     if (tableMetadataSchema.isPresent()) {
       when(config.getTableMetadataSchema()).thenReturn(tableMetadataSchema);
     }
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     // Act
     Set<String> actualTableNames = admin.getNamespaceTableNames(namespace);
@@ -1170,7 +1170,7 @@ public class JdbcDatabaseAdminTest {
       RdbEngine rdbEngine, String expectedSelectStatement) throws SQLException, ExecutionException {
     // Arrange
     String namespace = "my_ns";
-    JdbcDatabaseAdmin admin = new JdbcDatabaseAdmin(dataSource, rdbEngine, config);
+    JdbcAdmin admin = new JdbcAdmin(dataSource, rdbEngine, config);
 
     Connection connection = mock(Connection.class);
     PreparedStatement selectStatement = mock(PreparedStatement.class);
@@ -1207,14 +1207,12 @@ public class JdbcDatabaseAdminTest {
       }
       GetColumnsResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(JdbcDatabaseAdmin.METADATA_COL_COLUMN_NAME))
-          .thenReturn(currentRow.columnName);
-      when(mock.getString(JdbcDatabaseAdmin.METADATA_COL_DATA_TYPE))
-          .thenReturn(currentRow.dataType);
-      when(mock.getString(JdbcDatabaseAdmin.METADATA_COL_KEY_TYPE)).thenReturn(currentRow.keyType);
-      when(mock.getString(JdbcDatabaseAdmin.METADATA_COL_CLUSTERING_ORDER))
+      when(mock.getString(JdbcAdmin.METADATA_COL_COLUMN_NAME)).thenReturn(currentRow.columnName);
+      when(mock.getString(JdbcAdmin.METADATA_COL_DATA_TYPE)).thenReturn(currentRow.dataType);
+      when(mock.getString(JdbcAdmin.METADATA_COL_KEY_TYPE)).thenReturn(currentRow.keyType);
+      when(mock.getString(JdbcAdmin.METADATA_COL_CLUSTERING_ORDER))
           .thenReturn(currentRow.clusteringOrder);
-      when(mock.getBoolean(JdbcDatabaseAdmin.METADATA_COL_INDEXED)).thenReturn(currentRow.indexed);
+      when(mock.getBoolean(JdbcAdmin.METADATA_COL_INDEXED)).thenReturn(currentRow.indexed);
       return true;
     }
 
@@ -1257,7 +1255,7 @@ public class JdbcDatabaseAdminTest {
       }
       GetTablesNamesResultSetMocker.Row currentRow = rows.get(row);
       ResultSet mock = (ResultSet) invocation.getMock();
-      when(mock.getString(JdbcDatabaseAdmin.METADATA_COL_FULL_TABLE_NAME))
+      when(mock.getString(JdbcAdmin.METADATA_COL_FULL_TABLE_NAME))
           .thenReturn(currentRow.fullTableName);
       return true;
     }

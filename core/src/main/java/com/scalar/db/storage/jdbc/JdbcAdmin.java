@@ -36,9 +36,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
+public class JdbcAdmin implements DistributedStorageAdmin {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcDatabaseAdmin.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcAdmin.class);
   private static final ImmutableMap<RdbEngine, ImmutableMap<DataType, String>> DATA_TYPE_MAPPING =
       ImmutableMap.<RdbEngine, ImmutableMap<DataType, String>>builder()
           .put(
@@ -125,20 +125,20 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   private final String metadataSchema;
 
   @Inject
-  public JdbcDatabaseAdmin(JdbcConfig config) {
+  public JdbcAdmin(JdbcConfig config) {
     dataSource = JdbcUtils.initDataSource(config);
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
-  public JdbcDatabaseAdmin(BasicDataSource dataSource, JdbcConfig config) {
+  public JdbcAdmin(BasicDataSource dataSource, JdbcConfig config) {
     this.dataSource = dataSource;
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
 
   @VisibleForTesting
-  JdbcDatabaseAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
+  JdbcAdmin(BasicDataSource dataSource, RdbEngine rdbEngine, JdbcConfig config) {
     this.dataSource = dataSource;
     this.rdbEngine = rdbEngine;
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
