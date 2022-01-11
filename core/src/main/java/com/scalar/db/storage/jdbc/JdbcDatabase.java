@@ -52,7 +52,7 @@ public class JdbcDatabase implements DistributedStorage {
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
-            new JdbcDatabaseAdmin(tableMetadataDataSource, config),
+            new JdbcAdmin(tableMetadataDataSource, config),
             config.getTableMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);

@@ -8,8 +8,8 @@ import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
@@ -42,7 +42,7 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
         new TableMetadataManager(
-            new JdbcDatabaseAdmin(tableMetadataDataSource, config),
+            new JdbcAdmin(tableMetadataDataSource, config),
             config.getTableMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);

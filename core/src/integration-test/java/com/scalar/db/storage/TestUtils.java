@@ -15,8 +15,8 @@ import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.cosmos.CosmosConfig;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
 import com.scalar.db.storage.dynamo.DynamoConfig;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
-import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
 import java.util.Arrays;
@@ -179,7 +179,7 @@ public final class TestUtils {
     // for JDBC
     String tableMetadataSchema = properties.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
     if (tableMetadataSchema == null) {
-      tableMetadataSchema = JdbcDatabaseAdmin.METADATA_SCHEMA;
+      tableMetadataSchema = JdbcAdmin.METADATA_SCHEMA;
     }
     properties.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
 
