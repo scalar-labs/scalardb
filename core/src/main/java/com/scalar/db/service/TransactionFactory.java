@@ -23,7 +23,7 @@ public class TransactionFactory {
    * @return a {@link DistributedTransactionManager} instance
    */
   public DistributedTransactionManager getTransactionManager() {
-    return injector.getInstance(TransactionService.class);
+    return injector.getInstance(DistributedTransactionManager.class);
   }
 
   /**
@@ -32,6 +32,6 @@ public class TransactionFactory {
    * @return a {@link TwoPhaseCommitTransactionManager} instance
    */
   public TwoPhaseCommitTransactionManager getTwoPhaseCommitTransactionManager() {
-    return injector.getInstance(TwoPhaseCommitTransactionService.class);
+    return injector.getInstance(TwoPhaseCommitTransactionManager.class);
   }
 }
