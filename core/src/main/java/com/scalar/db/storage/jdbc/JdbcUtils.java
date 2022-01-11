@@ -106,6 +106,29 @@ public final class JdbcUtils {
     return dataSource;
   }
 
+  public static BasicDataSource initDataSourceForAdmin(JdbcConfig config) {
+    String jdbcUrl = config.getContactPoints().get(0);
+    BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlining database to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(getDriverClass(jdbcUrl));
+
+    dataSource.setUrl(jdbcUrl);
+
+    config.getUsername().ifPresent(dataSource::setUsername);
+    config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setMinIdle(config.getAdminConnectionPoolMinIdle());
+    dataSource.setMaxIdle(config.getAdminConnectionPoolMaxIdle());
+    dataSource.setMaxTotal(config.getAdminConnectionPoolMaxTotal());
+
+    return dataSource;
+  }
+
   private static Driver getDriverClass(String jdbcUrl) {
     switch (getRdbEngine(jdbcUrl)) {
       case MYSQL:
