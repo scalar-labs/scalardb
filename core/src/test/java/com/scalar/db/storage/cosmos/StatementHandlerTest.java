@@ -2,7 +2,7 @@ package com.scalar.db.storage.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.util.TableMetadataManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;

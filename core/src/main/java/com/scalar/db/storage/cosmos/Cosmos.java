@@ -16,9 +16,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -58,7 +58,9 @@ public class Cosmos implements DistributedStorage {
     namespace = Optional.empty();
     tableName = Optional.empty();
 
-    metadataManager = new TableMetadataManager(new CosmosAdmin(client, config), config);
+    metadataManager =
+        new TableMetadataManager(
+            new CosmosAdmin(client, config), config.getTableMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
 
     selectStatementHandler = new SelectStatementHandler(client, metadataManager);

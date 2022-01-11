@@ -19,9 +19,9 @@ import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
 import com.scalar.db.util.retry.ServiceTemporaryUnavailableException;
@@ -74,7 +74,9 @@ public class GrpcStorage implements DistributedStorage {
             .build();
     stub = DistributedStorageGrpc.newStub(channel);
     blockingStub = DistributedStorageGrpc.newBlockingStub(channel);
-    metadataManager = new TableMetadataManager(new GrpcAdmin(channel, config), config);
+    metadataManager =
+        new TableMetadataManager(
+            new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
     namespace = Optional.empty();
     tableName = Optional.empty();
   }

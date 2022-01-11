@@ -13,9 +13,9 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.storage.RetriableExecutionException;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
+import com.scalar.db.util.TableMetadataManager;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -51,7 +51,9 @@ public class JdbcDatabase implements DistributedStorage {
 
     tableMetadataDataSource = JdbcUtils.initDataSourceForTableMetadata(config);
     TableMetadataManager tableMetadataManager =
-        new TableMetadataManager(new JdbcAdmin(tableMetadataDataSource, config), config);
+        new TableMetadataManager(
+            new JdbcAdmin(tableMetadataDataSource, config),
+            config.getTableMetadataCacheExpirationTimeSecs());
 
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
