@@ -14,7 +14,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ValidationTask;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,19 +37,21 @@ public class Snapshot {
   private final String id;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
+  private final ParallelExecutor parallelExecutor;
   private final Map<Key, Optional<TransactionResult>> readSet;
-  private final Map<Scan, Optional<List<Key>>> scanSet;
+  private final Map<Scan, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
 
-  public Snapshot(String id) {
-    this(id, Isolation.SNAPSHOT, SerializableStrategy.EXTRA_WRITE);
-  }
-
-  public Snapshot(String id, Isolation isolation, SerializableStrategy strategy) {
+  public Snapshot(
+      String id,
+      Isolation isolation,
+      SerializableStrategy strategy,
+      ParallelExecutor parallelExecutor) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.parallelExecutor = parallelExecutor;
     this.readSet = new HashMap<>();
     this.scanSet = new HashMap<>();
     this.writeSet = new HashMap<>();
@@ -59,13 +63,15 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
+      ParallelExecutor parallelExecutor,
       Map<Key, Optional<TransactionResult>> readSet,
-      Map<Scan, Optional<List<Key>>> scanSet,
+      Map<Scan, List<Key>> scanSet,
       Map<Key, Put> writeSet,
       Map<Key, Delete> deleteSet) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
@@ -87,7 +93,7 @@ public class Snapshot {
     readSet.put(key, result);
   }
 
-  public void put(Scan scan, Optional<List<Key>> keys) {
+  public void put(Scan scan, List<Key> keys) {
     scanSet.put(scan, keys);
   }
 
@@ -121,7 +127,7 @@ public class Snapshot {
       throw new IllegalArgumentException("reading already written data is not allowed");
     }
     if (scanSet.containsKey(scan)) {
-      return scanSet.get(scan);
+      return Optional.ofNullable(scanSet.get(scan));
     }
     return Optional.empty();
   }
@@ -234,11 +240,9 @@ public class Snapshot {
       }
     }
 
-    for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
-      // if there is a scan and a write in a transaction
-      if (entry.getValue().isPresent() && !writeSet.isEmpty()) {
-        throwExceptionDueToPotentialAntiDependency();
-      }
+    // if there is a scan and a write in a transaction
+    if (!scanSet.isEmpty() && !writeSet.isEmpty()) {
+      throwExceptionDueToPotentialAntiDependency();
     }
   }
 
@@ -248,50 +252,58 @@ public class Snapshot {
       return;
     }
 
-    Set<Key> validatedReadSetByScan = new HashSet<>();
+    List<ValidationTask> validationTasks = new ArrayList<>();
 
     // Read set by scan is re-validated to check if there is no anti-dependency
-    for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
-      Set<TransactionResult> currentReadSet = new HashSet<>();
-      Set<Key> validatedReadSet = new HashSet<>();
-      Scanner scanner = null;
-      try {
-        scanner = storage.scan(entry.getKey());
-        for (Result result : scanner) {
-          TransactionResult transactionResult = new TransactionResult(result);
-          // Ignore records that this transaction has prepared (and that are in the write set)
-          if (transactionResult.getId().equals(id)) {
-            continue;
-          }
-          currentReadSet.add(transactionResult);
-        }
-      } finally {
-        if (scanner != null) {
-          try {
-            scanner.close();
-          } catch (IOException e) {
-            LOGGER.warn("failed to close the scanner", e);
-          }
-        }
-      }
+    for (Map.Entry<Scan, List<Key>> entry : scanSet.entrySet()) {
+      validationTasks.add(
+          () -> {
+            Set<TransactionResult> currentReadSet = new HashSet<>();
+            Set<Key> validatedReadSet = new HashSet<>();
+            Scanner scanner = null;
+            try {
+              scanner = storage.scan(entry.getKey());
+              for (Result result : scanner) {
+                TransactionResult transactionResult = new TransactionResult(result);
+                // Ignore records that this transaction has prepared (and that are in the write set)
+                if (transactionResult.getId().equals(id)) {
+                  continue;
+                }
+                currentReadSet.add(transactionResult);
+              }
+            } finally {
+              if (scanner != null) {
+                try {
+                  scanner.close();
+                } catch (IOException e) {
+                  LOGGER.warn("failed to close the scanner", e);
+                }
+              }
+            }
 
-      for (Key key : entry.getValue().get()) {
-        if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
-          continue;
-        }
-        // Check if read records are not changed
-        if (!currentReadSet.contains(readSet.get(key).get())) {
-          throwExceptionDueToAntiDependency();
-        }
-        validatedReadSet.add(key);
-      }
+            for (Key key : entry.getValue()) {
+              if (writeSet.containsKey(key) || deleteSet.containsKey(key)) {
+                continue;
+              }
+              // Check if read records are not changed
+              if (readSet.get(key).isPresent()
+                  && !currentReadSet.contains(readSet.get(key).get())) {
+                throwExceptionDueToAntiDependency();
+              }
+              validatedReadSet.add(key);
+            }
 
-      // Check if the size of a read set by scan is not changed
-      if (currentReadSet.size() != validatedReadSet.size()) {
-        throwExceptionDueToAntiDependency();
-      }
+            // Check if the size of a read set by scan is not changed
+            if (currentReadSet.size() != validatedReadSet.size()) {
+              throwExceptionDueToAntiDependency();
+            }
+          });
+    }
 
-      validatedReadSetByScan.addAll(validatedReadSet);
+    // Calculate read set validated by scan
+    Set<Key> validatedReadSetByScan = new HashSet<>();
+    for (List<Key> values : scanSet.values()) {
+      validatedReadSetByScan.addAll(values);
     }
 
     // Read set by get is re-validated to check if there is no anti-dependency
@@ -303,18 +315,23 @@ public class Snapshot {
         continue;
       }
 
-      Get get =
-          new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
-              .withConsistency(Consistency.LINEARIZABLE)
-              .forNamespace(key.getNamespace())
-              .forTable(key.getTable());
+      validationTasks.add(
+          () -> {
+            Get get =
+                new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+                    .withConsistency(Consistency.LINEARIZABLE)
+                    .forNamespace(key.getNamespace())
+                    .forTable(key.getTable());
 
-      Optional<TransactionResult> result = storage.get(get).map(TransactionResult::new);
-      // Check if a read record is not changed
-      if (!result.equals(entry.getValue())) {
-        throwExceptionDueToAntiDependency();
-      }
+            Optional<TransactionResult> result = storage.get(get).map(TransactionResult::new);
+            // Check if a read record is not changed
+            if (!result.equals(entry.getValue())) {
+              throwExceptionDueToAntiDependency();
+            }
+          });
     }
+
+    parallelExecutor.validate(validationTasks);
   }
 
   private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {

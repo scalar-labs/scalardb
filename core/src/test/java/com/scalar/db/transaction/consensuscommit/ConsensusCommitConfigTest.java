@@ -24,6 +24,7 @@ public class ConsensusCommitConfigTest {
     assertThat(config.getParallelExecutorCount())
         .isEqualTo(ConsensusCommitConfig.DEFAULT_PARALLEL_EXECUTOR_COUNT);
     assertThat(config.isParallelPreparationEnabled()).isEqualTo(false);
+    assertThat(config.isParallelValidationEnabled()).isEqualTo(false);
     assertThat(config.isParallelCommitEnabled()).isEqualTo(false);
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
@@ -139,6 +140,7 @@ public class ConsensusCommitConfigTest {
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.PARALLEL_EXECUTOR_COUNT, "100");
     props.setProperty(ConsensusCommitConfig.PARALLEL_PREPARATION_ENABLED, "true");
+    props.setProperty(ConsensusCommitConfig.PARALLEL_VALIDATION_ENABLED, "true");
     props.setProperty(ConsensusCommitConfig.PARALLEL_COMMIT_ENABLED, "true");
     props.setProperty(ConsensusCommitConfig.PARALLEL_ROLLBACK_ENABLED, "true");
 
@@ -148,13 +150,14 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getParallelExecutorCount()).isEqualTo(100);
     assertThat(config.isParallelPreparationEnabled()).isEqualTo(true);
+    assertThat(config.isParallelValidationEnabled()).isEqualTo(true);
     assertThat(config.isParallelCommitEnabled()).isEqualTo(true);
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(true);
   }
 
   @Test
   public void
-      constructor_ParallelExecutionRelatedPropertiesWithoutParallelRollbackPropertyGiven_ShouldUseParallelCommitValueForParallelRollback() {
+      constructor_ParallelExecutionRelatedPropertiesWithoutParallelValidationAndParallelRollbackPropertyGiven_ShouldUseParallelCommitValueForParallelValidationAndParallelRollback() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ConsensusCommitConfig.PARALLEL_EXECUTOR_COUNT, "100");
@@ -167,6 +170,8 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.getParallelExecutorCount()).isEqualTo(100);
     assertThat(config.isParallelPreparationEnabled()).isEqualTo(false);
+    assertThat(config.isParallelValidationEnabled())
+        .isEqualTo(true); // use the parallel commit value
     assertThat(config.isParallelCommitEnabled()).isEqualTo(true);
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(true); // use the parallel commit value
   }

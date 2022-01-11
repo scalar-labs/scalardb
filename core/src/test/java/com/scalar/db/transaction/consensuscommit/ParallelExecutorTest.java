@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ValidationTask;
 import com.scalar.db.util.ThrowableRunnable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
@@ -26,9 +28,11 @@ public class ParallelExecutorTest {
   @Mock private ExecutorService parallelExecutorService;
   @Mock private Future<Void> future;
   @Mock private ThrowableRunnable<ExecutionException> task;
+  @Mock private ValidationTask validationTask;
 
   private ParallelExecutor parallelExecutor;
   private List<ThrowableRunnable<ExecutionException>> tasks;
+  private List<ValidationTask> validationTasks;
 
   @Before
   public void setUp() throws Exception {
@@ -69,6 +73,41 @@ public class ParallelExecutorTest {
     verify(parallelExecutorService, times(tasks.size()))
         .submit(ArgumentMatchers.<Callable<Void>>any());
     verify(future, times(tasks.size())).get();
+  }
+
+  @Test
+  public void validate_ParallelValidationNotEnabled_ShouldExecuteTasksSerially()
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(false);
+    validationTasks = Arrays.asList(validationTask, validationTask, validationTask);
+
+    // Act
+    parallelExecutor.validate(validationTasks);
+
+    // Assert
+    verify(validationTask, times(validationTasks.size())).run();
+    verify(parallelExecutorService, never()).submit(ArgumentMatchers.<Callable<Void>>any());
+    verify(future, never()).get();
+  }
+
+  @Test
+  public void validate_ParallelValidationEnabled_ShouldExecuteTasksInParallel()
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(true);
+    validationTasks = Arrays.asList(validationTask, validationTask, validationTask);
+
+    // Act
+    parallelExecutor.validate(validationTasks);
+
+    // Assert
+    verify(validationTask, never()).run();
+    verify(parallelExecutorService, times(validationTasks.size()))
+        .submit(ArgumentMatchers.<Callable<Void>>any());
+    verify(future, times(validationTasks.size())).get();
   }
 
   @Test
