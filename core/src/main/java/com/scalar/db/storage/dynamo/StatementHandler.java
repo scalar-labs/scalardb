@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.Joiner;
 import com.scalar.db.api.Operation;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;

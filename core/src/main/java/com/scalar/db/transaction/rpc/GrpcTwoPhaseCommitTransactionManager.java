@@ -16,11 +16,11 @@ import com.scalar.db.rpc.AbortResponse;
 import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
-import com.scalar.db.storage.common.TableMetadataManager;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.util.ActiveExpiringMap;
 import com.scalar.db.util.ProtoUtils;
+import com.scalar.db.util.TableMetadataManager;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Optional;
@@ -63,7 +63,9 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
             .build();
     stub = TwoPhaseCommitTransactionGrpc.newStub(channel);
     blockingStub = TwoPhaseCommitTransactionGrpc.newBlockingStub(channel);
-    metadataManager = new TableMetadataManager(new GrpcAdmin(channel, config), config);
+    metadataManager =
+        new TableMetadataManager(
+            new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
           new ActiveExpiringMap<>(
