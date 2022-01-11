@@ -77,7 +77,7 @@ jobs:
   integration-test-for-cassandra:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: cassandra:3.11
+      - image: cassandra:3.11.11
         environment:
           MAX_HEAP_SIZE: 2048m
           HEAP_NEWSIZE: 512m
@@ -117,8 +117,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestCassandra /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -157,8 +159,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestCosmos /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -168,7 +172,7 @@ jobs:
   integration-test-for-dynamo:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: amazon/dynamodb-local:1.15.0
+      - image: amazon/dynamodb-local:1.17.0
 
     working_directory: ~/repo
 
@@ -192,13 +196,16 @@ jobs:
 
       - run:
           name: Run integration test
+          no_output_timeout: 20m
           command: gradle integrationTestDynamo
 
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestDynamo /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -208,7 +215,7 @@ jobs:
   integration-test-for-jdbc-mysql:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -239,8 +246,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -250,7 +259,7 @@ jobs:
   integration-test-for-jdbc-postgresql:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/postgres:9.6.9-alpine
+      - image: postgres:14.1-alpine
         environment:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -282,8 +291,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -293,12 +304,12 @@ jobs:
   integration-test-for-jdbc-oracle:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: ghcr.io/scalar-labs/oracle/database:18.4.0-xe
+      - image: ghcr.io/scalar-labs/oracle/database:21.3.0-xe
         auth:
           username: scalar-git
           password: ${SCALAR_GIT_PASSWORD}
         environment:
-          ORACLE_PWD: Oracle18
+          ORACLE_PWD: Oracle21
 
     working_directory: ~/repo
 
@@ -328,13 +339,15 @@ jobs:
 
       - run:
           name: Run integration test
-          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle18
+          command: gradle integrationTestJdbc -Dscalardb.jdbc.url=jdbc:oracle:thin:@localhost:1521/XEPDB1 -Dscalardb.jdbc.username=SYSTEM -Dscalardb.jdbc.password=Oracle21
 
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -377,8 +390,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestJdbc /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -388,11 +403,11 @@ jobs:
   integration-test-for-multi-storage:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: cassandra:3.11
+      - image: cassandra:3.11.11
         environment:
           MAX_HEAP_SIZE: 1536m
           HEAP_NEWSIZE: 256m
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -429,8 +444,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/core
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a core/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/core/
+            cp -a schema-loader/build/reports/tests/integrationTestMultiStorage /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -440,7 +457,7 @@ jobs:
   integration-test-for-scalardb-server:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 
@@ -471,8 +488,10 @@ jobs:
       - run:
           name: Save Gradle integration test reports
           command: |
-            mkdir -p /tmp/gradle_integration_test_reports
-            cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/
+            mkdir -p /tmp/gradle_integration_test_reports/server
+            mkdir -p /tmp/gradle_integration_test_reports/schema-loader
+            cp -a server/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/server/
+            cp -a schema-loader/build/reports/tests/integrationTestScalarDbServer /tmp/gradle_integration_test_reports/schema-loader/
           when: always
 
       - store_artifacts:
@@ -482,7 +501,7 @@ jobs:
   integration-test-for-two-phase-consensus-commit:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: circleci/mysql:8.0.23
+      - image: circleci/mysql:8.0.27
         environment:
           MYSQL_ROOT_PASSWORD: mysql
 

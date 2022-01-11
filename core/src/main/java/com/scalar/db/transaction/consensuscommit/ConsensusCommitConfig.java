@@ -1,26 +1,54 @@
 package com.scalar.db.transaction.consensuscommit;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
+import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
-import com.scalar.db.util.Utility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
-public class ConsensusCommitConfig extends DatabaseConfig {
+public class ConsensusCommitConfig {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitConfig.class);
+
   public static final String PREFIX = DatabaseConfig.PREFIX + "consensus_commit.";
+  public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
   public static final String SERIALIZABLE_STRATEGY = PREFIX + "serializable_strategy";
   public static final String COORDINATOR_NAMESPACE = PREFIX + "coordinator.namespace";
 
+  public static final String PARALLEL_EXECUTOR_COUNT = PREFIX + "parallel_executor_count";
+  public static final String PARALLEL_PREPARATION_ENABLED = PREFIX + "parallel_preparation.enabled";
+  public static final String PARALLEL_COMMIT_ENABLED = PREFIX + "parallel_commit.enabled";
+  public static final String PARALLEL_ROLLBACK_ENABLED = PREFIX + "parallel_rollback.enabled";
+
+  public static final String ASYNC_COMMIT_ENABLED = PREFIX + "async_commit.enabled";
+  public static final String ASYNC_ROLLBACK_ENABLED = PREFIX + "async_rollback.enabled";
+
+  public static final int DEFAULT_PARALLEL_EXECUTOR_COUNT = 30;
+
+  private final Properties props;
+
+  private Isolation isolation;
   private SerializableStrategy strategy;
   @Nullable private String coordinatorNamespace;
+
+  private int parallelExecutorCount;
+  private boolean parallelPreparationEnabled;
+  private boolean parallelCommitEnabled;
+  private boolean parallelRollbackEnabled;
+  private boolean asyncCommitEnabled;
+  private boolean asyncRollbackEnabled;
 
   // for two-phase consensus commit
   public static final String TWO_PHASE_CONSENSUS_COMMIT_PREFIX = PREFIX + "2pcc.";
@@ -30,47 +58,69 @@ public class ConsensusCommitConfig extends DatabaseConfig {
   private boolean activeTransactionsManagementEnabled;
 
   public ConsensusCommitConfig(File propertiesFile) throws IOException {
-    super(propertiesFile);
+    this(new FileInputStream(propertiesFile));
   }
 
   public ConsensusCommitConfig(InputStream stream) throws IOException {
-    super(stream);
+    props = new Properties();
+    props.load(stream);
+    load();
   }
 
   public ConsensusCommitConfig(Properties properties) {
-    super(properties);
+    props = new Properties();
+    props.putAll(properties);
+    load();
   }
 
-  @Override
+  public Properties getProperties() {
+    return props;
+  }
+
   protected void load() {
-    String transactionManager = getProperties().getProperty(DatabaseConfig.TRANSACTION_MANAGER);
-    if (transactionManager != null && !transactionManager.equals("consensus-commit")) {
-      throw new IllegalArgumentException(
-          DatabaseConfig.TRANSACTION_MANAGER + " should be 'consensus-commit'");
+    if (getProperties().containsValue("scalar.db.isolation_level")) {
+      LOGGER.warn(
+          "The property \"scalar.db.isolation_level\" is deprecated and will be removed. "
+              + "Please use \""
+              + ISOLATION_LEVEL
+              + "\" instead.");
     }
+    isolation =
+        Isolation.valueOf(
+            getString(
+                    getProperties(),
+                    ISOLATION_LEVEL,
+                    getString(
+                        getProperties(),
+                        "scalar.db.isolation_level", // for backward compatibility
+                        Isolation.SNAPSHOT.toString()))
+                .toUpperCase());
+    strategy =
+        SerializableStrategy.valueOf(
+            getString(
+                    getProperties(),
+                    SERIALIZABLE_STRATEGY,
+                    SerializableStrategy.EXTRA_READ.toString())
+                .toUpperCase());
 
-    super.load();
+    activeTransactionsManagementEnabled =
+        getBoolean(getProperties(), ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED, true);
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(SERIALIZABLE_STRATEGY))) {
-      strategy =
-          SerializableStrategy.valueOf(
-              getProperties().getProperty(SERIALIZABLE_STRATEGY).toUpperCase());
-    } else {
-      strategy = SerializableStrategy.EXTRA_READ;
-    }
+    coordinatorNamespace = getString(getProperties(), COORDINATOR_NAMESPACE, null);
 
-    String activeTransactionsManagementEnabledValue =
-        getProperties().getProperty(ACTIVE_TRANSACTIONS_MANAGEMENT_ENABLED);
-    if (Utility.isBooleanString(activeTransactionsManagementEnabledValue)) {
-      activeTransactionsManagementEnabled =
-          Boolean.parseBoolean(activeTransactionsManagementEnabledValue);
-    } else {
-      activeTransactionsManagementEnabled = true;
-    }
+    parallelExecutorCount =
+        getInt(getProperties(), PARALLEL_EXECUTOR_COUNT, DEFAULT_PARALLEL_EXECUTOR_COUNT);
+    parallelPreparationEnabled = getBoolean(getProperties(), PARALLEL_PREPARATION_ENABLED, false);
+    parallelCommitEnabled = getBoolean(getProperties(), PARALLEL_COMMIT_ENABLED, false);
+    parallelRollbackEnabled =
+        getBoolean(getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(COORDINATOR_NAMESPACE))) {
-      coordinatorNamespace = getProperties().getProperty(COORDINATOR_NAMESPACE);
-    }
+    asyncCommitEnabled = getBoolean(getProperties(), ASYNC_COMMIT_ENABLED, false);
+    asyncRollbackEnabled = getBoolean(getProperties(), ASYNC_ROLLBACK_ENABLED, asyncCommitEnabled);
+  }
+
+  public Isolation getIsolation() {
+    return isolation;
   }
 
   public SerializableStrategy getSerializableStrategy() {
@@ -83,5 +133,29 @@ public class ConsensusCommitConfig extends DatabaseConfig {
 
   public Optional<String> getCoordinatorNamespace() {
     return Optional.ofNullable(coordinatorNamespace);
+  }
+
+  public int getParallelExecutorCount() {
+    return parallelExecutorCount;
+  }
+
+  public boolean isParallelPreparationEnabled() {
+    return parallelPreparationEnabled;
+  }
+
+  public boolean isParallelCommitEnabled() {
+    return parallelCommitEnabled;
+  }
+
+  public boolean isParallelRollbackEnabled() {
+    return parallelRollbackEnabled;
+  }
+
+  public boolean isAsyncCommitEnabled() {
+    return asyncCommitEnabled;
+  }
+
+  public boolean isAsyncRollbackEnabled() {
+    return asyncRollbackEnabled;
   }
 }

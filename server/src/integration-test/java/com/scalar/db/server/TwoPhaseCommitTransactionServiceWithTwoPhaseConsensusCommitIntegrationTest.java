@@ -26,7 +26,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
-import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.server.config.ServerConfig;
@@ -1092,7 +1091,7 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
   }
 
   @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowCrudException()
+  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
       throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransaction transaction = manager.start();
@@ -1100,7 +1099,7 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
 
     // Act Assert
     assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
-        .isInstanceOf(CrudException.class);
+        .isInstanceOf(IllegalArgumentException.class);
     transaction.rollback();
   }
 

@@ -41,16 +41,13 @@ public class ServerConfigTest {
   }
 
   @Test
-  public void constructor_InvalidPortGiven_ShouldUseDefault() {
+  public void constructor_InvalidPortGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ServerConfig.PORT, "abc");
 
-    // Act
-    ServerConfig config = new ServerConfig(props);
-
-    // Assert
-    assertThat(config.getPort()).isEqualTo(ServerConfig.DEFAULT_PORT);
+    // Act Assert
+    assertThatThrownBy(() -> new ServerConfig(props)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -67,17 +64,13 @@ public class ServerConfigTest {
   }
 
   @Test
-  public void constructor_InvalidPrometheusExporterPortGiven_ShouldUseDefault() {
+  public void constructor_InvalidPrometheusExporterPortGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(ServerConfig.PROMETHEUS_EXPORTER_PORT, "abc");
 
-    // Act
-    ServerConfig config = new ServerConfig(props);
-
-    // Assert
-    assertThat(config.getPrometheusExporterPort())
-        .isEqualTo(ServerConfig.DEFAULT_PROMETHEUS_EXPORTER_PORT);
+    // Act Assert
+    assertThatThrownBy(() -> new ServerConfig(props)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

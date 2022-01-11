@@ -15,7 +15,7 @@ import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
 import com.scalar.db.rpc.ScanRequest;
 import com.scalar.db.rpc.ScanResponse;
-import com.scalar.db.util.ProtoUtil;
+import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.ThrowableRunnable;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -52,10 +52,10 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
   public void get(GetRequest request, StreamObserver<GetResponse> responseObserver) {
     execute(
         () -> {
-          Get get = ProtoUtil.toGet(request.getGet());
+          Get get = ProtoUtils.toGet(request.getGet());
           Optional<Result> result = storage.get(get);
           GetResponse.Builder builder = GetResponse.newBuilder();
-          result.ifPresent(r -> builder.setResult(ProtoUtil.toResult(r)));
+          result.ifPresent(r -> builder.setResult(ProtoUtils.toResult(r)));
           responseObserver.onNext(builder.build());
           responseObserver.onCompleted();
         },
@@ -75,7 +75,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
         () -> {
           List<Mutation> mutations = new ArrayList<>(request.getMutationCount());
           for (com.scalar.db.rpc.Mutation mutation : request.getMutationList()) {
-            mutations.add(ProtoUtil.toMutation(mutation));
+            mutations.add(ProtoUtils.toMutation(mutation));
           }
           storage.mutate(mutations);
           responseObserver.onNext(Empty.getDefaultInstance());
@@ -199,7 +199,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
             SERVICE_NAME,
             "scan.open_scanner",
             () -> {
-              Scan scan = ProtoUtil.toScan(request.getScan());
+              Scan scan = ProtoUtils.toScan(request.getScan());
               scanner = storage.scan(scan);
             });
         return true;
@@ -227,7 +227,7 @@ public class DistributedStorageService extends DistributedStorageGrpc.Distribute
                       resultIterator,
                       request.hasFetchCount() ? request.getFetchCount() : DEFAULT_SCAN_FETCH_COUNT);
               ScanResponse.Builder builder = ScanResponse.newBuilder();
-              results.forEach(r -> builder.addResult(ProtoUtil.toResult(r)));
+              results.forEach(r -> builder.addResult(ProtoUtils.toResult(r)));
               return builder.setHasMoreResults(resultIterator.hasNext()).build();
             });
       } catch (Throwable t) {

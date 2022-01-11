@@ -16,20 +16,37 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 class ColumnChecker implements ValueVisitor {
   private final TableMetadata tableMetadata;
+  private final boolean notNull;
+  private final boolean notEmpty;
+  private final boolean notPrimaryKey;
   private String name;
   private boolean isValid;
 
-  public ColumnChecker(TableMetadata tableMetadata) {
+  public ColumnChecker(
+      TableMetadata tableMetadata, boolean notNull, boolean notEmpty, boolean notPrimaryKey) {
     this.tableMetadata = tableMetadata;
+    this.notNull = notNull;
+    this.notEmpty = notEmpty;
+    this.notPrimaryKey = notPrimaryKey;
   }
 
   public boolean check(Value<?> value) {
+    String name = getName(value);
+
     // Check if the column exists
-    if (!tableMetadata.getColumnNames().contains(getName(value))) {
+    if (!tableMetadata.getColumnNames().contains(name)) {
       return false;
     }
 
-    // Check if the column data type is correct
+    if (notPrimaryKey) {
+      // Check if the column is primary key or not
+      if (tableMetadata.getPartitionKeyNames().contains(name)
+          || tableMetadata.getClusteringKeyNames().contains(name)) {
+        return false;
+      }
+    }
+
+    // Check if the column data type is correct and the column value is null or empty
     value.accept(this);
     return isValid;
   }
@@ -70,11 +87,28 @@ class ColumnChecker implements ValueVisitor {
 
   @Override
   public void visit(TextValue value) {
+    if (notNull && !value.getAsString().isPresent()) {
+      isValid = false;
+      return;
+    }
+    if (notEmpty && (value.getAsString().isPresent() && value.getAsString().get().isEmpty())) {
+      isValid = false;
+      return;
+    }
+
     isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.TEXT;
   }
 
   @Override
   public void visit(BlobValue value) {
+    if (notNull && !value.getAsBytes().isPresent()) {
+      isValid = false;
+      return;
+    }
+    if (notEmpty && (value.getAsBytes().isPresent() && value.getAsBytes().get().length == 0)) {
+      isValid = false;
+      return;
+    }
     isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.BLOB;
   }
 }

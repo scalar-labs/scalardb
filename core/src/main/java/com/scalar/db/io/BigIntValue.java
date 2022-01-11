@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
@@ -84,7 +85,7 @@ public final class BigIntValue implements Value<Long> {
 
   @Override
   public int hashCode() {
-    return Long.hashCode(value);
+    return Objects.hash(name, value);
   }
 
   /**

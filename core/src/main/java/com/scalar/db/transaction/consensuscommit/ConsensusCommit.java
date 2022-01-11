@@ -16,9 +16,11 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.Utility;
+import com.scalar.db.util.ScalarDbUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +29,14 @@ import org.slf4j.LoggerFactory;
  * A transaction manager that implements a transaction protocol on the basis of two-phase commit on
  * the consensus of an underlining storage.
  *
- * <p>When SERIALIZABLE is specified in {@link com.scalar.db.api.Isolation}, it makes schedule
- * strict serializable or serializable depending on underlining database operations. If a
- * transaction runs on linearizable operations, it makes it strict serializable. If a transaction
- * runs on serializable operations, it makes it serializable.
+ * <p>When SERIALIZABLE is specified in {@link Isolation}, it makes schedule strict serializable or
+ * serializable depending on underlining database operations. If a transaction runs on linearizable
+ * operations, it makes it strict serializable. If a transaction runs on serializable operations, it
+ * makes it serializable.
  *
- * <p>When SNAPSHOT is specified in {@link com.scalar.db.api.Isolation}, it makes it a weaker
- * variant of snapshot isolation (SI). This snapshot isolation could cause read skew anomalies in
- * addition to write skew and read-only anomalies, which are known to be usual SI anomalies.
+ * <p>When SNAPSHOT is specified in {@link Isolation}, it makes it a weaker variant of snapshot
+ * isolation (SI). This snapshot isolation could cause read skew anomalies in addition to write skew
+ * and read-only anomalies, which are known to be usual SI anomalies.
  */
 @NotThreadSafe
 public class ConsensusCommit implements DistributedTransaction {
@@ -90,9 +92,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   /**
    * Retrieves a result from the storage through a transaction with the specified {@link Get}
-   * command with a primary key and returns the result. Note that the current implementation clears
-   * the specified projections in {@link Get} to project all the values including metadata properly,
-   * but the behavior might be changed at some point.
+   * command with a primary key and returns the result.
    *
    * @param get a {@code Get} command
    * @return an {@code Optional} with the returned result
@@ -100,10 +100,11 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
-    Utility.setTargetToIfNot(get, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+    List<String> projections = new ArrayList<>(get.getProjections());
     get.clearProjections(); // project all
     try {
-      return crud.get(get);
+      return crud.get(get).map(r -> new FilteredResult(r, projections));
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
@@ -113,9 +114,7 @@ public class ConsensusCommit implements DistributedTransaction {
   /**
    * Retrieves results from the storage through a transaction with the specified {@link Scan}
    * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys. Note that the current implementation clears the
-   * specified projections in {@link Scan} to project all the values including metadata properly,
-   * but the behavior might be changed at some point.
+   * specifying a range of clustering keys.
    *
    * @param scan a {@code Scan} command
    * @return a list of {@link Result}
@@ -123,10 +122,13 @@ public class ConsensusCommit implements DistributedTransaction {
    */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    Utility.setTargetToIfNot(scan, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+    List<String> projections = new ArrayList<>(scan.getProjections());
     scan.clearProjections(); // project all
     try {
-      return crud.scan(scan);
+      return crud.scan(scan).stream()
+          .map(r -> new FilteredResult(r, projections))
+          .collect(Collectors.toList());
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
       throw e;
@@ -135,7 +137,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void put(Put put) {
-    Utility.setTargetToIfNot(put, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     crud.put(put);
   }
 
@@ -147,7 +149,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void delete(Delete delete) {
-    Utility.setTargetToIfNot(delete, namespace, tableName);
+    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     crud.delete(delete);
   }
 
@@ -207,7 +209,7 @@ public class ConsensusCommit implements DistributedTransaction {
   }
 
   private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.info("recover uncommitted record");
+    LOGGER.debug("recover uncommitted records: {}", results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
   }

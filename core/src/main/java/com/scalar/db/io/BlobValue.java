@@ -6,6 +6,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.primitives.UnsignedBytes;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -88,7 +89,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
 
   @Override
   public int hashCode() {
-    return value.hashCode();
+    return Objects.hash(name, Arrays.hashCode(value.orElse(null)));
   }
 
   /**

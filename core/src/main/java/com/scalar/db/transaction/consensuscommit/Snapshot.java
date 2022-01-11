@@ -7,7 +7,6 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
-import com.scalar.db.api.Isolation;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
@@ -15,7 +14,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.exception.transaction.CrudRuntimeException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -108,7 +107,7 @@ public class Snapshot {
 
   public Optional<TransactionResult> get(Snapshot.Key key) {
     if (writeSet.containsKey(key)) {
-      throw new CrudRuntimeException("reading already written data is not allowed");
+      throw new IllegalArgumentException("reading already written data is not allowed");
     } else if (deleteSet.containsKey(key)) {
       return Optional.empty();
     } else if (readSet.containsKey(key)) {
@@ -119,7 +118,7 @@ public class Snapshot {
 
   public Optional<List<Key>> get(Scan scan) {
     if (isWriteSetOverlappedWith(scan)) {
-      throw new CrudRuntimeException("reading already written data is not allowed");
+      throw new IllegalArgumentException("reading already written data is not allowed");
     }
     if (scanSet.containsKey(scan)) {
       return scanSet.get(scan);
@@ -315,14 +314,11 @@ public class Snapshot {
   }
 
   private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
-    LOGGER.warn(
-        "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
     throw new CommitConflictException(
         "reading empty records might cause write skew anomaly so aborting the transaction for safety.");
   }
 
   private void throwExceptionDueToAntiDependency() throws CommitConflictException {
-    LOGGER.warn("Anti-dependency found. Aborting the transaction.");
     throw new CommitConflictException("Anti-dependency found. Aborting the transaction.");
   }
 
@@ -357,7 +353,7 @@ public class Snapshot {
         String namespace,
         String table,
         com.scalar.db.io.Key partitionKey,
-        com.scalar.db.io.Key clusteringKey) {
+        @Nullable com.scalar.db.io.Key clusteringKey) {
       this.namespace = namespace;
       this.table = table;
       this.partitionKey = partitionKey;

@@ -1,6 +1,9 @@
 package com.scalar.db.storage.jdbc;
 
-import com.google.common.base.Strings;
+import static com.scalar.db.config.ConfigUtils.getBoolean;
+import static com.scalar.db.config.ConfigUtils.getInt;
+import static com.scalar.db.config.ConfigUtils.getString;
+
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -10,14 +13,10 @@ import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 public class JdbcConfig extends DatabaseConfig {
-  private static final Logger LOGGER = LoggerFactory.getLogger(JdbcConfig.class);
-
   public static final String PREFIX = DatabaseConfig.PREFIX + "jdbc.";
   public static final String CONNECTION_POOL_MIN_IDLE = PREFIX + "connection_pool.min_idle";
   public static final String CONNECTION_POOL_MAX_IDLE = PREFIX + "connection_pool.max_idle";
@@ -26,7 +25,16 @@ public class JdbcConfig extends DatabaseConfig {
       PREFIX + "prepared_statements_pool.enabled";
   public static final String PREPARED_STATEMENTS_POOL_MAX_OPEN =
       PREFIX + "prepared_statements_pool.max_open";
+
+  public static final String ISOLATION_LEVEL = PREFIX + "isolation_level";
+
   public static final String TABLE_METADATA_SCHEMA = PREFIX + "table_metadata.schema";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MIN_IDLE =
+      PREFIX + "table_metadata.connection_pool.min_idle";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_IDLE =
+      PREFIX + "table_metadata.connection_pool.max_idle";
+  public static final String TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL =
+      PREFIX + "table_metadata.connection_pool.max_total";
 
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
@@ -34,12 +42,22 @@ public class JdbcConfig extends DatabaseConfig {
   public static final boolean DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED = false;
   public static final int DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN = -1;
 
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE = 5;
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE = 10;
+  public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL = 25;
+
   private int connectionPoolMinIdle;
   private int connectionPoolMaxIdle;
   private int connectionPoolMaxTotal;
   private boolean preparedStatementsPoolEnabled;
   private int preparedStatementsPoolMaxOpen;
+
+  @Nullable private Isolation isolation;
+
   @Nullable private String tableMetadataSchema;
+  private int tableMetadataConnectionPoolMinIdle;
+  private int tableMetadataConnectionPoolMaxIdle;
+  private int tableMetadataConnectionPoolMaxTotal;
 
   public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -62,41 +80,44 @@ public class JdbcConfig extends DatabaseConfig {
 
     super.load();
 
-    connectionPoolMinIdle = getInt(CONNECTION_POOL_MIN_IDLE, DEFAULT_CONNECTION_POOL_MIN_IDLE);
-    connectionPoolMaxIdle = getInt(CONNECTION_POOL_MAX_IDLE, DEFAULT_CONNECTION_POOL_MAX_IDLE);
-    connectionPoolMaxTotal = getInt(CONNECTION_POOL_MAX_TOTAL, DEFAULT_CONNECTION_POOL_MAX_TOTAL);
+    connectionPoolMinIdle =
+        getInt(getProperties(), CONNECTION_POOL_MIN_IDLE, DEFAULT_CONNECTION_POOL_MIN_IDLE);
+    connectionPoolMaxIdle =
+        getInt(getProperties(), CONNECTION_POOL_MAX_IDLE, DEFAULT_CONNECTION_POOL_MAX_IDLE);
+    connectionPoolMaxTotal =
+        getInt(getProperties(), CONNECTION_POOL_MAX_TOTAL, DEFAULT_CONNECTION_POOL_MAX_TOTAL);
     preparedStatementsPoolEnabled =
-        getBoolean(PREPARED_STATEMENTS_POOL_ENABLED, DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
+        getBoolean(
+            getProperties(),
+            PREPARED_STATEMENTS_POOL_ENABLED,
+            DEFAULT_PREPARED_STATEMENTS_POOL_ENABLED);
     preparedStatementsPoolMaxOpen =
-        getInt(PREPARED_STATEMENTS_POOL_MAX_OPEN, DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
+        getInt(
+            getProperties(),
+            PREPARED_STATEMENTS_POOL_MAX_OPEN,
+            DEFAULT_PREPARED_STATEMENTS_POOL_MAX_OPEN);
 
-    if (!Strings.isNullOrEmpty(getProperties().getProperty(TABLE_METADATA_SCHEMA))) {
-      tableMetadataSchema = getProperties().getProperty(TABLE_METADATA_SCHEMA);
+    String isolationLevel = getString(getProperties(), ISOLATION_LEVEL, null);
+    if (isolationLevel != null) {
+      isolation = Isolation.valueOf(isolationLevel);
     }
-  }
 
-  private int getInt(String name, int defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException ignored) {
-      LOGGER.warn(
-          "the specified value of '{}' is not a number. using the default value: {}",
-          name,
-          defaultValue);
-      return defaultValue;
-    }
-  }
-
-  private boolean getBoolean(String name, boolean defaultValue) {
-    String value = getProperties().getProperty(name);
-    if (Strings.isNullOrEmpty(value)) {
-      return defaultValue;
-    }
-    return Boolean.parseBoolean(value);
+    tableMetadataSchema = getString(getProperties(), TABLE_METADATA_SCHEMA, null);
+    tableMetadataConnectionPoolMinIdle =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MIN_IDLE,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE);
+    tableMetadataConnectionPoolMaxIdle =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MAX_IDLE,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE);
+    tableMetadataConnectionPoolMaxTotal =
+        getInt(
+            getProperties(),
+            TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL,
+            DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
   }
 
   public int getConnectionPoolMinIdle() {
@@ -119,7 +140,23 @@ public class JdbcConfig extends DatabaseConfig {
     return preparedStatementsPoolMaxOpen;
   }
 
+  public Optional<Isolation> getIsolation() {
+    return Optional.ofNullable(isolation);
+  }
+
   public Optional<String> getTableMetadataSchema() {
     return Optional.ofNullable(tableMetadataSchema);
+  }
+
+  public int getTableMetadataConnectionPoolMinIdle() {
+    return tableMetadataConnectionPoolMinIdle;
+  }
+
+  public int getTableMetadataConnectionPoolMaxIdle() {
+    return tableMetadataConnectionPoolMaxIdle;
+  }
+
+  public int getTableMetadataConnectionPoolMaxTotal() {
+    return tableMetadataConnectionPoolMaxTotal;
   }
 }

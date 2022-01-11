@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.storage.NoMutationException;
+import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.io.Key;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -29,6 +30,7 @@ import org.mockito.MockitoAnnotations;
 public class JdbcDatabaseTest {
 
   @Mock private BasicDataSource dataSource;
+  @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
 
   @Mock private ResultInterpreter resultInterpreter;
@@ -42,7 +44,8 @@ public class JdbcDatabaseTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcDatabase = new JdbcDatabase(dataSource, jdbcService);
+    jdbcDatabase =
+        new JdbcDatabase(dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
 
     when(dataSource.getConnection()).thenReturn(connection);
   }
@@ -260,6 +263,24 @@ public class JdbcDatabaseTest {
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(ExecutionException.class);
+    verify(connection).close();
+  }
+
+  @Test
+  public void mutate_withConflictError_shouldThrowRetriableExecutionException()
+      throws SQLException, ExecutionException {
+    // Arrange
+    when(jdbcService.mutate(any(), any(), any(), any())).thenThrow(sqlException);
+    when(sqlException.getErrorCode()).thenReturn(1213);
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> {
+              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Delete delete = new Delete(new Key("p1", "val1"));
+              jdbcDatabase.mutate(Arrays.asList(put, delete));
+            })
+        .isInstanceOf(RetriableExecutionException.class);
     verify(connection).close();
   }
 }

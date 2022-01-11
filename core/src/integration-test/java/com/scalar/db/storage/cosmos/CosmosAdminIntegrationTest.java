@@ -13,9 +13,23 @@ public class CosmosAdminIntegrationTest extends AdminIntegrationTestBase {
   }
 
   @Override
-  protected String getNamespace() {
+  protected String getNamespace1() {
+    return getNamespace(super.getNamespace1());
+  }
+
+  @Override
+  protected String getNamespace2() {
+    return getNamespace(super.getNamespace2());
+  }
+
+  @Override
+  protected String getNamespace3() {
+    return getNamespace(super.getNamespace3());
+  }
+
+  private String getNamespace(String namespace) {
     Optional<String> databasePrefix = CosmosEnv.getDatabasePrefix();
-    return databasePrefix.map(prefix -> prefix + NAMESPACE).orElse(NAMESPACE);
+    return databasePrefix.map(prefix -> prefix + namespace).orElse(namespace);
   }
 
   @Override

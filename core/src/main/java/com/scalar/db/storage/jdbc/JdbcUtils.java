@@ -47,14 +47,61 @@ public final class JdbcUtils {
     if (transactional) {
       dataSource.setDefaultAutoCommit(false);
       dataSource.setAutoCommitOnReturn(false);
+      // if transactional, the default isolation level is SERIALIZABLE
       dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
     }
+
+    config
+        .getIsolation()
+        .ifPresent(
+            isolation -> {
+              switch (isolation) {
+                case READ_UNCOMMITTED:
+                  dataSource.setDefaultTransactionIsolation(
+                      Connection.TRANSACTION_READ_UNCOMMITTED);
+                  break;
+                case READ_COMMITTED:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                  break;
+                case REPEATABLE_READ:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+                  break;
+                case SERIALIZABLE:
+                  dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                  break;
+                default:
+                  throw new AssertionError();
+              }
+            });
 
     dataSource.setMinIdle(config.getConnectionPoolMinIdle());
     dataSource.setMaxIdle(config.getConnectionPoolMaxIdle());
     dataSource.setMaxTotal(config.getConnectionPoolMaxTotal());
     dataSource.setPoolPreparedStatements(config.isPreparedStatementsPoolEnabled());
     dataSource.setMaxOpenPreparedStatements(config.getPreparedStatementsPoolMaxOpen());
+
+    return dataSource;
+  }
+
+  public static BasicDataSource initDataSourceForTableMetadata(JdbcConfig config) {
+    String jdbcUrl = config.getContactPoints().get(0);
+    BasicDataSource dataSource = new BasicDataSource();
+
+    /*
+     * We need to set the driver class of an underlining database to the dataSource in order
+     * to avoid the "No suitable driver" error when ServiceLoader in java.sql.DriverManager doesn't
+     * work (e.g., when we dynamically load a driver class from a fatJar).
+     */
+    dataSource.setDriver(getDriverClass(jdbcUrl));
+
+    dataSource.setUrl(jdbcUrl);
+
+    config.getUsername().ifPresent(dataSource::setUsername);
+    config.getPassword().ifPresent(dataSource::setPassword);
+
+    dataSource.setMinIdle(config.getTableMetadataConnectionPoolMinIdle());
+    dataSource.setMaxIdle(config.getTableMetadataConnectionPoolMaxIdle());
+    dataSource.setMaxTotal(config.getTableMetadataConnectionPoolMaxTotal());
 
     return dataSource;
   }
@@ -76,5 +123,32 @@ public final class JdbcUtils {
       default:
         throw new AssertionError();
     }
+  }
+
+  public static boolean isConflictError(SQLException e, RdbEngine rdbEngine) {
+    switch (rdbEngine) {
+      case MYSQL:
+        if (e.getErrorCode() == 1213 || e.getErrorCode() == 1205) {
+          // Deadlock found when trying to get lock or Lock wait timeout exceeded
+          return true;
+        }
+        break;
+      case POSTGRESQL:
+        if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+          // Serialization error happened or Dead lock found
+          return true;
+        }
+        break;
+      case ORACLE:
+        if (e.getErrorCode() == 8177 || e.getErrorCode() == 60) {
+          // ORA-08177: can't serialize access for this transaction
+          // ORA-00060: deadlock detected while waiting for resource
+          return true;
+        }
+        break;
+      default:
+        break;
+    }
+    return false;
   }
 }

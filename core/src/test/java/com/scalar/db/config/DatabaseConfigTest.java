@@ -3,7 +3,6 @@ package com.scalar.db.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.scalar.db.api.Isolation;
 import com.scalar.db.storage.cassandra.Cassandra;
 import com.scalar.db.storage.cassandra.CassandraAdmin;
 import com.scalar.db.storage.cosmos.Cosmos;
@@ -50,7 +49,6 @@ public class DatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -74,7 +72,6 @@ public class DatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -98,7 +95,6 @@ public class DatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
@@ -124,21 +120,20 @@ public class DatabaseConfigTest {
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SNAPSHOT);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
-  public void constructor_NonQualifiedPropertiesGiven_ShouldThrowRuntimeException() {
+  public void constructor_NonQualifiedPropertiesGiven_ShouldThrowNullPointerException() {
     // Arrange
     Properties props = new Properties();
 
     // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(NullPointerException.class);
   }
 
   @Test
-  public void constructor_PropertiesWithNegativePortGiven_ShouldThrowRuntimeException() {
+  public void constructor_PropertiesWithNegativePortGiven_ShouldThrowIllegalArgumentException() {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
@@ -147,7 +142,8 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
 
     // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props)).isInstanceOf(RuntimeException.class);
+    assertThatThrownBy(() -> new DatabaseConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -400,42 +396,6 @@ public class DatabaseConfigTest {
     props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "cassandra");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
-
-    // Act Assert
-    assertThatThrownBy(() -> new DatabaseConfig(props))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void constructor_PropertiesWithIsolationLevelGiven_ShouldLoadProperly() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.ISOLATION_LEVEL, Isolation.SERIALIZABLE.toString());
-
-    // Act
-    DatabaseConfig config = new DatabaseConfig(props);
-
-    // Assert
-    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getIsolation()).isEqualTo(Isolation.SERIALIZABLE);
-  }
-
-  @Test
-  public void constructor_UnsupportedIsolationGiven_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    Properties props = new Properties();
-    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
-    props.setProperty(DatabaseConfig.ISOLATION_LEVEL, "READ_COMMITTED");
 
     // Act Assert
     assertThatThrownBy(() -> new DatabaseConfig(props))

@@ -33,21 +33,20 @@ From here, we assume Oracle JDK 8 is properly installed in your local environmen
 
 ## Configure Scalar DB
     
-The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` and `password` with your Cosmos DB account URI and the account's password respectively, and `storage` with `cosmos`.
+The **scalardb.properties** (getting-started/scalardb.properties) file holds the configuration for Scalar DB. You need to update `contact_points` and `password` with your Cosmos DB URI and Cosmos DB key respectively, and `storage` with `cosmos`.
     
 ```
-# Comma separated contact points
-scalar.db.contact_points=<COSMOS_DB_ACCOUNT_URI>
+# The Cosmos DB URI
+scalar.db.contact_points=<COSMOS_DB_URI>
 
-# Port number for all the contact points. Default port number for each database is used if empty.
-#scalar.db.contact_port=
-
-# Credential information to access the database
-scalar.db.username=
+# The Cosmos DB key
 scalar.db.password=<COSMOS_DB_KEY>
 
-# Storage implementation. Either cassandra or cosmos or dynamo or jdbc can be set. Default storage is cassandra.
+# Cosmos DB storage implementation
 scalar.db.storage=cosmos
+
+# The database name for the table metadata. If not specified, the default name ("scalardb") is used
+scalar.db.cosmos.table_metadata.database=
 ```
 Note that you can use a primary key or a secondary key for `<COSMOS_DB_KEY>`.
 

@@ -1,7 +1,7 @@
 package com.scalar.db.storage.jdbc;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
-import static com.scalar.db.util.Utility.getFullTableName;
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -11,6 +11,7 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
@@ -117,6 +118,7 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
   @VisibleForTesting static final String METADATA_COL_CLUSTERING_ORDER = "clustering_order";
   @VisibleForTesting static final String METADATA_COL_INDEXED = "indexed";
   @VisibleForTesting static final String METADATA_COL_ORDINAL_POSITION = "ordinal_position";
+  private static final String INDEX_NAME_PREFIX = "index";
 
   private final BasicDataSource dataSource;
   private final RdbEngine rdbEngine;
@@ -666,15 +668,31 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
                 columnName ->
                     enclose(columnName) + " " + getVendorDbColumnType(metadata, columnName))
             .collect(Collectors.joining(","));
+
+    boolean hasDescClusteringOrder = hasDescClusteringOrder(metadata);
+
     // Add primary key definition
-    createTableStatement +=
-        ", PRIMARY KEY ("
-            + Stream.concat(
-                    metadata.getPartitionKeyNames().stream(),
-                    metadata.getClusteringKeyNames().stream())
-                .map(this::enclose)
-                .collect(Collectors.joining(","))
-            + "))";
+    if (hasDescClusteringOrder
+        && (rdbEngine == RdbEngine.MYSQL || rdbEngine == RdbEngine.SQL_SERVER)) {
+      // For MySQL and SQL Server, specify the clustering orders in the primary key definition
+      createTableStatement +=
+          ", PRIMARY KEY ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
+                      metadata.getClusteringKeyNames().stream()
+                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
+                  .collect(Collectors.joining(","))
+              + "))";
+    } else {
+      createTableStatement +=
+          ", PRIMARY KEY ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream(),
+                      metadata.getClusteringKeyNames().stream())
+                  .map(this::enclose)
+                  .collect(Collectors.joining(","))
+              + "))";
+    }
     if (rdbEngine == RdbEngine.ORACLE) {
       // For Oracle Database, add ROWDEPENDENCIES to the table to improve the performance
       createTableStatement += " ROWDEPENDENCIES";
@@ -689,6 +707,24 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
               + enclosedFullTableName(schema, table, rdbEngine)
               + " INITRANS 3 MAXTRANS 255";
       execute(connection, alterTableStatement);
+    }
+
+    if (hasDescClusteringOrder
+        && (rdbEngine == RdbEngine.POSTGRESQL || rdbEngine == RdbEngine.ORACLE)) {
+      // For PostgreSQL and Oracle, create a unique index for the clustering orders
+      String createUniqueIndexStatement =
+          "CREATE UNIQUE INDEX "
+              + enclose(getFullTableName(schema, table) + "_clustering_order_idx")
+              + " ON "
+              + enclosedFullTableName(schema, table, rdbEngine)
+              + " ("
+              + Stream.concat(
+                      metadata.getPartitionKeyNames().stream().map(c -> enclose(c) + " ASC"),
+                      metadata.getClusteringKeyNames().stream()
+                          .map(c -> enclose(c) + " " + metadata.getClusteringOrder(c)))
+                  .collect(Collectors.joining(","))
+              + ")";
+      execute(connection, createUniqueIndexStatement);
     }
   }
 
@@ -715,6 +751,11 @@ public class JdbcDatabaseAdmin implements DistributedStorageAdmin {
     } else {
       return DATA_TYPE_MAPPING.get(rdbEngine).get(scalarDbColumnType);
     }
+  }
+
+  private boolean hasDescClusteringOrder(TableMetadata metadata) {
+    return metadata.getClusteringKeyNames().stream()
+        .anyMatch(c -> metadata.getClusteringOrder(c) == Order.DESC);
   }
 
   private void createIndex(
