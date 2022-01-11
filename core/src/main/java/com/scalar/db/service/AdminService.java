@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
+/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0. */
+@Deprecated
 @ThreadSafe
 public class AdminService implements DistributedStorageAdmin {
 
