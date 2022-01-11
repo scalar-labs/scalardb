@@ -2107,6 +2107,20 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
+  public void scanAndCommit_MultipleScansGivenInTransactionWithExtraRead_ShouldCommitProperly()
+      throws CrudException, CommitException, UnknownTransactionStatusException {
+    // Arrange
+    populateRecords(namespace1, TABLE_1);
+
+    // Act Assert
+    ConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction.scan(prepareScan(0, namespace1, TABLE_1));
+    transaction.scan(prepareScan(1, namespace1, TABLE_1));
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+  }
+
+  @Test
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws CrudException, CommitException, UnknownTransactionStatusException {
     // Arrange
@@ -2530,6 +2544,14 @@ public abstract class ConsensusCommitIntegrationTestBase {
         .withConsistency(Consistency.LINEARIZABLE)
         .withStart(new Key(ACCOUNT_TYPE, fromType))
         .withEnd(new Key(ACCOUNT_TYPE, toType));
+  }
+
+  private Scan prepareScan(int id, String namespace, String table) {
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    return new Scan(partitionKey)
+        .forNamespace(namespace)
+        .forTable(table)
+        .withConsistency(Consistency.LINEARIZABLE);
   }
 
   private Put preparePut(int id, int type, String namespace, String table) {

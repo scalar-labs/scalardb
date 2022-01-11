@@ -248,10 +248,12 @@ public class Snapshot {
       return;
     }
 
-    // Read set by scan is re-validated to check if there is no anti-dependency
     Set<Key> validatedReadSetByScan = new HashSet<>();
+
+    // Read set by scan is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, Optional<List<Key>>> entry : scanSet.entrySet()) {
-      Set<TransactionResult> currentReadSetByScan = new HashSet<>();
+      Set<TransactionResult> currentReadSet = new HashSet<>();
+      Set<Key> validatedReadSet = new HashSet<>();
       Scanner scanner = null;
       try {
         scanner = storage.scan(entry.getKey());
@@ -261,7 +263,7 @@ public class Snapshot {
           if (transactionResult.getId().equals(id)) {
             continue;
           }
-          currentReadSetByScan.add(transactionResult);
+          currentReadSet.add(transactionResult);
         }
       } finally {
         if (scanner != null) {
@@ -278,16 +280,18 @@ public class Snapshot {
           continue;
         }
         // Check if read records are not changed
-        if (!currentReadSetByScan.contains(readSet.get(key).get())) {
+        if (!currentReadSet.contains(readSet.get(key).get())) {
           throwExceptionDueToAntiDependency();
         }
-        validatedReadSetByScan.add(key);
+        validatedReadSet.add(key);
       }
 
       // Check if the size of a read set by scan is not changed
-      if (currentReadSetByScan.size() != validatedReadSetByScan.size()) {
+      if (currentReadSet.size() != validatedReadSet.size()) {
         throwExceptionDueToAntiDependency();
       }
+
+      validatedReadSetByScan.addAll(validatedReadSet);
     }
 
     // Read set by get is re-validated to check if there is no anti-dependency
