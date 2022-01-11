@@ -26,7 +26,7 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.storage.common.TableMetadataManager;
+import com.scalar.db.util.TableMetadataManager;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;

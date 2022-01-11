@@ -20,7 +20,7 @@ public class StorageFactory {
    * @return a {@link DistributedStorage} instance
    */
   public DistributedStorage getStorage() {
-    return injector.getInstance(StorageService.class);
+    return injector.getInstance(DistributedStorage.class);
   }
 
   /**
@@ -29,6 +29,6 @@ public class StorageFactory {
    * @return a {@link DistributedStorageAdmin} instance
    */
   public DistributedStorageAdmin getAdmin() {
-    return injector.getInstance(AdminService.class);
+    return injector.getInstance(DistributedStorageAdmin.class);
   }
 }

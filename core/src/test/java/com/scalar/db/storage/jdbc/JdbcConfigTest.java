@@ -46,7 +46,7 @@ public class JdbcConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getConnectionPoolMinIdle()).isEqualTo(1);
     assertThat(config.getConnectionPoolMaxIdle()).isEqualTo(100);
     assertThat(config.getConnectionPoolMaxTotal()).isEqualTo(500);
@@ -82,7 +82,7 @@ public class JdbcConfigTest {
     assertThat(config.getPassword().isPresent()).isTrue();
     assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
-    assertThat(config.getAdminClass()).isEqualTo(JdbcDatabaseAdmin.class);
+    assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getConnectionPoolMinIdle())
         .isEqualTo(JdbcConfig.DEFAULT_CONNECTION_POOL_MIN_IDLE);
     assertThat(config.getConnectionPoolMaxIdle())

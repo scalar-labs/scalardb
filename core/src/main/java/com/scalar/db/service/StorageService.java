@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
+/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0. */
+@Deprecated
 @ThreadSafe
 public class StorageService implements DistributedStorage {
   private final DistributedStorage storage;
