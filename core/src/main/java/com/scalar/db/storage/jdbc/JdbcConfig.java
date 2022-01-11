@@ -36,6 +36,13 @@ public class JdbcConfig extends DatabaseConfig {
   public static final String TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL =
       PREFIX + "table_metadata.connection_pool.max_total";
 
+  public static final String ADMIN_CONNECTION_POOL_MIN_IDLE =
+      PREFIX + "admin.connection_pool.min_idle";
+  public static final String ADMIN_CONNECTION_POOL_MAX_IDLE =
+      PREFIX + "admin.connection_pool.max_idle";
+  public static final String ADMIN_CONNECTION_POOL_MAX_TOTAL =
+      PREFIX + "admin.connection_pool.max_total";
+
   public static final int DEFAULT_CONNECTION_POOL_MIN_IDLE = 20;
   public static final int DEFAULT_CONNECTION_POOL_MAX_IDLE = 50;
   public static final int DEFAULT_CONNECTION_POOL_MAX_TOTAL = 200;
@@ -45,6 +52,10 @@ public class JdbcConfig extends DatabaseConfig {
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MIN_IDLE = 5;
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_IDLE = 10;
   public static final int DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL = 25;
+
+  public static final int DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE = 5;
+  public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE = 10;
+  public static final int DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL = 25;
 
   private int connectionPoolMinIdle;
   private int connectionPoolMaxIdle;
@@ -58,6 +69,10 @@ public class JdbcConfig extends DatabaseConfig {
   private int tableMetadataConnectionPoolMinIdle;
   private int tableMetadataConnectionPoolMaxIdle;
   private int tableMetadataConnectionPoolMaxTotal;
+
+  private int adminConnectionPoolMinIdle;
+  private int adminConnectionPoolMaxIdle;
+  private int adminConnectionPoolMaxTotal;
 
   public JdbcConfig(File propertiesFile) throws IOException {
     super(propertiesFile);
@@ -118,6 +133,22 @@ public class JdbcConfig extends DatabaseConfig {
             getProperties(),
             TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL,
             DEFAULT_TABLE_METADATA_CONNECTION_POOL_MAX_TOTAL);
+
+    adminConnectionPoolMinIdle =
+        getInt(
+            getProperties(),
+            ADMIN_CONNECTION_POOL_MIN_IDLE,
+            DEFAULT_ADMIN_CONNECTION_POOL_MIN_IDLE);
+    adminConnectionPoolMaxIdle =
+        getInt(
+            getProperties(),
+            ADMIN_CONNECTION_POOL_MAX_IDLE,
+            DEFAULT_ADMIN_CONNECTION_POOL_MAX_IDLE);
+    adminConnectionPoolMaxTotal =
+        getInt(
+            getProperties(),
+            ADMIN_CONNECTION_POOL_MAX_TOTAL,
+            DEFAULT_ADMIN_CONNECTION_POOL_MAX_TOTAL);
   }
 
   public int getConnectionPoolMinIdle() {
@@ -158,5 +189,17 @@ public class JdbcConfig extends DatabaseConfig {
 
   public int getTableMetadataConnectionPoolMaxTotal() {
     return tableMetadataConnectionPoolMaxTotal;
+  }
+
+  public int getAdminConnectionPoolMinIdle() {
+    return adminConnectionPoolMinIdle;
+  }
+
+  public int getAdminConnectionPoolMaxIdle() {
+    return adminConnectionPoolMaxIdle;
+  }
+
+  public int getAdminConnectionPoolMaxTotal() {
+    return adminConnectionPoolMaxTotal;
   }
 }

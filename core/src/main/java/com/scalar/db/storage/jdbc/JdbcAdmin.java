@@ -126,7 +126,7 @@ public class JdbcAdmin implements DistributedStorageAdmin {
 
   @Inject
   public JdbcAdmin(JdbcConfig config) {
-    dataSource = JdbcUtils.initDataSource(config);
+    dataSource = JdbcUtils.initDataSourceForAdmin(config);
     rdbEngine = JdbcUtils.getRdbEngine(config.getContactPoints().get(0));
     metadataSchema = config.getTableMetadataSchema().orElse(METADATA_SCHEMA);
   }
