@@ -635,6 +635,65 @@ public class SnapshotTest {
   }
 
   @Test
+  public void
+      toSerializableWithExtraRead_MultipleScansInScanSetExist_ShouldThrowCommitConflictException()
+          throws ExecutionException {
+    // Arrange
+    snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+
+    Scan scan1 =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+    Scan scan2 =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    Snapshot.Key key1 =
+        new Snapshot.Key(
+            scan1.forNamespace().get(),
+            scan1.forTable().get(),
+            scan1.getPartitionKey(),
+            scan1.getStartClusteringKey().get());
+    Snapshot.Key key2 =
+        new Snapshot.Key(
+            scan2.forNamespace().get(),
+            scan2.forTable().get(),
+            scan2.getPartitionKey(),
+            scan2.getStartClusteringKey().get());
+
+    Result result1 = mock(TransactionResult.class);
+    when(result1.getValues())
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id1")));
+    Result result2 = mock(TransactionResult.class);
+    when(result2.getValues())
+        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id2")));
+
+    snapshot.put(scan1, Optional.of(Collections.singletonList(key1)));
+    snapshot.put(scan2, Optional.of(Collections.singletonList(key2)));
+    snapshot.put(key1, Optional.of(new TransactionResult(result1)));
+    snapshot.put(key2, Optional.of(new TransactionResult(result2)));
+
+    DistributedStorage storage = mock(DistributedStorage.class);
+
+    Scanner scanner1 = mock(Scanner.class);
+    when(scanner1.iterator()).thenReturn(Collections.singletonList(result1).iterator());
+    when(storage.scan(scan1)).thenReturn(scanner1);
+
+    Scanner scanner2 = mock(Scanner.class);
+    when(scanner2.iterator()).thenReturn(Collections.singletonList(result2).iterator());
+    when(storage.scan(scan2)).thenReturn(scanner2);
+
+    // Act Assert
+    assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void put_PutGivenAfterDelete_PutSupercedesDelete() {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);

@@ -1963,6 +1963,26 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
+  public void scanAndCommit_MultipleScansGivenInTransactionWithExtraRead_ShouldCommitProperly()
+      throws TransactionException {
+    // Arrange
+    populate(TABLE_1);
+
+    // Act Assert
+    TwoPhaseConsensusCommit transaction =
+        manager.start(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
+    transaction.scan(prepareScan(0, TABLE_1));
+    transaction.scan(prepareScan(1, TABLE_1));
+    assertThatCode(
+            () -> {
+              transaction.prepare();
+              transaction.validate();
+              transaction.commit();
+            })
+        .doesNotThrowAnyException();
+  }
+
+  @Test
   public void putAndCommit_DeleteGivenInBetweenTransactions_ShouldProduceSerializableResults()
       throws TransactionException {
     // Arrange
@@ -2357,6 +2377,14 @@ public class TwoPhaseConsensusCommitIntegrationTest {
         .withConsistency(Consistency.LINEARIZABLE)
         .withStart(new Key(ACCOUNT_TYPE, fromType))
         .withEnd(new Key(ACCOUNT_TYPE, toType));
+  }
+
+  private Scan prepareScan(int id, String table) {
+    Key partitionKey = new Key(ACCOUNT_ID, id);
+    return new Scan(partitionKey)
+        .forNamespace(NAMESPACE)
+        .forTable(table)
+        .withConsistency(Consistency.LINEARIZABLE);
   }
 
   private Put preparePut(int id, int type, String table) {
