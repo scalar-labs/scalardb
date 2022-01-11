@@ -15,8 +15,8 @@ import com.scalar.db.storage.cosmos.Cosmos;
 import com.scalar.db.storage.cosmos.CosmosAdmin;
 import com.scalar.db.storage.dynamo.Dynamo;
 import com.scalar.db.storage.dynamo.DynamoAdmin;
+import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcDatabase;
-import com.scalar.db.storage.jdbc.JdbcDatabaseAdmin;
 import com.scalar.db.storage.multistorage.MultiStorage;
 import com.scalar.db.storage.multistorage.MultiStorageAdmin;
 import com.scalar.db.storage.rpc.GrpcAdmin;
@@ -104,7 +104,7 @@ public class DatabaseConfig {
         break;
       case "jdbc":
         storageClass = JdbcDatabase.class;
-        adminClass = JdbcDatabaseAdmin.class;
+        adminClass = JdbcAdmin.class;
         break;
       case "multi-storage":
         storageClass = MultiStorage.class;
