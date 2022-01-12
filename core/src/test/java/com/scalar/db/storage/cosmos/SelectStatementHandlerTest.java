@@ -232,13 +232,13 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " <= '"
+            + "\"] <= '"
             + ANY_TEXT_3
             + "')";
 
@@ -265,21 +265,21 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " = '"
+            + "\"] = '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_3
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_3
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " = '"
+            + "\"] = '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_3
-            + " <= '"
+            + "\"] <= '"
             + ANY_TEXT_4
             + "')";
 
@@ -306,13 +306,13 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " > '"
+            + "\"] > '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " < '"
+            + "\"] < '"
             + ANY_TEXT_3
             + "')";
 
@@ -340,13 +340,13 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
             + ANY_NAME_2
-            + " asc offset 0 limit "
+            + "\"] asc offset 0 limit "
             + ANY_LIMIT;
 
     // Act Assert
@@ -374,15 +374,15 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
             + ANY_NAME_2
-            + " asc, r.clusteringKey."
+            + "\"] asc, r.clusteringKey[\""
             + ANY_NAME_3
-            + " desc offset 0 limit "
+            + "\"] desc offset 0 limit "
             + ANY_LIMIT;
 
     // Act Assert
