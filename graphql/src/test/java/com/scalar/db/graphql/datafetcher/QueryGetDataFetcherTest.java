@@ -23,7 +23,6 @@ import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,16 +34,15 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
 
-  private TableGraphQlModel storageTableGraphQlModel;
-  private QueryGetDataFetcher dataFetcherForStorageTable;
-  private QueryGetDataFetcher dataFetcherForTransactionalTable;
+  private TableGraphQlModel tableGraphQlModel;
+  private QueryGetDataFetcher dataFetcher;
   private Map<String, Object> getInput;
   private Get expectedGet;
 
   @Override
   public void doSetUp() {
     // Arrange
-    TableMetadata storageTableMetadata =
+    TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -52,16 +50,8 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    storageTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
-    dataFetcherForStorageTable =
-        new QueryGetDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
-    TableMetadata transactionalTableMetadata =
-        ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    TableGraphQlModel transactionalTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
-    dataFetcherForTransactionalTable =
-        new QueryGetDataFetcher(storage, new DataFetcherHelper(transactionalTableGraphQlModel));
+    tableGraphQlModel = new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata);
+    dataFetcher = spy(new QueryGetDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
   }
 
   private void prepareGetInputAndExpectedGet() {
@@ -79,10 +69,9 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForStorageTable_ShouldUseStorage() throws Exception {
+  public void get_WhenTransactionNotStarted_ShouldUseStorage() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
-    QueryGetDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
 
     // Act
     dataFetcher.get(environment);
@@ -93,10 +82,10 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
+  public void get_WhenTransactionStarted_ShouldUseTransaction() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
-    QueryGetDataFetcher dataFetcher = spy(dataFetcherForTransactionalTable);
+    setTransactionStarted();
 
     // Act
     dataFetcher.get(environment);
@@ -110,7 +99,6 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_GetInputGiven_ShouldRunScalarDbGet() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
-    QueryGetDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
 
     // Act
     dataFetcher.get(environment);
@@ -125,7 +113,6 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_GetInputGiven_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
-    QueryGetDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     Result mockResult = mock(Result.class);
     when(mockResult.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -136,7 +123,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     Map<String, Map<String, Object>> result = dataFetcher.get(environment);
 
     // Assert
-    Map<String, Object> object = result.get(storageTableGraphQlModel.getObjectType().getName());
+    Map<String, Object> object = result.get(tableGraphQlModel.getObjectType().getName());
     assertThat(object)
         .containsOnly(entry(COL1, 1), entry(COL2, Optional.of("A")), entry(COL3, 2.0));
   }
@@ -147,7 +134,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     prepareGetInputAndExpectedGet();
 
     // Act
-    Get actual = dataFetcherForStorageTable.createGet(getInput);
+    Get actual = dataFetcher.createGet(getInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
@@ -161,7 +148,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     expectedGet.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Get actual = dataFetcherForStorageTable.createGet(getInput);
+    Get actual = dataFetcher.createGet(getInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);

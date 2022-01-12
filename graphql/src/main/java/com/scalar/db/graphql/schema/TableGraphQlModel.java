@@ -34,7 +34,6 @@ public class TableGraphQlModel {
   private final String namespaceName;
   private final String tableName;
   private final TableMetadata tableMetadata;
-  private final boolean transactionEnabled;
   private final LinkedHashSet<String> fieldNames;
   private final Map<String, GraphQLScalarType> fieldNameGraphQLScalarTypeMap;
 
@@ -65,7 +64,6 @@ public class TableGraphQlModel {
     this.tableName = Objects.requireNonNull(tableName);
     this.tableMetadata = Objects.requireNonNull(tableMetadata);
 
-    this.transactionEnabled = ConsensusCommitUtils.isTransactionalTableMetadata(tableMetadata);
     this.fieldNames =
         ConsensusCommitUtils.removeTransactionalMetaColumns(tableMetadata).getColumnNames();
     this.fieldNameGraphQLScalarTypeMap =
@@ -365,10 +363,6 @@ public class TableGraphQlModel {
 
   public TableMetadata getTableMetadata() {
     return tableMetadata;
-  }
-
-  public boolean getTransactionEnabled() {
-    return transactionEnabled;
   }
 
   public LinkedHashSet<String> getFieldNames() {

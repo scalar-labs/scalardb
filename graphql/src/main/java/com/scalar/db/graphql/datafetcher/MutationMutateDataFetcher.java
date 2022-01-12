@@ -50,7 +50,7 @@ public class MutationMutateDataFetcher implements DataFetcher<DataFetcherResult<
   @VisibleForTesting
   void performMutate(DataFetchingEnvironment environment, List<Mutation> mutations)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       transaction.mutate(mutations);
     } else {

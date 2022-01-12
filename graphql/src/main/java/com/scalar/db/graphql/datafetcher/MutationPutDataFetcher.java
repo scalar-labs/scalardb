@@ -40,7 +40,7 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
   @VisibleForTesting
   void performPut(DataFetchingEnvironment environment, Put put)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       transaction.put(put);
     } else {

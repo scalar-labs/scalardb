@@ -43,6 +43,10 @@ public class DataFetcherHelper {
     this.tableGraphQlModel = tableGraphQlModel;
   }
 
+  static DistributedTransaction getCurrentTransaction(DataFetchingEnvironment environment) {
+    return environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);
+  }
+
   static Value<?> createValueFromMap(String name, Map<String, Object> map) {
     Object v = getOneScalarValue(map);
     Value<?> value;
@@ -133,14 +137,6 @@ public class DataFetcherHelper {
                     createValueFromMap("", ex),
                     ConditionalExpression.Operator.valueOf((String) ex.get("operator"))))
         .collect(toList());
-  }
-
-  DistributedTransaction getTransactionIfEnabled(DataFetchingEnvironment environment) {
-    DistributedTransaction transaction = null;
-    if (tableGraphQlModel.getTransactionEnabled()) {
-      transaction = environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);
-    }
-    return transaction;
   }
 
   @SuppressWarnings("unchecked")
