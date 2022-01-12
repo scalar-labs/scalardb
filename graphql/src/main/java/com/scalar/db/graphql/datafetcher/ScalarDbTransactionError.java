@@ -14,17 +14,22 @@ import java.util.Map;
 
 class ScalarDbTransactionError implements GraphQLError {
   private static final String EXTENSIONS_EXCEPTION_KEY = "exception";
+  private final String txId;
   private final TransactionException transactionException;
   private final List<SourceLocation> locations;
   private final String message;
   private final Map<String, Object> extensions;
 
   public ScalarDbTransactionError(
-      TransactionException transactionException, SourceLocation sourceLocation) {
+      String txId, TransactionException transactionException, SourceLocation sourceLocation) {
+    this.txId = txId;
     this.transactionException = transactionException;
     this.locations = sourceLocation == null ? null : Collections.singletonList(sourceLocation);
     String simpleExName = transactionException.getClass().getSimpleName();
-    this.message = "Scalar DB " + simpleExName + ": " + transactionException.getMessage();
+    this.message =
+        String.format(
+            "Scalar DB %s happened in the transaction %s: %s",
+            simpleExName, txId, transactionException.getMessage());
     this.extensions = ImmutableMap.of(EXTENSIONS_EXCEPTION_KEY, simpleExName);
   }
 
@@ -52,6 +57,7 @@ class ScalarDbTransactionError implements GraphQLError {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("transactionException", transactionException)
+        .add("txId", txId)
         .add("message", message)
         .add("locations", locations)
         .toString();

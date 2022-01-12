@@ -390,6 +390,7 @@ public class TransactionInstrumentationTest {
     assertThat(error.getExtensions().get("exception"))
         .isEqualTo(transactionExceptionClass.getSimpleName());
     assertThat(error.getMessage()).contains(transactionExceptionClass.getSimpleName());
+    assertThat((Object) result.getData()).isNull();
   }
 
   public static class ExecutionResultCaptor implements Answer<CompletableFuture<ExecutionResult>> {

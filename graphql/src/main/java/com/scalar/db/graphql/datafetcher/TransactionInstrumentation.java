@@ -134,7 +134,8 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
                       e);
                   graphQLContext.put(
                       CONTEXT_TRANSACTION_ERROR_KEY,
-                      new ScalarDbTransactionError(e, directive.getSourceLocation()));
+                      new ScalarDbTransactionError(
+                          transaction.getId(), e, directive.getSourceLocation()));
                   transaction.abort();
                 }
               }
@@ -154,33 +155,36 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
       ExecutionResult executionResult, InstrumentationExecutionParameters parameters) {
     GraphQLContext graphQLContext = parameters.getGraphQLContext();
 
-    DistributedTransaction transaction = graphQLContext.get(Constants.CONTEXT_TRANSACTION_KEY);
+    // If a transaction error has occurred, only the "errors" key should be included in the result.
     ScalarDbTransactionError txError = graphQLContext.get(CONTEXT_TRANSACTION_ERROR_KEY);
-    if (transaction == null && txError == null) {
+    if (txError != null) {
+      List<GraphQLError> currentErrors = executionResult.getErrors();
+      List<GraphQLError> errorsWithTxError =
+          ImmutableList.<GraphQLError>builder()
+              .addAll(currentErrors != null ? currentErrors : Collections.emptyList())
+              .add(txError)
+              .build();
+      return CompletableFuture.completedFuture(new ExecutionResultImpl(errorsWithTxError));
+    }
+
+    // If a transaction is ongoing, transaction ID should be included in the "extensions" key of the
+    // result.
+    DistributedTransaction transaction = graphQLContext.get(Constants.CONTEXT_TRANSACTION_KEY);
+    if (transaction == null) {
       return CompletableFuture.completedFuture(executionResult);
     }
 
-    Map<Object, Object> extensions = executionResult.getExtensions();
-    if (transaction != null) {
-      extensions =
-          ImmutableMap.builder()
-              .putAll(extensions != null ? extensions : Collections.emptyMap())
-              .put(
-                  RESULT_EXTENSIONS_TRANSACTION_KEY,
-                  ImmutableMap.of(RESULT_EXTENSIONS_TRANSACTION_TX_ID_KEY, transaction.getId()))
-              .build();
-    }
-
-    List<GraphQLError> errors = executionResult.getErrors();
-    if (txError != null) {
-      errors =
-          ImmutableList.<GraphQLError>builder()
-              .addAll(errors != null ? errors : Collections.emptyList())
-              .add(txError)
-              .build();
-    }
+    Map<Object, Object> currentExt = executionResult.getExtensions();
+    Map<Object, Object> extWithTxId =
+        ImmutableMap.builder()
+            .putAll(currentExt != null ? currentExt : Collections.emptyMap())
+            .put(
+                RESULT_EXTENSIONS_TRANSACTION_KEY,
+                ImmutableMap.of(RESULT_EXTENSIONS_TRANSACTION_TX_ID_KEY, transaction.getId()))
+            .build();
 
     return CompletableFuture.completedFuture(
-        new ExecutionResultImpl(executionResult.getData(), errors, extensions));
+        new ExecutionResultImpl(
+            executionResult.getData(), executionResult.getErrors(), extWithTxId));
   }
 }
