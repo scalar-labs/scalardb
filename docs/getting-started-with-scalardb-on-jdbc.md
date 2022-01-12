@@ -57,6 +57,15 @@ scalar.db.storage=jdbc
 
 # The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for the table metadata. Use a negative value for no limit. The default is 25
 #scalar.db.jdbc.table_metadata.connection_pool.max_total=25
+
+# The minimum number of idle connections in the connection pool for admin. The default is 5
+#scalar.db.jdbc.admin.connection_pool.min_idle=5
+
+# The maximum number of connections that can remain idle in the connection pool for admin. The default is 10
+#scalar.db.jdbc.admin.connection_pool.max_idle=10
+
+# The maximum total number of idle and borrowed connections that can be active at the same time for the connection pool for admin. Use a negative value for no limit. The default is 25
+#scalar.db.jdbc.admin.connection_pool.max_total=25
 ```
 
 Please follow [Getting Started with Scalar DB](getting-started-with-scalardb.md) to run the application.
