@@ -61,7 +61,7 @@ public class ClusterManager {
    */
   public TableMetadata getMetadata(String keyspace, String table) {
     KeyspaceMetadata metadata = cluster.getMetadata().getKeyspace(quoteIfNecessary(keyspace));
-    if (metadata == null || metadata.getTable(quoteIfNecessary(table)) == null) {
+    if (metadata == null) {
       return null;
     }
     return metadata.getTable(quoteIfNecessary(table));

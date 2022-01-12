@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosAdmin.quoteKeyword;
+import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.DeleteIf;

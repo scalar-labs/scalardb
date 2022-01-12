@@ -140,7 +140,7 @@ public class BatchHandler {
 
     Map<String, String> conditionAttributeNameMap = dynamoMutation.getConditionAttributeNameMap();
     if (!conditionAttributeNameMap.isEmpty()) {
-      expressionAttributeNameMap.putAll(dynamoMutation.getConditionAttributeNameMap());
+      expressionAttributeNameMap.putAll(conditionAttributeNameMap);
     }
 
     updateBuilder.expressionAttributeNames(expressionAttributeNameMap);

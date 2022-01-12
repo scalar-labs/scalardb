@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosAdmin.quoteKeyword;
+import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
 
 import com.azure.cosmos.models.CosmosStoredProcedureRequestOptions;
 import com.google.common.annotations.VisibleForTesting;

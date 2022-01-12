@@ -3,6 +3,7 @@ package com.scalar.db.storage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
@@ -15,6 +16,8 @@ import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
@@ -40,7 +43,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressFBWarnings({"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"})
+@SuppressFBWarnings({"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"})
 public abstract class StorageWithReservedKeywordIntegrationTestBase {
   private static boolean initialized;
   private static DistributedStorage storage;
@@ -127,7 +130,6 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     deleteTable();
     admin.close();
     storage.close();
-    initialized = false;
   }
 
   private static void deleteTable() throws ExecutionException {
@@ -463,6 +465,30 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     }
 
     assertThat(expectedValues).isEmpty();
+  }
+
+  @Test
+  public void scan_WithReservedKeywordAndClusteringKeyRange_ShouldReturnProperResult()
+      throws ExecutionException, IOException {
+    // Arrange
+    populateRecords();
+    Scan scan =
+        new Scan(new Key(columnName1, 1))
+            .withStart(new Key(columnName4, 1), false)
+            .withEnd(new Key(columnName4, 3), false)
+            .withOrdering(new Ordering(columnName4, Order.DESC))
+            .forNamespace(namespace)
+            .forTable(tableName);
+
+    List<Integer> expected = ImmutableList.of(2);
+
+    // Act
+    List<Result> actual = scanAll(scan);
+
+    // Assert
+    assertThat(actual.size()).isEqualTo(1);
+    assertThat(actual.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(expected.get(0));
   }
 
   private void populateRecords() {

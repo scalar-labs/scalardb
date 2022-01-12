@@ -320,10 +320,6 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     }
   }
 
-  public static String quoteKeyword(String keyword) {
-    return "[\"" + keyword + "\"]";
-  }
-
   @Override
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     try {

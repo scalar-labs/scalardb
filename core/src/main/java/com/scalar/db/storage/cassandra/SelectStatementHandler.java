@@ -123,10 +123,7 @@ public class SelectStatementHandler extends StatementHandler {
     if (projections.isEmpty()) {
       selection.all();
     } else {
-      projections.forEach(
-          v -> {
-            selection.column(quoteIfNecessary(v));
-          });
+      projections.forEach(v -> selection.column(quoteIfNecessary(v)));
     }
   }
 

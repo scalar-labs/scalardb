@@ -1,6 +1,6 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosAdmin.quoteKeyword;
+import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
@@ -134,7 +134,8 @@ public class SelectStatementHandler extends StatementHandler {
                   .forEach(
                       i -> {
                         Value<?> value = start.get(i);
-                        Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
+                        Field<Object> field =
+                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
                             binder.set(v -> select.and(field.greaterOrEqual(v)));
@@ -163,7 +164,8 @@ public class SelectStatementHandler extends StatementHandler {
                   .forEach(
                       i -> {
                         Value<?> value = end.get(i);
-                        Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
+                        Field<Object> field =
+                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
                             binder.set(v -> select.and(field.lessOrEqual(v)));
@@ -197,7 +199,7 @@ public class SelectStatementHandler extends StatementHandler {
     // For clustering keys
     scanOrderings.forEach(
         o -> {
-          Field<Object> field = DSL.field("r.clusteringKey." + o.getName());
+          Field<Object> field = DSL.field("r.clusteringKey" + quoteKeyword(o.getName()));
           select.orderBy(o.getOrder() == Scan.Ordering.Order.ASC ? field.asc() : field.desc());
         });
   }
