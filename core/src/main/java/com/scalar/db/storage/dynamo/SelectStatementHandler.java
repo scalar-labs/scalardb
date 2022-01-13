@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.UnsignedBytes;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
@@ -42,6 +43,8 @@ import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
  */
 @ThreadSafe
 public class SelectStatementHandler extends StatementHandler {
+
+  static final String EXPRESSION_ATTRIBUTE_NAME_PREFIX = "#exp_att_";
 
   /**
    * Constructs a {@code SelectStatementHandler} with the specified {@link DynamoDbClient} and a new
@@ -108,11 +111,15 @@ public class SelectStatementHandler extends StatementHandler {
     QueryRequest.Builder builder =
         QueryRequest.builder().tableName(dynamoOperation.getTableName()).indexName(indexTable);
 
-    String condition = column + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    String expressionColumnName = EXPRESSION_ATTRIBUTE_NAME_PREFIX + column;
+    String condition = expressionColumnName + " = " + DynamoOperation.VALUE_ALIAS + "0";
     ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
     keyValue.accept(binder);
     Map<String, AttributeValue> bindMap = binder.build();
-    builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
+    builder
+        .keyConditionExpression(condition)
+        .expressionAttributeValues(bindMap)
+        .expressionAttributeNames(ImmutableMap.of(expressionColumnName, column));
 
     if (!selection.getProjections().isEmpty()) {
       projectionExpression(builder, selection);
