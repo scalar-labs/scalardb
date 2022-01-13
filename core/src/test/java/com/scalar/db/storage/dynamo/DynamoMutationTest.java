@@ -126,16 +126,36 @@ public class DynamoMutationTest {
     // Assert
     assertThat(actual)
         .isEqualTo(
-            ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_3
-                + " = "
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS
+                + "0 = "
                 + DynamoOperation.CONDITION_VALUE_ALIAS
                 + "0 AND "
-                + ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_4
-                + " > "
+                + DynamoOperation.CONDITION_COLUMN_NAME_ALIAS
+                + "1 > "
                 + DynamoOperation.CONDITION_VALUE_ALIAS
                 + "1");
+  }
+
+  @Test
+  public void getConditionColumnMap_PutGiven_ShouldReturnCondition() {
+    // Arrange
+    PutIf conditions =
+        new PutIf(
+            new ConditionalExpression(ANY_NAME_3, ANY_INT_VALUE, Operator.EQ),
+            new ConditionalExpression(ANY_NAME_4, ANY_INT_VALUE, Operator.GT));
+    Put put = preparePut().withCondition(conditions);
+
+    Map<String, String> expected = new HashMap<>();
+    expected.put(DynamoOperation.CONDITION_COLUMN_NAME_ALIAS + "0", ANY_NAME_3);
+    expected.put(DynamoOperation.CONDITION_COLUMN_NAME_ALIAS + "1", ANY_NAME_4);
+
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
+
+    // Act
+    Map<String, String> conditionColumnMap = dynamoMutation.getConditionColumnMap();
+
+    // Assert
+    assertThat(conditionColumnMap).isEqualTo(expected);
   }
 
   @Test

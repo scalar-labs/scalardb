@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
@@ -16,11 +17,8 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 @Immutable
 public class DynamoMutation extends DynamoOperation {
 
-  private final Map<String, String> conditionAttributeNameMap;
-
   DynamoMutation(Mutation mutation, TableMetadata metadata) {
     super(mutation, metadata);
-    conditionAttributeNameMap = new HashMap<>();
   }
 
   @Nonnull
@@ -58,16 +56,12 @@ public class DynamoMutation extends DynamoOperation {
 
   @Nonnull
   public String getCondition() {
-    ConditionExpressionBuilder builder = new ConditionExpressionBuilder(CONDITION_VALUE_ALIAS);
+    ConditionExpressionBuilder builder =
+        new ConditionExpressionBuilder(CONDITION_COLUMN_NAME_ALIAS, CONDITION_VALUE_ALIAS);
     Mutation mutation = (Mutation) getOperation();
     mutation.getCondition().ifPresent(c -> c.accept(builder));
-    conditionAttributeNameMap.putAll(builder.getConditionAttributeNameMap());
 
     return builder.build();
-  }
-
-  public Map<String, String> getConditionAttributeNameMap() {
-    return conditionAttributeNameMap;
   }
 
   @Nonnull
@@ -140,6 +134,20 @@ public class DynamoMutation extends DynamoOperation {
     }
 
     return columnMap;
+  }
+
+  @Nonnull
+  public Map<String, String> getConditionColumnMap() {
+    Map<String, String> ret = new HashMap<>();
+    Mutation mutation = (Mutation) getOperation();
+    if (mutation.getCondition().isPresent()) {
+      int index = 0;
+      for (ConditionalExpression expression : mutation.getCondition().get().getExpressions()) {
+        ret.put(CONDITION_COLUMN_NAME_ALIAS + index, expression.getName());
+        index++;
+      }
+    }
+    return ret;
   }
 
   @Nonnull

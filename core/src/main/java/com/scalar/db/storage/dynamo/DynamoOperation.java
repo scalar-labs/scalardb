@@ -25,6 +25,7 @@ public class DynamoOperation {
   static final String CONDITION_VALUE_ALIAS = ":cval";
   static final String VALUE_ALIAS = ":val";
   static final String COLUMN_NAME_ALIAS = "#col";
+  static final String CONDITION_COLUMN_NAME_ALIAS = "#ccol";
   static final String INDEX_NAME_PREFIX = "index";
   static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
 
