@@ -48,6 +48,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -317,6 +318,12 @@ public class TransactionInstrumentationTest {
     verify(transactionManager, times(1)).start();
     verify(transaction, times(1)).commit();
     assertThat(instrumentation.activeTransactions.get(transaction.getId())).isEmpty();
+
+    ArgumentCaptor<InstrumentationExecutionParameters> captor =
+        ArgumentCaptor.forClass(InstrumentationExecutionParameters.class);
+    verify(instrumentation).instrumentExecutionResult(any(ExecutionResult.class), captor.capture());
+    assertThat(captor.getValue().getGraphQLContext().hasKey(Constants.CONTEXT_TRANSACTION_KEY))
+        .isFalse();
   }
 
   @Test
@@ -332,6 +339,12 @@ public class TransactionInstrumentationTest {
     verify(transactionManager, times(1)).start();
     verify(transaction, never()).commit();
     assertThat(instrumentation.activeTransactions.get(transaction.getId())).isPresent();
+
+    ArgumentCaptor<InstrumentationExecutionParameters> captor =
+        ArgumentCaptor.forClass(InstrumentationExecutionParameters.class);
+    verify(instrumentation).instrumentExecutionResult(any(ExecutionResult.class), captor.capture());
+    assertThat(captor.getValue().getGraphQLContext().hasKey(Constants.CONTEXT_TRANSACTION_KEY))
+        .isTrue();
   }
 
   @Test

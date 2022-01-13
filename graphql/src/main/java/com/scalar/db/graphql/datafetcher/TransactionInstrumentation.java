@@ -115,6 +115,7 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     if (isCommitTrue) {
       return SimpleInstrumentationContext.whenCompleted(
           (executionResult, throwable) -> {
+            graphQLContext.delete(Constants.CONTEXT_TRANSACTION_KEY);
             activeTransactions.remove(transaction.getId());
             try {
               if (throwable != null) {
