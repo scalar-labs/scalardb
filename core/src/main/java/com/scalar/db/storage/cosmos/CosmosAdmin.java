@@ -306,7 +306,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
       CosmosPagedIterable<Record> records =
           container.queryItems(
-              "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + table + " t",
+              "SELECT t." + ID + ", t." + CONCATENATED_PARTITION_KEY + " FROM " + " t",
               new CosmosQueryRequestOptions(),
               Record.class);
       records.forEach(
