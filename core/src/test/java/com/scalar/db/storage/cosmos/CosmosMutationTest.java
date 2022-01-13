@@ -157,9 +157,8 @@ public class CosmosMutationTest {
         .isEqualTo(
             "select * from Record r where (r.concatenatedPartitionKey = '"
                 + concatenatedPartitionKey
-                + "' and r.clusteringKey[\""
+                + "' and r.clusteringKey."
                 + ANY_NAME_2
-                + "\"]"
                 + " = '"
                 + ANY_TEXT_2
                 + "')");
@@ -184,14 +183,12 @@ public class CosmosMutationTest {
         .isEqualTo(
             "select * from Record r where (r.id = '"
                 + id
-                + "' and r.values[\""
+                + "' and r.values."
                 + ANY_NAME_3
-                + "\"]"
                 + " = "
                 + ANY_INT_3
-                + " and r.values[\""
+                + " and r.values."
                 + ANY_NAME_4
-                + "\"]"
                 + " > "
                 + ANY_INT_3
                 + ")");

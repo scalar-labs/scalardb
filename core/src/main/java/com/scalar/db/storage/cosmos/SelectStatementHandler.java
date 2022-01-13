@@ -1,7 +1,5 @@
 package com.scalar.db.storage.cosmos;
 
-import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
-
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -134,8 +132,7 @@ public class SelectStatementHandler extends StatementHandler {
                   .forEach(
                       i -> {
                         Value<?> value = start.get(i);
-                        Field<Object> field =
-                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
+                        Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
                             binder.set(v -> select.and(field.greaterOrEqual(v)));
@@ -164,8 +161,7 @@ public class SelectStatementHandler extends StatementHandler {
                   .forEach(
                       i -> {
                         Value<?> value = end.get(i);
-                        Field<Object> field =
-                            DSL.field("r.clusteringKey" + quoteKeyword(value.getName()));
+                        Field<Object> field = DSL.field("r.clusteringKey." + value.getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
                             binder.set(v -> select.and(field.lessOrEqual(v)));
@@ -199,7 +195,7 @@ public class SelectStatementHandler extends StatementHandler {
     // For clustering keys
     scanOrderings.forEach(
         o -> {
-          Field<Object> field = DSL.field("r.clusteringKey" + quoteKeyword(o.getName()));
+          Field<Object> field = DSL.field("r.clusteringKey." + o.getName());
           select.orderBy(o.getOrder() == Scan.Ordering.Order.ASC ? field.asc() : field.desc());
         });
   }
@@ -209,11 +205,11 @@ public class SelectStatementHandler extends StatementHandler {
     Value<?> keyValue = operation.getPartitionKey().get().get(0);
     String fieldName;
     if (tableMetadata.getClusteringKeyNames().contains(keyValue.getName())) {
-      fieldName = "r.clusteringKey";
+      fieldName = "r.clusteringKey.";
     } else {
-      fieldName = "r.values";
+      fieldName = "r.values.";
     }
-    Field<Object> field = DSL.field(fieldName + quoteKeyword(keyValue.getName()));
+    Field<Object> field = DSL.field(fieldName + keyValue.getName());
 
     ValueBinder binder = new ValueBinder();
     binder.set(v -> select.where(field.eq(v)));

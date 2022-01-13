@@ -75,11 +75,6 @@ public class DeleteStatementHandler extends StatementHandler {
       builder.conditionExpression(condition);
     }
 
-    Map<String, String> conditionAttributeNameMap = dynamoMutation.getConditionAttributeNameMap();
-    if (!conditionAttributeNameMap.isEmpty()) {
-      builder.expressionAttributeNames(conditionAttributeNameMap);
-    }
-
     client.deleteItem(builder.build());
   }
 }

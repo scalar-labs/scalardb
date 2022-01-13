@@ -581,7 +581,7 @@ public class CosmosAdminTest {
     // Assert
     verify(container)
         .queryItems(
-            eq("SELECT t.id, t.concatenatedPartitionKey FROM " + " t"),
+            eq("SELECT t.id, t.concatenatedPartitionKey FROM " + table + " t"),
             refEq(new CosmosQueryRequestOptions()),
             eq(Record.class));
     verify(container)

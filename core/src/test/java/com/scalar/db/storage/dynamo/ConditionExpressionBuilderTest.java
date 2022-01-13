@@ -52,14 +52,7 @@ public class ConditionExpressionBuilderTest {
     String actual = builder.build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(
-            ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_1
-                + " = :cval0 AND "
-                + ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_2
-                + " > :cval1");
+    assertThat(actual).isEqualTo(ANY_NAME_1 + " = :cval0 AND " + ANY_NAME_2 + " > :cval1");
   }
 
   @Test
@@ -107,13 +100,6 @@ public class ConditionExpressionBuilderTest {
     String actual = builder.build();
 
     // Assert
-    assertThat(actual)
-        .isEqualTo(
-            ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_1
-                + " = :cval0 AND "
-                + ConditionExpressionBuilder.CONDITION_ATTRIBUTE_NAME_PREFIX
-                + ANY_NAME_2
-                + " > :cval1");
+    assertThat(actual).isEqualTo(ANY_NAME_1 + " = :cval0 AND " + ANY_NAME_2 + " > :cval1");
   }
 }

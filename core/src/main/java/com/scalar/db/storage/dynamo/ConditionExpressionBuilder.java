@@ -9,9 +9,7 @@ import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -25,23 +23,16 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
   private final List<String> expressions;
   private final String alias;
   private int index;
-  private final Map<String, String> conditionAttributeNameMap;
-  static final String CONDITION_ATTRIBUTE_NAME_PREFIX = "#con_att_";
 
   public ConditionExpressionBuilder(String alias) {
     this.expressions = new ArrayList<>();
     this.alias = alias;
     this.index = 0;
-    conditionAttributeNameMap = new HashMap<>();
   }
 
   @Nonnull
   public String build() {
     return String.join(" AND ", expressions);
-  }
-
-  public Map<String, String> getConditionAttributeNameMap() {
-    return conditionAttributeNameMap;
   }
 
   /**
@@ -96,26 +87,24 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
 
   private String createConditionWith(ConditionalExpression e) {
     List<String> elements;
-    String elementName = CONDITION_ATTRIBUTE_NAME_PREFIX + e.getName();
-    conditionAttributeNameMap.put(elementName, e.getName());
     switch (e.getOperator()) {
       case EQ:
-        elements = Arrays.asList(elementName, "=", alias + index);
+        elements = Arrays.asList(e.getName(), "=", alias + index);
         break;
       case NE:
-        elements = Arrays.asList("NOT", elementName, "=", alias + index);
+        elements = Arrays.asList("NOT", e.getName(), "=", alias + index);
         break;
       case GT:
-        elements = Arrays.asList(elementName, ">", alias + index);
+        elements = Arrays.asList(e.getName(), ">", alias + index);
         break;
       case GTE:
-        elements = Arrays.asList(elementName, ">=", alias + index);
+        elements = Arrays.asList(e.getName(), ">=", alias + index);
         break;
       case LT:
-        elements = Arrays.asList(elementName, "<", alias + index);
+        elements = Arrays.asList(e.getName(), "<", alias + index);
         break;
       case LTE:
-        elements = Arrays.asList(elementName, "<=", alias + index);
+        elements = Arrays.asList(e.getName(), "<=", alias + index);
         break;
       default:
         // never comes here because ConditionalExpression accepts only above operators
