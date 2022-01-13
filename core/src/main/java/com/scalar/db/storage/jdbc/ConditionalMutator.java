@@ -14,6 +14,7 @@ import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.Query;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.UpdateQuery;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -24,6 +25,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @author Toshihiro Suzuki
  */
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @NotThreadSafe
 public class ConditionalMutator implements MutationConditionVisitor {
 
@@ -85,7 +87,8 @@ public class ConditionalMutator implements MutationConditionVisitor {
             .insertInto(put.forNamespace().get(), put.forTable().get())
             .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
             .build();
-    try (PreparedStatement preparedStatement = insertQuery.prepareAndBind(connection)) {
+    try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery.sql())) {
+      insertQuery.bind(preparedStatement);
       preparedStatement.executeUpdate();
       isMutated = true;
     } catch (SQLException e) {
@@ -120,7 +123,8 @@ public class ConditionalMutator implements MutationConditionVisitor {
   }
 
   private void executeMutate(Query query) {
-    try (PreparedStatement preparedStatement = query.prepareAndBind(connection)) {
+    try (PreparedStatement preparedStatement = connection.prepareStatement(query.sql())) {
+      query.bind(preparedStatement);
       int res = preparedStatement.executeUpdate();
       if (res > 0) {
         isMutated = true;

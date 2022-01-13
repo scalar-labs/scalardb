@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class UpdateQuery extends AbstractQuery {
+public class UpdateQuery implements Query {
 
   private final RdbEngine rdbEngine;
   private final String schema;
@@ -38,7 +38,7 @@ public class UpdateQuery extends AbstractQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return "UPDATE "
         + enclosedFullTableName(schema, table, rdbEngine)
         + " SET "
@@ -66,7 +66,7 @@ public class UpdateQuery extends AbstractQuery {
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     for (Value<?> value : values.values()) {
