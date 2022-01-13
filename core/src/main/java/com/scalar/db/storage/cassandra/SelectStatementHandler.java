@@ -261,12 +261,12 @@ public class SelectStatementHandler extends StatementHandler {
   private Ordering getOrdering(Scan.Ordering ordering) {
     switch (ordering.getOrder()) {
       case ASC:
-        return QueryBuilder.asc(ordering.getName());
+        return QueryBuilder.asc(quoteIfNecessary(ordering.getName()));
       case DESC:
-        return QueryBuilder.desc(ordering.getName());
+        return QueryBuilder.desc(quoteIfNecessary(ordering.getName()));
       default:
         LOGGER.warn("Unsupported ordering specified. Using Order.ASC.");
-        return QueryBuilder.asc(ordering.getName());
+        return QueryBuilder.asc(quoteIfNecessary(ordering.getName()));
     }
   }
 

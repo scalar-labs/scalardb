@@ -39,7 +39,7 @@ public class CassandraWithReservedKeywordIntegrationTest
   @Override
   protected String getColumnName4() {
     // a reserved keyword in Cassandra
-    return "two";
+    return "select";
   }
 
   @Override
