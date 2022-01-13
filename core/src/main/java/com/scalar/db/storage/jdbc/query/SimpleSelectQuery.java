@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
+public class SimpleSelectQuery implements SelectQuery {
 
   private final TableMetadata tableMetadata;
   private final List<String> projections;
@@ -52,7 +52,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return "SELECT "
         + projectionSqlString()
         + " FROM "
@@ -119,7 +119,7 @@ public class SimpleSelectQuery extends AbstractQuery implements SelectQuery {
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     for (Value<?> value : partitionKey) {

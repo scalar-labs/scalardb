@@ -11,7 +11,7 @@ public class SelectWithFetchFirstNRowsOnly extends SimpleSelectQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return super.sql() + " FETCH FIRST " + limit + " ROWS ONLY";
   }
 }

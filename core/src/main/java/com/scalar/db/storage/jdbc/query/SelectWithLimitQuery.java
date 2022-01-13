@@ -11,7 +11,7 @@ public class SelectWithLimitQuery extends SimpleSelectQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return super.sql() + " LIMIT " + limit;
   }
 }
