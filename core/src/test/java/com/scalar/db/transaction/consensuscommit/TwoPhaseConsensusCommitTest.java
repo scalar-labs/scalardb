@@ -116,7 +116,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void put_PutGiven_ShouldCallCrudHandlerPut() {
+  public void put_PutGiven_ShouldCallCrudHandlerPut() throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
@@ -130,7 +130,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
+  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
@@ -144,7 +144,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
+  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
@@ -158,7 +158,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
+  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
@@ -172,7 +172,7 @@ public class TwoPhaseConsensusCommitTest {
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
+  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);

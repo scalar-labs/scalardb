@@ -884,6 +884,22 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   @Test
+  public void get_PutCalledBefore_ShouldGet() throws TransactionException {
+    // Arrange
+    GrpcTransaction transaction = manager.start();
+
+    // Act
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    Get get = prepareGet(0, 0, TABLE_1);
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
@@ -947,7 +963,8 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void put_DeleteCalledBefore_ShouldPut() throws TransactionException {
+  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
@@ -956,49 +973,34 @@ public class DistributedTransactionServiceWithConsensusCommitIntegrationTest {
     // Act
     GrpcTransaction transaction1 = manager.start();
     Get get = prepareGet(0, 0, TABLE_1);
-    Optional<Result> resultBefore = transaction1.get(get);
+    transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    GrpcTransaction transaction2 = manager.start();
-    Optional<Result> resultAfter = transaction2.get(get);
-    transaction2.commit();
-    assertThat(resultBefore.isPresent()).isTrue();
-    assertThat(resultAfter.isPresent()).isTrue();
-    assertThat(getBalance(resultAfter.get())).isEqualTo(2);
-  }
-
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
-    // Arrange
-    GrpcTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-
-    // Act
-    Scan scan = prepareScan(0, 0, 0, TABLE_1);
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
-    transaction.abort();
+    Throwable thrown =
+        catchThrowable(() -> transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2)));
+    transaction1.abort();
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws TransactionException {
+  public void scan_OverlappingPutGivenBefore_ShouldScan() throws TransactionException {
     // Arrange
     GrpcTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 5, TABLE_1).withValue(BALANCE, 3));
+    transaction.put(preparePut(0, 3, TABLE_1).withValue(BALANCE, 2));
 
     // Act
-    Scan scan = prepareScan(0, 1, 1, TABLE_1);
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
-    transaction.commit();
+    Scan scan = prepareScan(0, 0, 10, TABLE_1);
+    List<Result> results = transaction.scan(scan);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
-    assertThat(thrown).doesNotThrowAnyException();
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(getBalance(results.get(0))).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(3);
   }
 
   @Test

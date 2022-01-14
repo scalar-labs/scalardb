@@ -104,7 +104,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(
-            storage, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
+            storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
   }
 
   protected void initialize() throws Exception {}
@@ -178,7 +178,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(result.isPresent()).isTrue();
     Assertions.assertThat(
-            ((TransactionResult) ((FilteredResult) result.get()).getOriginalResult()).getState())
+            new TransactionResult(((FilteredResult) result.get()).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -196,7 +196,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Assert
     assertThat(results.size()).isEqualTo(1);
     Assertions.assertThat(
-            ((TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult()).getState())
+            new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult()).getState())
         .isEqualTo(TransactionState.COMMITTED);
   }
 
@@ -297,11 +297,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -349,11 +349,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -447,11 +447,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -522,11 +522,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_2);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -593,11 +593,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -698,11 +698,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -796,11 +796,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -934,11 +934,11 @@ public abstract class ConsensusCommitIntegrationTestBase {
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
       assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     } else {
       List<Result> results = transaction.scan((Scan) s);
       assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+      result = new TransactionResult(((FilteredResult) results.get(0)).getOriginalResult());
     }
     assertThat(result.getId()).isEqualTo(ANY_ID_1);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
@@ -1008,7 +1008,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    TransactionResult result =
+        new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     assertThat(getBalance(result)).isEqualTo(expected);
     Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(result.getVersion()).isEqualTo(1);
@@ -1034,7 +1035,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     ConsensusCommit another = manager.start();
     Optional<Result> r = another.get(get);
     assertThat(r).isPresent();
-    TransactionResult actual = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+    TransactionResult actual =
+        new TransactionResult(((FilteredResult) r.get()).getOriginalResult());
     assertThat(getBalance(actual)).isEqualTo(expected);
     Assertions.assertThat(actual.getState()).isEqualTo(TransactionState.COMMITTED);
     assertThat(actual.getVersion()).isEqualTo(2);
@@ -1042,7 +1044,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
   @Test
   public void putAndCommit_PutGivenForExistingAndNeverRead_ShouldThrowCommitException()
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     populateRecords(namespace1, TABLE_1);
     List<Put> puts = preparePuts(namespace1, TABLE_1);
@@ -1058,7 +1060,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void
       putAndCommit_SinglePartitionMutationsGiven_ShouldAccessStorageOnceForPrepareAndCommit()
           throws CommitException, UnknownTransactionStatusException, ExecutionException,
-              CoordinatorException {
+              CoordinatorException, CrudException {
     // Arrange
     IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts = preparePuts(namespace1, TABLE_1);
@@ -1080,7 +1082,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   @Test
   public void putAndCommit_TwoPartitionsMutationsGiven_ShouldAccessStorageTwiceForPrepareAndCommit()
       throws CommitException, UnknownTransactionStatusException, ExecutionException,
-          CoordinatorException {
+          CoordinatorException, CrudException {
     // Arrange
     IntValue balance = new IntValue(BALANCE, INITIAL_BALANCE);
     List<Put> puts = preparePuts(namespace1, TABLE_1);
@@ -1145,8 +1147,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
-      String namespace1, String table1, String namespace2, String table2)
-      throws CrudException, CommitConflictException {
+      String namespace1, String table1, String namespace2, String table2) throws CrudException {
     // Arrange
     boolean differentTables = !namespace1.equals(namespace2) || !table1.equals(table2);
 
@@ -1481,7 +1482,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void commit_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
+  public void commit_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException()
+      throws CrudException {
     // Arrange
     Delete delete = prepareDelete(0, 0, namespace1, TABLE_1);
     ConsensusCommit transaction = manager.start();
@@ -2210,6 +2212,22 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
+  public void get_PutCalledBefore_ShouldGet() throws CrudException {
+    // Arrange
+    ConsensusCommit transaction = manager.start();
+
+    // Act
+    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
@@ -2276,7 +2294,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   @Test
-  public void put_DeleteCalledBefore_ShouldPut()
+  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
       throws CommitException, UnknownTransactionStatusException, CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
@@ -2286,49 +2304,35 @@ public abstract class ConsensusCommitIntegrationTestBase {
     // Act
     ConsensusCommit transaction1 = manager.start();
     Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    Optional<Result> resultBefore = transaction1.get(get);
+    transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, namespace1, TABLE_1));
-    transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2));
-    assertThatCode(transaction1::commit).doesNotThrowAnyException();
-
-    // Assert
-    ConsensusCommit transaction2 = manager.start();
-    Optional<Result> resultAfter = transaction2.get(get);
-    transaction2.commit();
-    assertThat(resultBefore.isPresent()).isTrue();
-    assertThat(resultAfter.isPresent()).isTrue();
-    assertThat(getBalance(resultAfter.get())).isEqualTo(2);
-  }
-
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException() {
-    // Arrange
-    ConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
-
-    // Act
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
-    transaction.abort();
+    Throwable thrown =
+        catchThrowable(
+            () -> transaction1.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 2)));
+    transaction1.abort();
 
     // Assert
     assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan()
-      throws CommitException, UnknownTransactionStatusException {
+  public void scan_OverlappingPutGivenBefore_ShouldScan() throws CrudException {
     // Arrange
     ConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, namespace1, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 5, namespace1, TABLE_1).withValue(BALANCE, 3));
+    transaction.put(preparePut(0, 3, namespace1, TABLE_1).withValue(BALANCE, 2));
 
     // Act
-    Scan scan = prepareScan(0, 1, 1, namespace1, TABLE_1);
-    Throwable thrown = catchThrowable(() -> transaction.scan(scan));
-    transaction.commit();
+    Scan scan = prepareScan(0, 0, 10, namespace1, TABLE_1);
+    List<Result> results = transaction.scan(scan);
+    assertThatCode(transaction::commit).doesNotThrowAnyException();
 
     // Assert
-    assertThat(thrown).doesNotThrowAnyException();
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(getBalance(results.get(0))).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(3);
   }
 
   @Test
@@ -2469,23 +2473,20 @@ public abstract class ConsensusCommitIntegrationTestBase {
   }
 
   private void populateRecords(String namespace, String table)
-      throws CommitException, UnknownTransactionStatusException {
+      throws CommitException, UnknownTransactionStatusException, CrudException {
     ConsensusCommit transaction = manager.start();
-    IntStream.range(0, NUM_ACCOUNTS)
-        .forEach(
-            i ->
-                IntStream.range(0, NUM_TYPES)
-                    .forEach(
-                        j -> {
-                          Key partitionKey = new Key(ACCOUNT_ID, i);
-                          Key clusteringKey = new Key(ACCOUNT_TYPE, j);
-                          Put put =
-                              new Put(partitionKey, clusteringKey)
-                                  .forNamespace(namespace)
-                                  .forTable(table)
-                                  .withValue(BALANCE, INITIAL_BALANCE);
-                          transaction.put(put);
-                        }));
+    for (int i = 0; i < NUM_ACCOUNTS; i++) {
+      for (int j = 0; j < NUM_TYPES; j++) {
+        Key partitionKey = new Key(ACCOUNT_ID, i);
+        Key clusteringKey = new Key(ACCOUNT_TYPE, j);
+        Put put =
+            new Put(partitionKey, clusteringKey)
+                .forNamespace(namespace)
+                .forTable(table)
+                .withValue(BALANCE, INITIAL_BALANCE);
+        transaction.put(put);
+      }
+    }
     transaction.commit();
   }
 

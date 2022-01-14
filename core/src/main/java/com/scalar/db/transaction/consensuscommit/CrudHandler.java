@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,39 +35,61 @@ public class CrudHandler {
   }
 
   public Optional<Result> get(Get get) throws CrudException {
-    Optional<TransactionResult> result;
+    List<String> projections = new ArrayList<>(get.getProjections());
     Snapshot.Key key = new Snapshot.Key(get);
-
-    if (snapshot.containsKey(key)) {
-      return snapshot.get(key).map(r -> r);
+    if (!snapshot.containsKeyInReadSet(key)) {
+      getFromStorageAndPutIntoSnapshot(get, key);
     }
-
-    result = getFromStorage(get);
-    if (!result.isPresent()) {
-      snapshot.put(key, result);
-      return Optional.empty();
-    }
-
-    if (result.get().isCommitted()) {
-      snapshot.put(key, result);
-      return Optional.of(result.get());
-    }
-    throw new UncommittedRecordException(result.get(), "this record needs recovery");
+    return snapshot.get(get).map(r -> new FilteredResult(r, projections));
   }
 
   public List<Result> scan(Scan scan) throws CrudException {
-    List<Result> results = new ArrayList<>();
+    List<String> projections = new ArrayList<>(scan.getProjections());
+    if (!snapshot.containsKeyInScanSet(scan)) {
+      getFromStorageAndPutIntoSnapshot(scan);
+    }
+    return snapshot.scan(scan).stream()
+        .map(r -> new FilteredResult(r, projections))
+        .collect(Collectors.toList());
+  }
 
-    Optional<List<Snapshot.Key>> keysInSnapshot = snapshot.get(scan);
-    if (keysInSnapshot.isPresent()) {
-      keysInSnapshot.get().forEach(key -> snapshot.get(key).ifPresent(results::add));
-      return results;
+  public void put(Put put) throws CrudException {
+    snapshot.put(new Snapshot.Key(put), put);
+  }
+
+  public void delete(Delete delete) throws CrudException {
+    snapshot.put(new Snapshot.Key(delete), delete);
+  }
+
+  private void getFromStorageAndPutIntoSnapshot(Get get, Snapshot.Key key) throws CrudException {
+    Optional<TransactionResult> result;
+    try {
+      get.clearProjections(); // project all
+      get.withConsistency(Consistency.LINEARIZABLE);
+      result = storage.get(get).map(TransactionResult::new);
+    } catch (ExecutionException e) {
+      throw new CrudException("get failed.", e);
     }
 
+    if (!result.isPresent()) {
+      snapshot.put(key, get, Optional.empty());
+      return;
+    }
+    if (result.get().isCommitted()) {
+      snapshot.put(key, get, result);
+      return;
+    }
+
+    throw new UncommittedRecordException(result.get(), "this record needs recovery");
+  }
+
+  private void getFromStorageAndPutIntoSnapshot(Scan scan) throws CrudException {
     List<Snapshot.Key> keys = new ArrayList<>();
     Scanner scanner = null;
     try {
-      scanner = getFromStorage(scan);
+      scan.clearProjections(); // project all
+      scan.withConsistency(Consistency.LINEARIZABLE);
+      scanner = storage.scan(scan);
       for (Result r : scanner) {
         TransactionResult result = new TransactionResult(r);
         if (!result.isCommitted()) {
@@ -75,14 +98,14 @@ public class CrudHandler {
 
         Snapshot.Key key = getSnapshotKey(r, scan);
 
-        if (snapshot.containsKey(key)) {
-          result = snapshot.get(key).orElse(null);
+        if (!snapshot.containsKeyInReadSet(key)) {
+          snapshot.put(key, scan, Optional.of(result));
         }
 
-        snapshot.put(key, Optional.ofNullable(result));
         keys.add(key);
-        results.add(result);
       }
+    } catch (ExecutionException e) {
+      throw new CrudException("scan failed.", e);
     } finally {
       if (scanner != null) {
         try {
@@ -93,34 +116,6 @@ public class CrudHandler {
       }
     }
     snapshot.put(scan, keys);
-
-    return results;
-  }
-
-  public void put(Put put) {
-    snapshot.put(new Snapshot.Key(put), put);
-  }
-
-  public void delete(Delete delete) {
-    snapshot.put(new Snapshot.Key(delete), delete);
-  }
-
-  private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
-    try {
-      get.withConsistency(Consistency.LINEARIZABLE);
-      return storage.get(get).map(TransactionResult::new);
-    } catch (ExecutionException e) {
-      throw new CrudException("get failed.", e);
-    }
-  }
-
-  private Scanner getFromStorage(Scan scan) throws CrudException {
-    try {
-      scan.withConsistency(Consistency.LINEARIZABLE);
-      return storage.scan(scan);
-    } catch (ExecutionException e) {
-      throw new CrudException("scan failed.", e);
-    }
   }
 
   private Snapshot.Key getSnapshotKey(Result result, Scan scan) throws CrudException {

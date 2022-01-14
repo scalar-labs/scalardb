@@ -6,35 +6,41 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class ConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
 
-  @Mock
-  @SuppressWarnings("unused")
-  private DistributedStorage storage;
-
+  @Mock private DistributedStorage storage;
+  @Mock private DistributedStorageAdmin admin;
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
+  @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
-  @InjectMocks private ConsensusCommitManager manager;
+
+  private ConsensusCommitManager manager;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
+    // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
+    when(config.getTableMetadataCacheExpirationTimeSecs()).thenReturn(-1L);
+
+    manager =
+        new ConsensusCommitManager(
+            storage, admin, config, coordinator, parallelExecutor, recovery, commit);
   }
 
   @Test

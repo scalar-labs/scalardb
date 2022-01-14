@@ -12,8 +12,10 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,25 +39,30 @@ public class Snapshot {
   private final String id;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final Map<Key, Optional<TransactionResult>> readSet;
   private final Map<Scan, List<Key>> scanSet;
   private final Map<Key, Put> writeSet;
   private final Map<Key, Delete> deleteSet;
+  private final Map<String, TableSnapshot> tableSnapshots;
 
   public Snapshot(
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
+      TransactionalTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
-    this.readSet = new HashMap<>();
-    this.scanSet = new HashMap<>();
-    this.writeSet = new HashMap<>();
-    this.deleteSet = new HashMap<>();
+    readSet = new HashMap<>();
+    scanSet = new HashMap<>();
+    writeSet = new HashMap<>();
+    deleteSet = new HashMap<>();
+    tableSnapshots = new HashMap<>();
   }
 
   @VisibleForTesting
@@ -63,19 +70,23 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
+      TransactionalTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       Map<Key, Optional<TransactionResult>> readSet,
       Map<Scan, List<Key>> scanSet,
       Map<Key, Put> writeSet,
-      Map<Key, Delete> deleteSet) {
+      Map<Key, Delete> deleteSet,
+      Map<String, TableSnapshot> tableSnapshots) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
     this.scanSet = scanSet;
     this.writeSet = writeSet;
     this.deleteSet = deleteSet;
+    this.tableSnapshots = tableSnapshots;
   }
 
   @Nonnull
@@ -89,47 +100,85 @@ public class Snapshot {
     return isolation;
   }
 
-  public void put(Snapshot.Key key, Optional<TransactionResult> result) {
+  public void put(Key key, Selection selection, Optional<TransactionResult> result)
+      throws CrudException {
     readSet.put(key, result);
+    if (result.isPresent()) {
+      // put data into a table snapshot
+      getTableSnapshot(selection)
+          .put(
+              selection.getPartitionKey(),
+              result.get().getClusteringKey(),
+              result.get().getValues());
+    }
   }
 
   public void put(Scan scan, List<Key> keys) {
     scanSet.put(scan, keys);
   }
 
-  public void put(Snapshot.Key key, Put put) {
-    deleteSet.remove(key);
-    writeSet.put(key, put);
+  public void put(Key key, Put put) throws CrudException {
+    if (deleteSet.containsKey(key)) {
+      throw new IllegalArgumentException(
+          "Currently, writing data in the delete set is not allowed");
+    }
+    if (writeSet.containsKey(key)) {
+      // merge the previous put in the write set and the new put
+      writeSet.get(key).withValues(put.getValues().values());
+    } else {
+      writeSet.put(key, put);
+    }
+
+    // put data into a table snapshot
+    getTableSnapshot(put).put(put.getPartitionKey(), put.getClusteringKey(), put.getValues());
   }
 
-  public void put(Snapshot.Key key, Delete delete) {
+  public void put(Key key, Delete delete) throws CrudException {
     writeSet.remove(key);
     deleteSet.put(key, delete);
+
+    // delete data from a table snapshot
+    getTableSnapshot(delete).delete(delete.getPartitionKey(), delete.getClusteringKey());
   }
 
-  public boolean containsKey(Snapshot.Key key) {
-    return writeSet.containsKey(key) || deleteSet.containsKey(key) || readSet.containsKey(key);
+  public boolean containsKeyInReadSet(Snapshot.Key key) {
+    return readSet.containsKey(key);
   }
 
-  public Optional<TransactionResult> get(Snapshot.Key key) {
-    if (writeSet.containsKey(key)) {
-      throw new IllegalArgumentException("reading already written data is not allowed");
-    } else if (deleteSet.containsKey(key)) {
-      return Optional.empty();
-    } else if (readSet.containsKey(key)) {
-      return readSet.get(key);
-    }
-    return Optional.empty();
+  public boolean containsKeyInScanSet(Scan scan) {
+    return scanSet.containsKey(scan);
   }
 
-  public Optional<List<Key>> get(Scan scan) {
-    if (isWriteSetOverlappedWith(scan)) {
-      throw new IllegalArgumentException("reading already written data is not allowed");
+  public Optional<Result> get(Get get) throws CrudException {
+    // get data from a table snapshot
+    return getTableSnapshot(get).get(get.getPartitionKey(), get.getClusteringKey());
+  }
+
+  public List<Result> scan(Scan scan) throws CrudException {
+    // scan data from a table snapshot
+    return getTableSnapshot(scan)
+        .scan(
+            scan.getPartitionKey(),
+            scan.getStartClusteringKey(),
+            scan.getStartInclusive(),
+            scan.getEndClusteringKey(),
+            scan.getEndInclusive(),
+            scan.getOrderings(),
+            scan.getLimit());
+  }
+
+  private TableSnapshot getTableSnapshot(Operation operation) throws CrudException {
+    try {
+      String fullTableName = operation.forFullTableName().get();
+      if (!tableSnapshots.containsKey(fullTableName)) {
+        TransactionalTableMetadata metadata =
+            tableMetadataManager.getTransactionalTableMetadata(operation);
+        tableSnapshots.put(fullTableName, new TableSnapshot(metadata.getTableMetadata()));
+      }
+      return tableSnapshots.get(fullTableName);
+    } catch (ExecutionException e) {
+      throw new CrudException("getting metadata failed", e);
     }
-    if (scanSet.containsKey(scan)) {
-      return Optional.ofNullable(scanSet.get(scan));
-    }
-    return Optional.empty();
   }
 
   public void to(MutationComposer composer) throws CommitConflictException {
@@ -147,61 +196,6 @@ public class Snapshot {
               readSet.containsKey(key) ? readSet.get(key).orElse(null) : null;
           composer.add(value, result);
         });
-  }
-
-  private boolean isWriteSetOverlappedWith(Scan scan) {
-    for (Map.Entry<Key, Put> entry : writeSet.entrySet()) {
-      Put put = entry.getValue();
-      if (!put.forNamespace().equals(scan.forNamespace())
-          || !put.forTable().equals(scan.forTable())
-          || !put.getPartitionKey().equals(scan.getPartitionKey())) {
-        continue;
-      }
-
-      // If partition keys match and a primary key does not have a clustering key
-      if (!put.getClusteringKey().isPresent()) {
-        return true;
-      }
-
-      com.scalar.db.io.Key writtenKey = put.getClusteringKey().get();
-      boolean isStartGiven = scan.getStartClusteringKey().isPresent();
-      boolean isEndGiven = scan.getEndClusteringKey().isPresent();
-
-      // If no range is specified, which means it scans the whole partition space
-      if (!isStartGiven && !isEndGiven) {
-        return true;
-      }
-
-      if (isStartGiven && isEndGiven) {
-        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
-        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
-        // If startKey <= writtenKey <= endKey
-        if ((scan.getStartInclusive() && writtenKey.equals(startKey))
-            || (writtenKey.compareTo(startKey) > 0 && writtenKey.compareTo(endKey) < 0)
-            || (scan.getEndInclusive() && writtenKey.equals(endKey))) {
-          return true;
-        }
-      }
-
-      if (isStartGiven && !isEndGiven) {
-        com.scalar.db.io.Key startKey = scan.getStartClusteringKey().get();
-        // If startKey <= writtenKey
-        if ((scan.getStartInclusive() && startKey.equals(writtenKey))
-            || writtenKey.compareTo(startKey) > 0) {
-          return true;
-        }
-      }
-
-      if (!isStartGiven) {
-        com.scalar.db.io.Key endKey = scan.getEndClusteringKey().get();
-        // If writtenKey <= endKey
-        if ((scan.getEndInclusive() && writtenKey.equals(endKey))
-            || writtenKey.compareTo(endKey) < 0) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   @VisibleForTesting

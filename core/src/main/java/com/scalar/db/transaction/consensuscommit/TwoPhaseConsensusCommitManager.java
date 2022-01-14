@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.RollbackException;
@@ -29,7 +30,9 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   private static final long TRANSACTION_EXPIRATION_INTERVAL_MILLIS = 1000;
 
   private final DistributedStorage storage;
+  private final DistributedStorageAdmin admin;
   private final ConsensusCommitConfig config;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
@@ -41,10 +44,14 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   @Nullable private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
 
   @Inject
-  public TwoPhaseConsensusCommitManager(DistributedStorage storage, ConsensusCommitConfig config) {
+  public TwoPhaseConsensusCommitManager(
+      DistributedStorage storage, DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     this.storage = storage;
+    this.admin = admin;
     this.config = config;
-
+    tableMetadataManager =
+        new TransactionalTableMetadataManager(
+            admin, config.getTableMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
     recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
@@ -71,13 +78,18 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   @VisibleForTesting
   TwoPhaseConsensusCommitManager(
       DistributedStorage storage,
+      DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit) {
     this.storage = storage;
+    this.admin = admin;
     this.config = config;
+    tableMetadataManager =
+        new TransactionalTableMetadataManager(
+            admin, config.getTableMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
@@ -160,7 +172,8 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
 
   private TwoPhaseConsensusCommit createNewTransaction(
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy) {
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot);
 
     TwoPhaseConsensusCommit transaction =
@@ -217,6 +230,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   @Override
   public void close() {
     storage.close();
+    admin.close();
     parallelExecutor.close();
   }
 

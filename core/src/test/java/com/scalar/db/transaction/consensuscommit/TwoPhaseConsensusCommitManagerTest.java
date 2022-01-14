@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -20,6 +21,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   private static final String ANY_TX_ID = "any_id";
 
   @Mock private DistributedStorage storage;
+  @Mock private DistributedStorageAdmin admin;
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
   @Mock private ParallelExecutor parallelExecutor;
@@ -36,10 +38,11 @@ public class TwoPhaseConsensusCommitManagerTest {
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
     when(config.isActiveTransactionsManagementEnabled()).thenReturn(true);
+    when(config.getTableMetadataCacheExpirationTimeSecs()).thenReturn(-1L);
 
     manager =
         new TwoPhaseConsensusCommitManager(
-            storage, config, coordinator, parallelExecutor, recovery, commit);
+            storage, admin, config, coordinator, parallelExecutor, recovery, commit);
   }
 
   @Test
@@ -138,7 +141,7 @@ public class TwoPhaseConsensusCommitManagerTest {
     when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
     manager =
         new TwoPhaseConsensusCommitManager(
-            storage, config, coordinator, parallelExecutor, recovery, commit);
+            storage, admin, config, coordinator, parallelExecutor, recovery, commit);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))

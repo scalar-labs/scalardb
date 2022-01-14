@@ -102,7 +102,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void put_PutGiven_ShouldCallCrudHandlerPut() {
+  public void put_PutGiven_ShouldCallCrudHandlerPut() throws CrudException {
     // Arrange
     doNothing().when(crud).put(put);
 
@@ -114,7 +114,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
+  public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() throws CrudException {
     // Arrange
     doNothing().when(crud).put(put);
 
@@ -126,7 +126,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
+  public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() throws CrudException {
     // Arrange
     doNothing().when(crud).delete(delete);
 
@@ -138,7 +138,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
+  public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() throws CrudException {
     // Arrange
     doNothing().when(crud).delete(delete);
 
@@ -150,7 +150,7 @@ public class ConsensusCommitTest {
   }
 
   @Test
-  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
+  public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() throws CrudException {
     // Arrange
     doNothing().when(crud).put(put);
     doNothing().when(crud).delete(delete);

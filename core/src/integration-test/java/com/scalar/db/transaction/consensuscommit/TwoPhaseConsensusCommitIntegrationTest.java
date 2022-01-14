@@ -18,6 +18,7 @@ import com.scalar.db.api.TransactionState;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
@@ -118,7 +119,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private static void initManagerAndCoordinator(DatabaseConfig config) {
     ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
+    manager = new TwoPhaseConsensusCommitManager(storage, admin, consensusCommitConfig);
     coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 
@@ -1350,7 +1351,8 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void prepare_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException() {
+  public void prepare_DeleteGivenWithoutRead_ShouldThrowIllegalArgumentException()
+      throws CrudException {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.delete(prepareDelete(0, 0, TABLE_1));
@@ -2062,6 +2064,27 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
+  public void get_PutCalledBefore_ShouldGet() throws CrudException {
+    // Arrange
+    TwoPhaseConsensusCommit transaction = manager.start();
+
+    // Act
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    Get get = prepareGet(0, 0, TABLE_1);
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(
+            () -> {
+              transaction.prepare();
+              transaction.commit();
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
@@ -2143,7 +2166,8 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
-  public void put_DeleteCalledBefore_ShouldPut() throws TransactionException {
+  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     TwoPhaseConsensusCommit transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
@@ -2152,46 +2176,40 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
     // Act
     TwoPhaseConsensusCommit transaction1 = manager.start();
-    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, TABLE_1));
+    Get get = prepareGet(0, 0, TABLE_1);
+    transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
+    Throwable thrown =
+        catchThrowable(() -> transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2)));
+    transaction1.rollback();
 
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_OverlappingPutGivenBefore_ShouldScan() throws TransactionException {
+    // Arrange
+    TwoPhaseConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 5, TABLE_1).withValue(BALANCE, 3));
+    transaction.put(preparePut(0, 3, TABLE_1).withValue(BALANCE, 2));
+
+    // Act
+    Scan scan = prepareScan(0, 0, 10, TABLE_1);
+    List<Result> results = transaction.scan(scan);
     assertThatCode(
             () -> {
-              transaction1.prepare();
-              transaction1.commit();
+              transaction.prepare();
+              transaction.commit();
             })
         .doesNotThrowAnyException();
 
     // Assert
-    TwoPhaseConsensusCommit transaction2 = manager.start();
-    Optional<Result> resultAfter = transaction2.get(prepareGet(0, 0, TABLE_1));
-
-    assertThat(resultBefore.isPresent()).isTrue();
-    assertThat(resultAfter.isPresent()).isTrue();
-    assertThat(getBalance(resultAfter.get())).isEqualTo(2);
-  }
-
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldIllegalArgumentException() {
-    // Arrange
-    TwoPhaseConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
-        .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan() {
-    // Arrange
-    TwoPhaseConsensusCommit transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-
-    // Act Assert
-    assertThatCode(() -> transaction.scan(prepareScan(0, 1, 1, TABLE_1)))
-        .doesNotThrowAnyException();
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(getBalance(results.get(0))).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(3);
   }
 
   @Test

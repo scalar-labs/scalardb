@@ -3,6 +3,7 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.scalar.db.config.DatabaseConfig;
 import java.util.Properties;
 import org.junit.Test;
 
@@ -28,7 +29,8 @@ public class ConsensusCommitConfigTest {
     assertThat(config.isParallelCommitEnabled()).isEqualTo(false);
     assertThat(config.isParallelRollbackEnabled()).isEqualTo(false);
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
-    assertThat(config.isAsyncRollbackEnabled()).isEqualTo(false);
+    assertThat(config.isAsyncCommitEnabled()).isEqualTo(false);
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
   }
 
   @Test
@@ -204,5 +206,30 @@ public class ConsensusCommitConfigTest {
     // Assert
     assertThat(config.isAsyncCommitEnabled()).isEqualTo(true);
     assertThat(config.isAsyncRollbackEnabled()).isEqualTo(true); // use the async commit value
+  }
+
+  @Test
+  public void constructor_TableMetadataCacheExpirationTimeGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
+
+    // Act
+    ConsensusCommitConfig config = new ConsensusCommitConfig(props);
+
+    // Assert
+    assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
+  }
+
+  @Test
+  public void
+      constructor_InvalidTableMetadataCacheExpirationTimeGiven_ShouldThrowIllegalArgumentException() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "aaa");
+
+    // Act Assert
+    assertThatThrownBy(() -> new ConsensusCommitConfig(props))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }

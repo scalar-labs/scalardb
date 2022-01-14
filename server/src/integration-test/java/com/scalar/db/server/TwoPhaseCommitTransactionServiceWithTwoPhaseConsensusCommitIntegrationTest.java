@@ -22,7 +22,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.scalar.db.api.DistributedStorageAdmin;
+import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -975,6 +977,27 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
   }
 
   @Test
+  public void get_PutCalledBefore_ShouldGet() throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransaction transaction = manager.start();
+
+    // Act
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    Get get = prepareGet(0, 0, TABLE_1);
+    Optional<Result> result = transaction.get(get);
+    assertThatCode(
+            () -> {
+              transaction.prepare();
+              transaction.commit();
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    assertThat(result).isPresent();
+    assertThat(getBalance(result.get())).isEqualTo(1);
+  }
+
+  @Test
   public void get_DeleteCalledBefore_ShouldReturnEmpty() throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransaction transaction = manager.start();
@@ -1058,7 +1081,8 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
   }
 
   @Test
-  public void put_DeleteCalledBefore_ShouldPut() throws TransactionException {
+  public void put_DeleteCalledBefore_ShouldThrowIllegalArgumentException()
+      throws TransactionException {
     // Arrange
     GrpcTwoPhaseCommitTransaction transaction = manager.start();
     transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
@@ -1067,52 +1091,40 @@ public class TwoPhaseCommitTransactionServiceWithTwoPhaseConsensusCommitIntegrat
 
     // Act
     GrpcTwoPhaseCommitTransaction transaction1 = manager.start();
-    Optional<Result> resultBefore = transaction1.get(prepareGet(0, 0, TABLE_1));
+    Get get = prepareGet(0, 0, TABLE_1);
+    transaction1.get(get);
     transaction1.delete(prepareDelete(0, 0, TABLE_1));
-    transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2));
+    Throwable thrown =
+        catchThrowable(() -> transaction1.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 2)));
+    transaction1.rollback();
 
+    // Assert
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void scan_OverlappingPutGivenBefore_ShouldScan() throws TransactionException {
+    // Arrange
+    GrpcTwoPhaseCommitTransaction transaction = manager.start();
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 5, TABLE_1).withValue(BALANCE, 3));
+    transaction.put(preparePut(0, 3, TABLE_1).withValue(BALANCE, 2));
+
+    // Act
+    Scan scan = prepareScan(0, 0, 10, TABLE_1);
+    List<Result> results = transaction.scan(scan);
     assertThatCode(
             () -> {
-              transaction1.prepare();
-              transaction1.commit();
+              transaction.prepare();
+              transaction.commit();
             })
         .doesNotThrowAnyException();
 
     // Assert
-    GrpcTwoPhaseCommitTransaction transaction2 = manager.start();
-    Optional<Result> resultAfter = transaction2.get(prepareGet(0, 0, TABLE_1));
-    transaction2.prepare();
-    transaction2.commit();
-
-    assertThat(resultBefore.isPresent()).isTrue();
-    assertThat(resultAfter.isPresent()).isTrue();
-    assertThat(getBalance(resultAfter.get())).isEqualTo(2);
-  }
-
-  @Test
-  public void scan_OverlappingPutGivenBefore_ShouldThrowIllegalArgumentException()
-      throws TransactionException {
-    // Arrange
-    GrpcTwoPhaseCommitTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-
-    // Act Assert
-    assertThatThrownBy(() -> transaction.scan(prepareScan(0, 0, 0, TABLE_1)))
-        .isInstanceOf(IllegalArgumentException.class);
-    transaction.rollback();
-  }
-
-  @Test
-  public void scan_NonOverlappingPutGivenBefore_ShouldScan() throws TransactionException {
-    // Arrange
-    GrpcTwoPhaseCommitTransaction transaction = manager.start();
-    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
-
-    // Act Assert
-    assertThatCode(() -> transaction.scan(prepareScan(0, 1, 1, TABLE_1)))
-        .doesNotThrowAnyException();
-    transaction.prepare();
-    transaction.commit();
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(getBalance(results.get(0))).isEqualTo(1);
+    assertThat(getBalance(results.get(1))).isEqualTo(2);
+    assertThat(getBalance(results.get(2))).isEqualTo(3);
   }
 
   @Test

@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
@@ -21,7 +22,9 @@ import org.slf4j.LoggerFactory;
 public class ConsensusCommitManager implements DistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
+  private final DistributedStorageAdmin admin;
   private final ConsensusCommitConfig config;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final Coordinator coordinator;
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
@@ -30,33 +33,43 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private Optional<String> tableName;
 
   @Inject
-  public ConsensusCommitManager(DistributedStorage storage, ConsensusCommitConfig config) {
+  public ConsensusCommitManager(
+      DistributedStorage storage, DistributedStorageAdmin admin, ConsensusCommitConfig config) {
     this.storage = storage;
+    this.admin = admin;
     this.config = config;
-    this.coordinator = new Coordinator(storage, config);
-    this.parallelExecutor = new ParallelExecutor(config);
-    this.recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
-    this.commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
-    this.namespace = storage.getNamespace();
-    this.tableName = storage.getTable();
+    tableMetadataManager =
+        new TransactionalTableMetadataManager(
+            admin, config.getTableMetadataCacheExpirationTimeSecs());
+    coordinator = new Coordinator(storage, config);
+    parallelExecutor = new ParallelExecutor(config);
+    recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
+    namespace = storage.getNamespace();
+    tableName = storage.getTable();
   }
 
   @VisibleForTesting
   public ConsensusCommitManager(
       DistributedStorage storage,
+      DistributedStorageAdmin admin,
       ConsensusCommitConfig config,
       Coordinator coordinator,
       ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit) {
     this.storage = storage;
+    this.admin = admin;
     this.config = config;
+    tableMetadataManager =
+        new TransactionalTableMetadataManager(
+            admin, config.getTableMetadataCacheExpirationTimeSecs());
     this.coordinator = coordinator;
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    this.namespace = storage.getNamespace();
-    this.tableName = storage.getTable();
+    namespace = storage.getNamespace();
+    tableName = storage.getTable();
   }
 
   @Override
@@ -151,7 +164,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
           "Setting different isolation level or serializable strategy from the ones"
               + "in DatabaseConfig might cause unexpected anomalies.");
     }
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     namespace.ifPresent(consensus::withNamespace);
@@ -187,6 +201,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   @Override
   public void close() {
     storage.close();
+    admin.close();
     parallelExecutor.close();
   }
 }

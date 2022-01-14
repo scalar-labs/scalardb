@@ -23,11 +23,9 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.util.ScalarDbUtils;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -110,49 +108,26 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     return tableName;
   }
 
-  /**
-   * Retrieves a result from the storage through a transaction with the specified {@link Get}
-   * command with a primary key and returns the result.
-   *
-   * @param get a {@code Get} command
-   * @return an {@code Optional} with the returned result
-   * @throws CrudException if the operation failed
-   */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     setTargetToIfNot(get);
-    List<String> projections = new ArrayList<>(get.getProjections());
-    get.clearProjections(); // project all
     try {
-      return crud.get(get).map(r -> new FilteredResult(r, projections));
+      return crud.get(get);
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
     }
   }
 
-  /**
-   * Retrieves results from the storage through a transaction with the specified {@link Scan}
-   * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys.
-   *
-   * @param scan a {@code Scan} command
-   * @return a list of {@link Result}
-   * @throws CrudException if the operation failed
-   */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     setTargetToIfNot(scan);
-    List<String> projections = new ArrayList<>(scan.getProjections());
-    scan.clearProjections(); // project all
     try {
-      return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, projections))
-          .collect(Collectors.toList());
+      return crud.scan(scan);
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
       throw e;
@@ -160,58 +135,61 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   @Override
-  public void put(Put put) {
+  public void put(Put put) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     putInternal(put);
   }
 
   @Override
-  public void put(List<Put> puts) {
+  public void put(List<Put> puts) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     checkArgument(puts.size() != 0);
-    puts.forEach(this::putInternal);
+    for (Put put : puts) {
+      putInternal(put);
+    }
   }
 
-  private void putInternal(Put put) {
+  private void putInternal(Put put) throws CrudException {
     setTargetToIfNot(put);
     crud.put(put);
   }
 
   @Override
-  public void delete(Delete delete) {
+  public void delete(Delete delete) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     deleteInternal(delete);
   }
 
   @Override
-  public void delete(List<Delete> deletes) {
+  public void delete(List<Delete> deletes) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     checkArgument(deletes.size() != 0);
-    deletes.forEach(this::deleteInternal);
+    for (Delete delete : deletes) {
+      deleteInternal(delete);
+    }
   }
 
-  private void deleteInternal(Delete delete) {
+  private void deleteInternal(Delete delete) throws CrudException {
     setTargetToIfNot(delete);
     crud.delete(delete);
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) {
+  public void mutate(List<? extends Mutation> mutations) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
     checkArgument(mutations.size() != 0);
-    mutations.forEach(
-        m -> {
-          if (m instanceof Put) {
-            putInternal((Put) m);
-          } else if (m instanceof Delete) {
-            deleteInternal((Delete) m);
-          }
-        });
+    for (Mutation m : mutations) {
+      if (m instanceof Put) {
+        putInternal((Put) m);
+      } else if (m instanceof Delete) {
+        deleteInternal((Delete) m);
+      }
+    }
   }
 
   @Override
