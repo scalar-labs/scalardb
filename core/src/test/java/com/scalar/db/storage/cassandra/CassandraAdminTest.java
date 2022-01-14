@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quote;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.storage.cassandra.CassandraAdmin.CompactionStrategy;
 import com.scalar.db.storage.cassandra.CassandraAdmin.ReplicationStrategy;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -58,8 +60,8 @@ public class CassandraAdminTest {
   @Test
   public void getTableMetadata_ClusterManagerShouldBeCalledProperly() throws ExecutionException {
     // Arrange
-    String namespace = "ns";
-    String table = "table";
+    String namespace = "sample_ns";
+    String table = "sample_table";
 
     CassandraAdmin admin = new CassandraAdmin(clusterManager, config);
 
@@ -150,6 +152,26 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void createNamespace_WithReservedKeywords_ShouldExecuteCreateKeyspaceStatementProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "keyspace";
+    Map<String, String> options = Collections.emptyMap();
+
+    // Act
+    cassandraAdmin.createNamespace(namespace, options);
+
+    // Assert
+    Map<String, Object> replicationOptions = new LinkedHashMap<>();
+    replicationOptions.put("class", ReplicationStrategy.SIMPLE_STRATEGY.toString());
+    replicationOptions.put("replication_factor", "1");
+    KeyspaceOptions query =
+        SchemaBuilder.createKeyspace(quote(namespace)).with().replication(replicationOptions);
+
+    verify(cassandraSession).execute(query.getQueryString());
+  }
+
+  @Test
   public void
       createTableInternal_WithoutSettingCompactionStrategy_ShouldExecuteCreateTableStatementWithStcs()
           throws ExecutionException {
@@ -232,6 +254,51 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void createTableInternal_ReservedKeywords_ShouldExecuteCreateTableStatementProperly()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "keyspace";
+    String table = "table";
+    TableMetadata tableMetadata =
+        TableMetadata.newBuilder()
+            .addPartitionKey("from")
+            .addPartitionKey("c7")
+            .addClusteringKey("two")
+            .addClusteringKey("c6", Order.DESC)
+            .addColumn("from", DataType.INT)
+            .addColumn("to", DataType.TEXT)
+            .addColumn("one", DataType.BLOB)
+            .addColumn("two", DataType.DOUBLE)
+            .addColumn("password", DataType.BIGINT)
+            .addColumn("c6", DataType.BOOLEAN)
+            .addColumn("c7", DataType.TEXT)
+            .addSecondaryIndex("to")
+            .addSecondaryIndex("two")
+            .build();
+    HashMap<String, String> options = new HashMap<>();
+    options.put(CassandraAdmin.COMPACTION_STRATEGY, CompactionStrategy.LCS.toString());
+
+    // Act
+    cassandraAdmin.createTableInternal(namespace, table, tableMetadata, options);
+
+    // Assert
+    TableOptions<Options> createTableStatement =
+        SchemaBuilder.createTable(quote(namespace), quote(table))
+            .addPartitionKey("\"from\"", com.datastax.driver.core.DataType.cint())
+            .addPartitionKey("c7", com.datastax.driver.core.DataType.text())
+            .addClusteringColumn("\"two\"", com.datastax.driver.core.DataType.cdouble())
+            .addClusteringColumn("c6", com.datastax.driver.core.DataType.cboolean())
+            .addColumn("\"to\"", com.datastax.driver.core.DataType.text())
+            .addColumn("\"one\"", com.datastax.driver.core.DataType.blob())
+            .addColumn("\"password\"", com.datastax.driver.core.DataType.bigint())
+            .withOptions()
+            .clusteringOrder("\"two\"", Direction.ASC)
+            .clusteringOrder("c6", Direction.DESC)
+            .compactionOptions(SchemaBuilder.leveledStrategy());
+    verify(cassandraSession).execute(createTableStatement.getQueryString());
+  }
+
+  @Test
   public void createSecondaryIndex_WithTwoIndexesNames_ShouldCreateBothIndexes()
       throws ExecutionException {
     // Arrange
@@ -258,6 +325,32 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void createSecondaryIndex_WithReservedKeywordsIndexesNames_ShouldCreateBothIndexes()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "sample_ns";
+    String table = "sample_table";
+    Set<String> indexes = new HashSet<>();
+    indexes.add("from");
+    indexes.add("to");
+
+    // Act
+    cassandraAdmin.createSecondaryIndex(namespace, table, indexes);
+
+    // Assert
+    SchemaStatement c1IndexStatement =
+        SchemaBuilder.createIndex(table + "_" + CassandraAdmin.INDEX_NAME_PREFIX + "_from")
+            .onTable(namespace, table)
+            .andColumn("\"from\"");
+    SchemaStatement c2IndexStatement =
+        SchemaBuilder.createIndex(table + "_" + CassandraAdmin.INDEX_NAME_PREFIX + "_to")
+            .onTable(namespace, table)
+            .andColumn("\"to\"");
+    verify(cassandraSession).execute(c1IndexStatement.getQueryString());
+    verify(cassandraSession).execute(c2IndexStatement.getQueryString());
+  }
+
+  @Test
   public void dropTable_WithCorrectParameters_ShouldDropTable() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
@@ -272,6 +365,21 @@ public class CassandraAdminTest {
   }
 
   @Test
+  public void dropTable_WithReservedKeywords_ShouldDropTable() throws ExecutionException {
+    // Arrange
+    String namespace = "keyspace";
+    String table = "table";
+
+    // Act
+    cassandraAdmin.dropTable(namespace, table);
+
+    // Assert
+    String dropTableStatement =
+        SchemaBuilder.dropTable(quote(namespace), quote(table)).getQueryString();
+    verify(cassandraSession).execute(dropTableStatement);
+  }
+
+  @Test
   public void dropNamespace_WithCorrectParameters_ShouldDropKeyspace() throws ExecutionException {
     // Arrange
     String namespace = "sample_ns";
@@ -280,8 +388,22 @@ public class CassandraAdminTest {
     cassandraAdmin.dropNamespace(namespace);
 
     // Assert
-    String dropKeyspaceStaement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
-    verify(cassandraSession).execute(dropKeyspaceStaement);
+    String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(namespace).getQueryString();
+    verify(cassandraSession).execute(dropKeyspaceStatement);
+  }
+
+  @Test
+  public void dropNamespace_WithReservedKeywordNamespace_ShouldDropKeyspace()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "keyspace";
+
+    // Act
+    cassandraAdmin.dropNamespace(namespace);
+
+    // Assert
+    String dropKeyspaceStatement = SchemaBuilder.dropKeyspace(quote(namespace)).getQueryString();
+    verify(cassandraSession).execute(dropKeyspaceStatement);
   }
 
   @Test
@@ -321,6 +443,22 @@ public class CassandraAdminTest {
 
     // Assert
     String truncateTableStatement = QueryBuilder.truncate(namespace, table).getQueryString();
+    verify(cassandraSession).execute(truncateTableStatement);
+  }
+
+  @Test
+  public void truncateTable_WithReservedKeywordsParameters_ShouldTruncateTable()
+      throws ExecutionException {
+    // Arrange
+    String namespace = "keyspace";
+    String table = "table";
+
+    // Act
+    cassandraAdmin.truncateTable(namespace, table);
+
+    // Assert
+    String truncateTableStatement =
+        QueryBuilder.truncate(quote(namespace), quote(table)).getQueryString();
     verify(cassandraSession).execute(truncateTableStatement);
   }
 

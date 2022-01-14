@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
@@ -114,14 +115,15 @@ public class SelectStatementHandler extends StatementHandler {
     Select.Selection selection = select();
 
     setProjections(selection, sel.getProjections());
-    return selection.from(sel.forNamespace().get(), sel.forTable().get());
+    return selection.from(
+        quoteIfNecessary(sel.forNamespace().get()), quoteIfNecessary(sel.forTable().get()));
   }
 
   private void setProjections(Select.Selection selection, List<String> projections) {
     if (projections.isEmpty()) {
       selection.all();
     } else {
-      projections.forEach(selection::column);
+      projections.forEach(v -> selection.column(quoteIfNecessary(v)));
     }
   }
 
@@ -139,7 +141,8 @@ public class SelectStatementHandler extends StatementHandler {
   }
 
   private void setKey(Select.Where statement, Optional<Key> key) {
-    key.ifPresent(k -> k.forEach(v -> statement.and(eq(v.getName(), bindMarker()))));
+    key.ifPresent(
+        k -> k.forEach(v -> statement.and(eq(quoteIfNecessary(v.getName()), bindMarker()))));
   }
 
   private void setStart(Select.Where statement, Scan scan, Set<String> traveledEqualKeySet) {
@@ -154,14 +157,14 @@ public class SelectStatementHandler extends StatementHandler {
               IntStream.range(0, start.size())
                   .forEach(
                       i -> {
+                        String clusteringKeyName = quoteIfNecessary(start.get(i).getName());
                         if (i == (start.size() - 1)) {
                           if (scan.getStartInclusive()) {
-                            statement.and(gte(start.get(i).getName(), bindMarker()));
+                            statement.and(gte(clusteringKeyName, bindMarker()));
                           } else {
-                            statement.and(gt(start.get(i).getName(), bindMarker()));
+                            statement.and(gt(clusteringKeyName, bindMarker()));
                           }
                         } else {
-                          String clusteringKeyName = start.get(i).getName();
                           statement.and(eq(clusteringKeyName, bindMarker()));
                           traveledEqualKeySet.add(clusteringKeyName);
                         }
@@ -181,14 +184,14 @@ public class SelectStatementHandler extends StatementHandler {
               IntStream.range(0, end.size())
                   .forEach(
                       i -> {
+                        String clusteringKeyName = quoteIfNecessary(end.get(i).getName());
                         if (i == (end.size() - 1)) {
                           if (scan.getEndInclusive()) {
-                            statement.and(lte(end.get(i).getName(), bindMarker()));
+                            statement.and(lte(clusteringKeyName, bindMarker()));
                           } else {
-                            statement.and(lt(end.get(i).getName(), bindMarker()));
+                            statement.and(lt(clusteringKeyName, bindMarker()));
                           }
                         } else {
-                          String clusteringKeyName = end.get(i).getName();
                           if (!traveledEqualKeySet.contains(clusteringKeyName)) {
                             statement.and(eq(clusteringKeyName, bindMarker()));
                           }
@@ -258,12 +261,12 @@ public class SelectStatementHandler extends StatementHandler {
   private Ordering getOrdering(Scan.Ordering ordering) {
     switch (ordering.getOrder()) {
       case ASC:
-        return QueryBuilder.asc(ordering.getName());
+        return QueryBuilder.asc(quoteIfNecessary(ordering.getName()));
       case DESC:
-        return QueryBuilder.desc(ordering.getName());
+        return QueryBuilder.desc(quoteIfNecessary(ordering.getName()));
       default:
         LOGGER.warn("Unsupported ordering specified. Using Order.ASC.");
-        return QueryBuilder.asc(ordering.getName());
+        return QueryBuilder.asc(quoteIfNecessary(ordering.getName()));
     }
   }
 
