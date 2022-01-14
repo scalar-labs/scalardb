@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quote;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -19,8 +20,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class ClusterManagerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "any_keyspace";
+  private static final String ANY_TABLE_NAME = "any_table";
   @Mock private Cluster cluster;
   @Mock private Session session;
   private ClusterManager manager;
@@ -51,6 +52,26 @@ public class ClusterManagerTest {
 
     // Act
     TableMetadata actual = manager.getMetadata(ANY_KEYSPACE_NAME, ANY_TABLE_NAME);
+
+    // Assert
+    assertThat(actual).isEqualTo(tableMetadata);
+  }
+
+  @Test
+  public void getMetadata_WithReservedKeywordsExistingKeyspaceAndTableGiven_ShouldReturnMetadata() {
+    // Arrange
+    String keyspace = "keyspace";
+    String table = "table";
+
+    Metadata metadata = mock(Metadata.class);
+    KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+    TableMetadata tableMetadata = mock(TableMetadata.class);
+    when(cluster.getMetadata()).thenReturn(metadata);
+    when(metadata.getKeyspace(quote(keyspace))).thenReturn(keyspaceMetadata);
+    when(keyspaceMetadata.getTable(quote(table))).thenReturn(tableMetadata);
+
+    // Act
+    TableMetadata actual = manager.getMetadata(keyspace, table);
 
     // Assert
     assertThat(actual).isEqualTo(tableMetadata);

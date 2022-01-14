@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 
@@ -58,11 +59,14 @@ public class InsertStatementHandler extends MutateStatementHandler {
   }
 
   private Insert prepare(Put put) {
-    Insert insert = insertInto(put.forNamespace().get(), put.forTable().get());
+    Insert insert =
+        insertInto(
+            quoteIfNecessary(put.forNamespace().get()), quoteIfNecessary(put.forTable().get()));
 
-    put.getPartitionKey().forEach(v -> insert.value(v.getName(), bindMarker()));
-    put.getClusteringKey().ifPresent(k -> k.forEach(v -> insert.value(v.getName(), bindMarker())));
-    put.getValues().forEach((k, v) -> insert.value(v.getName(), bindMarker()));
+    put.getPartitionKey().forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
+    put.getClusteringKey()
+        .ifPresent(k -> k.forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker())));
+    put.getValues().forEach((k, v) -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
 
     setCondition(insert, put);
 
