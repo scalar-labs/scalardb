@@ -115,7 +115,7 @@ public class MutationBulkPutDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutInputListGiven_ShouldRunScalarDbPut() throws Exception {
+  public void get_PutArgumentGiven_ShouldRunScalarDbPut() throws Exception {
     // Arrange
     preparePutInputAndExpectedPut();
     MutationBulkPutDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
