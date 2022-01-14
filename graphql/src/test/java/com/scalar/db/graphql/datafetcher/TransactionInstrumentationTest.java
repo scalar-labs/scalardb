@@ -306,7 +306,7 @@ public class TransactionInstrumentationTest {
   }
 
   @Test
-  public void instrumentationContext_CommitTrueGiven_ShouldCommitAndDiscardTransaction()
+  public void instrumentationContext_CommitTrueGiven_ShouldCommitAndDeleteTransaction()
       throws Exception {
     // Arrange
     prepareForInstrumentationContextTests();
