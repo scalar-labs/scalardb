@@ -83,7 +83,12 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithDifferentPartitionPut() {
-    Snapshot snapshot = new Snapshot(ANY_ID);
+    Snapshot snapshot =
+        new Snapshot(
+            ANY_ID,
+            Isolation.SNAPSHOT,
+            SerializableStrategy.EXTRA_WRITE,
+            new ParallelExecutor(config));
 
     // different partition
     Put put1 = preparePut1();
@@ -95,7 +100,12 @@ public class CommitHandlerTest {
   }
 
   private Snapshot prepareSnapshotWithSamePartitionPut() {
-    Snapshot snapshot = new Snapshot(ANY_ID);
+    Snapshot snapshot =
+        new Snapshot(
+            ANY_ID,
+            Isolation.SNAPSHOT,
+            SerializableStrategy.EXTRA_WRITE,
+            new ParallelExecutor(config));
 
     // same partition
     Put put1 = preparePut1();

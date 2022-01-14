@@ -11,7 +11,7 @@ import com.scalar.db.exception.storage.RetriableExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.ThrowableRunnable;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -76,7 +76,7 @@ public class CommitHandler {
     PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
     ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-    List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+    List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
     for (PartitionedMutations.Key key : orderedKeys) {
       tasks.add(() -> storage.mutate(mutations.get(key)));
     }
@@ -129,7 +129,7 @@ public class CommitHandler {
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
       ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }

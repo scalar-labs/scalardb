@@ -9,7 +9,7 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ThrowableRunnable;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,7 +62,7 @@ public class RecoveryHandler {
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
       ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ThrowableRunnable<ExecutionException>> tasks = new ArrayList<>(orderedKeys.size());
+      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
       for (PartitionedMutations.Key key : orderedKeys) {
         tasks.add(() -> storage.mutate(mutations.get(key)));
       }

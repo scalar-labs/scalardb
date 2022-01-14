@@ -92,7 +92,7 @@ public class CrudHandler {
         }
       }
     }
-    snapshot.put(scan, Optional.of(keys));
+    snapshot.put(scan, keys);
 
     return results;
   }

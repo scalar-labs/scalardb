@@ -29,6 +29,7 @@ public class ConsensusCommitConfig {
 
   public static final String PARALLEL_EXECUTOR_COUNT = PREFIX + "parallel_executor_count";
   public static final String PARALLEL_PREPARATION_ENABLED = PREFIX + "parallel_preparation.enabled";
+  public static final String PARALLEL_VALIDATION_ENABLED = PREFIX + "parallel_validation.enabled";
   public static final String PARALLEL_COMMIT_ENABLED = PREFIX + "parallel_commit.enabled";
   public static final String PARALLEL_ROLLBACK_ENABLED = PREFIX + "parallel_rollback.enabled";
 
@@ -45,6 +46,7 @@ public class ConsensusCommitConfig {
 
   private int parallelExecutorCount;
   private boolean parallelPreparationEnabled;
+  private boolean parallelValidationEnabled;
   private boolean parallelCommitEnabled;
   private boolean parallelRollbackEnabled;
   private boolean asyncCommitEnabled;
@@ -116,6 +118,11 @@ public class ConsensusCommitConfig {
         getInt(getProperties(), PARALLEL_EXECUTOR_COUNT, DEFAULT_PARALLEL_EXECUTOR_COUNT);
     parallelPreparationEnabled = getBoolean(getProperties(), PARALLEL_PREPARATION_ENABLED, false);
     parallelCommitEnabled = getBoolean(getProperties(), PARALLEL_COMMIT_ENABLED, false);
+
+    // Use the value of parallel commit for parallel validation and parallel rollback as default
+    // value
+    parallelValidationEnabled =
+        getBoolean(getProperties(), PARALLEL_VALIDATION_ENABLED, parallelCommitEnabled);
     parallelRollbackEnabled =
         getBoolean(getProperties(), PARALLEL_ROLLBACK_ENABLED, parallelCommitEnabled);
 
@@ -145,6 +152,10 @@ public class ConsensusCommitConfig {
 
   public boolean isParallelPreparationEnabled() {
     return parallelPreparationEnabled;
+  }
+
+  public boolean isParallelValidationEnabled() {
+    return parallelValidationEnabled;
   }
 
   public boolean isParallelCommitEnabled() {
