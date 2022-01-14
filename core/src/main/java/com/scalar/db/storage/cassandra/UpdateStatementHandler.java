@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
 
@@ -59,14 +60,20 @@ public class UpdateStatementHandler extends MutateStatementHandler {
   }
 
   private Update prepare(Put put) {
-    Update update = QueryBuilder.update(put.forNamespace().get(), put.forTable().get());
+    Update update =
+        QueryBuilder.update(
+            quoteIfNecessary(put.forNamespace().get()), quoteIfNecessary(put.forTable().get()));
 
     Update.Assignments assignments = update.with();
-    put.getValues().forEach((k, v) -> assignments.and(set(k, bindMarker())));
+    put.getValues().forEach((k, v) -> assignments.and(set(quoteIfNecessary(k), bindMarker())));
     Update.Where where = update.where();
-    put.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+    put.getPartitionKey()
+        .forEach(v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker())));
     put.getClusteringKey()
-        .ifPresent(k -> k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker()))));
+        .ifPresent(
+            k ->
+                k.forEach(
+                    v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker()))));
 
     setCondition(where, put);
 
