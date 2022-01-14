@@ -67,17 +67,12 @@ public class DeleteStatementHandler extends StatementHandler {
         condition = dynamoMutation.getIfExistsCondition();
       } else {
         condition = dynamoMutation.getCondition();
+        builder.expressionAttributeNames(dynamoMutation.getConditionColumnMap());
         Map<String, AttributeValue> bindMap = dynamoMutation.getConditionBindMap();
-
         builder.expressionAttributeValues(bindMap);
       }
 
       builder.conditionExpression(condition);
-    }
-
-    Map<String, String> conditionAttributeNameMap = dynamoMutation.getConditionAttributeNameMap();
-    if (!conditionAttributeNameMap.isEmpty()) {
-      builder.expressionAttributeNames(conditionAttributeNameMap);
     }
 
     client.deleteItem(builder.build());
