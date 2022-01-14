@@ -1,6 +1,13 @@
 package com.scalar.db.storage.cassandra;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.ne;
 
 import com.datastax.driver.core.querybuilder.BuiltStatement;
 import com.datastax.driver.core.querybuilder.Clause;
@@ -100,19 +107,20 @@ public class ConditionSetter implements MutationConditionVisitor {
   }
 
   private Clause createClauseWith(ConditionalExpression e) {
+    String name = quoteIfNecessary(e.getName());
     switch (e.getOperator()) {
       case EQ:
-        return eq(e.getName(), bindMarker());
+        return eq(name, bindMarker());
       case NE:
-        return ne(e.getName(), bindMarker());
+        return ne(name, bindMarker());
       case GT:
-        return gt(e.getName(), bindMarker());
+        return gt(name, bindMarker());
       case GTE:
-        return gte(e.getName(), bindMarker());
+        return gte(name, bindMarker());
       case LT:
-        return lt(e.getName(), bindMarker());
+        return lt(name, bindMarker());
       case LTE:
-        return lte(e.getName(), bindMarker());
+        return lte(name, bindMarker());
       default:
         // never comes here because ConditionalExpression accepts only above operators
         throw new IllegalArgumentException(e.getOperator() + " is not supported");

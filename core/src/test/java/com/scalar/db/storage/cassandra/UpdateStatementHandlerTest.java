@@ -28,8 +28,8 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class UpdateStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
-  private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_KEYSPACE_NAME = "keyspace_name";
+  private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -69,6 +69,15 @@ public class UpdateStatementHandlerTest {
         .withValue(ANY_NAME_3, ANY_INT_1)
         .forNamespace(ANY_KEYSPACE_NAME)
         .forTable(ANY_TABLE_NAME);
+  }
+
+  private Put preparePutWithReservedKeywords() {
+    Key partitionKey = new Key("from", ANY_TEXT_1);
+    Key clusteringKey = new Key("to", ANY_TEXT_2);
+    return new Put(partitionKey, clusteringKey)
+        .withValue("one", ANY_INT_1)
+        .forNamespace("keyspace")
+        .forTable("table");
   }
 
   private void configureBehavior(String expected) {
@@ -150,6 +159,33 @@ public class UpdateStatementHandlerTest {
                 });
     configureBehavior(expected);
     put = preparePutWithClusteringKey();
+
+    // Act
+    handler.prepare(put);
+
+    // Assert
+    verify(session).prepare(expected);
+  }
+
+  @Test
+  public void prepare_PutOperationWithReservedKeywordsGiven_ShouldPrepareProperQuery() {
+    // Arrange
+    String expected =
+        Joiner.on(" ")
+            .skipNulls()
+            .join(
+                new String[] {
+                  "UPDATE",
+                  "\"keyspace\"" + "." + "\"table\"",
+                  "SET",
+                  "\"one\"" + "=?",
+                  "WHERE",
+                  "\"from\"" + "=?",
+                  "AND",
+                  "\"to\"" + "=?;"
+                });
+    configureBehavior(expected);
+    put = preparePutWithReservedKeywords();
 
     // Act
     handler.prepare(put);

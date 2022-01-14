@@ -1,5 +1,6 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 
 import com.datastax.driver.core.BoundStatement;
@@ -56,12 +57,18 @@ public class DeleteStatementHandler extends MutateStatementHandler {
 
   private com.datastax.driver.core.querybuilder.Delete prepare(Delete del) {
     com.datastax.driver.core.querybuilder.Delete delete =
-        QueryBuilder.delete().from(del.forNamespace().get(), del.forTable().get());
+        QueryBuilder.delete()
+            .from(
+                quoteIfNecessary(del.forNamespace().get()), quoteIfNecessary(del.forTable().get()));
     com.datastax.driver.core.querybuilder.Delete.Where where = delete.where();
 
-    del.getPartitionKey().forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker())));
+    del.getPartitionKey()
+        .forEach(v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker())));
     del.getClusteringKey()
-        .ifPresent(k -> k.forEach(v -> where.and(QueryBuilder.eq(v.getName(), bindMarker()))));
+        .ifPresent(
+            k ->
+                k.forEach(
+                    v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker()))));
 
     setCondition(where, del);
 
