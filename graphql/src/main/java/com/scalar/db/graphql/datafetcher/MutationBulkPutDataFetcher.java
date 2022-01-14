@@ -4,9 +4,8 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.CrudException;
 import graphql.VisibleForTesting;
-import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -27,7 +26,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
   }
 
   @Override
-  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     List<Map<String, Object>> putInput = environment.getArgument("put");
     LOGGER.debug("got put argument: " + putInput);
     List<Put> puts = putInput.stream().map(helper::createPut).collect(Collectors.toList());
@@ -36,9 +35,9 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
     try {
       performPut(environment, puts);
       result.data(true);
-    } catch (TransactionException | ExecutionException e) {
+    } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB put operation failed", e);
-      result.data(false).error(new AbortExecutionException(e));
+      result.data(false).error(DataFetcherHelper.getGraphQLError(e, environment));
     }
 
     return result.build();
@@ -46,7 +45,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
 
   @VisibleForTesting
   void performPut(DataFetchingEnvironment environment, List<Put> puts)
-      throws TransactionException, ExecutionException {
+      throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Put operations with transaction: " + puts);

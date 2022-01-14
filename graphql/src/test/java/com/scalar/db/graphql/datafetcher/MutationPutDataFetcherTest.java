@@ -14,11 +14,10 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.Map;
 import org.junit.Test;
@@ -133,7 +132,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenPutFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
     preparePutInputAndExpectedPut();
-    TransactionException exception = new TransactionException("error");
+    ExecutionException exception = new ExecutionException("error");
     doThrow(exception).when(dataFetcher).performPut(eq(environment), any(Put.class));
 
     // Act
@@ -141,11 +140,6 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     assertThat(result.getData()).isFalse();
-    assertThat(result.getErrors())
-        .hasSize(1)
-        .element(0)
-        .isInstanceOf(AbortExecutionException.class);
-    assertThat(((AbortExecutionException) result.getErrors().get(0)).getCause())
-        .isSameAs(exception);
+    assertThatDataFetcherResultHasErrorForException(result, exception);
   }
 }

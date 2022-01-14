@@ -4,9 +4,8 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.CrudException;
 import graphql.VisibleForTesting;
-import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -27,7 +26,7 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
   }
 
   @Override
-  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     List<Map<String, Object>> deleteInput = environment.getArgument("delete");
     LOGGER.debug("got delete argument: " + deleteInput);
     List<Delete> deletes =
@@ -37,9 +36,9 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
     try {
       performDelete(environment, deletes);
       result.data(true);
-    } catch (TransactionException | ExecutionException e) {
+    } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB delete operation failed", e);
-      result.data(false).error(new AbortExecutionException(e));
+      result.data(false).error(DataFetcherHelper.getGraphQLError(e, environment));
     }
 
     return result.build();
@@ -47,7 +46,7 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
 
   @VisibleForTesting
   void performDelete(DataFetchingEnvironment environment, List<Delete> deletes)
-      throws TransactionException, ExecutionException {
+      throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Delete operations with transaction: " + deletes);

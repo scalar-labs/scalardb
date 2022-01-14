@@ -5,8 +5,7 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
-import graphql.execution.AbortExecutionException;
+import com.scalar.db.exception.transaction.CrudException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -25,7 +24,7 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
   }
 
   @Override
-  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     Map<String, Object> deleteInput = environment.getArgument("delete");
     LOGGER.debug("got delete argument: " + deleteInput);
     Delete delete = helper.createDelete(deleteInput);
@@ -34,9 +33,9 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
     try {
       performDelete(environment, delete);
       result.data(true);
-    } catch (TransactionException | ExecutionException e) {
+    } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB delete operation failed", e);
-      result.data(false).error(new AbortExecutionException(e));
+      result.data(false).error(DataFetcherHelper.getGraphQLError(e, environment));
     }
 
     return result.build();
@@ -44,7 +43,7 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
 
   @VisibleForTesting
   void performDelete(DataFetchingEnvironment environment, Delete delete)
-      throws TransactionException, ExecutionException {
+      throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Delete operation with transaction: " + delete);

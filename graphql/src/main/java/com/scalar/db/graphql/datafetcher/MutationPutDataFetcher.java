@@ -5,8 +5,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Put;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
-import graphql.execution.AbortExecutionException;
+import com.scalar.db.exception.transaction.CrudException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -25,7 +24,7 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
   }
 
   @Override
-  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
+  public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     Map<String, Object> putInput = environment.getArgument("put");
     LOGGER.debug("got put argument: " + putInput);
     Put put = helper.createPut(putInput);
@@ -34,9 +33,9 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
     try {
       performPut(environment, put);
       result.data(true);
-    } catch (TransactionException | ExecutionException e) {
+    } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB put operation failed", e);
-      result.data(false).error(new AbortExecutionException(e));
+      result.data(false).error(DataFetcherHelper.getGraphQLError(e, environment));
     }
 
     return result.build();
@@ -44,7 +43,7 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
 
   @VisibleForTesting
   void performPut(DataFetchingEnvironment environment, Put put)
-      throws TransactionException, ExecutionException {
+      throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Put operation with transaction: " + put);

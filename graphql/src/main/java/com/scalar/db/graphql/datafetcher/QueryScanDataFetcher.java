@@ -13,8 +13,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.Key;
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.LinkedHashSet;
@@ -23,7 +24,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<String, Object>>>> {
+public class QueryScanDataFetcher
+    implements DataFetcher<DataFetcherResult<Map<String, List<Map<String, Object>>>>> {
   private static final Logger LOGGER = LoggerFactory.getLogger(QueryScanDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
@@ -34,29 +36,33 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
   }
 
   @Override
-  public Map<String, List<Map<String, Object>>> get(DataFetchingEnvironment environment)
-      throws Exception {
+  public DataFetcherResult<Map<String, List<Map<String, Object>>>> get(
+      DataFetchingEnvironment environment) {
     Map<String, Object> scanInput = environment.getArgument("scan");
     LOGGER.debug("got scan argument: " + scanInput);
     Scan scan = createScan(scanInput);
 
     // TODO: scan.withProjections()
+
+    DataFetcherResult.Builder<Map<String, List<Map<String, Object>>>> result =
+        DataFetcherResult.newResult();
     LinkedHashSet<String> fieldNames = helper.getFieldNames();
     ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
     try {
-      for (Result result : performScan(environment, scan)) {
+      for (Result dbResult : performScan(environment, scan)) {
         ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
         for (String fieldName : fieldNames) {
-          result.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
+          dbResult.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
         }
         list.add(map.build());
       }
-    } catch (TransactionException | ExecutionException e) {
+      result.data(ImmutableMap.of(helper.getObjectTypeName(), list.build()));
+    } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB scan operation failed", e);
-      throw e;
+      result.error(DataFetcherHelper.getGraphQLError(e, environment));
     }
 
-    return ImmutableMap.of(helper.getObjectTypeName(), list.build());
+    return result.build();
   }
 
   @VisibleForTesting
@@ -125,7 +131,7 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
 
   @VisibleForTesting
   List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
-      throws TransactionException, ExecutionException {
+      throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Scan operation with transaction: " + scan);
