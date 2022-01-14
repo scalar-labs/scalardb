@@ -14,7 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ValidationTask;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -252,11 +252,11 @@ public class Snapshot {
       return;
     }
 
-    List<ValidationTask> validationTasks = new ArrayList<>();
+    List<ParallelExecutorTask> tasks = new ArrayList<>();
 
     // Read set by scan is re-validated to check if there is no anti-dependency
     for (Map.Entry<Scan, List<Key>> entry : scanSet.entrySet()) {
-      validationTasks.add(
+      tasks.add(
           () -> {
             Set<TransactionResult> currentReadSet = new HashSet<>();
             Set<Key> validatedReadSet = new HashSet<>();
@@ -315,7 +315,7 @@ public class Snapshot {
         continue;
       }
 
-      validationTasks.add(
+      tasks.add(
           () -> {
             Get get =
                 new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
@@ -331,7 +331,7 @@ public class Snapshot {
           });
     }
 
-    parallelExecutor.validate(validationTasks);
+    parallelExecutor.validate(tasks);
   }
 
   private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
