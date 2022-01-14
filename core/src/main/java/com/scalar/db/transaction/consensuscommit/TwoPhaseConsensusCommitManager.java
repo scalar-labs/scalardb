@@ -73,12 +73,13 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
       DistributedStorage storage,
       ConsensusCommitConfig config,
       Coordinator coordinator,
+      ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit) {
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
-    parallelExecutor = null;
+    this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
     if (config.isActiveTransactionsManagementEnabled()) {
@@ -159,7 +160,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
 
   private TwoPhaseConsensusCommit createNewTransaction(
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy) {
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy);
+    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot);
 
     TwoPhaseConsensusCommit transaction =
