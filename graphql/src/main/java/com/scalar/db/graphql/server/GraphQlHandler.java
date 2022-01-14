@@ -115,7 +115,7 @@ class GraphQlHandler extends AbstractHandler {
     if (matcher.matches()) {
       Charset cs = getCharset(matcher.group(1));
       Reader reader = new InputStreamReader(request.getInputStream(), cs);
-      ExecutionInput input = createExecutionInput(JsonParser.parseReader(reader).getAsJsonObject());
+      ExecutionInput input = createExecutionInput(reader);
       execute(response, input);
       return;
     }
@@ -170,7 +170,8 @@ class GraphQlHandler extends AbstractHandler {
     }
   }
 
-  private ExecutionInput createExecutionInput(JsonObject jsonObject) {
+  private ExecutionInput createExecutionInput(Reader reader) {
+    JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
     ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput();
     JsonElement query = jsonObject.get("query");
     if (query != null && query.isJsonPrimitive()) {
