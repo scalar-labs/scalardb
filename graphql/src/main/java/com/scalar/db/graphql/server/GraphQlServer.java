@@ -6,11 +6,15 @@ import com.scalar.db.service.StorageFactory;
 import java.io.File;
 import java.util.concurrent.Callable;
 import org.eclipse.jetty.server.Server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "scalardb-graphql", description = "Starts Scalar DB GraphQL server.")
 public class GraphQlServer implements Callable<Integer> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(GraphQlServer.class);
+
   @CommandLine.Option(
       names = {"--properties", "--config"},
       required = true,
@@ -54,6 +58,9 @@ public class GraphQlServer implements Callable<Integer> {
     Server server = new Server(config.getPort());
     server.setHandler(handlerBuilder.build());
     server.start();
+
+    LOGGER.info("Scalar DB GraphQL server started, listening on " + config.getPort());
+
     server.join();
 
     return 0;

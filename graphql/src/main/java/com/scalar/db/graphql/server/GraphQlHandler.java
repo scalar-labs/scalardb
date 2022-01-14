@@ -35,8 +35,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class GraphQlHandler extends AbstractHandler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(GraphQlHandler.class);
   private static final Pattern CONTENT_TYPE_JSON =
       Pattern.compile(
           "^application/(?:graphql\\+)?json\\s*(?:;\\s*charset=(.+))?", Pattern.CASE_INSENSITIVE);
@@ -113,6 +116,7 @@ class GraphQlHandler extends AbstractHandler {
     }
     Matcher matcher = CONTENT_TYPE_JSON.matcher(contentType);
     if (matcher.matches()) {
+      LOGGER.debug("A POST request with application/json body received.");
       Charset cs = getCharset(matcher.group(1));
       Reader reader = new InputStreamReader(request.getInputStream(), cs);
       ExecutionInput input = createExecutionInput(reader);
@@ -121,6 +125,7 @@ class GraphQlHandler extends AbstractHandler {
     }
     matcher = CONTENT_TYPE_GRAPHQL.matcher(contentType);
     if (matcher.matches()) {
+      LOGGER.debug("A POST request with application/graphql body received.");
       Charset cs = getCharset(matcher.group(1));
       BufferedReader reader =
           new BufferedReader(new InputStreamReader(request.getInputStream(), cs));
@@ -130,6 +135,7 @@ class GraphQlHandler extends AbstractHandler {
       return;
     }
     if (request.getParameter("query") != null) {
+      LOGGER.debug("A POST request with a \"query\" parameter in the body received.");
       ExecutionInput input =
           createExecutionInput(
               request.getParameter("query"),
@@ -155,6 +161,7 @@ class GraphQlHandler extends AbstractHandler {
   private void handleGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     if (request.getParameter("query") != null) {
+      LOGGER.debug("A GET request with a \"query\" parameter received.");
       ExecutionInput input =
           createExecutionInput(
               request.getParameter("query"),
@@ -162,10 +169,12 @@ class GraphQlHandler extends AbstractHandler {
               request.getParameter("variables"));
       execute(response, input);
     } else if (isGraphiqlEnabled) {
+      LOGGER.debug("A GET request without query parameter received. Serving Graphiql HTML.");
       response.setContentType("text/html");
       response.setStatus(HttpServletResponse.SC_OK);
       response.getOutputStream().write(graphiqlHtml);
     } else {
+      LOGGER.debug("No \"query\" parameter or Graphiql is disabled.");
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     }
   }
@@ -206,6 +215,7 @@ class GraphQlHandler extends AbstractHandler {
 
   private void execute(HttpServletResponse response, ExecutionInput executionInput)
       throws IOException {
+    LOGGER.debug("Executing GraphQL input: " + executionInput);
     ExecutionResult result = graphql.execute(executionInput);
     response.setContentType("application/json");
     response.setStatus(HttpServletResponse.SC_OK);
