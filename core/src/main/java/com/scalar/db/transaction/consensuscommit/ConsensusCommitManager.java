@@ -46,12 +46,13 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
       DistributedStorage storage,
       ConsensusCommitConfig config,
       Coordinator coordinator,
+      ParallelExecutor parallelExecutor,
       RecoveryHandler recovery,
       CommitHandler commit) {
     this.storage = storage;
     this.config = config;
     this.coordinator = coordinator;
-    parallelExecutor = null;
+    this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
     this.namespace = storage.getNamespace();
@@ -150,7 +151,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
           "Setting different isolation level or serializable strategy from the ones"
               + "in DatabaseConfig might cause unexpected anomalies.");
     }
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy);
+    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     namespace.ifPresent(consensus::withNamespace);
