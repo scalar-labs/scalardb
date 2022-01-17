@@ -122,7 +122,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_GetArgumentGiven_ShouldReturnResultAsMap() throws Exception {
+  public void get_WhenGetSucceeds_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
     QueryGetDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
