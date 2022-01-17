@@ -25,13 +25,13 @@ scalar.db.isolation_level={{ default .Env.SCALAR_DB_ISOLATION_LEVEL "" }}
 # If SNAPSHOT is specified, this is ignored.
 scalar.db.consensus_commit.serializable_strategy={{ default .Env.SCALAR_DB_CONSENSUSCOMMIT_SERIALIZABLE_STRATEGY "" }}
 
-# Port number for GraphQL server. Default port number is 8080.
+# Port number for GraphQL server. The default is 8080.
 scalar.db.graphql.port={{ default .Env.SCALAR_DB_GRAPHQL_PORT "" }}
 
 # Path component of the URL of the GraphQL endpoint. The default is /graphql.
 scalar.db.graphql.path={{ default .Env.SCALAR_DB_GRAPHQL_PATH "/graphql" }}
 
-# Comma-separated list of namespaces in which tables the GraphQL server generates schema for.
+# Comma-separated list of namespaces of tables for which the GraphQL server generates a schema.
 scalar.db.graphql.namespaces={{ default .Env.SCALAR_DB_GRAPHQL_NAMESPACES "" }}
 
 # Whether the GraphQL server serves GraphiQL IDE. The default is true.
