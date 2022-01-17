@@ -215,7 +215,7 @@ class GraphQlHandler extends AbstractHandler {
 
   private void execute(HttpServletResponse response, ExecutionInput executionInput)
       throws IOException {
-    LOGGER.debug("Executing GraphQL input: " + executionInput);
+    LOGGER.debug("Executing GraphQL input: {}", executionInput);
     ExecutionResult result = graphql.execute(executionInput);
     response.setContentType("application/json");
     response.setStatus(HttpServletResponse.SC_OK);

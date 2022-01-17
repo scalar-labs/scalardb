@@ -59,7 +59,7 @@ public class GraphQlServer implements Callable<Integer> {
     server.setHandler(handlerBuilder.build());
     server.start();
 
-    LOGGER.info("Scalar DB GraphQL server started, listening on " + config.getPort());
+    LOGGER.info("Scalar DB GraphQL server started, listening on {}", config.getPort());
 
     server.join();
 
