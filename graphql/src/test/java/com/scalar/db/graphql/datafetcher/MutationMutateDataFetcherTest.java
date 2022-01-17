@@ -129,7 +129,7 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutAndDeleteInputListGiven_ShouldRunScalarDbMutate() throws Exception {
+  public void get_PutAndDeleteArgumentsGiven_ShouldRunScalarDbMutate() throws Exception {
     // Arrange
     preparePutAndDelete();
     MutationMutateDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
