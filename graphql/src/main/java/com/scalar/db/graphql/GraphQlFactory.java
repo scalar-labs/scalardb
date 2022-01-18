@@ -139,7 +139,7 @@ public class GraphQlFactory {
 
     GraphQLSchema schema = schemaBuilder.build();
     if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("GraphQL schema generated: " + new SchemaPrinter().print(schema));
+      LOGGER.debug("GraphQL schema generated: {}", new SchemaPrinter().print(schema));
     }
 
     return GraphQL.newGraphQL(schema)
@@ -188,7 +188,7 @@ public class GraphQlFactory {
             new TableGraphQlModel(
                 namespace, table, storageAdmin.getTableMetadata(namespace, table));
         tableModelListBuilder.add(tableGraphQlModel);
-        LOGGER.debug("table added: " + namespace + "." + table);
+        LOGGER.debug("table added: {}.{}", namespace, table);
       }
 
       return new GraphQlFactory(

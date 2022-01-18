@@ -28,7 +28,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     List<Map<String, Object>> putInput = environment.getArgument("put");
-    LOGGER.debug("got put argument: " + putInput);
+    LOGGER.debug("got put argument: {}", putInput);
     List<Put> puts = putInput.stream().map(helper::createPut).collect(Collectors.toList());
 
     DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
@@ -48,10 +48,10 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Put operations with transaction: " + puts);
+      LOGGER.debug("running Put operations with transaction: {}", puts);
       transaction.put(puts);
     } else {
-      LOGGER.debug("running Put operations with storage: " + puts);
+      LOGGER.debug("running Put operations with storage: {}", puts);
       storage.put(puts);
     }
   }

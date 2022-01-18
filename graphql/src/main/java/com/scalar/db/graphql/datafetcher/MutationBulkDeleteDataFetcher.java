@@ -28,7 +28,7 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     List<Map<String, Object>> deleteInput = environment.getArgument("delete");
-    LOGGER.debug("got delete argument: " + deleteInput);
+    LOGGER.debug("got delete argument: {}", deleteInput);
     List<Delete> deletes =
         deleteInput.stream().map(helper::createDelete).collect(Collectors.toList());
 
@@ -49,10 +49,10 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Delete operations with transaction: " + deletes);
+      LOGGER.debug("running Delete operations with transaction: {}", deletes);
       transaction.delete(deletes);
     } else {
-      LOGGER.debug("running Delete operations with storage: " + deletes);
+      LOGGER.debug("running Delete operations with storage: {}", deletes);
       storage.delete(deletes);
     }
   }

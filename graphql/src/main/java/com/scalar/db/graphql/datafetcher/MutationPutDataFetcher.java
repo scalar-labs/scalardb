@@ -26,7 +26,7 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) {
     Map<String, Object> putInput = environment.getArgument("put");
-    LOGGER.debug("got put argument: " + putInput);
+    LOGGER.debug("got put argument: {}", putInput);
     Put put = helper.createPut(putInput);
 
     DataFetcherResult.Builder<Boolean> result = DataFetcherResult.newResult();
@@ -46,10 +46,10 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Put operation with transaction: " + put);
+      LOGGER.debug("running Put operation with transaction: {}", put);
       transaction.put(put);
     } else {
-      LOGGER.debug("running Put operation with storage: " + put);
+      LOGGER.debug("running Put operation with storage: {}", put);
       storage.put(put);
     }
   }

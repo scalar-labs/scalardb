@@ -39,7 +39,7 @@ public class QueryScanDataFetcher
   public DataFetcherResult<Map<String, List<Map<String, Object>>>> get(
       DataFetchingEnvironment environment) {
     Map<String, Object> scanInput = environment.getArgument("scan");
-    LOGGER.debug("got scan argument: " + scanInput);
+    LOGGER.debug("got scan argument: {}", scanInput);
     Scan scan = createScan(scanInput);
 
     // TODO: scan.withProjections()
@@ -134,10 +134,10 @@ public class QueryScanDataFetcher
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Scan operation with transaction: " + scan);
+      LOGGER.debug("running Scan operation with transaction: {}", scan);
       return transaction.scan(scan);
     } else {
-      LOGGER.debug("running Scan operation with storage: " + scan);
+      LOGGER.debug("running Scan operation with storage: {}", scan);
       return ImmutableList.copyOf(storage.scan(scan));
     }
   }

@@ -32,11 +32,11 @@ public class MutationMutateDataFetcher implements DataFetcher<DataFetcherResult<
     List<Map<String, Object>> deleteInput = environment.getArgument("delete");
     List<Mutation> mutations = new ArrayList<>();
     if (putInput != null) {
-      LOGGER.debug("got put argument: " + putInput);
+      LOGGER.debug("got put argument: {}", putInput);
       mutations.addAll(putInput.stream().map(helper::createPut).collect(Collectors.toList()));
     }
     if (deleteInput != null) {
-      LOGGER.debug("got delete argument: " + deleteInput);
+      LOGGER.debug("got delete argument: {}", deleteInput);
       mutations.addAll(deleteInput.stream().map(helper::createDelete).collect(Collectors.toList()));
     }
 
@@ -57,10 +57,10 @@ public class MutationMutateDataFetcher implements DataFetcher<DataFetcherResult<
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Mutation operations with transaction: " + mutations);
+      LOGGER.debug("running Mutation operations with transaction: {}", mutations);
       transaction.mutate(mutations);
     } else {
-      LOGGER.debug("running Mutation operations with storage: " + mutations);
+      LOGGER.debug("running Mutation operations with storage: {}", mutations);
       storage.mutate(mutations);
     }
   }

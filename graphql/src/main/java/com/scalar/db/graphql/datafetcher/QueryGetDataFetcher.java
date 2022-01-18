@@ -32,7 +32,7 @@ public class QueryGetDataFetcher
   public DataFetcherResult<Map<String, Map<String, Object>>> get(
       DataFetchingEnvironment environment) {
     Map<String, Object> getInput = environment.getArgument("get");
-    LOGGER.debug("got get argument: " + getInput);
+    LOGGER.debug("got get argument: {}", getInput);
     Get get = createGet(getInput);
 
     DataFetcherResult.Builder<Map<String, Map<String, Object>>> result =
@@ -78,10 +78,10 @@ public class QueryGetDataFetcher
       throws CrudException, ExecutionException {
     DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
-      LOGGER.debug("running Get operation with transaction: " + get);
+      LOGGER.debug("running Get operation with transaction: {}", get);
       return transaction.get(get);
     } else {
-      LOGGER.debug("running Get operation with storage: " + get);
+      LOGGER.debug("running Get operation with storage: {}", get);
       return storage.get(get);
     }
   }
