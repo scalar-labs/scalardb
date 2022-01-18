@@ -3,6 +3,7 @@ package com.scalar.db.graphql.datafetcher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -28,6 +29,8 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import graphql.execution.DataFetcherResult;
+import graphql.schema.DataFetchingFieldSelectionSet;
+import graphql.schema.SelectedField;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
 
 public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private static final String COL1 = "c1";
@@ -49,6 +53,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private QueryScanDataFetcher dataFetcher;
   private Map<String, Object> scanInput;
   private Scan expectedScan;
+  @Mock private DataFetchingFieldSelectionSet selectionSet;
 
   @Override
   protected void doSetUp() throws Exception {
@@ -83,6 +88,10 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     scanInput = new HashMap<>();
     scanInput.put("partitionKey", ImmutableMap.of(COL1, 1, COL2, "A"));
     when(environment.getArgument("scan")).thenReturn(scanInput);
+
+    // Set empty selection set
+    when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
+    when(environment.getSelectionSet()).thenReturn(selectionSet);
 
     expectedScan =
         new Scan(new Key(new IntValue(COL1, 1), new TextValue(COL2, "A")))
@@ -173,6 +182,43 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // Assert
     assertThat(result.getData()).isNull();
     assertThatDataFetcherResultHasErrorForException(result, exception);
+  }
+
+  @Test
+  public void get_ScanArgumentWithFieldSelectionGiven_ShouldRunScalarDbScanWithProjections()
+      throws Exception {
+    // Arrange
+    // table1_scan(scan: {
+    //   partitionKey: { c1: 1, c2: "A" }
+    // }) {
+    //   table1 {
+    //     c1, c2
+    //   }
+    // }
+    Map<String, Object> scanInput =
+        ImmutableMap.of("partitionKey", ImmutableMap.of("c1", 1, "c2", "A"));
+    when(environment.getArgument("scan")).thenReturn(scanInput);
+    SelectedField selectedField1 = mock(SelectedField.class);
+    when(selectedField1.getName()).thenReturn("c1");
+    SelectedField selectedField2 = mock(SelectedField.class);
+    when(selectedField2.getName()).thenReturn("c2");
+    when(selectionSet.getFields(anyString()))
+        .thenReturn(ImmutableList.of(selectedField1, selectedField2));
+    when(environment.getSelectionSet()).thenReturn(selectionSet);
+
+    Scan expectedScan =
+        new Scan(new Key(new IntValue("c1", 1), new TextValue("c2", "A")))
+            .withProjections(Arrays.asList("c1", "c2"))
+            .forNamespace(ANY_NAMESPACE)
+            .forTable(ANY_TABLE);
+
+    // Act
+    dataFetcher.get(environment);
+
+    // Assert
+    ArgumentCaptor<Scan> argument = ArgumentCaptor.forClass(Scan.class);
+    verify(dataFetcher, times(1)).performScan(eq(environment), argument.capture());
+    assertThat(argument.getValue()).isEqualTo(expectedScan);
   }
 
   @Test

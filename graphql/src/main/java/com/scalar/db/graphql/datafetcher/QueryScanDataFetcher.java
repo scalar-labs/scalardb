@@ -18,9 +18,11 @@ import com.scalar.db.io.Key;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.SelectedField;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +44,15 @@ public class QueryScanDataFetcher
     LOGGER.debug("got scan argument: {}", scanInput);
     Scan scan = createScan(scanInput);
 
-    // TODO: scan.withProjections()
+    // Add the specified field names, filtered by "*/*", to the scan object as the projections
+    // since the fields of the scan input are represented in the following format:
+    // <object_type_name>_ScanPayLoad.<object_type_name>/<object_type_name>.<field_name>
+    List<String> selectedFieldNames =
+        environment.getSelectionSet().getFields("*/*").stream()
+            .map(SelectedField::getName)
+            .collect(Collectors.toList());
+    LOGGER.debug("scan projections: {}", selectedFieldNames);
+    scan.withProjections(selectedFieldNames);
 
     DataFetcherResult.Builder<Map<String, List<Map<String, Object>>>> result =
         DataFetcherResult.newResult();
