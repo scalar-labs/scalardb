@@ -22,6 +22,7 @@ public class TwoPhaseConsensusCommitManagerTest {
   @Mock private DistributedStorage storage;
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
+  @Mock private ParallelExecutor parallelExecutor;
   @Mock private RecoveryHandler recovery;
   @Mock private CommitHandler commit;
 
@@ -36,7 +37,9 @@ public class TwoPhaseConsensusCommitManagerTest {
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
     when(config.isActiveTransactionsManagementEnabled()).thenReturn(true);
 
-    manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
+    manager =
+        new TwoPhaseConsensusCommitManager(
+            storage, config, coordinator, parallelExecutor, recovery, commit);
   }
 
   @Test
@@ -133,7 +136,9 @@ public class TwoPhaseConsensusCommitManagerTest {
       resume_WhenActiveTransactionsManagementEnabledIsFalse_ShouldThrowUnsupportedOperationException() {
     // Arrange
     when(config.isActiveTransactionsManagementEnabled()).thenReturn(false);
-    manager = new TwoPhaseConsensusCommitManager(storage, config, coordinator, recovery, commit);
+    manager =
+        new TwoPhaseConsensusCommitManager(
+            storage, config, coordinator, parallelExecutor, recovery, commit);
 
     // Act Assert
     assertThatThrownBy(() -> manager.resume(ANY_TX_ID))

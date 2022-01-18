@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cassandra;
 
+import static com.datastax.driver.core.Metadata.quoteIfNecessary;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
@@ -58,11 +60,11 @@ public class ClusterManager {
    * @return {@code TableMetadata}
    */
   public TableMetadata getMetadata(String keyspace, String table) {
-    KeyspaceMetadata metadata = cluster.getMetadata().getKeyspace(keyspace);
-    if (metadata == null || metadata.getTable(table) == null) {
+    KeyspaceMetadata metadata = cluster.getMetadata().getKeyspace(quoteIfNecessary(keyspace));
+    if (metadata == null) {
       return null;
     }
-    return metadata.getTable(table);
+    return metadata.getTable(quoteIfNecessary(table));
   }
 
   /** Closes the cluster. */

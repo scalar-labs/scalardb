@@ -54,10 +54,11 @@ public class SnapshotTest {
   private static final String ANY_TEXT_6 = "text6";
   private Snapshot snapshot;
   private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
-  private Map<Scan, Optional<List<Snapshot.Key>>> scanSet;
+  private Map<Scan, List<Snapshot.Key>> scanSet;
   private Map<Snapshot.Key, Put> writeSet;
   private Map<Snapshot.Key, Delete> deleteSet;
 
+  @Mock private ConsensusCommitConfig config;
   @Mock private PrepareMutationComposer prepareComposer;
   @Mock private CommitMutationComposer commitComposer;
   @Mock private RollbackMutationComposer rollbackComposer;
@@ -78,7 +79,16 @@ public class SnapshotTest {
     writeSet = new ConcurrentHashMap<>();
     deleteSet = new ConcurrentHashMap<>();
 
-    return spy(new Snapshot(ANY_ID, isolation, strategy, readSet, scanSet, writeSet, deleteSet));
+    return spy(
+        new Snapshot(
+            ANY_ID,
+            isolation,
+            strategy,
+            new ParallelExecutor(config),
+            readSet,
+            scanSet,
+            writeSet,
+            deleteSet));
   }
 
   private Get prepareGet() {
@@ -221,10 +231,10 @@ public class SnapshotTest {
     List<Snapshot.Key> expected = Collections.singletonList(key);
 
     // Act
-    snapshot.put(scan, Optional.of(expected));
+    snapshot.put(scan, expected);
 
     // Assert
-    assertThat(scanSet.get(scan).get()).isEqualTo(expected);
+    assertThat(scanSet.get(scan)).isEqualTo(expected);
   }
 
   @Test
@@ -475,7 +485,7 @@ public class SnapshotTest {
             scan.getPartitionKey(),
             scan.getStartClusteringKey().get());
     Put put = preparePut();
-    snapshot.put(scan, Optional.of(Collections.singletonList(key)));
+    snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
 
     // Act Assert
@@ -565,7 +575,7 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Snapshot.Key key = new Snapshot.Key(get);
     snapshot.put(key, Optional.of(txResult));
-    snapshot.put(scan, Optional.of(Collections.singletonList(key)));
+    snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
@@ -593,7 +603,7 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Snapshot.Key key = new Snapshot.Key(get);
     snapshot.put(key, Optional.of(txResult));
-    snapshot.put(scan, Optional.of(Collections.singletonList(key)));
+    snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = new TransactionResult(result);
@@ -618,7 +628,7 @@ public class SnapshotTest {
     Scan scan = prepareScan();
     Put put = preparePut();
     when(result.getValues()).thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(ANY_ID + "x")));
-    snapshot.put(scan, Optional.of(Collections.emptyList()));
+    snapshot.put(scan, Collections.emptyList());
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = new TransactionResult(result);
@@ -674,8 +684,8 @@ public class SnapshotTest {
     when(result2.getValues())
         .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id2")));
 
-    snapshot.put(scan1, Optional.of(Collections.singletonList(key1)));
-    snapshot.put(scan2, Optional.of(Collections.singletonList(key2)));
+    snapshot.put(scan1, Collections.singletonList(key1));
+    snapshot.put(scan2, Collections.singletonList(key2));
     snapshot.put(key1, Optional.of(new TransactionResult(result1)));
     snapshot.put(key2, Optional.of(new TransactionResult(result2)));
 

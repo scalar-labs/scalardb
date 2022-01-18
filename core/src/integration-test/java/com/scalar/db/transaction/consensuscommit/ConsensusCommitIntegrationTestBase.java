@@ -103,7 +103,8 @@ public abstract class ConsensusCommitIntegrationTestBase {
     recovery = spy(new RecoveryHandler(storage, coordinator, parallelExecutor));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
-        new ConsensusCommitManager(storage, consensusCommitConfig, coordinator, recovery, commit);
+        new ConsensusCommitManager(
+            storage, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
   }
 
   protected void initialize() throws Exception {}
