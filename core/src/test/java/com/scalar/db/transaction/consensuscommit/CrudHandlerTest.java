@@ -45,6 +45,7 @@ public class CrudHandlerTest {
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
+  @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
   @Mock private Result result;
 
@@ -267,6 +268,7 @@ public class CrudHandlerTest {
             ANY_TX_ID,
             Isolation.SNAPSHOT,
             null,
+            parallelExecutor,
             new HashMap<>(),
             new HashMap<>(),
             new HashMap<>(),
@@ -327,6 +329,7 @@ public class CrudHandlerTest {
             ANY_TX_ID,
             Isolation.SNAPSHOT,
             null,
+            parallelExecutor,
             new HashMap<>(),
             new HashMap<>(),
             new HashMap<>(),

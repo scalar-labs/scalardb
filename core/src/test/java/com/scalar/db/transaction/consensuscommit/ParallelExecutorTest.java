@@ -6,7 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.util.ThrowableRunnable;
+import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
@@ -25,10 +26,10 @@ public class ParallelExecutorTest {
   @Mock private ConsensusCommitConfig config;
   @Mock private ExecutorService parallelExecutorService;
   @Mock private Future<Void> future;
-  @Mock private ThrowableRunnable<ExecutionException> task;
+  @Mock private ParallelExecutorTask task;
 
   private ParallelExecutor parallelExecutor;
-  private List<ThrowableRunnable<ExecutionException>> tasks;
+  private List<ParallelExecutorTask> tasks;
 
   @Before
   public void setUp() throws Exception {
@@ -42,7 +43,8 @@ public class ParallelExecutorTest {
 
   @Test
   public void prepare_ParallelPreparationNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(false);
 
@@ -57,7 +59,8 @@ public class ParallelExecutorTest {
 
   @Test
   public void prepare_ParallelPreparationEnabled_ShouldExecuteTasksInParallel()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelPreparationEnabled()).thenReturn(true);
 
@@ -72,8 +75,42 @@ public class ParallelExecutorTest {
   }
 
   @Test
+  public void validate_ParallelValidationNotEnabled_ShouldExecuteTasksSerially()
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(false);
+
+    // Act
+    parallelExecutor.validate(tasks);
+
+    // Assert
+    verify(task, times(tasks.size())).run();
+    verify(parallelExecutorService, never()).submit(ArgumentMatchers.<Callable<Void>>any());
+    verify(future, never()).get();
+  }
+
+  @Test
+  public void validate_ParallelValidationEnabled_ShouldExecuteTasksInParallel()
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
+    // Arrange
+    when(config.isParallelValidationEnabled()).thenReturn(true);
+
+    // Act
+    parallelExecutor.validate(tasks);
+
+    // Assert
+    verify(task, never()).run();
+    verify(parallelExecutorService, times(tasks.size()))
+        .submit(ArgumentMatchers.<Callable<Void>>any());
+    verify(future, times(tasks.size())).get();
+  }
+
+  @Test
   public void commit_ParallelCommitNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(false);
 
@@ -88,7 +125,8 @@ public class ParallelExecutorTest {
 
   @Test
   public void commit_ParallelCommitEnabled_ShouldExecuteTasksInParallel()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
 
@@ -105,7 +143,8 @@ public class ParallelExecutorTest {
   @Test
   public void
       commit_ParallelCommitEnabledAndAsyncCommitEnabled_ShouldExecuteTasksInParallelAndAsynchronously()
-          throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+          throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+              CommitConflictException {
     // Arrange
     when(config.isParallelCommitEnabled()).thenReturn(true);
     when(config.isAsyncCommitEnabled()).thenReturn(true);
@@ -122,7 +161,8 @@ public class ParallelExecutorTest {
 
   @Test
   public void rollback_ParallelRollbackNotEnabled_ShouldExecuteTasksSerially()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(false);
 
@@ -137,7 +177,8 @@ public class ParallelExecutorTest {
 
   @Test
   public void rollback_ParallelRollbackEnabled_ShouldExecuteTasksInParallel()
-      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+      throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+          CommitConflictException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
 
@@ -154,7 +195,8 @@ public class ParallelExecutorTest {
   @Test
   public void
       rollback_ParallelRollbackEnabledAndAsyncRollbackEnabled_ShouldExecuteTasksInParallelAndAsynchronously()
-          throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException {
+          throws ExecutionException, java.util.concurrent.ExecutionException, InterruptedException,
+              CommitConflictException {
     // Arrange
     when(config.isParallelRollbackEnabled()).thenReturn(true);
     when(config.isAsyncRollbackEnabled()).thenReturn(true);
