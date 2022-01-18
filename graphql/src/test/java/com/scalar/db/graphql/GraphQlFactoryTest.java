@@ -17,7 +17,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
-import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLNamedInputType;
@@ -223,6 +222,7 @@ public class GraphQlFactoryTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void createGraphQL_TransactionManagerIsNotSet_ShouldReturnGraphQLWithoutTransaction()
       throws Exception {
     // Arrange
@@ -240,7 +240,11 @@ public class GraphQlFactoryTest {
     GraphQLSchema schema = graphql.getGraphQLSchema();
     assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNull();
     Instrumentation instrumentation = graphql.getInstrumentation();
-    assertThat(instrumentation).isNotInstanceOf(ChainedInstrumentation.class);
+
+    Field field = instrumentation.getClass().getDeclaredField("instrumentations");
+    field.setAccessible(true);
+    assertThat((List<Instrumentation>) field.get(instrumentation))
+        .allMatch(element -> !(element instanceof TransactionInstrumentation));
 
     assertThat(schema.getMutationType().getFieldDefinition("abort")).isNull();
     assertThat(

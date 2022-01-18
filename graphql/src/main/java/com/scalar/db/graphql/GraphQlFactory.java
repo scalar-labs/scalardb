@@ -7,6 +7,7 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
 import com.scalar.db.graphql.datafetcher.DataFetcherHelper;
 import com.scalar.db.graphql.datafetcher.MutationAbortDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationBulkDeleteDataFetcher;
@@ -23,6 +24,9 @@ import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
 import graphql.Scalars;
+import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.execution.instrumentation.Instrumentation;
+import graphql.execution.instrumentation.fieldvalidation.FieldValidationInstrumentation;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLNonNull;
@@ -145,9 +149,13 @@ public class GraphQlFactory {
     }
 
     GraphQL.Builder graphql = GraphQL.newGraphQL(schema);
+    List<Instrumentation> instrumentations = new ArrayList<>();
     if (transactionManager != null) {
-      graphql.instrumentation(new TransactionInstrumentation(transactionManager));
+      instrumentations.add(new FieldValidationInstrumentation(new AbortFieldValidation()));
+      instrumentations.add(new TransactionInstrumentation(transactionManager));
     }
+    graphql.instrumentation(new ChainedInstrumentation(instrumentations));
+
     return graphql.build();
   }
 
