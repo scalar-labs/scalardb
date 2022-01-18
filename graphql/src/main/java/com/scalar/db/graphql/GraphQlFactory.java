@@ -19,6 +19,7 @@ import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
 import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
 import com.scalar.db.graphql.instrumentation.validation.ConditionalExpressionValidation;
+import com.scalar.db.graphql.instrumentation.validation.ScanStartAndEndValidation;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -152,6 +153,7 @@ public class GraphQlFactory {
     GraphQL.Builder graphql = GraphQL.newGraphQL(schema);
     List<Instrumentation> instrumentations = new ArrayList<>();
     instrumentations.add(new FieldValidationInstrumentation(new ConditionalExpressionValidation()));
+    instrumentations.add(new FieldValidationInstrumentation(new ScanStartAndEndValidation()));
     if (transactionManager != null) {
       instrumentations.add(new FieldValidationInstrumentation(new AbortFieldValidation()));
       instrumentations.add(new TransactionInstrumentation(transactionManager));
