@@ -2,12 +2,9 @@ package com.scalar.db.graphql.instrumentation.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import graphql.ErrorType;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.GraphQLError;
 import graphql.execution.instrumentation.fieldvalidation.FieldValidationInstrumentation;
-import graphql.language.SourceLocation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -17,7 +14,7 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class AbortFieldValidationTest {
+public class AbortFieldValidationTest extends FieldValidationTestBase {
   private static GraphQL graphQl;
 
   @BeforeClass
@@ -43,14 +40,6 @@ public class AbortFieldValidationTest {
         GraphQL.newGraphQL(schema)
             .instrumentation(new FieldValidationInstrumentation(new AbortFieldValidation()))
             .build();
-  }
-
-  private void assertValidationError(GraphQLError error, int line, int column) {
-    assertThat(error.getErrorType()).isEqualTo(ErrorType.ValidationError);
-    assertThat(error.getLocations()).hasSize(1);
-    SourceLocation location = error.getLocations().get(0);
-    assertThat(location.getLine()).isEqualTo(line);
-    assertThat(location.getColumn()).isEqualTo(column);
   }
 
   @Test

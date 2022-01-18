@@ -7,7 +7,6 @@ import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
 import com.scalar.db.graphql.datafetcher.DataFetcherHelper;
 import com.scalar.db.graphql.datafetcher.MutationAbortDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationBulkDeleteDataFetcher;
@@ -18,6 +17,8 @@ import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
+import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
+import com.scalar.db.graphql.instrumentation.validation.ConditionalExpressionValidation;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -150,6 +151,7 @@ public class GraphQlFactory {
 
     GraphQL.Builder graphql = GraphQL.newGraphQL(schema);
     List<Instrumentation> instrumentations = new ArrayList<>();
+    instrumentations.add(new FieldValidationInstrumentation(new ConditionalExpressionValidation()));
     if (transactionManager != null) {
       instrumentations.add(new FieldValidationInstrumentation(new AbortFieldValidation()));
       instrumentations.add(new TransactionInstrumentation(transactionManager));
