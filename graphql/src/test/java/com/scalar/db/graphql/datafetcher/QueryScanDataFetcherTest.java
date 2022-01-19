@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -19,12 +20,14 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import graphql.execution.DataFetcherResult;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -129,7 +132,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ScanArgumentGiven_ShouldReturnResultAsMap() throws Exception {
+  public void get_WhenScanSucceeds_ShouldReturnListData() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
     Result mockResult1 = mock(Result.class);
@@ -145,15 +148,31 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
         .performScan(eq(environment), any(Scan.class));
 
     // Act
-    Map<String, List<Map<String, Object>>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, List<Map<String, Object>>>> result = dataFetcher.get(environment);
 
     // Assert
-    List<Map<String, Object>> list = result.get(tableGraphQlModel.getObjectType().getName());
+    List<Map<String, Object>> list =
+        result.getData().get(tableGraphQlModel.getObjectType().getName());
     assertThat(list).hasSize(2);
     assertThat(list.get(0))
         .containsOnly(entry(COL1, 1), entry(COL2, Optional.of("A")), entry(COL3, 2L));
     assertThat(list.get(1))
         .containsOnly(entry(COL1, 2), entry(COL2, Optional.of("B")), entry(COL3, 3L));
+  }
+
+  @Test
+  public void get_WhenScanFails_ShouldReturnNullDataWithErrors() throws Exception {
+    // Arrange
+    prepareScanInputAndExpectedScan();
+    ExecutionException exception = new ExecutionException("error");
+    doThrow(exception).when(dataFetcher).performScan(eq(environment), any(Scan.class));
+
+    // Act
+    DataFetcherResult<Map<String, List<Map<String, Object>>>> result = dataFetcher.get(environment);
+
+    // Assert
+    assertThat(result.getData()).isNull();
+    assertThatDataFetcherResultHasErrorForException(result, exception);
   }
 
   @Test

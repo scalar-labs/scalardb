@@ -26,14 +26,17 @@ import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.SchemaPrinter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Immutable
 public class GraphQlFactory {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(GraphQlFactory.class);
   private final DistributedStorage storage;
   private final DistributedTransactionManager transactionManager;
   private final List<TableGraphQlModel> tableModels;
@@ -122,16 +125,24 @@ public class GraphQlFactory {
   public GraphQL createGraphQL() {
     GraphQLObjectType queryObjectType = createQueryObjectType();
     GraphQLObjectType mutationObjectType = createMutationObjectType();
-    GraphQLSchema.Builder schema =
+    GraphQLSchema.Builder schemaBuilder =
         GraphQLSchema.newSchema()
             .query(queryObjectType)
             .mutation(mutationObjectType)
             .codeRegistry(createGraphQLCodeRegistry(queryObjectType, mutationObjectType));
-    CommonSchema.createCommonGraphQLTypes().forEach(schema::additionalType);
+    CommonSchema.createCommonGraphQLTypes().forEach(schemaBuilder::additionalType);
     if (transactionManager != null) {
-      schema.additionalDirective(CommonSchema.createTransactionDirective());
+      schemaBuilder.additionalDirective(CommonSchema.createTransactionDirective());
+    } else {
+      LOGGER.info("@transaction directive is disabled since transactionManager is not given");
     }
-    return GraphQL.newGraphQL(schema.build())
+
+    GraphQLSchema schema = schemaBuilder.build();
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("GraphQL schema generated: {}", new SchemaPrinter().print(schema));
+    }
+
+    return GraphQL.newGraphQL(schema)
         // TODO: .instrumentation(new TransactionInstrumentation(transactionManager))
         .build();
   }
@@ -173,9 +184,11 @@ public class GraphQlFactory {
       for (int i = 0; i < tables.size(); i++) {
         String namespace = namespaces.get(i);
         String table = tables.get(i);
-        tableModelListBuilder.add(
+        TableGraphQlModel tableGraphQlModel =
             new TableGraphQlModel(
-                namespace, table, storageAdmin.getTableMetadata(namespace, table)));
+                namespace, table, storageAdmin.getTableMetadata(namespace, table));
+        tableModelListBuilder.add(tableGraphQlModel);
+        LOGGER.debug("table added: {}.{}", namespace, table);
       }
 
       return new GraphQlFactory(

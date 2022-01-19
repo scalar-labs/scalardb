@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -17,12 +18,14 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import graphql.execution.DataFetcherResult;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -120,12 +123,27 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     doReturn(Optional.of(mockResult)).when(dataFetcher).performGet(eq(environment), any(Get.class));
 
     // Act
-    Map<String, Map<String, Object>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);
 
     // Assert
-    Map<String, Object> object = result.get(tableGraphQlModel.getObjectType().getName());
+    Map<String, Object> object = result.getData().get(tableGraphQlModel.getObjectType().getName());
     assertThat(object)
         .containsOnly(entry(COL1, 1), entry(COL2, Optional.of("A")), entry(COL3, 2.0));
+  }
+
+  @Test
+  public void get_WhenGetFails_ShouldReturnNullWithErrors() throws Exception {
+    // Arrange
+    prepareGetInputAndExpectedGet();
+    ExecutionException exception = new ExecutionException("error");
+    doThrow(exception).when(dataFetcher).performGet(eq(environment), any(Get.class));
+
+    // Act
+    DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);
+
+    // Assert
+    assertThat(result.getData()).isNull();
+    assertThatDataFetcherResultHasErrorForException(result, exception);
   }
 
   @Test
