@@ -78,10 +78,12 @@ public class GraphQlFactory {
           .field(tableModel.getMutationBulkDeleteField())
           .field(tableModel.getMutationMutateField());
     }
-    builder.field(
-        GraphQLFieldDefinition.newFieldDefinition()
-            .name("abort")
-            .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
+    if (transactionManager != null) {
+      builder.field(
+          GraphQLFieldDefinition.newFieldDefinition()
+              .name("abort")
+              .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
+    }
 
     return builder.build();
   }
