@@ -196,12 +196,7 @@ public class TableGraphQlModel {
     return newInputObject()
         .name(objectType.getName() + "_ClusteringKey")
         .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
-        .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
-        .field(newInputObjectField().name("bigIntValue").type(ScalarDbTypes.BIG_INT_SCALAR))
-        .field(newInputObjectField().name("floatValue").type(ScalarDbTypes.FLOAT_32_SCALAR))
-        .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
-        .field(newInputObjectField().name("textValue").type(Scalars.GraphQLString))
-        .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
+        .fields(ScalarDbTypes.getScalarValueInputObjectFields())
         .build();
   }
 

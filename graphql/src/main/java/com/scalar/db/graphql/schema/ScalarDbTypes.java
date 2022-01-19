@@ -9,6 +9,7 @@ import static graphql.schema.GraphQLList.list;
 import static graphql.schema.GraphQLNonNull.nonNull;
 import static graphql.schema.GraphQLScalarType.newScalar;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Consistency;
@@ -18,9 +19,11 @@ import graphql.Scalars;
 import graphql.introspection.Introspection.DirectiveLocation;
 import graphql.schema.GraphQLDirective;
 import graphql.schema.GraphQLEnumType;
+import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLType;
+import java.util.List;
 
 public final class ScalarDbTypes {
   public static final GraphQLDirective TRANSACTION_DIRECTIVE =
@@ -47,12 +50,7 @@ public final class ScalarDbTypes {
       newInputObject()
           .name("ConditionalExpression")
           .field(newInputObjectField().name("name").type(nonNull(Scalars.GraphQLString)))
-          .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
-          .field(newInputObjectField().name("bigIntValue").type(BIG_INT_SCALAR))
-          .field(newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR))
-          .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
-          .field(newInputObjectField().name("textValue").type(Scalars.GraphQLString))
-          .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
+          .fields(getScalarValueInputObjectFields())
           .field(
               newInputObjectField()
                   .name("operator")
@@ -148,6 +146,16 @@ public final class ScalarDbTypes {
       default:
         throw new IllegalArgumentException(dataType.name() + " type is not supported");
     }
+  }
+
+  static List<GraphQLInputObjectField> getScalarValueInputObjectFields() {
+    return ImmutableList.of(
+        newInputObjectField().name("intValue").type(Scalars.GraphQLInt).build(),
+        newInputObjectField().name("bigIntValue").type(BIG_INT_SCALAR).build(),
+        newInputObjectField().name("floatValue").type(FLOAT_32_SCALAR).build(),
+        newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat).build(),
+        newInputObjectField().name("textValue").type(Scalars.GraphQLString).build(),
+        newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean).build());
   }
 
   public enum PutConditionType {
