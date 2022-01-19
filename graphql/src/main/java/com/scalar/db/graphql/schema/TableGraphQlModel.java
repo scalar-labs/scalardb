@@ -49,7 +49,6 @@ public class TableGraphQlModel {
   private final GraphQLInputObjectType scanInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
   private final GraphQLFieldDefinition queryScanField;
-  private final GraphQLObjectType primaryKeyOutputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
   private final GraphQLInputObjectType putInputObjectType;
   private final GraphQLFieldDefinition mutationPutField;
@@ -97,8 +96,6 @@ public class TableGraphQlModel {
       this.scanPayloadObjectType = createScanPayloadObjectType();
       this.queryScanField = createQueryScanField();
     }
-
-    this.primaryKeyOutputObjectType = createPrimaryKeyOutputObjectType();
 
     this.putValuesObjectType = createPutValuesObjectType();
     this.putInputObjectType = createPutInputObjectType();
@@ -250,22 +247,6 @@ public class TableGraphQlModel {
         .build();
   }
 
-  private GraphQLObjectType createPrimaryKeyOutputObjectType() {
-    LinkedHashSet<String> keyNames = new LinkedHashSet<>();
-    keyNames.addAll(tableMetadata.getPartitionKeyNames());
-    keyNames.addAll(tableMetadata.getClusteringKeyNames());
-
-    GraphQLObjectType.Builder builder = newObject().name(objectType.getName() + "_KeyOutput");
-    keyNames.forEach(
-        keyName -> {
-          GraphQLScalarType type =
-              dataTypeToGraphQLScalarType(tableMetadata.getColumnDataType(keyName));
-          builder.field(newFieldDefinition().name(keyName).type(nonNull(type)));
-        });
-
-    return builder.build();
-  }
-
   private GraphQLInputObjectType createPutValuesObjectType() {
     LinkedHashSet<String> keyNames = new LinkedHashSet<>();
     keyNames.addAll(getPartitionKeyNames());
@@ -410,10 +391,6 @@ public class TableGraphQlModel {
 
   public GraphQLObjectType getScanPayloadObjectType() {
     return scanPayloadObjectType;
-  }
-
-  public GraphQLObjectType getPrimaryKeyOutputObjectType() {
-    return primaryKeyOutputObjectType;
   }
 
   public GraphQLFieldDefinition getMutationPutField() {
