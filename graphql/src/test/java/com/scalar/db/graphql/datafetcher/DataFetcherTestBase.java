@@ -26,10 +26,13 @@ public abstract class DataFetcherTestBase {
 
     // Arrange
     when(environment.getGraphQlContext()).thenReturn(graphQlContext);
-    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
 
     doSetUp();
   }
 
   protected abstract void doSetUp() throws Exception;
+
+  protected void setTransactionStarted() {
+    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
+  }
 }

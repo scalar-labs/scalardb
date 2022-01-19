@@ -42,7 +42,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
   @VisibleForTesting
   void performPut(DataFetchingEnvironment environment, List<Put> puts)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       transaction.put(puts);
     } else {

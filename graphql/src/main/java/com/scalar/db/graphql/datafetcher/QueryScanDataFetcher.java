@@ -117,7 +117,7 @@ public class QueryScanDataFetcher implements DataFetcher<Map<String, List<Map<St
   @VisibleForTesting
   List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       return transaction.scan(scan);
     } else {

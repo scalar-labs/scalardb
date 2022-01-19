@@ -40,7 +40,7 @@ public class MutationDeleteDataFetcher implements DataFetcher<DataFetcherResult<
   @VisibleForTesting
   void performDelete(DataFetchingEnvironment environment, Delete delete)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       transaction.delete(delete);
     } else {

@@ -25,7 +25,6 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,16 +42,15 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private static final String COL5 = "c5";
   private static final String COL6 = "c5";
 
-  private TableGraphQlModel storageTableGraphQlModel;
-  private QueryScanDataFetcher dataFetcherForStorageTable;
-  private QueryScanDataFetcher dataFetcherForTransactionalTable;
+  private TableGraphQlModel tableGraphQlModel;
+  private QueryScanDataFetcher dataFetcher;
   private Map<String, Object> scanInput;
   private Scan expectedScan;
 
   @Override
   protected void doSetUp() throws Exception {
     // Arrange
-    TableMetadata storageTableMetadata =
+    TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -66,16 +64,8 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
             .addClusteringKey(COL4)
             .addClusteringKey(COL5)
             .build();
-    storageTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
-    dataFetcherForStorageTable =
-        new QueryScanDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
-    TableMetadata transactionalTableMetadata =
-        ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    TableGraphQlModel transactionalTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
-    dataFetcherForTransactionalTable =
-        new QueryScanDataFetcher(storage, new DataFetcherHelper(transactionalTableGraphQlModel));
+    tableGraphQlModel = new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata);
+    dataFetcher = spy(new QueryScanDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
 
     // Mock scanner for storage
     Scanner mockScanner = mock(Scanner.class);
@@ -98,12 +88,12 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForStorageTable_ShouldUseStorage() throws Exception {
+  public void get_WhenTransactionNotStarted_ShouldUseStorage() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
 
     // Act
-    dataFetcherForStorageTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, times(1)).scan(expectedScan);
@@ -111,12 +101,13 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
+  public void get_WhenTransactionStarted_ShouldUseTransaction() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
+    setTransactionStarted();
 
     // Act
-    dataFetcherForTransactionalTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -127,7 +118,6 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   public void get_ScanArgumentGiven_ShouldRunScalarDbScan() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
-    QueryScanDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
 
     // Act
     dataFetcher.get(environment);
@@ -142,7 +132,6 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   public void get_ScanArgumentGiven_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
-    QueryScanDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     Result mockResult1 = mock(Result.class);
     when(mockResult1.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult1.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -159,7 +148,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     Map<String, List<Map<String, Object>>> result = dataFetcher.get(environment);
 
     // Assert
-    List<Map<String, Object>> list = result.get(storageTableGraphQlModel.getObjectType().getName());
+    List<Map<String, Object>> list = result.get(tableGraphQlModel.getObjectType().getName());
     assertThat(list).hasSize(2);
     assertThat(list.get(0))
         .containsOnly(entry(COL1, 1), entry(COL2, Optional.of("A")), entry(COL3, 2L));
@@ -173,7 +162,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     prepareScanInputAndExpectedScan();
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -187,7 +176,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -204,7 +193,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withStart(new Key(new BigIntValue(COL3, 1L)), false);
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -221,7 +210,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withEnd(new Key(new BigIntValue(COL3, 10L)), false);
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -242,7 +231,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
         .withOrdering(new Scan.Ordering(COL3, Scan.Ordering.Order.DESC));
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -256,7 +245,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withLimit(100);
 
     // Act
-    Scan actual = dataFetcherForStorageTable.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);

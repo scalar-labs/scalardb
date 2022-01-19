@@ -62,7 +62,7 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
   @VisibleForTesting
   Optional<Result> performGet(DataFetchingEnvironment environment, Get get)
       throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
       return transaction.get(get);
     } else {
