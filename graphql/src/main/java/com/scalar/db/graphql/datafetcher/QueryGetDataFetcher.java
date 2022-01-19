@@ -33,7 +33,8 @@ public class QueryGetDataFetcher
       DataFetchingEnvironment environment) {
     Map<String, Object> getInput = environment.getArgument("get");
     LOGGER.debug("got get argument: {}", getInput);
-    Get get = createGet(getInput);
+    Get get = createGet(getInput, environment);
+    LOGGER.debug("running get: {}", get);
 
     DataFetcherResult.Builder<Map<String, Map<String, Object>>> result =
         DataFetcherResult.newResult();
@@ -57,7 +58,7 @@ public class QueryGetDataFetcher
 
   @VisibleForTesting
   @SuppressWarnings("unchecked")
-  Get createGet(Map<String, Object> getInput) {
+  Get createGet(Map<String, Object> getInput, DataFetchingEnvironment environment) {
     Map<String, Object> key = (Map<String, Object>) getInput.get("key");
     Get get =
         new Get(
@@ -69,6 +70,7 @@ public class QueryGetDataFetcher
     if (consistency != null) {
       get.withConsistency(Consistency.valueOf(consistency));
     }
+    helper.addProjections(get, environment);
 
     return get;
   }

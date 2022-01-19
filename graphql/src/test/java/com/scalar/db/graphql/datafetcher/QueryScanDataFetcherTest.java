@@ -89,7 +89,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     scanInput.put("partitionKey", ImmutableMap.of(COL1, 1, COL2, "A"));
     when(environment.getArgument("scan")).thenReturn(scanInput);
 
-    // Set empty selection set
+    // Set empty selection set as default
     when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
     when(environment.getSelectionSet()).thenReturn(selectionSet);
 
@@ -185,49 +185,12 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ScanArgumentWithFieldSelectionGiven_ShouldRunScalarDbScanWithProjections()
-      throws Exception {
-    // Arrange
-    // table1_scan(scan: {
-    //   partitionKey: { c1: 1, c2: "A" }
-    // }) {
-    //   table1 {
-    //     c1, c2
-    //   }
-    // }
-    Map<String, Object> scanInput =
-        ImmutableMap.of("partitionKey", ImmutableMap.of("c1", 1, "c2", "A"));
-    when(environment.getArgument("scan")).thenReturn(scanInput);
-    SelectedField selectedField1 = mock(SelectedField.class);
-    when(selectedField1.getName()).thenReturn("c1");
-    SelectedField selectedField2 = mock(SelectedField.class);
-    when(selectedField2.getName()).thenReturn("c2");
-    when(selectionSet.getFields(anyString()))
-        .thenReturn(ImmutableList.of(selectedField1, selectedField2));
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
-
-    Scan expectedScan =
-        new Scan(new Key(new IntValue("c1", 1), new TextValue("c2", "A")))
-            .withProjections(Arrays.asList("c1", "c2"))
-            .forNamespace(ANY_NAMESPACE)
-            .forTable(ANY_TABLE);
-
-    // Act
-    dataFetcher.get(environment);
-
-    // Assert
-    ArgumentCaptor<Scan> argument = ArgumentCaptor.forClass(Scan.class);
-    verify(dataFetcher, times(1)).performScan(eq(environment), argument.capture());
-    assertThat(argument.getValue()).isEqualTo(expectedScan);
-  }
-
-  @Test
   public void createScan_ScanInputGiven_ShouldReturnScan() {
     // Arrange
     prepareScanInputAndExpectedScan();
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -241,7 +204,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -258,7 +221,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withStart(new Key(new BigIntValue(COL3, 1L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -275,7 +238,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withEnd(new Key(new BigIntValue(COL3, 10L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -296,7 +259,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
         .withOrdering(new Scan.Ordering(COL3, Scan.Ordering.Order.DESC));
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -310,7 +273,34 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withLimit(100);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
+
+    // Assert
+    assertThat(actual).isEqualTo(expectedScan);
+  }
+
+  @Test
+  public void createScan_ScanInputWithFieldSelectionGiven_ShouldReturnScanWithProjections() {
+    // Arrange
+    prepareScanInputAndExpectedScan();
+    // table1_scan(scan: {
+    //   partitionKey: { c1: 1, c2: "A" }
+    // }) {
+    //   table1 {
+    //     c2, c3
+    //   }
+    // }
+    SelectedField selectedField1 = mock(SelectedField.class);
+    when(selectedField1.getName()).thenReturn(COL2);
+    SelectedField selectedField2 = mock(SelectedField.class);
+    when(selectedField2.getName()).thenReturn(COL3);
+    when(selectionSet.getFields(anyString()))
+        .thenReturn(ImmutableList.of(selectedField1, selectedField2));
+    when(environment.getSelectionSet()).thenReturn(selectionSet);
+    expectedScan.withProjections(ImmutableList.of(COL2, COL3));
+
+    // Act
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
