@@ -3,7 +3,6 @@ package com.scalar.db.graphql.datafetcher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -29,8 +28,6 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import graphql.execution.DataFetcherResult;
-import graphql.schema.DataFetchingFieldSelectionSet;
-import graphql.schema.SelectedField;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,7 +36,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 
 public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private static final String COL1 = "c1";
@@ -53,7 +49,6 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private QueryScanDataFetcher dataFetcher;
   private Map<String, Object> scanInput;
   private Scan expectedScan;
-  @Mock private DataFetchingFieldSelectionSet selectionSet;
 
   @Override
   protected void doSetUp() throws Exception {
@@ -88,10 +83,6 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     scanInput = new HashMap<>();
     scanInput.put("partitionKey", ImmutableMap.of(COL1, 1, COL2, "A"));
     when(environment.getArgument("scan")).thenReturn(scanInput);
-
-    // Set empty selection set as default
-    when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
 
     expectedScan =
         new Scan(new Key(new IntValue(COL1, 1), new TextValue(COL2, "A")))
@@ -144,6 +135,8 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenScanSucceeds_ShouldReturnListData() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
+    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+
     Result mockResult1 = mock(Result.class);
     when(mockResult1.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult1.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -290,13 +283,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     //     c2, c3
     //   }
     // }
-    SelectedField selectedField1 = mock(SelectedField.class);
-    when(selectedField1.getName()).thenReturn(COL2);
-    SelectedField selectedField2 = mock(SelectedField.class);
-    when(selectedField2.getName()).thenReturn(COL3);
-    when(selectionSet.getFields(anyString()))
-        .thenReturn(ImmutableList.of(selectedField1, selectedField2));
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
+    addSelectionSetToEnvironment(environment, COL2, COL3);
     expectedScan.withProjections(ImmutableList.of(COL2, COL3));
 
     // Act

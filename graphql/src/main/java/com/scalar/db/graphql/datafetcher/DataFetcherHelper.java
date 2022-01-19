@@ -278,10 +278,6 @@ public class DataFetcherHelper {
     return tableGraphQlModel.getTableName();
   }
 
-  LinkedHashSet<String> getFieldNames() {
-    return tableGraphQlModel.getFieldNames();
-  }
-
   String getObjectTypeName() {
     return tableGraphQlModel.getObjectType().getName();
   }

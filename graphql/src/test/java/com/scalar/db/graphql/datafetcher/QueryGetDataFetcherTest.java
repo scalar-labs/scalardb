@@ -3,7 +3,6 @@ package com.scalar.db.graphql.datafetcher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -28,15 +27,11 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import graphql.execution.DataFetcherResult;
-import graphql.schema.DataFetchingFieldSelectionSet;
-import graphql.schema.SelectedField;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 
 public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private static final String COL1 = "c1";
@@ -47,7 +42,6 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private QueryGetDataFetcher dataFetcher;
   private Map<String, Object> getInput;
   private Get expectedGet;
-  @Mock private DataFetchingFieldSelectionSet selectionSet;
 
   @Override
   public void doSetUp() {
@@ -71,10 +65,6 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     getInput = new HashMap<>();
     getInput.put("key", ImmutableMap.of(COL1, 1, COL2, "A"));
     when(environment.getArgument("get")).thenReturn(getInput);
-
-    // Set empty selection set as default
-    when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
 
     expectedGet =
         new Get(new Key(COL1, 1), new Key(COL2, "A"))
@@ -127,6 +117,8 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenGetSucceeds_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
+    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+
     Result mockResult = mock(Result.class);
     when(mockResult.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -194,13 +186,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     //     c2, c3
     //   }
     // }
-    SelectedField selectedField1 = mock(SelectedField.class);
-    when(selectedField1.getName()).thenReturn(COL2);
-    SelectedField selectedField2 = mock(SelectedField.class);
-    when(selectedField2.getName()).thenReturn(COL3);
-    when(selectionSet.getFields(anyString()))
-        .thenReturn(ImmutableList.of(selectedField1, selectedField2));
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
+    addSelectionSetToEnvironment(environment, COL2, COL3);
     expectedGet.withProjections(ImmutableList.of(COL2, COL3));
 
     // Act

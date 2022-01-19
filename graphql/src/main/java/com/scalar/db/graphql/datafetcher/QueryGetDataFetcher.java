@@ -43,7 +43,7 @@ public class QueryGetDataFetcher
       performGet(environment, get)
           .ifPresent(
               dbResult -> {
-                for (String fieldName : helper.getFieldNames()) {
+                for (String fieldName : get.getProjections()) {
                   dbResult.getValue(fieldName).ifPresent(value -> data.put(fieldName, value.get()));
                 }
               });
