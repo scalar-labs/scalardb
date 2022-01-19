@@ -3,10 +3,8 @@ package com.scalar.db.graphql.datafetcher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.scalar.db.exception.transaction.AbortException;
-import com.scalar.db.graphql.schema.Constants;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import org.junit.Test;
@@ -21,7 +19,10 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenTransactionFound_ShouldAbortTransactionAndReturnTrue() throws Exception {
+  public void get_WhenTransactionIsPresent_ShouldAbortTransactionAndReturnTrue() throws Exception {
+    // Arrange
+    setTransactionStarted();
+
     // Act
     DataFetcherResult<Boolean> result = dataFetcher.get(environment);
 
@@ -32,10 +33,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenTransactionNotFound_ShouldReturnFalseWithErrors() throws Exception {
-    // Arrange
-    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(null);
-
+  public void get_WhenTransactionIsNotPresent_ShouldReturnFalseWithErrors() throws Exception {
     // Act
     DataFetcherResult<Boolean> result = dataFetcher.get(environment);
 
@@ -50,6 +48,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_WhenAbortExceptionThrown_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
+    setTransactionStarted();
     AbortException exception = new AbortException("error");
     doThrow(exception).when(transaction).abort();
 
