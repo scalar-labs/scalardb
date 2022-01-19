@@ -18,12 +18,10 @@ import com.scalar.db.api.Delete;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +37,7 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   private static final String COL5 = "c5";
   private static final String COL6 = "c5";
 
-  private MutationMutateDataFetcher dataFetcherForStorageTable;
-  private MutationMutateDataFetcher dataFetcherForTransactionalTable;
+  private MutationMutateDataFetcher dataFetcher;
   private Put expectedPut;
   private Delete expectedDelete;
   @Captor private ArgumentCaptor<List<Mutation>> mutationListCaptor;
@@ -48,7 +45,7 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   @Override
   public void doSetUp() {
     // Arrange
-    TableMetadata storageTableMetadata =
+    TableMetadata tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -59,17 +56,10 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    TableGraphQlModel storageTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
-    dataFetcherForStorageTable =
-        new MutationMutateDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
-    TableMetadata transactionalTableMetadata =
-        ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    TableGraphQlModel transactionalTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
-    dataFetcherForTransactionalTable =
-        new MutationMutateDataFetcher(
-            storage, new DataFetcherHelper(transactionalTableGraphQlModel));
+    TableGraphQlModel tableGraphQlModel =
+        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata);
+    dataFetcher =
+        spy(new MutationMutateDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
   }
 
   private void preparePutAndDelete() {
@@ -101,12 +91,12 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForStorageTable_ShouldUseStorage() throws Exception {
+  public void get_WhenTransactionNotStarted_ShouldUseStorage() throws Exception {
     // Arrange
     preparePutAndDelete();
 
     // Act
-    dataFetcherForStorageTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, times(1)).mutate(mutationListCaptor.capture());
@@ -115,12 +105,13 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
+  public void get_WhenTransactionStarted_ShouldUseTransaction() throws Exception {
     // Arrange
     preparePutAndDelete();
+    setTransactionStarted();
 
     // Act
-    dataFetcherForTransactionalTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -129,10 +120,9 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutAndDeleteInputListGiven_ShouldRunScalarDbMutate() throws Exception {
+  public void get_PutAndDeleteArgumentsGiven_ShouldRunScalarDbMutate() throws Exception {
     // Arrange
     preparePutAndDelete();
-    MutationMutateDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performMutate(eq(environment), anyList());
 
     // Act
@@ -147,7 +137,6 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenMutateSucceeds_ShouldReturnTrue() throws Exception {
     // Arrange
     preparePutAndDelete();
-    MutationMutateDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performMutate(eq(environment), anyList());
 
     // Act
@@ -162,8 +151,7 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenMutateFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
     preparePutAndDelete();
-    MutationMutateDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
-    TransactionException exception = new TransactionException("error");
+    ExecutionException exception = new ExecutionException("error");
     doThrow(exception).when(dataFetcher).performMutate(eq(environment), anyList());
 
     // Act
@@ -171,11 +159,6 @@ public class MutationMutateDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     assertThat(result.getData()).isFalse();
-    assertThat(result.getErrors())
-        .hasSize(1)
-        .element(0)
-        .isInstanceOf(AbortExecutionException.class);
-    assertThat(((AbortExecutionException) result.getErrors().get(0)).getCause())
-        .isSameAs(exception);
+    assertThatDataFetcherResultHasErrorForException(result, exception);
   }
 }

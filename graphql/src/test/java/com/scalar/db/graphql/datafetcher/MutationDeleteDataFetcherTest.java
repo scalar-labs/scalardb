@@ -14,12 +14,10 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
-import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.Map;
 import org.junit.Test;
@@ -31,13 +29,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
 
-  private MutationDeleteDataFetcher dataFetcherForStorageTable;
-  private MutationDeleteDataFetcher dataFetcherForTransactionalTable;
+  private MutationDeleteDataFetcher dataFetcher;
   private Delete expectedDelete;
   @Captor private ArgumentCaptor<Delete> deleteCaptor;
 
   @Override
-  public void doSetUp() throws Exception {
+  public void doSetUp() {
     // Arrange
     TableMetadata storageTableMetadata =
         TableMetadata.newBuilder()
@@ -47,17 +44,10 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    TableGraphQlModel storageTableGraphQlModel =
+    TableGraphQlModel tableGraphQlModel =
         new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
-    dataFetcherForStorageTable =
-        new MutationDeleteDataFetcher(storage, new DataFetcherHelper(storageTableGraphQlModel));
-    TableMetadata transactionalTableMetadata =
-        ConsensusCommitUtils.buildTransactionalTableMetadata(storageTableMetadata);
-    TableGraphQlModel transactionalTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, transactionalTableMetadata);
-    dataFetcherForTransactionalTable =
-        new MutationDeleteDataFetcher(
-            storage, new DataFetcherHelper(transactionalTableGraphQlModel));
+    dataFetcher =
+        spy(new MutationDeleteDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
   }
 
   private void prepareDeleteInputAndExpectedDelete() {
@@ -75,12 +65,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForStorageTable_ShouldUseStorage() throws Exception {
+  public void get_WhenTransactionNotStarted_ShouldUseStorage() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
 
     // Act
-    dataFetcherForStorageTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, times(1)).delete(expectedDelete);
@@ -88,12 +78,13 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_ForTransactionalTable_ShouldUseTransaction() throws Exception {
+  public void get_WhenTransactionStarted_ShouldUseTransaction() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
+    setTransactionStarted();
 
     // Act
-    dataFetcherForTransactionalTable.get(environment);
+    dataFetcher.get(environment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -101,10 +92,9 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutInputGiven_ShouldRunScalarDbDelete() throws Exception {
+  public void get_DeleteArgumentGiven_ShouldRunScalarDbDelete() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
-    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
@@ -116,10 +106,9 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenPutSucceeds_ShouldReturnTrue() throws Exception {
+  public void get_WhenDeleteSucceeds_ShouldReturnTrue() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
-    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
     doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
@@ -131,11 +120,10 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenPutFails_ShouldReturnFalseWithErrors() throws Exception {
+  public void get_WhenDeleteFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
-    MutationDeleteDataFetcher dataFetcher = spy(dataFetcherForStorageTable);
-    TransactionException exception = new TransactionException("error");
+    ExecutionException exception = new ExecutionException("error");
     doThrow(exception).when(dataFetcher).performDelete(eq(environment), any(Delete.class));
 
     // Act
@@ -143,11 +131,6 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     assertThat(result.getData()).isFalse();
-    assertThat(result.getErrors())
-        .hasSize(1)
-        .element(0)
-        .isInstanceOf(AbortExecutionException.class);
-    assertThat(((AbortExecutionException) result.getErrors().get(0)).getCause())
-        .isSameAs(exception);
+    assertThatDataFetcherResultHasErrorForException(result, exception);
   }
 }

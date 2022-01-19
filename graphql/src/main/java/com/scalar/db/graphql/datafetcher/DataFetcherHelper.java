@@ -2,6 +2,7 @@ package com.scalar.db.graphql.datafetcher;
 
 import static java.util.stream.Collectors.toList;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -25,6 +26,9 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import graphql.ErrorType;
+import graphql.GraphQLError;
+import graphql.GraphqlErrorBuilder;
 import graphql.Scalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
@@ -41,6 +45,10 @@ public class DataFetcherHelper {
 
   public DataFetcherHelper(TableGraphQlModel tableGraphQlModel) {
     this.tableGraphQlModel = tableGraphQlModel;
+  }
+
+  static DistributedTransaction getCurrentTransaction(DataFetchingEnvironment environment) {
+    return environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);
   }
 
   static Value<?> createValueFromMap(String name, Map<String, Object> map) {
@@ -80,6 +88,15 @@ public class DataFetcherHelper {
           "One and only one of intValue, bigIntValue, floatValue, doubleValue, textValue, and booleanValue must be specified.");
     }
     return values.get(0);
+  }
+
+  static GraphQLError getGraphQLError(Exception exception, DataFetchingEnvironment environment) {
+    String exName = exception.getClass().getSimpleName();
+    return GraphqlErrorBuilder.newError(environment)
+        .message("Scalar DB %s happened while fetching data: %s", exName, exception.getMessage())
+        .extensions(ImmutableMap.of(Constants.ERRORS_EXTENSIONS_EXCEPTION_KEY, exName))
+        .errorType(ErrorType.DataFetchingException)
+        .build();
   }
 
   Key createPartitionKeyFromKeyArgument(Map<String, Object> keyArg) {
@@ -133,14 +150,6 @@ public class DataFetcherHelper {
                     createValueFromMap("", ex),
                     ConditionalExpression.Operator.valueOf((String) ex.get("operator"))))
         .collect(toList());
-  }
-
-  DistributedTransaction getTransactionIfEnabled(DataFetchingEnvironment environment) {
-    DistributedTransaction transaction = null;
-    if (tableGraphQlModel.getTransactionEnabled()) {
-      transaction = environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);
-    }
-    return transaction;
   }
 
   @SuppressWarnings("unchecked")

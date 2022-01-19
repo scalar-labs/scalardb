@@ -8,13 +8,18 @@ import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.exception.transaction.TransactionException;
+import com.scalar.db.exception.transaction.CrudException;
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, Object>>> {
+public class QueryGetDataFetcher
+    implements DataFetcher<DataFetcherResult<Map<String, Map<String, Object>>>> {
+  private static final Logger LOGGER = LoggerFactory.getLogger(QueryGetDataFetcher.class);
   private final DistributedStorage storage;
   private final DataFetcherHelper helper;
 
@@ -24,21 +29,30 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
   }
 
   @Override
-  public Map<String, Map<String, Object>> get(DataFetchingEnvironment environment)
-      throws Exception {
+  public DataFetcherResult<Map<String, Map<String, Object>>> get(
+      DataFetchingEnvironment environment) {
     Map<String, Object> getInput = environment.getArgument("get");
+    LOGGER.debug("got get argument: {}", getInput);
     Get get = createGet(getInput);
 
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    performGet(environment, get)
-        .ifPresent(
-            result -> {
-              for (String fieldName : helper.getFieldNames()) {
-                result.getValue(fieldName).ifPresent(value -> builder.put(fieldName, value.get()));
-              }
-            });
+    DataFetcherResult.Builder<Map<String, Map<String, Object>>> result =
+        DataFetcherResult.newResult();
+    ImmutableMap.Builder<String, Object> data = ImmutableMap.builder();
+    try {
+      performGet(environment, get)
+          .ifPresent(
+              dbResult -> {
+                for (String fieldName : helper.getFieldNames()) {
+                  dbResult.getValue(fieldName).ifPresent(value -> data.put(fieldName, value.get()));
+                }
+              });
+      result.data(ImmutableMap.of(helper.getObjectTypeName(), data.build()));
+    } catch (CrudException | ExecutionException e) {
+      LOGGER.warn("Scalar DB get operation failed", e);
+      result.error(DataFetcherHelper.getGraphQLError(e, environment));
+    }
 
-    return ImmutableMap.of(helper.getObjectTypeName(), builder.build());
+    return result.build();
   }
 
   @VisibleForTesting
@@ -61,11 +75,13 @@ public class QueryGetDataFetcher implements DataFetcher<Map<String, Map<String, 
 
   @VisibleForTesting
   Optional<Result> performGet(DataFetchingEnvironment environment, Get get)
-      throws TransactionException, ExecutionException {
-    DistributedTransaction transaction = helper.getTransactionIfEnabled(environment);
+      throws CrudException, ExecutionException {
+    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
     if (transaction != null) {
+      LOGGER.debug("running Get operation with transaction: {}", get);
       return transaction.get(get);
     } else {
+      LOGGER.debug("running Get operation with storage: {}", get);
       return storage.get(get);
     }
   }

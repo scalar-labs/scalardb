@@ -1,4 +1,6 @@
 plugins {
+    id 'application'
+    id 'com.palantir.docker' version '0.25.0'
     id 'com.github.spotbugs' version '4.7.1'
     id 'net.ltgt.errorprone' version '2.0.2'
 }
@@ -7,6 +9,12 @@ dependencies {
     implementation project(':core')
     implementation group: 'com.graphql-java', name: 'graphql-java', version: "${graphqlJavaVersion}"
     implementation group: 'com.google.guava', name: 'guava', version: "${guavaVersion}"
+    implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: "${slf4jVersion}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: "${log4jVersion}"
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "${log4jVersion}"
+    implementation group: 'info.picocli', name: 'picocli', version: "${picocliVersion}"
+    implementation group: 'org.eclipse.jetty', name: 'jetty-servlet', version: "${jettyVersion}"
     testImplementation group: 'junit', name: 'junit', version: "${junitVersion}"
     testImplementation group: 'org.assertj', name: 'assertj-core', version: "${assertjVersion}"
     testImplementation group: 'org.mockito', name: 'mockito-core', version: "${mockitoVersion}"
@@ -17,6 +25,16 @@ dependencies {
     // for Error Prone
     errorprone "com.google.errorprone:error_prone_core:${errorproneVersion}"
     errorproneJavac "com.google.errorprone:javac:${errorproneJavacVersion}"
+}
+
+application {
+    mainClassName = 'com.scalar.db.graphql.server.GraphQlServer'
+    startScripts.applicationName = 'scalardb-graphql-server'
+}
+
+docker {
+    name "ghcr.io/scalar-labs/scalardb-graphql:${project.version}"
+    files tasks.distTar.outputs, 'conf/log4j2.properties', 'conf/database.properties.tmpl', 'docker-entrypoint.sh'
 }
 
 spotless {
@@ -34,4 +52,16 @@ spotbugsMain.reports {
 
 spotbugsTest.reports {
     html.enabled = true
+}
+
+archivesBaseName = "scalardb-graphql"
+
+// for release
+distZip {
+    archiveFileName = "${archivesBaseName}-${project.version}.zip"
+}
+
+// for docker
+distTar {
+    archiveFileName = "${project.name}.tar"
 }
