@@ -306,8 +306,7 @@ public class TransactionInstrumentationTest {
   }
 
   @Test
-  public void instrumentationContext_CommitTrueGiven_ShouldCommitAndDeleteTransaction()
-      throws Exception {
+  public void instrumentationContext_CommitTrueGiven_ShouldCommitTransaction() throws Exception {
     // Arrange
     prepareForInstrumentationContextTests();
 
@@ -318,12 +317,6 @@ public class TransactionInstrumentationTest {
     verify(transactionManager, times(1)).start();
     verify(transaction, times(1)).commit();
     assertThat(instrumentation.activeTransactions.get(transaction.getId())).isEmpty();
-
-    ArgumentCaptor<InstrumentationExecutionParameters> captor =
-        ArgumentCaptor.forClass(InstrumentationExecutionParameters.class);
-    verify(instrumentation).instrumentExecutionResult(any(ExecutionResult.class), captor.capture());
-    assertThat(captor.getValue().getGraphQLContext().hasKey(Constants.CONTEXT_TRANSACTION_KEY))
-        .isFalse();
   }
 
   @Test

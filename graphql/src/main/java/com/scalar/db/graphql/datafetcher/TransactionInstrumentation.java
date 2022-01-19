@@ -85,6 +85,7 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
       // start a new transaction
       try {
         transaction = transactionManager.start();
+        activeTransactions.put(transaction.getId(), transaction);
       } catch (TransactionException e) {
         LOGGER.warn("failed to start transaction", e);
         throw new AbortExecutionException(e);
@@ -145,7 +146,6 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
             }
           });
     } else {
-      activeTransactions.put(transaction.getId(), transaction);
       return SimpleInstrumentationContext.noOp();
     }
   }
