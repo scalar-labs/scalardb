@@ -51,4 +51,12 @@ public final class ConfigUtils {
           "the specified value of '" + name + "' is not a boolean value");
     }
   }
+
+  public static String[] getStringArray(Properties properties, String name, String[] defaultValue) {
+    String value = properties.getProperty(name);
+    if (Strings.isNullOrEmpty(value)) {
+      return defaultValue;
+    }
+    return value.split("\\s*,\\s*");
+  }
 }

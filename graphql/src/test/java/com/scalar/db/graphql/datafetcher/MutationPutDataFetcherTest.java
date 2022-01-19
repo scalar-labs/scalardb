@@ -101,7 +101,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutInputGiven_ShouldRunScalarDbDelete() throws Exception {
+  public void get_PutArgumentGiven_ShouldRunScalarDbDelete() throws Exception {
     // Arrange
     preparePutInputAndExpectedPut();
     doNothing().when(dataFetcher).performPut(eq(environment), any(Put.class));

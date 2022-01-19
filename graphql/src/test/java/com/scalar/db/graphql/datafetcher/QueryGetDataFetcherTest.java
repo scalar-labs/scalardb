@@ -99,7 +99,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_GetInputGiven_ShouldRunScalarDbGet() throws Exception {
+  public void get_GetArgumentGiven_ShouldRunScalarDbGet() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
 

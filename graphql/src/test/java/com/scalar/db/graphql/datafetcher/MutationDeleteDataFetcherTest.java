@@ -92,7 +92,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_PutInputGiven_ShouldRunScalarDbDelete() throws Exception {
+  public void get_DeleteArgumentGiven_ShouldRunScalarDbDelete() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
     doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
@@ -106,7 +106,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenPutSucceeds_ShouldReturnTrue() throws Exception {
+  public void get_WhenDeleteSucceeds_ShouldReturnTrue() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
     doNothing().when(dataFetcher).performDelete(eq(environment), any(Delete.class));
@@ -120,7 +120,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_WhenPutFails_ShouldReturnFalseWithErrors() throws Exception {
+  public void get_WhenDeleteFails_ShouldReturnFalseWithErrors() throws Exception {
     // Arrange
     prepareDeleteInputAndExpectedDelete();
     ExecutionException exception = new ExecutionException("error");

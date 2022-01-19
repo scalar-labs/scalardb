@@ -104,7 +104,7 @@ public class MutationBulkDeleteDataFetcherTest extends DataFetcherTestBase {
   }
 
   @Test
-  public void get_DeleteInputListGiven_ShouldRunScalarDbDelete() throws Exception {
+  public void get_DeleteArgumentGiven_ShouldRunScalarDbDelete() throws Exception {
     // Arrange
     prepareDeleteAndExpectedDelete();
     doNothing().when(dataFetcher).performDelete(eq(environment), anyList());
