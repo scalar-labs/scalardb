@@ -14,7 +14,6 @@ public class MutationAbortDataFetcher implements DataFetcher<DataFetcherResult<B
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     GraphQLContext graphQLContext = environment.getGraphQlContext();
     DistributedTransaction transaction = graphQLContext.get(Constants.CONTEXT_TRANSACTION_KEY);
-    graphQLContext.delete(Constants.CONTEXT_TRANSACTION_KEY);
     if (transaction == null) {
       return DataFetcherResult.<Boolean>newResult()
           .data(false)
