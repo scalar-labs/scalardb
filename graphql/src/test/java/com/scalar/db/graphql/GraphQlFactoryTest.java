@@ -19,6 +19,7 @@ import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
+import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLNamedInputType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
@@ -152,26 +153,13 @@ public class GraphQlFactoryTest {
     field.setAccessible(true);
     assertThat((List<Instrumentation>) field.get(instrumentation))
         .anyMatch(element -> element instanceof TransactionInstrumentation);
-  }
 
-  @Test
-  public void
-      createGraphQL_NoTransactionFactoryGiven_ShouldReturnGraphQLWithoutTransactionDirective()
-          throws Exception {
-    // Arrange
-    configureTableMetadata();
-
-    // Act
-    GraphQlFactory factory =
-        GraphQlFactory.newBuilder()
-            .storageFactory(storageFactory)
-            .table(NAMESPACE_NAME, TABLE_NAME_1)
-            .build();
-    GraphQL graphql = factory.createGraphQL();
-
-    // Assert
-    GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNull();
+    assertThat(schema.getMutationType().getFieldDefinition("abort")).isNotNull();
+    assertThat(
+            schema
+                .getCodeRegistry()
+                .hasDataFetcher(FieldCoordinates.coordinates("Mutation", "abort")))
+        .isTrue();
   }
 
   @Test
@@ -253,5 +241,12 @@ public class GraphQlFactoryTest {
     assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNull();
     Instrumentation instrumentation = graphql.getInstrumentation();
     assertThat(instrumentation).isNotInstanceOf(ChainedInstrumentation.class);
+
+    assertThat(schema.getMutationType().getFieldDefinition("abort")).isNull();
+    assertThat(
+            schema
+                .getCodeRegistry()
+                .hasDataFetcher(FieldCoordinates.coordinates("Mutation", "abort")))
+        .isFalse();
   }
 }

@@ -118,7 +118,9 @@ public class GraphQlFactory {
             new QueryScanDataFetcher(storage, helper));
       }
     }
-    builder.dataFetcher(coordinates(mutationObjectType, "abort"), new MutationAbortDataFetcher());
+    if (transactionManager != null) {
+      builder.dataFetcher(coordinates(mutationObjectType, "abort"), new MutationAbortDataFetcher());
+    }
     return builder.build();
   }
 
