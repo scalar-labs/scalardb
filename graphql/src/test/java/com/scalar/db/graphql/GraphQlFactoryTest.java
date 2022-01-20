@@ -10,15 +10,21 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
+import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.execution.instrumentation.Instrumentation;
+import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLNamedInputType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
+import java.lang.reflect.Field;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -118,7 +124,9 @@ public class GraphQlFactoryTest {
   }
 
   @Test
-  public void createGraphQL_AllParametersGiven_ShouldReturnGraphQL() throws Exception {
+  @SuppressWarnings("unchecked")
+  public void createGraphQL_AllParametersGiven_ShouldReturnGraphQLWithTransaction()
+      throws Exception {
     // Arrange
     configureTableMetadata();
 
@@ -140,26 +148,18 @@ public class GraphQlFactoryTest {
     for (GraphQLNamedInputType type : CommonSchema.createCommonGraphQLTypes()) {
       assertThat(schema.containsType(type.getName())).isTrue();
     }
-  }
+    Instrumentation instrumentation = graphql.getInstrumentation();
+    Field field = instrumentation.getClass().getDeclaredField("instrumentations");
+    field.setAccessible(true);
+    assertThat((List<Instrumentation>) field.get(instrumentation))
+        .anyMatch(element -> element instanceof TransactionInstrumentation);
 
-  @Test
-  public void
-      createGraphQL_NoTransactionFactoryGiven_ShouldReturnGraphQLWithoutTransactionDirective()
-          throws Exception {
-    // Arrange
-    configureTableMetadata();
-
-    // Act
-    GraphQlFactory factory =
-        GraphQlFactory.newBuilder()
-            .storageFactory(storageFactory)
-            .table(NAMESPACE_NAME, TABLE_NAME_1)
-            .build();
-    GraphQL graphql = factory.createGraphQL();
-
-    // Assert
-    GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNull();
+    assertThat(schema.getMutationType().getFieldDefinition("abort")).isNotNull();
+    assertThat(
+            schema
+                .getCodeRegistry()
+                .hasDataFetcher(FieldCoordinates.coordinates("Mutation", "abort")))
+        .isTrue();
   }
 
   @Test
@@ -220,5 +220,33 @@ public class GraphQlFactoryTest {
     assertThat(query).isNotNull();
     assertThat(query.getFieldDefinition(TABLE_NAME_1 + "_get")).isNotNull();
     assertThat(query.getFieldDefinition(TABLE_NAME_1 + "_scan")).isNull();
+  }
+
+  @Test
+  public void createGraphQL_TransactionManagerIsNotSet_ShouldReturnGraphQLWithoutTransaction()
+      throws Exception {
+    // Arrange
+    configureTableMetadata();
+
+    // Act
+    GraphQlFactory factory =
+        GraphQlFactory.newBuilder()
+            .storageFactory(storageFactory)
+            .table(NAMESPACE_NAME, TABLE_NAME_1)
+            .build();
+    GraphQL graphql = factory.createGraphQL();
+
+    // Assert
+    GraphQLSchema schema = graphql.getGraphQLSchema();
+    assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNull();
+    Instrumentation instrumentation = graphql.getInstrumentation();
+    assertThat(instrumentation).isNotInstanceOf(ChainedInstrumentation.class);
+
+    assertThat(schema.getMutationType().getFieldDefinition("abort")).isNull();
+    assertThat(
+            schema
+                .getCodeRegistry()
+                .hasDataFetcher(FieldCoordinates.coordinates("Mutation", "abort")))
+        .isFalse();
   }
 }

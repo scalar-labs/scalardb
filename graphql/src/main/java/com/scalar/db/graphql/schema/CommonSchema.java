@@ -116,8 +116,11 @@ public final class CommonSchema {
         .argument(
             GraphQLArgument.newArgument()
                 .name(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME)
-                .type(Scalars.GraphQLString)
-                .build())
+                .type(Scalars.GraphQLString))
+        .argument(
+            GraphQLArgument.newArgument()
+                .name(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME)
+                .type(Scalars.GraphQLBoolean))
         .validLocations(DirectiveLocation.MUTATION, DirectiveLocation.QUERY)
         .build();
   }

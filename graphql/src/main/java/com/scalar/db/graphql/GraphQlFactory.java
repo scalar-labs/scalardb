@@ -8,6 +8,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.datafetcher.DataFetcherHelper;
+import com.scalar.db.graphql.datafetcher.MutationAbortDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationBulkDeleteDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationBulkPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationDeleteDataFetcher;
@@ -15,6 +16,7 @@ import com.scalar.db.graphql.datafetcher.MutationMutateDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
+import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
 import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
@@ -76,15 +78,12 @@ public class GraphQlFactory {
           .field(tableModel.getMutationBulkDeleteField())
           .field(tableModel.getMutationMutateField());
     }
-    builder
-        .field(
-            GraphQLFieldDefinition.newFieldDefinition()
-                .name("commit")
-                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)))
-        .field(
-            GraphQLFieldDefinition.newFieldDefinition()
-                .name("abort")
-                .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
+    if (transactionManager != null) {
+      builder.field(
+          GraphQLFieldDefinition.newFieldDefinition()
+              .name("abort")
+              .type(GraphQLNonNull.nonNull(Scalars.GraphQLBoolean)));
+    }
 
     return builder.build();
   }
@@ -119,6 +118,9 @@ public class GraphQlFactory {
             new QueryScanDataFetcher(storage, helper));
       }
     }
+    if (transactionManager != null) {
+      builder.dataFetcher(coordinates(mutationObjectType, "abort"), new MutationAbortDataFetcher());
+    }
     return builder.build();
   }
 
@@ -142,9 +144,11 @@ public class GraphQlFactory {
       LOGGER.debug("GraphQL schema generated: {}", new SchemaPrinter().print(schema));
     }
 
-    return GraphQL.newGraphQL(schema)
-        // TODO: .instrumentation(new TransactionInstrumentation(transactionManager))
-        .build();
+    GraphQL.Builder graphql = GraphQL.newGraphQL(schema);
+    if (transactionManager != null) {
+      graphql.instrumentation(new TransactionInstrumentation(transactionManager));
+    }
+    return graphql.build();
   }
 
   public static final class Builder {
