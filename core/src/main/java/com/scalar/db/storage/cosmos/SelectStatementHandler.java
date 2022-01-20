@@ -11,6 +11,7 @@ import com.google.common.collect.Lists;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Value;
@@ -184,24 +185,26 @@ public class SelectStatementHandler extends StatementHandler {
       SelectConditionStep<org.jooq.Record> select,
       List<Scan.Ordering> scanOrderings,
       TableMetadata tableMetadata) {
-    if (scanOrderings.isEmpty()) {
-      return;
+    boolean reverse = false;
+    if (!scanOrderings.isEmpty()) {
+      reverse =
+          tableMetadata.getClusteringOrder(scanOrderings.get(0).getName())
+              != scanOrderings.get(0).getOrder();
     }
 
     // For partition key. To use the composite index, we always need to specify ordering for
     // partition key when orderings are set
-    boolean reverse =
-        tableMetadata.getClusteringOrder(scanOrderings.get(0).getName())
-            != scanOrderings.get(0).getOrder();
     Field<Object> partitionKeyField = DSL.field("r.concatenatedPartitionKey");
     select.orderBy(reverse ? partitionKeyField.desc() : partitionKeyField.asc());
 
     // For clustering keys
-    scanOrderings.forEach(
-        o -> {
-          Field<Object> field = DSL.field("r.clusteringKey" + quoteKeyword(o.getName()));
-          select.orderBy(o.getOrder() == Scan.Ordering.Order.ASC ? field.asc() : field.desc());
-        });
+    for (String clusteringKeyName : tableMetadata.getClusteringKeyNames()) {
+      Field<Object> field = DSL.field("r.clusteringKey" + quoteKeyword(clusteringKeyName));
+      select.orderBy(
+          tableMetadata.getClusteringOrder(clusteringKeyName) == Order.ASC
+              ? (!reverse ? field.asc() : field.desc())
+              : (!reverse ? field.desc() : field.asc()));
+    }
   }
 
   private String makeQueryWithIndex(Operation operation, TableMetadata tableMetadata) {
