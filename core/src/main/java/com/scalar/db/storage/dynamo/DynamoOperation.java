@@ -25,6 +25,7 @@ public class DynamoOperation {
   static final String COLUMN_NAME_ALIAS = "#col";
   static final String RANGE_KEY_ALIAS = ":sk";
   static final String RANGE_CONDITION = " BETWEEN :sk0 AND :sk1";
+  static final String CONDITION_COLUMN_NAME_ALIAS = "#ccol";
   static final String INDEX_NAME_PREFIX = "index";
   static final String GLOBAL_INDEX_NAME_PREFIX = "global_index";
 

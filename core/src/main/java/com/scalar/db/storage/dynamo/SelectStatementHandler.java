@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Operation;
@@ -101,11 +102,15 @@ public class SelectStatementHandler extends StatementHandler {
     QueryRequest.Builder builder =
         QueryRequest.builder().tableName(dynamoOperation.getTableName()).indexName(indexTable);
 
-    String condition = column + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    String expressionColumnName = DynamoOperation.COLUMN_NAME_ALIAS + "0";
+    String condition = expressionColumnName + " = " + DynamoOperation.VALUE_ALIAS + "0";
     ValueBinder binder = new ValueBinder(DynamoOperation.VALUE_ALIAS);
     keyValue.accept(binder);
     Map<String, AttributeValue> bindMap = binder.build();
-    builder.keyConditionExpression(condition).expressionAttributeValues(bindMap);
+    builder
+        .keyConditionExpression(condition)
+        .expressionAttributeValues(bindMap)
+        .expressionAttributeNames(ImmutableMap.of(expressionColumnName, column));
 
     if (!selection.getProjections().isEmpty()) {
       projectionExpression(builder, selection);

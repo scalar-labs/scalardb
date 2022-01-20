@@ -53,41 +53,40 @@ public class PutStatementHandler extends StatementHandler {
     DynamoMutation dynamoMutation = new DynamoMutation(put, tableMetadata);
     String expression;
     String condition = null;
-    Map<String, String> columnMap;
+    Map<String, String> expressionAttributeNameMap;
     Map<String, AttributeValue> bindMap;
 
     if (!put.getCondition().isPresent()) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
-      columnMap = dynamoMutation.getColumnMapWithKey();
+      expressionAttributeNameMap = dynamoMutation.getColumnMapWithKey();
       bindMap = dynamoMutation.getValueBindMapWithKey();
     } else if (put.getCondition().get() instanceof PutIfNotExists) {
       expression = dynamoMutation.getUpdateExpressionWithKey();
-      columnMap = dynamoMutation.getColumnMapWithKey();
+      expressionAttributeNameMap = dynamoMutation.getColumnMapWithKey();
       bindMap = dynamoMutation.getValueBindMapWithKey();
       condition = dynamoMutation.getIfNotExistsCondition();
     } else if (put.getCondition().get() instanceof PutIfExists) {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition();
-      columnMap = dynamoMutation.getColumnMap();
+      expressionAttributeNameMap = dynamoMutation.getColumnMap();
       bindMap = dynamoMutation.getValueBindMap();
     } else {
       expression = dynamoMutation.getUpdateExpression();
       condition = dynamoMutation.getIfExistsCondition() + " AND " + dynamoMutation.getCondition();
-      columnMap = dynamoMutation.getColumnMap();
+      expressionAttributeNameMap = dynamoMutation.getColumnMap();
+      expressionAttributeNameMap.putAll(dynamoMutation.getConditionColumnMap());
       bindMap = dynamoMutation.getConditionBindMap();
       bindMap.putAll(dynamoMutation.getValueBindMap());
     }
 
-    UpdateItemRequest request =
+    client.updateItem(
         UpdateItemRequest.builder()
             .tableName(dynamoMutation.getTableName())
             .key(dynamoMutation.getKeyMap())
             .updateExpression(expression)
             .conditionExpression(condition)
-            .expressionAttributeNames(columnMap)
             .expressionAttributeValues(bindMap)
-            .build();
-
-    client.updateItem(request);
+            .expressionAttributeNames(expressionAttributeNameMap)
+            .build());
   }
 }
