@@ -70,7 +70,8 @@ public class QueryScanDataFetcher
                 helper.createPartitionKeyFromKeyArgument(
                     (Map<String, Object>) scanInput.get("partitionKey")))
             .forNamespace(helper.getNamespaceName())
-            .forTable(helper.getTableName());
+            .forTable(helper.getTableName())
+            .withProjections(DataFetcherHelper.getProjections(environment));
 
     List<Map<String, Object>> startInput = (List<Map<String, Object>>) scanInput.get("start");
     Boolean startInclusiveInput = (Boolean) scanInput.get("startInclusive");
@@ -122,8 +123,6 @@ public class QueryScanDataFetcher
     if (consistencyInput != null) {
       scan.withConsistency(Consistency.valueOf(consistencyInput));
     }
-
-    helper.addProjections(scan, environment);
 
     return scan;
   }

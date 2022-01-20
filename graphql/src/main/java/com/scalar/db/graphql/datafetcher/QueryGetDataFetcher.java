@@ -65,12 +65,12 @@ public class QueryGetDataFetcher
                 helper.createPartitionKeyFromKeyArgument(key),
                 helper.createClusteringKeyFromKeyArgument(key))
             .forNamespace(helper.getNamespaceName())
-            .forTable(helper.getTableName());
+            .forTable(helper.getTableName())
+            .withProjections(DataFetcherHelper.getProjections(environment));
     String consistency = (String) getInput.get("consistency");
     if (consistency != null) {
       get.withConsistency(Consistency.valueOf(consistency));
     }
-    helper.addProjections(get, environment);
 
     return get;
   }
