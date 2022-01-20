@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements UpsertQuery {
+public class InsertOnConflictDoUpdateQuery implements UpsertQuery {
 
   private final RdbEngine rdbEngine;
   private final String schema;
@@ -33,7 +33,7 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return "INSERT INTO "
         + enclosedFullTableName(schema, table, rdbEngine)
         + " "
@@ -78,7 +78,7 @@ public class InsertOnConflictDoUpdateQuery extends AbstractQuery implements Upse
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     for (Value<?> value : partitionKey) {

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
+public class MergeIntoQuery implements UpsertQuery {
 
   private final RdbEngine rdbEngine;
   private final String schema;
@@ -33,7 +33,7 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     List<String> enclosedKeyNames = new ArrayList<>();
     partitionKey.forEach(v -> enclosedKeyNames.add(enclose(v.getName(), rdbEngine)));
     clusteringKey.ifPresent(
@@ -85,7 +85,7 @@ public class MergeIntoQuery extends AbstractQuery implements UpsertQuery {
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     // For the USING SELECT statement

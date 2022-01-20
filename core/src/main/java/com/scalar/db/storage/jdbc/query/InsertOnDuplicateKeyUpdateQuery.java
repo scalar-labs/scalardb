@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements UpsertQuery {
+public class InsertOnDuplicateKeyUpdateQuery implements UpsertQuery {
 
   private final RdbEngine rdbEngine;
   private final String schema;
@@ -33,7 +33,7 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     StringBuilder sql;
     if (!values.isEmpty()) {
       sql = new StringBuilder("INSERT INTO ");
@@ -69,7 +69,7 @@ public class InsertOnDuplicateKeyUpdateQuery extends AbstractQuery implements Up
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     for (Value<?> value : partitionKey) {
