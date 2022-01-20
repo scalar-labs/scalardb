@@ -28,7 +28,8 @@ public class ConditionExpressionBuilderTest {
   public void build_NoConditionsGiven_ShouldReturnEmpty() {
     // Arrange
     ConditionExpressionBuilder builder =
-        new ConditionExpressionBuilder(DynamoOperation.CONDITION_VALUE_ALIAS);
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
 
     // Act
     String actual = builder.build();
@@ -45,14 +46,15 @@ public class ConditionExpressionBuilderTest {
             new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
             new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
     ConditionExpressionBuilder builder =
-        new ConditionExpressionBuilder(DynamoOperation.CONDITION_VALUE_ALIAS);
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
 
     // Act
     condition.accept(builder);
     String actual = builder.build();
 
     // Assert
-    assertThat(actual).isEqualTo(ANY_NAME_1 + " = :cval0 AND " + ANY_NAME_2 + " > :cval1");
+    assertThat(actual).isEqualTo("#ccol0 = :cval0 AND #ccol1 > :cval1");
   }
 
   @Test
@@ -60,7 +62,8 @@ public class ConditionExpressionBuilderTest {
     // Arrange
     PutIfExists condition = new PutIfExists();
     ConditionExpressionBuilder builder =
-        new ConditionExpressionBuilder(DynamoOperation.CONDITION_VALUE_ALIAS);
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
 
     // Act
     condition.accept(builder);
@@ -75,7 +78,8 @@ public class ConditionExpressionBuilderTest {
     // Arrange
     PutIfNotExists condition = new PutIfNotExists();
     ConditionExpressionBuilder builder =
-        new ConditionExpressionBuilder(DynamoOperation.CONDITION_VALUE_ALIAS);
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
 
     // Act
     condition.accept(builder);
@@ -93,13 +97,14 @@ public class ConditionExpressionBuilderTest {
             new ConditionalExpression(ANY_NAME_1, ANY_INT_VALUE, Operator.EQ),
             new ConditionalExpression(ANY_NAME_2, ANY_INT_VALUE, Operator.GT));
     ConditionExpressionBuilder builder =
-        new ConditionExpressionBuilder(DynamoOperation.CONDITION_VALUE_ALIAS);
+        new ConditionExpressionBuilder(
+            DynamoOperation.CONDITION_COLUMN_NAME_ALIAS, DynamoOperation.CONDITION_VALUE_ALIAS);
 
     // Act
     condition.accept(builder);
     String actual = builder.build();
 
     // Assert
-    assertThat(actual).isEqualTo(ANY_NAME_1 + " = :cval0 AND " + ANY_NAME_2 + " > :cval1");
+    assertThat(actual).isEqualTo("#ccol0 = :cval0 AND #ccol1 > :cval1");
   }
 }
