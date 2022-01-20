@@ -21,12 +21,14 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 public class ConditionExpressionBuilder implements MutationConditionVisitor {
   private final List<String> expressions;
-  private final String alias;
+  private final String columnNameAlias;
+  private final String valueAlias;
   private int index;
 
-  public ConditionExpressionBuilder(String alias) {
+  public ConditionExpressionBuilder(String columnNameAlias, String valueAlias) {
     this.expressions = new ArrayList<>();
-    this.alias = alias;
+    this.columnNameAlias = columnNameAlias;
+    this.valueAlias = valueAlias;
     this.index = 0;
   }
 
@@ -87,24 +89,27 @@ public class ConditionExpressionBuilder implements MutationConditionVisitor {
 
   private String createConditionWith(ConditionalExpression e) {
     List<String> elements;
+
+    String columnName = columnNameAlias + index;
+    String value = valueAlias + index;
     switch (e.getOperator()) {
       case EQ:
-        elements = Arrays.asList(e.getName(), "=", alias + index);
+        elements = Arrays.asList(columnName, "=", value);
         break;
       case NE:
-        elements = Arrays.asList("NOT", e.getName(), "=", alias + index);
+        elements = Arrays.asList("NOT", columnName, "=", value);
         break;
       case GT:
-        elements = Arrays.asList(e.getName(), ">", alias + index);
+        elements = Arrays.asList(columnName, ">", value);
         break;
       case GTE:
-        elements = Arrays.asList(e.getName(), ">=", alias + index);
+        elements = Arrays.asList(columnName, ">=", value);
         break;
       case LT:
-        elements = Arrays.asList(e.getName(), "<", alias + index);
+        elements = Arrays.asList(columnName, "<", value);
         break;
       case LTE:
-        elements = Arrays.asList(e.getName(), "<=", alias + index);
+        elements = Arrays.asList(columnName, "<=", value);
         break;
       default:
         // never comes here because ConditionalExpression accepts only above operators
