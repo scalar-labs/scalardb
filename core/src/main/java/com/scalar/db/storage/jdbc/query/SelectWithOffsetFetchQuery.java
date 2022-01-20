@@ -11,7 +11,7 @@ public class SelectWithOffsetFetchQuery extends SimpleSelectQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return super.sql() + " OFFSET 0 ROWS FETCH NEXT " + limit + " ROWS ONLY";
   }
 }

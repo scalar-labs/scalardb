@@ -35,6 +35,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcAdmin implements DistributedStorageAdmin {
 
@@ -428,7 +429,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private boolean isMetadataTableEmpty(Connection connection) throws SQLException {
     String selectAllTables =
         "SELECT DISTINCT "
@@ -491,7 +491,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public TableMetadata getTableMetadata(String namespace, String table) throws ExecutionException {
     TableMetadata.Builder builder = TableMetadata.newBuilder();
     boolean tableExists = false;
@@ -565,7 +564,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public Set<String> getNamespaceTableNames(String namespace) throws ExecutionException {
     String selectTablesOfNamespaceStatement =
         "SELECT DISTINCT "
@@ -603,7 +601,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
   }
 
   @Override
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public boolean namespaceExists(String namespace) throws ExecutionException {
     String namespaceExistsStatement = "";
     switch (rdbEngine) {
@@ -775,7 +772,6 @@ public class JdbcAdmin implements DistributedStorageAdmin {
     }
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   private void execute(Connection connection, String sql) throws SQLException {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(sql);

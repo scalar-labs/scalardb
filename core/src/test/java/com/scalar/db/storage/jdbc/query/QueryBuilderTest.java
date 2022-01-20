@@ -2,6 +2,8 @@ package com.scalar.db.storage.jdbc.query;
 
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.ConditionalExpression.Operator;
@@ -12,6 +14,8 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +52,7 @@ public class QueryBuilderTest {
           .build();
 
   @Parameterized.Parameter public RdbEngine rdbEngine;
+
   private QueryBuilder queryBuilder;
 
   @Parameterized.Parameters(name = "RDB={0}")
@@ -75,166 +80,216 @@ public class QueryBuilderTest {
   }
 
   @Test
-  public void selectQueryTest() {
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("p1", "aaa"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?"));
+  public void selectQueryTest() throws SQLException {
+    SelectQuery query;
+    PreparedStatement preparedStatement;
 
-    assertThat(
-            queryBuilder
-                .select(Collections.emptyList())
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("p1", "aaa", "p2", "bbb"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("p1", "p1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "aaa")))
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("p1", "p1Value", "p2", "p2Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND p2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "aaa", "c2", "bbb")))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "c2Value");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Collections.emptyList())
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    false,
-                    Optional.of(new Key("c1", "bbb")),
-                    false)
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Collections.emptyList())
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                false,
+                Optional.of(new Key("c1", "c1EndValue")),
+                false)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql("SELECT * FROM n1.t1 WHERE p1=? AND c1>? AND c1<? ORDER BY c1 ASC,c2 DESC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa", "c2", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "aaa", "c2", "bbb")),
-                    false)
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1Value", "c2", "c2EndValue")),
+                false)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1=? AND c2>=? AND c2<? "
                     + "ORDER BY c1 ASC,c2 DESC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "c2StartValue");
+    verify(preparedStatement).setString(4, "c2EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .orderBy(
-                    Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.ASC)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .orderBy(
-                    Arrays.asList(
-                        new Scan.Ordering("c1", Scan.Ordering.Order.ASC),
-                        new Scan.Ordering("c2", Scan.Ordering.Order.DESC)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .orderBy(
+                Arrays.asList(
+                    new Scan.Ordering("c1", Scan.Ordering.Order.ASC),
+                    new Scan.Ordering("c2", Scan.Ordering.Order.DESC)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 ASC,c2 DESC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .orderBy(
-                    Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .orderBy(Collections.singletonList(new Scan.Ordering("c1", Scan.Ordering.Order.DESC)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .orderBy(
-                    Arrays.asList(
-                        new Scan.Ordering("c1", Scan.Ordering.Order.DESC),
-                        new Scan.Ordering("c2", Scan.Ordering.Order.ASC)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .orderBy(
+                Arrays.asList(
+                    new Scan.Ordering("c1", Scan.Ordering.Order.DESC),
+                    new Scan.Ordering("c2", Scan.Ordering.Order.ASC)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "SELECT c1,c2 FROM n1.t1 WHERE p1=? AND c1>=? AND c1<=? ORDER BY c1 DESC,c2 ASC"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
 
     String expectedQuery;
     switch (rdbEngine) {
@@ -256,232 +311,347 @@ public class QueryBuilderTest {
                 + "ORDER BY c1 ASC,c2 DESC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY";
         break;
     }
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "aaa")),
-                    true,
-                    Optional.of(new Key("c1", "bbb")),
-                    true)
-                .limit(10)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1StartValue")),
+                true,
+                Optional.of(new Key("c1", "c1EndValue")),
+                true)
+            .limit(10)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1StartValue");
+    verify(preparedStatement).setString(3, "c1EndValue");
   }
 
   @Test
-  public void selectQueryWithIndexedColumnTest() {
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("v1", "aaa"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+  public void selectQueryWithIndexedColumnTest() throws SQLException {
+    SelectQuery query;
+    PreparedStatement preparedStatement;
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("v1", "aaa"), Optional.empty(), false, Optional.empty(), false)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("v1", "v1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("v2", "aaa"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("v1", "v1Value"), Optional.empty(), false, Optional.empty(), false)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
 
-    assertThat(
-            queryBuilder
-                .select(Arrays.asList("c1", "c2"))
-                .from(NAMESPACE, TABLE, TABLE_METADATA)
-                .where(new Key("v2", "aaa"), Optional.empty(), false, Optional.empty(), false)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("v2", "v2Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v2Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .select(Arrays.asList("c1", "c2"))
+            .from(NAMESPACE, TABLE, TABLE_METADATA)
+            .where(new Key("v2", "v2Value"), Optional.empty(), false, Optional.empty(), false)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("SELECT c1,c2 FROM n1.t1 WHERE v2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v2Value");
   }
 
   @Test
-  public void insertQueryTest() {
+  public void insertQueryTest() throws SQLException {
+    InsertQuery query;
+    PreparedStatement preparedStatement;
+
     Map<String, Value<?>> values = new HashMap<>();
-    values.put("v1", new TextValue("aaa"));
-    values.put("v2", new TextValue("bbb"));
-    values.put("v3", new TextValue("ddd"));
+    values.put("v1", new TextValue("v1Value"));
+    values.put("v2", new TextValue("v2Value"));
+    values.put("v3", new TextValue("v3Value"));
 
-    assertThat(
-            queryBuilder
-                .insertInto(NAMESPACE, TABLE)
-                .values(new Key("p1", "aaa"), Optional.empty(), values)
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .insertInto(NAMESPACE, TABLE)
+            .values(new Key("p1", "p1Value"), Optional.empty(), values)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,v1,v2,v3) VALUES (?,?,?,?)"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "v1Value");
+    verify(preparedStatement).setString(3, "v2Value");
+    verify(preparedStatement).setString(4, "v3Value");
 
-    assertThat(
-            queryBuilder
-                .insertInto(NAMESPACE, TABLE)
-                .values(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), values)
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .insertInto(NAMESPACE, TABLE)
+            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), values)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("INSERT INTO n1.t1 (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?)"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1Value");
+    verify(preparedStatement).setString(4, "v2Value");
+    verify(preparedStatement).setString(5, "v3Value");
 
-    values.put("v4", new TextValue("eee"));
-
-    assertThat(
-            queryBuilder
-                .insertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key("p1", "aaa", "p2", "ccc"),
-                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
-                    values)
-                .build()
-                .toString())
+    values.put("v4", new TextValue("v4Value"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .insertInto(NAMESPACE, TABLE)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                values)
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql("INSERT INTO n1.t1 (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?)"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
+    verify(preparedStatement).setString(5, "v1Value");
+    verify(preparedStatement).setString(6, "v2Value");
+    verify(preparedStatement).setString(7, "v3Value");
+    verify(preparedStatement).setString(8, "v4Value");
   }
 
   @Test
-  public void updateQueryTest() {
+  public void updateQueryTest() throws SQLException {
+    UpdateQuery query;
+    PreparedStatement preparedStatement;
+
     Map<String, Value<?>> values = new HashMap<>();
-    values.put("v1", new TextValue("aaa"));
-    values.put("v2", new TextValue("bbb"));
-    values.put("v3", new TextValue("ddd"));
+    values.put("v1", new TextValue("v1Value"));
+    values.put("v2", new TextValue("v2Value"));
+    values.put("v3", new TextValue("v3Value"));
 
-    assertThat(
-            queryBuilder
-                .update(NAMESPACE, TABLE)
-                .set(values)
-                .where(new Key("p1", "aaa"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE)
+            .set(values)
+            .where(new Key("p1", "p1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
 
-    assertThat(
-            queryBuilder
-                .update(NAMESPACE, TABLE)
-                .set(values)
-                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE)
+            .set(values)
+            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
+    verify(preparedStatement).setString(5, "c1Value");
 
-    assertThat(
-            queryBuilder
-                .update(NAMESPACE, TABLE)
-                .set(values)
-                .where(
-                    new Key("p1", "aaa", "p2", "ccc"),
-                    Optional.of(new Key("c1", "bbb", "c2", "ddd")))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE)
+            .set(values)
+            .where(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND p2=? AND c1=? AND c2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
+    verify(preparedStatement).setString(5, "p2Value");
+    verify(preparedStatement).setString(6, "c1Value");
+    verify(preparedStatement).setString(7, "c2Value");
 
-    assertThat(
-            queryBuilder
-                .update(NAMESPACE, TABLE)
-                .set(values)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "bbb")),
-                    Collections.singletonList(
-                        new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE)
+            .set(values)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Collections.singletonList(
+                    new ConditionalExpression(
+                        "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
+    verify(preparedStatement).setString(5, "c1Value");
+    verify(preparedStatement).setString(6, "v1ConditionValue");
 
-    assertThat(
-            queryBuilder
-                .update(NAMESPACE, TABLE)
-                .set(values)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "bbb")),
-                    Arrays.asList(
-                        new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
-                        new ConditionalExpression("v2", new TextValue("ddd"), Operator.GT),
-                        new ConditionalExpression("v3", new TextValue("eee"), Operator.LTE)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .update(NAMESPACE, TABLE)
+            .set(values)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Arrays.asList(
+                    new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
+                    new ConditionalExpression("v2", new TextValue("v2ConditionValue"), Operator.GT),
+                    new ConditionalExpression(
+                        "v3", new TextValue("v3ConditionValue"), Operator.LTE)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql(
                 "UPDATE n1.t1 SET v1=?,v2=?,v3=? WHERE p1=? AND c1=? AND v1<>? AND v2>? AND v3<=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "v1Value");
+    verify(preparedStatement).setString(2, "v2Value");
+    verify(preparedStatement).setString(3, "v3Value");
+    verify(preparedStatement).setString(4, "p1Value");
+    verify(preparedStatement).setString(5, "c1Value");
+    verify(preparedStatement).setString(6, "v1ConditionValue");
+    verify(preparedStatement).setString(7, "v2ConditionValue");
+    verify(preparedStatement).setString(8, "v3ConditionValue");
   }
 
   @Test
-  public void deleteQueryTest() {
-    assertThat(
-            queryBuilder
-                .deleteFrom(NAMESPACE, TABLE)
-                .where(new Key("p1", "aaa"), Optional.empty())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?"));
+  public void deleteQueryTest() throws SQLException {
+    DeleteQuery query;
+    PreparedStatement preparedStatement;
 
-    assertThat(
-            queryBuilder
-                .deleteFrom(NAMESPACE, TABLE)
-                .where(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")))
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE)
+            .where(new Key("p1", "p1Value"), Optional.empty())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
 
-    assertThat(
-            queryBuilder
-                .deleteFrom(NAMESPACE, TABLE)
-                .where(
-                    new Key("p1", "aaa", "p2", "ccc"),
-                    Optional.of(new Key("c1", "bbb", "c2", "ddd")))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE)
+            .where(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")))
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE)
+            .where(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND p2=? AND c1=? AND c2=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "p2Value");
+    verify(preparedStatement).setString(3, "c1Value");
+    verify(preparedStatement).setString(4, "c2Value");
 
-    assertThat(
-            queryBuilder
-                .deleteFrom(NAMESPACE, TABLE)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "bbb")),
-                    Collections.singletonList(
-                        new ConditionalExpression("v1", new TextValue("ccc"), Operator.EQ)))
-                .build()
-                .toString())
-        .isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?"));
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Collections.singletonList(
+                    new ConditionalExpression(
+                        "v1", new TextValue("v1ConditionValue"), Operator.EQ)))
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1=?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1ConditionValue");
 
-    assertThat(
-            queryBuilder
-                .deleteFrom(NAMESPACE, TABLE)
-                .where(
-                    new Key("p1", "aaa"),
-                    Optional.of(new Key("c1", "bbb")),
-                    Arrays.asList(
-                        new ConditionalExpression("v1", new TextValue("ccc"), Operator.NE),
-                        new ConditionalExpression("v2", new TextValue("ddd"), Operator.GTE),
-                        new ConditionalExpression("v3", new TextValue("eee"), Operator.LT)))
-                .build()
-                .toString())
+    preparedStatement = mock(PreparedStatement.class);
+    query =
+        queryBuilder
+            .deleteFrom(NAMESPACE, TABLE)
+            .where(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Arrays.asList(
+                    new ConditionalExpression("v1", new TextValue("v1ConditionValue"), Operator.NE),
+                    new ConditionalExpression(
+                        "v2", new TextValue("v2ConditionValue"), Operator.GTE),
+                    new ConditionalExpression(
+                        "v3", new TextValue("v3ConditionValue"), Operator.LT)))
+            .build();
+    assertThat(query.sql())
         .isEqualTo(
             encloseSql("DELETE FROM n1.t1 WHERE p1=? AND c1=? AND v1<>? AND v2>=? AND v3<?"));
+    query.bind(preparedStatement);
+    verify(preparedStatement).setString(1, "p1Value");
+    verify(preparedStatement).setString(2, "c1Value");
+    verify(preparedStatement).setString(3, "v1ConditionValue");
+    verify(preparedStatement).setString(4, "v2ConditionValue");
+    verify(preparedStatement).setString(5, "v3ConditionValue");
   }
 
   @Test
-  public void upsertQueryTest() {
-    Map<String, Value<?>> values = new HashMap<>();
-    values.put("v1", new TextValue("aaa"));
-    values.put("v2", new TextValue("bbb"));
-    values.put("v3", new TextValue("ddd"));
-
+  public void upsertQueryTest() throws SQLException {
     String expectedQuery;
+    UpsertQuery query;
+    PreparedStatement preparedStatement;
 
+    Map<String, Value<?>> values = new HashMap<>();
+    values.put("v1", new TextValue("v1Value"));
+    values.put("v2", new TextValue("v2Value"));
+    values.put("v3", new TextValue("v3Value"));
+
+    preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery =
@@ -507,14 +677,38 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,v1,v2,v3) VALUES (?,?,?,?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(new Key("p1", "aaa"), Optional.empty(), values)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(new Key("p1", "p1Value"), Optional.empty(), values)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "v1Value");
+        verify(preparedStatement).setString(3, "v2Value");
+        verify(preparedStatement).setString(4, "v3Value");
+        verify(preparedStatement).setString(5, "v1Value");
+        verify(preparedStatement).setString(6, "v2Value");
+        verify(preparedStatement).setString(7, "v3Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "v1Value");
+        verify(preparedStatement).setString(3, "v2Value");
+        verify(preparedStatement).setString(4, "v3Value");
+        verify(preparedStatement).setString(5, "p1Value");
+        verify(preparedStatement).setString(6, "v1Value");
+        verify(preparedStatement).setString(7, "v2Value");
+        verify(preparedStatement).setString(8, "v3Value");
+        break;
+    }
 
+    preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery =
@@ -542,16 +736,42 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1,v1,v2,v3) VALUES (?,?,?,?,?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), values)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(new Key("p1", "p1Value"), Optional.of(new Key("c1", "c1Value")), values)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "c1Value");
+        verify(preparedStatement).setString(3, "v1Value");
+        verify(preparedStatement).setString(4, "v2Value");
+        verify(preparedStatement).setString(5, "v3Value");
+        verify(preparedStatement).setString(6, "v1Value");
+        verify(preparedStatement).setString(7, "v2Value");
+        verify(preparedStatement).setString(8, "v3Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "c1Value");
+        verify(preparedStatement).setString(3, "v1Value");
+        verify(preparedStatement).setString(4, "v2Value");
+        verify(preparedStatement).setString(5, "v3Value");
+        verify(preparedStatement).setString(6, "p1Value");
+        verify(preparedStatement).setString(7, "c1Value");
+        verify(preparedStatement).setString(8, "v1Value");
+        verify(preparedStatement).setString(9, "v2Value");
+        verify(preparedStatement).setString(10, "v3Value");
+        break;
+    }
 
-    values.put("v4", new TextValue("eee"));
-
+    preparedStatement = mock(PreparedStatement.class);
+    values.put("v4", new TextValue("v4Value"));
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery =
@@ -580,22 +800,61 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2,v1,v2,v3,v4) VALUES (?,?,?,?,?,?,?,?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key("p1", "aaa", "p2", "ccc"),
-                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
-                    values)
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                values)
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        verify(preparedStatement).setString(5, "v1Value");
+        verify(preparedStatement).setString(6, "v2Value");
+        verify(preparedStatement).setString(7, "v3Value");
+        verify(preparedStatement).setString(8, "v4Value");
+        verify(preparedStatement).setString(9, "v1Value");
+        verify(preparedStatement).setString(10, "v2Value");
+        verify(preparedStatement).setString(11, "v3Value");
+        verify(preparedStatement).setString(12, "v4Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        verify(preparedStatement).setString(5, "v1Value");
+        verify(preparedStatement).setString(6, "v2Value");
+        verify(preparedStatement).setString(7, "v3Value");
+        verify(preparedStatement).setString(8, "v4Value");
+        verify(preparedStatement).setString(9, "p1Value");
+        verify(preparedStatement).setString(10, "p2Value");
+        verify(preparedStatement).setString(11, "c1Value");
+        verify(preparedStatement).setString(12, "c2Value");
+        verify(preparedStatement).setString(13, "v1Value");
+        verify(preparedStatement).setString(14, "v2Value");
+        verify(preparedStatement).setString(15, "v3Value");
+        verify(preparedStatement).setString(16, "v4Value");
+        break;
+    }
   }
 
   @Test
-  public void upsertQueryWithoutValuesTest() {
+  public void upsertQueryWithoutValuesTest() throws SQLException {
     String expectedQuery;
+    UpsertQuery query;
+    PreparedStatement preparedStatement;
 
+    preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1) VALUES (?)";
@@ -615,14 +874,26 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1) VALUES (?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(new Key("p1", "aaa"), Optional.empty(), Collections.emptyMap())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(new Key("p1", "p1Value"), Optional.empty(), Collections.emptyMap())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p1Value");
+        break;
+    }
 
+    preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,c1) VALUES (?,?)";
@@ -644,15 +915,32 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,c1) VALUES (?,?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key("p1", "aaa"), Optional.of(new Key("c1", "bbb")), Collections.emptyMap())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(
+                new Key("p1", "p1Value"),
+                Optional.of(new Key("c1", "c1Value")),
+                Collections.emptyMap())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "c1Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "c1Value");
+        verify(preparedStatement).setString(3, "p1Value");
+        verify(preparedStatement).setString(4, "c1Value");
+        break;
+    }
 
+    preparedStatement = mock(PreparedStatement.class);
     switch (rdbEngine) {
       case MYSQL:
         expectedQuery = "INSERT IGNORE INTO n1.t1 (p1,p2,c1,c2) VALUES (?,?,?,?)";
@@ -676,15 +964,35 @@ public class QueryBuilderTest {
                 + "WHEN NOT MATCHED THEN INSERT (p1,p2,c1,c2) VALUES (?,?,?,?);";
         break;
     }
-    assertThat(
-            queryBuilder
-                .upsertInto(NAMESPACE, TABLE)
-                .values(
-                    new Key("p1", "aaa", "p2", "ccc"),
-                    Optional.of(new Key("c1", "bbb", "c2", "ddd")),
-                    Collections.emptyMap())
-                .build()
-                .toString())
-        .isEqualTo(encloseSql(expectedQuery));
+    query =
+        queryBuilder
+            .upsertInto(NAMESPACE, TABLE)
+            .values(
+                new Key("p1", "p1Value", "p2", "p2Value"),
+                Optional.of(new Key("c1", "c1Value", "c2", "c2Value")),
+                Collections.emptyMap())
+            .build();
+    assertThat(query.sql()).isEqualTo(encloseSql(expectedQuery));
+    query.bind(preparedStatement);
+    switch (rdbEngine) {
+      case MYSQL:
+      case POSTGRESQL:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        break;
+      case ORACLE:
+      case SQL_SERVER:
+        verify(preparedStatement).setString(1, "p1Value");
+        verify(preparedStatement).setString(2, "p2Value");
+        verify(preparedStatement).setString(3, "c1Value");
+        verify(preparedStatement).setString(4, "c2Value");
+        verify(preparedStatement).setString(5, "p1Value");
+        verify(preparedStatement).setString(6, "p2Value");
+        verify(preparedStatement).setString(7, "c1Value");
+        verify(preparedStatement).setString(8, "c2Value");
+        break;
+    }
   }
 }
