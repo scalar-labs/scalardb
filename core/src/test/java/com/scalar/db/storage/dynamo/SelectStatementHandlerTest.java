@@ -138,7 +138,8 @@ public class SelectStatementHandlerTest {
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    String expectedKeyCondition =
+        DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
@@ -202,7 +203,8 @@ public class SelectStatementHandlerTest {
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
-    String expectedKeyCondition = ANY_NAME_3 + " = " + DynamoOperation.VALUE_ALIAS + "0";
+    String expectedKeyCondition =
+        DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
     expectedBindMap.put(
         DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().s(ANY_TEXT_3).build());
