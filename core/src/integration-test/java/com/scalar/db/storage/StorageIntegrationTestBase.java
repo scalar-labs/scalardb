@@ -35,12 +35,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -233,7 +231,20 @@ public abstract class StorageIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // Assert
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+
     actual.forEach(
         a -> {
           assertThat(a.getValue(COL_NAME1).isPresent()).isTrue();
@@ -273,7 +284,19 @@ public abstract class StorageIntegrationTestBase {
     result = scanner.one();
     assertThat(result.isPresent()).isFalse();
 
-    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
 
     scanner.close();
   }
@@ -322,7 +345,15 @@ public abstract class StorageIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // verify
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1));
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -340,7 +371,15 @@ public abstract class StorageIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // verify
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(1, 2));
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -425,7 +464,19 @@ public abstract class StorageIntegrationTestBase {
     scanner.close();
 
     // Assert
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -445,11 +496,20 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     assertThat(result.isPresent()).isTrue();
-
-    List<Integer> expected = new ArrayList<>(Arrays.asList(0, 1, 2));
+    assertThat(result.get().getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(result.get().getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
     assertThat(result.get().getValue(COL_NAME4).isPresent()).isTrue();
-    expected.remove(result.get().getValue(COL_NAME4).get().getAsInt());
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, expected);
+    assertThat(result.get().getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -468,7 +528,20 @@ public abstract class StorageIntegrationTestBase {
     scanner.close();
 
     // Assert
-    assertScanResultWithoutOrdering(all, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(all.size()).isEqualTo(3);
+    assertThat(all.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(all.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(all.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(all.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(all.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(all.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(all.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(all.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(all.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
+
     assertThat(actual).isEmpty();
   }
 
@@ -489,7 +562,19 @@ public abstract class StorageIntegrationTestBase {
     scanner.close();
 
     // Assert
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(0, 1, 2));
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -565,8 +650,19 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertScanResultWithoutOrdering(
-        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -587,8 +683,19 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertScanResultWithoutOrdering(
-        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -710,7 +817,15 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(new Key(COL_NAME1, 0)));
-    assertScanResultWithoutOrdering(results, 0, COL_NAME4, Arrays.asList(0, 1));
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -829,7 +944,15 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(partitionKey));
-    assertScanResultWithoutOrdering(results, pKey, COL_NAME4, Arrays.asList(cKey + 1, cKey + 2));
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 1);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 2);
   }
 
   @Test
@@ -953,8 +1076,19 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertScanResultWithoutOrdering(
-        results, pKey, COL_NAME4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(COL_NAME4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -998,8 +1132,15 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertScanResultWithoutOrdering(
-        results, pKey, COL_NAME3, Arrays.asList(Integer.MAX_VALUE, Integer.MIN_VALUE));
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(COL_NAME3).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(COL_NAME3).get().getAsInt()).isEqualTo(Integer.MAX_VALUE);
+    assertThat(results.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(COL_NAME3).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(COL_NAME3).get().getAsInt()).isEqualTo(Integer.MIN_VALUE);
   }
 
   @Test
@@ -1048,7 +1189,15 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     List<Result> actual = scanAll(new Scan(partitionKey));
-    assertScanResultWithoutOrdering(actual, pKey, COL_NAME4, Arrays.asList(cKey + 1, cKey + 2));
+    assertThat(actual.size()).isEqualTo(2);
+    assertThat(actual.get(0).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 1);
+    assertThat(actual.get(1).getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(COL_NAME4).get().getAsInt()).isEqualTo(cKey + 2);
   }
 
   @Test
@@ -1154,11 +1303,9 @@ public abstract class StorageIntegrationTestBase {
       throws ExecutionException, IOException {
     // Arrange
     Key partitionKey = new Key(COL_NAME1, 1);
-    List<Integer> expectedValues = new ArrayList<>();
     for (int i = 0; i < 345; i++) {
       Key clusteringKey = new Key(COL_NAME4, i);
       storage.put(new Put(partitionKey, clusteringKey));
-      expectedValues.add(i);
     }
     Scan scan = new Scan(partitionKey);
 
@@ -1167,7 +1314,12 @@ public abstract class StorageIntegrationTestBase {
 
     // Assert
     assertThat(results.size()).isEqualTo(345);
-    assertScanResultWithoutOrdering(results, 1, COL_NAME4, expectedValues);
+    for (int i = 0; i < 345; i++) {
+      assertThat(results.get(i).getValue(COL_NAME1).isPresent()).isTrue();
+      assertThat(results.get(i).getValue(COL_NAME1).get().getAsInt()).isEqualTo(1);
+      assertThat(results.get(i).getValue(COL_NAME4).isPresent()).isTrue();
+      assertThat(results.get(i).getValue(COL_NAME4).get().getAsInt()).isEqualTo(i);
+    }
   }
 
   @Test
@@ -1262,26 +1414,5 @@ public abstract class StorageIntegrationTestBase {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
-  }
-
-  private void assertScanResultWithoutOrdering(
-      List<Result> actual,
-      int expectedPartitionKeyValue,
-      String checkedColumn,
-      List<Integer> expectedValues) {
-    Set<Integer> expectedValuesSet = new HashSet<>(expectedValues);
-    assertThat(actual.size()).isEqualTo(expectedValues.size());
-
-    for (Result result : actual) {
-      assertThat(result.getValue(COL_NAME1))
-          .isEqualTo(Optional.of(new IntValue(COL_NAME1, expectedPartitionKeyValue)));
-      assertThat(result.getValue(checkedColumn).isPresent()).isTrue();
-
-      int actualClusteringKeyValue = result.getValue(checkedColumn).get().getAsInt();
-      assertThat(expectedValuesSet).contains(actualClusteringKeyValue);
-      expectedValuesSet.remove(actualClusteringKeyValue);
-    }
-
-    assertThat(expectedValuesSet).isEmpty();
   }
 }
