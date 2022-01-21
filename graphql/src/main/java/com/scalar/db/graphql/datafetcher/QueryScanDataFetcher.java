@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan.Ordering;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.Key;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
@@ -26,12 +27,13 @@ import org.slf4j.LoggerFactory;
 public class QueryScanDataFetcher
     implements DataFetcher<DataFetcherResult<Map<String, List<Map<String, Object>>>>> {
   private static final Logger LOGGER = LoggerFactory.getLogger(QueryScanDataFetcher.class);
-  private final DistributedStorage storage;
-  private final DataFetcherHelper helper;
 
-  public QueryScanDataFetcher(DistributedStorage storage, DataFetcherHelper helper) {
+  private final TableGraphQlModel tableGraphQlModel;
+  private final DistributedStorage storage;
+
+  public QueryScanDataFetcher(TableGraphQlModel tableGraphQlModel, DistributedStorage storage) {
+    this.tableGraphQlModel = tableGraphQlModel;
     this.storage = storage;
-    this.helper = helper;
   }
 
   @Override
@@ -53,10 +55,10 @@ public class QueryScanDataFetcher
         }
         list.add(map.build());
       }
-      result.data(ImmutableMap.of(helper.getObjectTypeName(), list.build()));
+      result.data(ImmutableMap.of(tableGraphQlModel.getObjectType().getName(), list.build()));
     } catch (CrudException | ExecutionException e) {
       LOGGER.warn("Scalar DB scan operation failed", e);
-      result.error(DataFetcherHelper.getGraphQLError(e, environment));
+      result.error(DataFetcherUtils.createGraphQLError(e, environment));
     }
 
     return result.build();
@@ -65,13 +67,14 @@ public class QueryScanDataFetcher
   @VisibleForTesting
   @SuppressWarnings("unchecked")
   Scan createScan(Map<String, Object> scanInput, DataFetchingEnvironment environment) {
+    Key partitionKey =
+        DataFetcherUtils.createPartitionKeyFromKeyArgument(
+            tableGraphQlModel, (Map<String, Object>) scanInput.get("partitionKey"));
     Scan scan =
-        new Scan(
-                helper.createPartitionKeyFromKeyArgument(
-                    (Map<String, Object>) scanInput.get("partitionKey")))
-            .forNamespace(helper.getNamespaceName())
-            .forTable(helper.getTableName())
-            .withProjections(DataFetcherHelper.getProjections(environment));
+        new Scan(partitionKey)
+            .forNamespace(tableGraphQlModel.getNamespaceName())
+            .forTable(tableGraphQlModel.getTableName())
+            .withProjections(DataFetcherUtils.getProjections(environment));
 
     List<Map<String, Object>> startInput = (List<Map<String, Object>>) scanInput.get("start");
     Boolean startInclusiveInput = (Boolean) scanInput.get("startInclusive");
@@ -81,7 +84,7 @@ public class QueryScanDataFetcher
               startInput.stream()
                   .map(
                       start ->
-                          DataFetcherHelper.createValueFromMap((String) start.get("name"), start))
+                          DataFetcherUtils.createValueFromMap((String) start.get("name"), start))
                   .collect(toList()));
       if (startInclusiveInput != null) {
         scan.withStart(key, startInclusiveInput);
@@ -96,7 +99,7 @@ public class QueryScanDataFetcher
       Key key =
           new Key(
               endInput.stream()
-                  .map(end -> DataFetcherHelper.createValueFromMap((String) end.get("name"), end))
+                  .map(end -> DataFetcherUtils.createValueFromMap((String) end.get("name"), end))
                   .collect(toList()));
       if (endInclusiveInput != null) {
         scan.withEnd(key, endInclusiveInput);
@@ -130,13 +133,13 @@ public class QueryScanDataFetcher
   @VisibleForTesting
   List<Result> performScan(DataFetchingEnvironment environment, Scan scan)
       throws CrudException, ExecutionException {
-    DistributedTransaction transaction = DataFetcherHelper.getCurrentTransaction(environment);
+    DistributedTransaction transaction = DataFetcherUtils.getCurrentTransaction(environment);
     if (transaction != null) {
       LOGGER.debug("running Scan operation with transaction: {}", scan);
       return transaction.scan(scan);
     } else {
       LOGGER.debug("running Scan operation with storage: {}", scan);
-      helper.failIfConsensusCommitTransactionalTable();
+      DataFetcherUtils.failIfConsensusCommitTransactionalTable(tableGraphQlModel);
       return ImmutableList.copyOf(storage.scan(scan));
     }
   }
