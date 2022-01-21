@@ -18,7 +18,6 @@ import com.scalar.db.io.Key;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -40,18 +39,16 @@ public class QueryScanDataFetcher
       DataFetchingEnvironment environment) {
     Map<String, Object> scanInput = environment.getArgument("scan");
     LOGGER.debug("got scan argument: {}", scanInput);
-    Scan scan = createScan(scanInput);
-
-    // TODO: scan.withProjections()
+    Scan scan = createScan(scanInput, environment);
+    LOGGER.debug("running scan: {}", scan);
 
     DataFetcherResult.Builder<Map<String, List<Map<String, Object>>>> result =
         DataFetcherResult.newResult();
-    LinkedHashSet<String> fieldNames = helper.getFieldNames();
     ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
     try {
       for (Result dbResult : performScan(environment, scan)) {
         ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-        for (String fieldName : fieldNames) {
+        for (String fieldName : scan.getProjections()) {
           dbResult.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
         }
         list.add(map.build());
@@ -67,13 +64,14 @@ public class QueryScanDataFetcher
 
   @VisibleForTesting
   @SuppressWarnings("unchecked")
-  Scan createScan(Map<String, Object> scanInput) {
+  Scan createScan(Map<String, Object> scanInput, DataFetchingEnvironment environment) {
     Scan scan =
         new Scan(
                 helper.createPartitionKeyFromKeyArgument(
                     (Map<String, Object>) scanInput.get("partitionKey")))
             .forNamespace(helper.getNamespaceName())
-            .forTable(helper.getTableName());
+            .forTable(helper.getTableName())
+            .withProjections(DataFetcherHelper.getProjections(environment));
 
     List<Map<String, Object>> startInput = (List<Map<String, Object>>) scanInput.get("start");
     Boolean startInclusiveInput = (Boolean) scanInput.get("startInclusive");

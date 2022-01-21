@@ -135,6 +135,8 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenScanSucceeds_ShouldReturnListData() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
+    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+
     Result mockResult1 = mock(Result.class);
     when(mockResult1.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult1.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -181,7 +183,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     prepareScanInputAndExpectedScan();
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -195,7 +197,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -212,7 +214,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withStart(new Key(new BigIntValue(COL3, 1L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -229,7 +231,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withEnd(new Key(new BigIntValue(COL3, 10L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -250,7 +252,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
         .withOrdering(new Scan.Ordering(COL3, Scan.Ordering.Order.DESC));
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -264,7 +266,28 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withLimit(100);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput);
+    Scan actual = dataFetcher.createScan(scanInput, environment);
+
+    // Assert
+    assertThat(actual).isEqualTo(expectedScan);
+  }
+
+  @Test
+  public void createScan_ScanInputWithFieldSelectionGiven_ShouldReturnScanWithProjections() {
+    // Arrange
+    prepareScanInputAndExpectedScan();
+    // table1_scan(scan: {
+    //   partitionKey: { c1: 1, c2: "A" }
+    // }) {
+    //   table1 {
+    //     c2, c3
+    //   }
+    // }
+    addSelectionSetToEnvironment(environment, COL2, COL3);
+    expectedScan.withProjections(ImmutableList.of(COL2, COL3));
+
+    // Act
+    Scan actual = dataFetcher.createScan(scanInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);

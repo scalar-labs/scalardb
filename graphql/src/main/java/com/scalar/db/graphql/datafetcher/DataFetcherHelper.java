@@ -33,6 +33,8 @@ import graphql.Scalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLScalarType;
+import graphql.schema.SelectedField;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -256,16 +258,22 @@ public class DataFetcherHelper {
     return delete;
   }
 
+  static Collection<String> getProjections(DataFetchingEnvironment environment) {
+    // Add specified field names of the get or scan GraphQL input to the Selection object as
+    // projections. The fields are filtered by "*/*" since they are represented in the following
+    // format:
+    // <object_type_name>_(Get|Scan)PayLoad.<object_type_name>/<object_type_name>.<field_name>
+    return environment.getSelectionSet().getFields("*/*").stream()
+        .map(SelectedField::getName)
+        .collect(Collectors.toList());
+  }
+
   String getNamespaceName() {
     return tableGraphQlModel.getNamespaceName();
   }
 
   String getTableName() {
     return tableGraphQlModel.getTableName();
-  }
-
-  LinkedHashSet<String> getFieldNames() {
-    return tableGraphQlModel.getFieldNames();
   }
 
   String getObjectTypeName() {

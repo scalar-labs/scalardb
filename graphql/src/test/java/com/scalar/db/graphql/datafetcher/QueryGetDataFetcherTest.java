@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Get;
@@ -116,6 +117,8 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenGetSucceeds_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
+    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+
     Result mockResult = mock(Result.class);
     when(mockResult.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
@@ -152,7 +155,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     prepareGetInputAndExpectedGet();
 
     // Act
-    Get actual = dataFetcher.createGet(getInput);
+    Get actual = dataFetcher.createGet(getInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
@@ -166,7 +169,28 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     expectedGet.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Get actual = dataFetcher.createGet(getInput);
+    Get actual = dataFetcher.createGet(getInput, environment);
+
+    // Assert
+    assertThat(actual).isEqualTo(expectedGet);
+  }
+
+  @Test
+  public void createScan_GetInputWithFieldSelectionGiven_ShouldReturnGetWithProjections() {
+    // Arrange
+    prepareGetInputAndExpectedGet();
+    // table1_get(get: {
+    //   key: { c1: 1, c2: "A" }
+    // }) {
+    //   table1 {
+    //     c2, c3
+    //   }
+    // }
+    addSelectionSetToEnvironment(environment, COL2, COL3);
+    expectedGet.withProjections(ImmutableList.of(COL2, COL3));
+
+    // Act
+    Get actual = dataFetcher.createGet(getInput, environment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
