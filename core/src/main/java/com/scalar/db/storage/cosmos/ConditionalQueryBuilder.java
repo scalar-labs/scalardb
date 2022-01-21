@@ -1,5 +1,7 @@
 package com.scalar.db.storage.cosmos;
 
+import static com.scalar.db.storage.cosmos.CosmosUtils.quoteKeyword;
+
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
@@ -97,7 +99,7 @@ public class ConditionalQueryBuilder implements MutationConditionVisitor {
 
   private <T> Consumer<T> createConditionWith(ConditionalExpression e) {
     // TODO: for a clustering key?
-    Field<Object> field = DSL.field("r.values." + e.getName());
+    Field<Object> field = DSL.field("r.values" + quoteKeyword(e.getName()));
     switch (e.getOperator()) {
       case EQ:
         return v -> select.and(field.equal(v));
