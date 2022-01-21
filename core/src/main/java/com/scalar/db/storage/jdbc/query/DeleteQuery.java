@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class DeleteQuery extends AbstractQuery {
+public class DeleteQuery implements Query {
 
   private final RdbEngine rdbEngine;
   private final String schema;
@@ -34,7 +34,7 @@ public class DeleteQuery extends AbstractQuery {
   }
 
   @Override
-  protected String sql() {
+  public String sql() {
     return "DELETE FROM "
         + enclosedFullTableName(schema, table, rdbEngine)
         + " WHERE "
@@ -54,7 +54,7 @@ public class DeleteQuery extends AbstractQuery {
   }
 
   @Override
-  protected void bind(PreparedStatement preparedStatement) throws SQLException {
+  public void bind(PreparedStatement preparedStatement) throws SQLException {
     PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
 
     for (Value<?> value : partitionKey) {

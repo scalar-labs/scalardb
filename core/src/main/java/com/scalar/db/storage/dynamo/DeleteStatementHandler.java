@@ -67,8 +67,8 @@ public class DeleteStatementHandler extends StatementHandler {
         condition = dynamoMutation.getIfExistsCondition();
       } else {
         condition = dynamoMutation.getCondition();
+        builder.expressionAttributeNames(dynamoMutation.getConditionColumnMap());
         Map<String, AttributeValue> bindMap = dynamoMutation.getConditionBindMap();
-
         builder.expressionAttributeValues(bindMap);
       }
 

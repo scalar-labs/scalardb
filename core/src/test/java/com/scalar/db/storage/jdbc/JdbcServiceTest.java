@@ -43,7 +43,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-@SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
+@SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT", "OBL_UNSATISFIED_OBLIGATION"})
 public class JdbcServiceTest {
 
   private static final Optional<String> NAMESPACE = Optional.of("s1");
@@ -94,7 +94,7 @@ public class JdbcServiceTest {
     when(selectQueryBuilder.from(any(), any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.where(any(), any())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
-    when(selectQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);
     when(resultSet.next()).thenReturn(false);
 
@@ -120,7 +120,7 @@ public class JdbcServiceTest {
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 
-    when(selectQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);
     when(resultSet.next()).thenReturn(false);
 
@@ -146,7 +146,7 @@ public class JdbcServiceTest {
     when(selectQueryBuilder.limit(anyInt())).thenReturn(selectQueryBuilder);
     when(selectQueryBuilder.build()).thenReturn(selectQuery);
 
-    when(selectQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeQuery()).thenReturn(resultSet);
     when(resultSet.next()).thenReturn(false);
 
@@ -165,7 +165,7 @@ public class JdbcServiceTest {
     when(queryBuilder.upsertInto(any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
-    when(upsertQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     // Act
     Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
@@ -185,7 +185,7 @@ public class JdbcServiceTest {
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
-    when(updateQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
@@ -212,7 +212,7 @@ public class JdbcServiceTest {
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
-    when(updateQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(0);
 
     // Act
@@ -239,7 +239,7 @@ public class JdbcServiceTest {
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
-    when(updateQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
@@ -261,7 +261,7 @@ public class JdbcServiceTest {
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
-    when(updateQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(0);
 
     // Act
@@ -283,7 +283,7 @@ public class JdbcServiceTest {
     when(queryBuilder.insertInto(any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
-    when(insertQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     // Act
     Put put =
@@ -304,7 +304,7 @@ public class JdbcServiceTest {
     when(queryBuilder.insertInto(any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
-    when(insertQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenThrow(sqlException);
     when(sqlException.getSQLState()).thenReturn("23000");
 
@@ -325,7 +325,7 @@ public class JdbcServiceTest {
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
     // Act
     Delete delete = new Delete(new Key("p1", "val1"));
@@ -344,7 +344,7 @@ public class JdbcServiceTest {
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
@@ -369,7 +369,7 @@ public class JdbcServiceTest {
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(0);
 
     // Act
@@ -395,7 +395,7 @@ public class JdbcServiceTest {
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(1);
 
     // Act
@@ -416,7 +416,7 @@ public class JdbcServiceTest {
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
     when(preparedStatement.executeUpdate()).thenReturn(0);
 
     // Act
@@ -432,15 +432,15 @@ public class JdbcServiceTest {
   @Test
   public void whenMutateOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {
     // Arrange
+    when(connection.prepareStatement(any())).thenReturn(preparedStatement);
+
     when(queryBuilder.upsertInto(any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
-    when(upsertQuery.prepareAndBind(any())).thenReturn(preparedStatement);
 
     when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
-    when(deleteQuery.prepareAndBind(any())).thenReturn(preparedStatement);
 
     // Act
     Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");

@@ -12,8 +12,10 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.storage.common.checker.OperationChecker;
+import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
 import com.scalar.db.storage.jdbc.query.SelectQuery;
+import com.scalar.db.storage.jdbc.query.UpsertQuery;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -32,6 +34,7 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * @author Toshihiro Suzuki
  */
+@SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
 @ThreadSafe
 public class JdbcService {
 
@@ -48,7 +51,6 @@ public class JdbcService {
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public Optional<Result> get(
       Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
@@ -64,21 +66,24 @@ public class JdbcService {
             .where(get.getPartitionKey(), get.getClusteringKey())
             .build();
 
-    try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
-        ResultSet resultSet = preparedStatement.executeQuery()) {
-      if (resultSet.next()) {
-        Optional<Result> ret =
-            Optional.of(
-                new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
+    try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
+      selectQuery.bind(preparedStatement);
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
         if (resultSet.next()) {
-          throw new IllegalArgumentException("please use scan() for non-exact match selection");
+          Optional<Result> ret =
+              Optional.of(
+                  new ResultInterpreter(get.getProjections(), tableMetadata).interpret(resultSet));
+          if (resultSet.next()) {
+            throw new IllegalArgumentException("please use scan() for non-exact match selection");
+          }
+          return ret;
         }
-        return ret;
+        return Optional.empty();
       }
-      return Optional.empty();
     }
   }
 
+  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
   public Scanner getScanner(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
@@ -88,7 +93,8 @@ public class JdbcService {
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
-    PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
+    PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql());
+    selectQuery.bind(preparedStatement);
     ResultSet resultSet = preparedStatement.executeQuery();
     return new ScannerImpl(
         new ResultInterpreter(scan.getProjections(), tableMetadata),
@@ -97,7 +103,6 @@ public class JdbcService {
         resultSet);
   }
 
-  @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION")
   public List<Result> scan(
       Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
       throws SQLException, ExecutionException {
@@ -107,15 +112,17 @@ public class JdbcService {
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
 
     SelectQuery selectQuery = buildSelectQueryForScan(scan, tableMetadata);
-    try (PreparedStatement preparedStatement = selectQuery.prepareAndBind(connection);
-        ResultSet resultSet = preparedStatement.executeQuery()) {
-      List<Result> ret = new ArrayList<>();
-      ResultInterpreter resultInterpreter =
-          new ResultInterpreter(scan.getProjections(), tableMetadata);
-      while (resultSet.next()) {
-        ret.add(resultInterpreter.interpret(resultSet));
+    try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery.sql())) {
+      selectQuery.bind(preparedStatement);
+      try (ResultSet resultSet = preparedStatement.executeQuery()) {
+        List<Result> ret = new ArrayList<>();
+        ResultInterpreter resultInterpreter =
+            new ResultInterpreter(scan.getProjections(), tableMetadata);
+        while (resultSet.next()) {
+          ret.add(resultInterpreter.interpret(resultSet));
+        }
+        return ret;
       }
-      return ret;
     }
   }
 
@@ -141,12 +148,13 @@ public class JdbcService {
     operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
-      try (PreparedStatement preparedStatement =
+      UpsertQuery upsertQuery =
           queryBuilder
               .upsertInto(put.forNamespace().get(), put.forTable().get())
               .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
-              .build()
-              .prepareAndBind(connection)) {
+              .build();
+      try (PreparedStatement preparedStatement = connection.prepareStatement(upsertQuery.sql())) {
+        upsertQuery.bind(preparedStatement);
         preparedStatement.executeUpdate();
         return true;
       }
@@ -162,12 +170,13 @@ public class JdbcService {
     operationChecker.check(delete);
 
     if (!delete.getCondition().isPresent()) {
-      try (PreparedStatement preparedStatement =
+      DeleteQuery deleteQuery =
           queryBuilder
               .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
               .where(delete.getPartitionKey(), delete.getClusteringKey())
-              .build()
-              .prepareAndBind(connection)) {
+              .build();
+      try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery.sql())) {
+        deleteQuery.bind(preparedStatement);
         preparedStatement.executeUpdate();
         return true;
       }
