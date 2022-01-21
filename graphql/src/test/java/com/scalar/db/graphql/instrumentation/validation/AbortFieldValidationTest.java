@@ -58,8 +58,8 @@ public class AbortFieldValidationTest extends FieldValidationTestBase {
         graphQl.execute("mutation @transaction(txId: \"xyz\") {\n  hello\n  abort\n}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 3, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 3, 3));
   }
 
   @Test
@@ -68,8 +68,8 @@ public class AbortFieldValidationTest extends FieldValidationTestBase {
     ExecutionResult result = graphQl.execute("mutation { abort }");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 1, 12);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 1, 12));
   }
 
   @Test
@@ -78,8 +78,8 @@ public class AbortFieldValidationTest extends FieldValidationTestBase {
     ExecutionResult result = graphQl.execute("mutation @transaction(commit: false) { abort }");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 1, 40);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 1, 40));
   }
 
   @Test
@@ -88,8 +88,8 @@ public class AbortFieldValidationTest extends FieldValidationTestBase {
     ExecutionResult result = graphQl.execute("mutation @transaction(txId: null) {\n  abort }");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -99,8 +99,8 @@ public class AbortFieldValidationTest extends FieldValidationTestBase {
         graphQl.execute("mutation @transaction(txId: \"xyz\", commit: true) {\n  abort }");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test

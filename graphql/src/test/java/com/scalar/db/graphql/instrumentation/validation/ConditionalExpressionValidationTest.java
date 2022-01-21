@@ -129,8 +129,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -148,8 +148,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -167,8 +167,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -203,8 +203,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -239,8 +239,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   //
@@ -288,8 +288,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -307,8 +307,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -326,8 +326,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   @Test
@@ -362,8 +362,8 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 2, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 2, 3));
   }
 
   //
@@ -559,7 +559,7 @@ public class ConditionalExpressionValidationTest extends FieldValidationTestBase
                 + "}");
 
     // Assert
-    assertThat(result.getErrors()).hasSize(1);
-    assertValidationError(result.getErrors().get(0), 5, 3);
+    assertThat(result.getErrors())
+        .hasOnlyOneElementSatisfying(error -> assertValidationError(error, 5, 3));
   }
 }
