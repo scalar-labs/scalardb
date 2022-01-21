@@ -13,6 +13,7 @@ import graphql.execution.instrumentation.fieldvalidation.FieldValidationEnvironm
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ConditionalExpressionValidation implements FieldValidation {
   @Override
@@ -21,25 +22,28 @@ public class ConditionalExpressionValidation implements FieldValidation {
     for (FieldAndArguments fieldAndArguments : validationEnvironment.getFields()) {
       String fieldName = fieldAndArguments.getField().getName();
       if (fieldName.endsWith("_put")) {
-        validatePut(errors, fieldAndArguments.getArgumentValue("put"), fieldAndArguments);
+        validatePut(fieldAndArguments.getArgumentValue("put"), fieldAndArguments)
+            .ifPresent(errors::add);
       } else if (fieldName.endsWith("_delete")) {
-        validateDelete(errors, fieldAndArguments.getArgumentValue("delete"), fieldAndArguments);
+        validateDelete(fieldAndArguments.getArgumentValue("delete"), fieldAndArguments)
+            .ifPresent(errors::add);
       } else if (fieldName.endsWith("_bulkPut")) {
         List<Map<String, Map<String, Object>>> puts = fieldAndArguments.getArgumentValue("put");
-        puts.forEach(put -> validatePut(errors, put, fieldAndArguments));
+        puts.forEach(put -> validatePut(put, fieldAndArguments).ifPresent(errors::add));
       } else if (fieldName.endsWith("_bulkDelete")) {
         List<Map<String, Map<String, Object>>> deletes =
             fieldAndArguments.getArgumentValue("delete");
-        deletes.forEach(delete -> validateDelete(errors, delete, fieldAndArguments));
+        deletes.forEach(delete -> validateDelete(delete, fieldAndArguments).ifPresent(errors::add));
       } else if (fieldName.endsWith("_mutate")) {
         List<Map<String, Map<String, Object>>> puts = fieldAndArguments.getArgumentValue("put");
         if (puts != null) {
-          puts.forEach(put -> validatePut(errors, put, fieldAndArguments));
+          puts.forEach(put -> validatePut(put, fieldAndArguments).ifPresent(errors::add));
         }
         List<Map<String, Map<String, Object>>> deletes =
             fieldAndArguments.getArgumentValue("delete");
         if (deletes != null) {
-          deletes.forEach(delete -> validateDelete(errors, delete, fieldAndArguments));
+          deletes.forEach(
+              delete -> validateDelete(delete, fieldAndArguments).ifPresent(errors::add));
         }
       }
     }
@@ -48,79 +52,69 @@ public class ConditionalExpressionValidation implements FieldValidation {
   }
 
   @SuppressWarnings("unchecked")
-  private void validatePut(
-      List<GraphQLError> errors,
-      Map<String, Map<String, Object>> put,
-      FieldAndArguments fieldAndArguments) {
+  private Optional<GraphQLError> validatePut(
+      Map<String, Map<String, Object>> put, FieldAndArguments fieldAndArguments) {
     Map<String, Object> condition = put.get("condition");
     if (condition == null) {
-      return;
+      return Optional.empty();
     }
     String type = (String) condition.get("type");
     List<Map<String, Object>> expressions =
         (List<Map<String, Object>>) condition.get("expressions");
     switch (PutConditionType.valueOf(type)) {
       case PutIf:
-        validateIfConditionType(errors, type, expressions, fieldAndArguments);
-        break;
+        return validateIfConditionType(type, expressions, fieldAndArguments);
       case PutIfExists:
       case PutIfNotExists:
-        validateIfExistsConditionType(errors, type, expressions, fieldAndArguments);
-        break;
+        return validateIfExistsConditionType(type, expressions, fieldAndArguments);
     }
+    return Optional.empty();
   }
 
   @SuppressWarnings("unchecked")
-  private void validateDelete(
-      List<GraphQLError> errors,
-      Map<String, Map<String, Object>> delete,
-      FieldAndArguments fieldAndArguments) {
+  private Optional<GraphQLError> validateDelete(
+      Map<String, Map<String, Object>> delete, FieldAndArguments fieldAndArguments) {
     Map<String, Object> condition = delete.get("condition");
     if (condition == null) {
-      return;
+      return Optional.empty();
     }
     String type = (String) condition.get("type");
     List<Map<String, Object>> expressions =
         (List<Map<String, Object>>) condition.get("expressions");
     switch (DeleteConditionType.valueOf(type)) {
       case DeleteIf:
-        validateIfConditionType(errors, type, expressions, fieldAndArguments);
-        break;
+        return validateIfConditionType(type, expressions, fieldAndArguments);
       case DeleteIfExists:
-        validateIfExistsConditionType(errors, type, expressions, fieldAndArguments);
-        break;
+        return validateIfExistsConditionType(type, expressions, fieldAndArguments);
     }
+    return Optional.empty();
   }
 
-  private void validateIfConditionType(
-      List<GraphQLError> errors,
-      String type,
-      List<Map<String, Object>> expressions,
-      FieldAndArguments fieldAndArguments) {
+  private Optional<GraphQLError> validateIfConditionType(
+      String type, List<Map<String, Object>> expressions, FieldAndArguments fieldAndArguments) {
     if (expressions == null || expressions.isEmpty()) {
-      errors.add(
+      return Optional.of(
           createError(
               "expressions must be present for " + type + " condition type", fieldAndArguments));
     } else if (expressions.stream()
         .anyMatch(ex -> Sets.intersection(ex.keySet(), Constants.SCALAR_VALUE_KEYS).size() != 1)) {
-      errors.add(
+      return Optional.of(
           createError(
               "expression must have only one of " + Constants.SCALAR_VALUE_KEYS,
               fieldAndArguments));
     }
+    return Optional.empty();
   }
 
-  private void validateIfExistsConditionType(
-      List<GraphQLError> errors,
-      String type,
-      List<Map<String, Object>> expressions,
-      FieldAndArguments fieldAndArguments) {
+  private Optional<GraphQLError> validateIfExistsConditionType(
+      String type, List<Map<String, Object>> expressions, FieldAndArguments fieldAndArguments) {
     if (expressions != null) {
-      errors.add(
+      return Optional.of(
           createError(
               "expressions must not be present for " + type + " condition type",
               fieldAndArguments));
     }
+    return Optional.empty();
   }
 
   private GraphQLError createError(String message, FieldAndArguments fieldAndArguments) {
