@@ -100,7 +100,7 @@ public class CrudHandlerTest {
     Get get = prepareGet();
     Optional<TransactionResult> expected =
         Optional.of(prepareResult(true, TransactionState.COMMITTED));
-    when(snapshot.containsKey(new Snapshot.Key(get))).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(new Snapshot.Key(get))).thenReturn(true);
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(expected);
 
     // Act
@@ -117,11 +117,13 @@ public class CrudHandlerTest {
     // Arrange
     Get get = prepareGet();
     Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.COMMITTED));
-    when(snapshot.containsKey(new Snapshot.Key(get))).thenReturn(false);
+    Snapshot.Key key = new Snapshot.Key(get);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     doNothing()
         .when(snapshot)
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(storage.get(get)).thenReturn(expected);
+    when(snapshot.get(key)).thenReturn(expected.map(e -> (TransactionResult) e));
 
     // Act
     Optional<Result> result = handler.get(get);
@@ -129,7 +131,7 @@ public class CrudHandlerTest {
     // Assert
     assertThat(result).isEqualTo(expected);
     verify(storage).get(get);
-    verify(snapshot).put(new Snapshot.Key(get), Optional.of((TransactionResult) expected.get()));
+    verify(snapshot).put(key, Optional.of((TransactionResult) expected.get()));
   }
 
   @Test
@@ -242,7 +244,7 @@ public class CrudHandlerTest {
     when(snapshot.get(scan))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Collections.singletonList(key)));
-    when(snapshot.containsKey(key)).thenReturn(false).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
     // Act
@@ -306,7 +308,8 @@ public class CrudHandlerTest {
             scan.getPartitionKey(),
             result.getClusteringKey().get());
     when(snapshot.get(scan)).thenReturn(Optional.empty());
-    when(snapshot.containsKey(key)).thenReturn(false).thenReturn(true);
+    when(snapshot.containsKey(key)).thenReturn(false);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
     // Act
