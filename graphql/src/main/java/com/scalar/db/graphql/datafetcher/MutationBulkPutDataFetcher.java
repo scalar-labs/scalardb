@@ -52,6 +52,7 @@ public class MutationBulkPutDataFetcher implements DataFetcher<DataFetcherResult
       transaction.put(puts);
     } else {
       LOGGER.debug("running Put operations with storage: {}", puts);
+      helper.failIfConsensusCommitTransactionalTable();
       storage.put(puts);
     }
   }

@@ -61,6 +61,7 @@ public class MutationMutateDataFetcher implements DataFetcher<DataFetcherResult<
       transaction.mutate(mutations);
     } else {
       LOGGER.debug("running Mutation operations with storage: {}", mutations);
+      helper.failIfConsensusCommitTransactionalTable();
       storage.mutate(mutations);
     }
   }

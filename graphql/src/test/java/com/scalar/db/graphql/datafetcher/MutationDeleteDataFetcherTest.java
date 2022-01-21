@@ -1,6 +1,7 @@
 package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -18,6 +19,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
+import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.Map;
 import org.junit.Test;
@@ -29,6 +32,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
 
+  private TableMetadata tableMetadata;
   private MutationDeleteDataFetcher dataFetcher;
   private Delete expectedDelete;
   @Captor private ArgumentCaptor<Delete> deleteCaptor;
@@ -36,7 +40,7 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
   @Override
   public void doSetUp() {
     // Arrange
-    TableMetadata storageTableMetadata =
+    tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -44,10 +48,12 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    TableGraphQlModel tableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
     dataFetcher =
-        spy(new MutationDeleteDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
+        spy(
+            new MutationDeleteDataFetcher(
+                storage,
+                new DataFetcherHelper(
+                    new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata))));
   }
 
   private void prepareDeleteInputAndExpectedDelete() {
@@ -132,5 +138,45 @@ public class MutationDeleteDataFetcherTest extends DataFetcherTestBase {
     // Assert
     assertThat(result.getData()).isFalse();
     assertThatDataFetcherResultHasErrorForException(result, exception);
+  }
+
+  private void prepareTransactionalTable() {
+    tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
+    dataFetcher =
+        new MutationDeleteDataFetcher(
+            storage,
+            new DataFetcherHelper(new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata)));
+  }
+
+  @Test
+  public void
+      performDelete_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    Delete delete = new Delete(new Key(COL1, 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcher.performDelete(environment, delete))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).delete(delete);
+    verify(transaction, never()).delete(delete);
+  }
+
+  @Test
+  public void
+      performDelete_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    Delete delete = new Delete(new Key(COL1, 1));
+
+    // Act
+    dataFetcher.performDelete(environment, delete);
+
+    // Assert
+    verify(storage, never()).delete(delete);
+    verify(transaction, times(1)).delete(delete);
   }
 }

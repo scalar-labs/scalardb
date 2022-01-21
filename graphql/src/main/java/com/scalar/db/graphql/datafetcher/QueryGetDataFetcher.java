@@ -84,6 +84,7 @@ public class QueryGetDataFetcher
       return transaction.get(get);
     } else {
       LOGGER.debug("running Get operation with storage: {}", get);
+      helper.failIfConsensusCommitTransactionalTable();
       return storage.get(get);
     }
   }

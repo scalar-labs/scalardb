@@ -50,6 +50,7 @@ public class MutationPutDataFetcher implements DataFetcher<DataFetcherResult<Boo
       transaction.put(put);
     } else {
       LOGGER.debug("running Put operation with storage: {}", put);
+      helper.failIfConsensusCommitTransactionalTable();
       storage.put(put);
     }
   }

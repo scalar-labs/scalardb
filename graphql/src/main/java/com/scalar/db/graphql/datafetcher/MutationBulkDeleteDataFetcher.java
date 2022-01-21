@@ -53,6 +53,7 @@ public class MutationBulkDeleteDataFetcher implements DataFetcher<DataFetcherRes
       transaction.delete(deletes);
     } else {
       LOGGER.debug("running Delete operations with storage: {}", deletes);
+      helper.failIfConsensusCommitTransactionalTable();
       storage.delete(deletes);
     }
   }
