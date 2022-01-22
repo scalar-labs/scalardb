@@ -1028,7 +1028,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowIllegalArgumentException() {
+      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeys_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey1 = new Key(PKEY1, 1, PKEY2, "val1");
     Key partitionKey2 = new Key(PKEY1, 2, PKEY2, "val2");
@@ -1037,6 +1037,22 @@ public class OperationCheckerTest {
     ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey2, clusteringKey);
     ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingMutateOperationWithMutationsWithSameTableAndPartitionKeyButDifferentNamespace_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val3");
+    Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
+    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Delete delete = new Delete(partitionKey, clusteringKey);
+    ScalarDbUtils.setTargetToIfNot(delete, Optional.of("s2"), TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
