@@ -3,11 +3,11 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageMultiplePartitionKeyIntegrationTestBase;
+import com.scalar.db.storage.StorageSinglePartitionKeyIntegrationTestBase;
 import java.util.Random;
 
-public class JdbcMultiplePartitionKeyIntegrationTest
-    extends StorageMultiplePartitionKeyIntegrationTestBase {
+public class JdbcDatabaseSinglePartitionKeyIntegrationTest
+    extends StorageSinglePartitionKeyIntegrationTestBase {
   private static RdbEngine rdbEngine;
 
   @Override
@@ -15,14 +15,6 @@ public class JdbcMultiplePartitionKeyIntegrationTest
     JdbcConfig jdbcConfig = JdbcEnv.getJdbcConfig();
     rdbEngine = JdbcUtils.getRdbEngine(jdbcConfig.getContactPoints().get(0));
     return jdbcConfig;
-  }
-
-  @Override
-  protected int getThreadNum() {
-    if (rdbEngine == RdbEngine.ORACLE) {
-      return 1;
-    }
-    return super.getThreadNum();
   }
 
   @Override
