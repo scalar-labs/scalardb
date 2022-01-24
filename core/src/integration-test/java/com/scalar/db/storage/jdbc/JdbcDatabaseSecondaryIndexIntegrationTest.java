@@ -3,11 +3,12 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageSingleClusteringKeyScanIntegrationTestBase;
+import com.scalar.db.storage.StorageSecondaryIndexIntegrationTestBase;
+import com.scalar.db.storage.TestUtils;
 import java.util.Random;
 
-public class JdbcSingleClusteringKeyScanIntegrationTest
-    extends StorageSingleClusteringKeyScanIntegrationTestBase {
+public class JdbcDatabaseSecondaryIndexIntegrationTest
+    extends StorageSecondaryIndexIntegrationTestBase {
 
   private static RdbEngine rdbEngine;
 
@@ -24,6 +25,8 @@ public class JdbcSingleClusteringKeyScanIntegrationTest
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
+      // don't allow empty value since Oracle treats empty value as NULL
+      return TestUtils.getRandomValue(random, columnName, dataType, false);
     }
     return super.getRandomValue(random, columnName, dataType);
   }
@@ -34,6 +37,8 @@ public class JdbcSingleClusteringKeyScanIntegrationTest
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
+      // don't allow empty value since Oracle treats empty value as NULL
+      return TestUtils.getMinValue(columnName, dataType, false);
     }
     return super.getMinValue(columnName, dataType);
   }

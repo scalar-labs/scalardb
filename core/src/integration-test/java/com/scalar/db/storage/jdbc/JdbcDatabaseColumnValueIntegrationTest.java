@@ -7,7 +7,7 @@ import com.scalar.db.storage.StorageColumnValueIntegrationTestBase;
 import com.scalar.db.storage.TestUtils;
 import java.util.Random;
 
-public class JdbcColumnValueIntegrationTest extends StorageColumnValueIntegrationTestBase {
+public class JdbcDatabaseColumnValueIntegrationTest extends StorageColumnValueIntegrationTestBase {
 
   private static RdbEngine rdbEngine;
 
