@@ -14,6 +14,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.io.Value;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,10 +53,10 @@ public class Snapshot {
     this.isolation = isolation;
     this.strategy = strategy;
     this.parallelExecutor = parallelExecutor;
-    this.readSet = new HashMap<>();
-    this.scanSet = new HashMap<>();
-    this.writeSet = new HashMap<>();
-    this.deleteSet = new HashMap<>();
+    readSet = new HashMap<>();
+    scanSet = new HashMap<>();
+    writeSet = new HashMap<>();
+    deleteSet = new HashMap<>();
   }
 
   @VisibleForTesting
@@ -89,7 +90,7 @@ public class Snapshot {
     return isolation;
   }
 
-  public void put(Snapshot.Key key, Optional<TransactionResult> result) {
+  public void put(Key key, Optional<TransactionResult> result) {
     readSet.put(key, result);
   }
 
@@ -97,29 +98,45 @@ public class Snapshot {
     scanSet.put(scan, keys);
   }
 
-  public void put(Snapshot.Key key, Put put) {
-    deleteSet.remove(key);
-    writeSet.put(key, put);
+  public void put(Key key, Put put) {
+    if (deleteSet.containsKey(key)) {
+      throw new IllegalArgumentException("writing already deleted data is not allowed");
+    }
+    if (writeSet.containsKey(key)) {
+      // merge the previous put in the write set and the new put
+      writeSet.get(key).withValues(put.getValues().values());
+    } else {
+      writeSet.put(key, put);
+    }
   }
 
-  public void put(Snapshot.Key key, Delete delete) {
+  public void put(Key key, Delete delete) {
     writeSet.remove(key);
     deleteSet.put(key, delete);
   }
 
-  public boolean containsKey(Snapshot.Key key) {
+  public boolean containsKey(Key key) {
     return writeSet.containsKey(key) || deleteSet.containsKey(key) || readSet.containsKey(key);
   }
 
-  public Optional<TransactionResult> get(Snapshot.Key key) {
-    if (writeSet.containsKey(key)) {
-      throw new IllegalArgumentException("reading already written data is not allowed");
-    } else if (deleteSet.containsKey(key)) {
+  public boolean containsKeyInReadSet(Key key) {
+    return readSet.containsKey(key);
+  }
+
+  public Optional<TransactionResult> get(Key key) {
+    if (deleteSet.containsKey(key)) {
       return Optional.empty();
     } else if (readSet.containsKey(key)) {
-      return readSet.get(key);
+      if (writeSet.containsKey(key)) {
+        // merge the result in the read set and the put in the write set
+        return Optional.of(
+            new TransactionResult(new MergedResult(readSet.get(key), writeSet.get(key))));
+      } else {
+        return readSet.get(key);
+      }
     }
-    return Optional.empty();
+    throw new IllegalArgumentException(
+        "getting data neither in the read set nor the delete set is not allowed");
   }
 
   public Optional<List<Key>> get(Scan scan) {
@@ -414,7 +431,7 @@ public class Snapshot {
       if (o == this) {
         return true;
       }
-      if (!(o instanceof Snapshot.Key)) {
+      if (!(o instanceof Key)) {
         return false;
       }
       Key another = (Key) o;
@@ -435,6 +452,43 @@ public class Snapshot {
               o.clusteringKey.orElse(null),
               Ordering.natural().nullsFirst())
           .result();
+    }
+  }
+
+  @Immutable
+  private static class MergedResult implements Result {
+    private final Optional<TransactionResult> result;
+    private final Put put;
+
+    public MergedResult(Optional<TransactionResult> result, Put put) {
+      this.result = result;
+      this.put = put;
+    }
+
+    @Override
+    public Optional<com.scalar.db.io.Key> getPartitionKey() {
+      return Optional.of(put.getPartitionKey());
+    }
+
+    @Override
+    public Optional<com.scalar.db.io.Key> getClusteringKey() {
+      return put.getClusteringKey();
+    }
+
+    @Override
+    public Optional<Value<?>> getValue(String name) {
+      if (put.getValues().containsKey(name)) {
+        return Optional.of(put.getValues().get(name));
+      }
+      return result.flatMap(r -> r.getValue(name));
+    }
+
+    @Override
+    public Map<String, Value<?>> getValues() {
+      Map<String, Value<?>> values = new HashMap<>();
+      result.ifPresent(r -> values.putAll(r.getValues()));
+      values.putAll(put.getValues());
+      return values;
     }
   }
 }
