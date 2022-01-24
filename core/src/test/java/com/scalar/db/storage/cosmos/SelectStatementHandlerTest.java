@@ -27,6 +27,7 @@ import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
 import com.scalar.db.util.TableMetadataManager;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -45,8 +46,6 @@ public class SelectStatementHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TEXT_4 = "text4";
-  private static final Scan.Ordering.Order ASC_ORDER = Scan.Ordering.Order.ASC;
-  private static final Scan.Ordering.Order DESC_ORDER = Scan.Ordering.Order.DESC;
   private static final int ANY_LIMIT = 100;
 
   private SelectStatementHandler handler;
@@ -119,7 +118,7 @@ public class SelectStatementHandlerTest {
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
-        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
+        "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
     assertThatCode(() -> handler.handle(get)).doesNotThrowAnyException();
@@ -171,7 +170,12 @@ public class SelectStatementHandlerTest {
     when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
 
     Scan scan = prepareScan();
-    String query = "select * from Record r where r.concatenatedPartitionKey = '" + ANY_TEXT_1 + "'";
+    String query =
+        "select * from Record r where r.concatenatedPartitionKey = '"
+            + ANY_TEXT_1
+            + "' order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] asc";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -191,7 +195,7 @@ public class SelectStatementHandlerTest {
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
     Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
     String query =
-        "select * from Record r where r.values." + ANY_NAME_3 + " = '" + ANY_TEXT_3 + "'";
+        "select * from Record r where r.values[\"" + ANY_NAME_3 + "\"]" + " = '" + ANY_TEXT_3 + "'";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -232,15 +236,17 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " <= '"
+            + "\"] <= '"
             + ANY_TEXT_3
-            + "')";
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] asc";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -252,6 +258,10 @@ public class SelectStatementHandlerTest {
   @Test
   public void handle_ScanOperationWithMultipleClusteringKeys_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
     Record expected = new Record();
@@ -265,23 +275,27 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " = '"
+            + "\"] = '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_3
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_3
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " = '"
+            + "\"] = '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_3
-            + " <= '"
+            + "\"] <= '"
             + ANY_TEXT_4
-            + "')";
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] asc, r.clusteringKey[\""
+            + ANY_NAME_3
+            + "\"] desc";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -306,15 +320,17 @@ public class SelectStatementHandlerTest {
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " > '"
+            + "\"] > '"
             + ANY_TEXT_2
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " < '"
+            + "\"] < '"
             + ANY_TEXT_3
-            + "')";
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] asc";
 
     // Act Assert
     assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
@@ -334,19 +350,19 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
+            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
             .withLimit(ANY_LIMIT);
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
             + ANY_NAME_2
-            + " asc offset 0 limit "
+            + "\"] asc offset 0 limit "
             + ANY_LIMIT;
 
     // Act Assert
@@ -357,7 +373,8 @@ public class SelectStatementHandlerTest {
   }
 
   @Test
-  public void handle_ScanOperationWithMultipleOrdering_ShouldCallQueryItemsWithProperQuery() {
+  public void
+      handle_ScanOperationWithReversedOrderingAndLimit_ShouldCallQueryItemsWithProperQuery() {
     // Arrange
     when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
         .thenReturn(responseIterable);
@@ -367,22 +384,101 @@ public class SelectStatementHandlerTest {
     Scan scan =
         prepareScan()
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
-            .withOrdering(new Scan.Ordering(ANY_NAME_2, ASC_ORDER))
-            .withOrdering(new Scan.Ordering(ANY_NAME_3, DESC_ORDER))
+            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
             .withLimit(ANY_LIMIT);
 
     String query =
         "select * from Record r where (r.concatenatedPartitionKey = '"
             + ANY_TEXT_1
-            + "' and r.clusteringKey."
+            + "' and r.clusteringKey[\""
             + ANY_NAME_2
-            + " >= '"
+            + "\"] >= '"
             + ANY_TEXT_2
-            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey."
+            + "') order by r.concatenatedPartitionKey desc, r.clusteringKey[\""
             + ANY_NAME_2
-            + " asc, r.clusteringKey."
+            + "\"] desc offset 0 limit "
+            + ANY_LIMIT;
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithMultipleOrderingsAndLimit_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+
+    Scan scan =
+        prepareScan()
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.ASC))
+            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.DESC))
+            .withLimit(ANY_LIMIT);
+
+    String query =
+        "select * from Record r where (r.concatenatedPartitionKey = '"
+            + ANY_TEXT_1
+            + "' and r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] >= '"
+            + ANY_TEXT_2
+            + "') order by r.concatenatedPartitionKey asc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] asc, r.clusteringKey[\""
             + ANY_NAME_3
-            + " desc offset 0 limit "
+            + "\"] desc offset 0 limit "
+            + ANY_LIMIT;
+
+    // Act Assert
+    assertThatCode(() -> handler.handle(scan)).doesNotThrowAnyException();
+
+    // Assert
+    verify(container).queryItems(eq(query), any(CosmosQueryRequestOptions.class), eq(Record.class));
+  }
+
+  @Test
+  public void
+      handle_ScanOperationWithMultipleReversedOrderingsAndLimit_ShouldCallQueryItemsWithProperQuery() {
+    // Arrange
+    when(metadata.getClusteringKeyNames())
+        .thenReturn(new LinkedHashSet<>(Arrays.asList(ANY_NAME_2, ANY_NAME_3)));
+    when(metadata.getClusteringOrder(ANY_NAME_3)).thenReturn(Order.DESC);
+
+    when(container.queryItems(anyString(), any(CosmosQueryRequestOptions.class), eq(Record.class)))
+        .thenReturn(responseIterable);
+    Record expected = new Record();
+    when(responseIterable.iterator()).thenReturn(Collections.singletonList(expected).iterator());
+
+    Scan scan =
+        prepareScan()
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withOrdering(new Scan.Ordering(ANY_NAME_2, Order.DESC))
+            .withOrdering(new Scan.Ordering(ANY_NAME_3, Order.ASC))
+            .withLimit(ANY_LIMIT);
+
+    String query =
+        "select * from Record r where (r.concatenatedPartitionKey = '"
+            + ANY_TEXT_1
+            + "' and r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] >= '"
+            + ANY_TEXT_2
+            + "') order by r.concatenatedPartitionKey desc, r.clusteringKey[\""
+            + ANY_NAME_2
+            + "\"] desc, r.clusteringKey[\""
+            + ANY_NAME_3
+            + "\"] asc offset 0 limit "
             + ANY_LIMIT;
 
     // Act Assert
