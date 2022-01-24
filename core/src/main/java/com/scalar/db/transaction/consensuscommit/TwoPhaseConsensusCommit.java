@@ -110,14 +110,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     return tableName;
   }
 
-  /**
-   * Retrieves a result from the storage through a transaction with the specified {@link Get}
-   * command with a primary key and returns the result.
-   *
-   * @param get a {@code Get} command
-   * @return an {@code Optional} with the returned result
-   * @throws CrudException if the operation failed
-   */
   @Override
   public Optional<Result> get(Get get) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
@@ -133,15 +125,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     }
   }
 
-  /**
-   * Retrieves results from the storage through a transaction with the specified {@link Scan}
-   * command with a partition key and returns a list of {@link Result}. Results can be filtered by
-   * specifying a range of clustering keys.
-   *
-   * @param scan a {@code Scan} command
-   * @return a list of {@link Result}
-   * @throws CrudException if the operation failed
-   */
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);

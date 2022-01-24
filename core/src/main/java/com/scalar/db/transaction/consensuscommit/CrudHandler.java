@@ -37,19 +37,19 @@ public class CrudHandler {
     Optional<TransactionResult> result;
     Snapshot.Key key = new Snapshot.Key(get);
 
-    if (snapshot.containsKey(key)) {
+    if (snapshot.containsKeyInReadSet(key)) {
       return snapshot.get(key).map(r -> r);
     }
 
     result = getFromStorage(get);
     if (!result.isPresent()) {
       snapshot.put(key, result);
-      return Optional.empty();
+      return snapshot.get(key).map(r -> r);
     }
 
     if (result.get().isCommitted()) {
       snapshot.put(key, result);
-      return Optional.of(result.get());
+      return snapshot.get(key).map(r -> r);
     }
     throw new UncommittedRecordException(result.get(), "this record needs recovery");
   }
