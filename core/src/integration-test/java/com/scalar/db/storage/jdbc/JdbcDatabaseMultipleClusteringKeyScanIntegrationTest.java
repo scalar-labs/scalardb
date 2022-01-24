@@ -3,11 +3,11 @@ package com.scalar.db.storage.jdbc;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.StorageSecondaryIndexIntegrationTestBase;
-import com.scalar.db.storage.TestUtils;
+import com.scalar.db.storage.StorageMultipleClusteringKeyScanIntegrationTestBase;
 import java.util.Random;
 
-public class JdbcSecondaryIndexIntegrationTest extends StorageSecondaryIndexIntegrationTestBase {
+public class JdbcDatabaseMultipleClusteringKeyScanIntegrationTest
+    extends StorageMultipleClusteringKeyScanIntegrationTestBase {
 
   private static RdbEngine rdbEngine;
 
@@ -19,13 +19,19 @@ public class JdbcSecondaryIndexIntegrationTest extends StorageSecondaryIndexInte
   }
 
   @Override
+  protected int getThreadNum() {
+    if (rdbEngine == RdbEngine.ORACLE) {
+      return 1;
+    }
+    return super.getThreadNum();
+  }
+
+  @Override
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
     if (rdbEngine == RdbEngine.ORACLE) {
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getRandomOracleDoubleValue(random, columnName);
       }
-      // don't allow empty value since Oracle treats empty value as NULL
-      return TestUtils.getRandomValue(random, columnName, dataType, false);
     }
     return super.getRandomValue(random, columnName, dataType);
   }
@@ -36,8 +42,6 @@ public class JdbcSecondaryIndexIntegrationTest extends StorageSecondaryIndexInte
       if (dataType == DataType.DOUBLE) {
         return JdbcTestUtils.getMinOracleDoubleValue(columnName);
       }
-      // don't allow empty value since Oracle treats empty value as NULL
-      return TestUtils.getMinValue(columnName, dataType, false);
     }
     return super.getMinValue(columnName, dataType);
   }
