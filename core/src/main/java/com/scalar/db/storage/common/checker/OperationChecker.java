@@ -231,7 +231,8 @@ public class OperationChecker {
 
     Mutation first = mutations.get(0);
     for (Mutation mutation : mutations) {
-      if (!mutation.forTable().equals(first.forTable())
+      if (!mutation.forNamespace().equals(first.forNamespace())
+          || !mutation.forTable().equals(first.forTable())
           || !mutation.getPartitionKey().equals(first.getPartitionKey())) {
         throw new IllegalArgumentException("Mutations that span multi-partition are not supported");
       }

@@ -1028,7 +1028,7 @@ public class OperationCheckerTest {
 
   @Test
   public void
-      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeysWithNotAllowPartitions_shouldThrowIllegalArgumentException() {
+      whenCheckingMutateOperationWithMutationsWithDifferentPartitionKeys_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey1 = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
     Key partitionKey2 = Key.newBuilder().addInt(PKEY1, 2).addText(PKEY2, "val2").build();
@@ -1037,6 +1037,22 @@ public class OperationCheckerTest {
     Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
     Delete delete = new Delete(partitionKey2, clusteringKey);
     Utility.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+
+    // Act Assert
+    assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void
+      whenCheckingMutateOperationWithMutationsWithSameTableAndPartitionKeyButDifferentNamespace_shouldThrowIllegalArgumentException() {
+    // Arrange
+    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, "val1").build();
+    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, "val3").build();
+    Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
+    Utility.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Delete delete = new Delete(partitionKey, clusteringKey);
+    Utility.setTargetToIfNot(delete, Optional.of("s2"), TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
