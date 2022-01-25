@@ -17,12 +17,18 @@ import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
 import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
+import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
+import com.scalar.db.graphql.instrumentation.validation.ConditionalExpressionValidation;
+import com.scalar.db.graphql.instrumentation.validation.ScanStartAndEndValidation;
 import com.scalar.db.graphql.schema.ScalarDbTypes;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
 import graphql.Scalars;
+import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.execution.instrumentation.Instrumentation;
+import graphql.execution.instrumentation.fieldvalidation.FieldValidationInstrumentation;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLNonNull;
@@ -145,9 +151,15 @@ public class GraphQlFactory {
     }
 
     GraphQL.Builder graphql = GraphQL.newGraphQL(schema);
+    List<Instrumentation> instrumentations = new ArrayList<>();
+    instrumentations.add(new FieldValidationInstrumentation(new ConditionalExpressionValidation()));
+    instrumentations.add(new FieldValidationInstrumentation(new ScanStartAndEndValidation()));
     if (transactionManager != null) {
-      graphql.instrumentation(new TransactionInstrumentation(transactionManager));
+      instrumentations.add(new FieldValidationInstrumentation(new AbortFieldValidation()));
+      instrumentations.add(new TransactionInstrumentation(transactionManager));
     }
+    graphql.instrumentation(new ChainedInstrumentation(instrumentations));
+
     return graphql.build();
   }
 

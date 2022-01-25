@@ -3,6 +3,7 @@ package com.scalar.db.graphql.datafetcher;
 import static java.util.stream.Collectors.toList;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.scalar.db.api.ConditionalExpression;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
@@ -38,11 +39,11 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DataFetcherHelper {
+
   private final TableGraphQlModel tableGraphQlModel;
 
   public DataFetcherHelper(TableGraphQlModel tableGraphQlModel) {
@@ -75,21 +76,12 @@ public class DataFetcherHelper {
   }
 
   private static Object getOneScalarValue(Map<String, Object> map) {
-    List<?> values =
-        Stream.of(
-                (Integer) map.get("intValue"),
-                (Long) map.get("bigIntValue"),
-                (Float) map.get("floatValue"),
-                (Double) map.get("doubleValue"),
-                (String) map.get("textValue"),
-                (Boolean) map.get("booleanValue"))
-            .filter(Objects::nonNull)
-            .collect(toList());
-    if (values.size() != 1) {
+    Set<String> valueKeys = Sets.intersection(map.keySet(), Constants.SCALAR_VALUE_KEYS);
+    if (valueKeys.size() != 1) {
       throw new IllegalArgumentException(
-          "One and only one of intValue, bigIntValue, floatValue, doubleValue, textValue, and booleanValue must be specified.");
+          "One and only one of " + Constants.SCALAR_VALUE_KEYS + " must be specified.");
     }
-    return values.get(0);
+    return map.get(valueKeys.stream().findFirst().get());
   }
 
   static GraphQLError getGraphQLError(Exception exception, DataFetchingEnvironment environment) {
