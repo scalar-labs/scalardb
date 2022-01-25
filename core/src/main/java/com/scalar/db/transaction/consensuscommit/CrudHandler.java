@@ -75,13 +75,12 @@ public class CrudHandler {
 
         Snapshot.Key key = getSnapshotKey(r, scan);
 
-        if (snapshot.containsKey(key)) {
-          result = snapshot.get(key).orElse(null);
+        if (!snapshot.containsKeyInReadSet(key)) {
+          snapshot.put(key, Optional.of(result));
         }
 
-        snapshot.put(key, Optional.ofNullable(result));
         keys.add(key);
-        results.add(result);
+        snapshot.get(key).ifPresent(results::add);
       }
     } finally {
       if (scanner != null) {

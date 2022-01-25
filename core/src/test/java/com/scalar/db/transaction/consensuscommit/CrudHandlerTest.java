@@ -1,7 +1,7 @@
 package com.scalar.db.transaction.consensuscommit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Java6Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.scalar.db.api.Delete;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
@@ -21,9 +22,11 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,6 +44,7 @@ public class CrudHandlerTest {
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_TEXT_2 = "text2";
+  private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TX_ID = "tx_id";
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
@@ -182,24 +186,23 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    when(snapshot.get(any(Snapshot.Key.class))).thenReturn(Optional.empty());
-    doNothing()
-        .when(snapshot)
-        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
-    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
-    // doCallRealMethod().when(scanner).forEach(any(Consumer.class));
-    when(storage.scan(scan)).thenReturn(scanner);
-
-    // Act
-    List<Result> results = handler.scan(scan);
-
-    // Assert
     Snapshot.Key key =
         new Snapshot.Key(
             scan.forNamespace().get(),
             scan.forTable().get(),
             scan.getPartitionKey(),
             result.getClusteringKey().get());
+    when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
+    doNothing()
+        .when(snapshot)
+        .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
+    when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    // Act
+    List<Result> results = handler.scan(scan);
+
+    // Assert
     TransactionResult expected = new TransactionResult(result);
     verify(snapshot).put(key, Optional.of(expected));
     assertThat(results.size()).isEqualTo(1);
@@ -265,16 +268,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    snapshot =
-        new Snapshot(
-            ANY_TX_ID,
-            Isolation.SNAPSHOT,
-            null,
-            parallelExecutor,
-            new HashMap<>(),
-            new HashMap<>(),
-            new HashMap<>(),
-            new HashMap<>());
+    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
     handler = new CrudHandler(storage, snapshot);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -308,8 +302,7 @@ public class CrudHandlerTest {
             scan.getPartitionKey(),
             result.getClusteringKey().get());
     when(snapshot.get(scan)).thenReturn(Optional.empty());
-    when(snapshot.containsKey(key)).thenReturn(false);
-    when(snapshot.containsKeyInReadSet(key)).thenReturn(true);
+    when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
 
     // Act
@@ -327,16 +320,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    snapshot =
-        new Snapshot(
-            ANY_TX_ID,
-            Isolation.SNAPSHOT,
-            null,
-            parallelExecutor,
-            new HashMap<>(),
-            new HashMap<>(),
-            new HashMap<>(),
-            new HashMap<>());
+    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
     handler = new CrudHandler(storage, snapshot);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -347,5 +331,81 @@ public class CrudHandlerTest {
 
     // Assert
     assertThat(results.get(0)).isEqualTo(result.get());
+  }
+
+  @Test
+  public void scan_CalledAfterDeleteUnderRealSnapshot_ShouldReturnResultsWithoutDeletedRecord()
+      throws ExecutionException, CrudException {
+    // Arrange
+    Scan scan = prepareScan();
+    result = prepareResult(true, TransactionState.COMMITTED);
+
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
+    Result result2 = mock(Result.class);
+    when(result2.getPartitionKey()).thenReturn(Optional.of(partitionKey));
+    when(result2.getClusteringKey()).thenReturn(Optional.of(clusteringKey));
+    ImmutableMap<String, Value<?>> values =
+        ImmutableMap.<String, Value<?>>builder()
+            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
+            .put(Attribute.STATE, Attribute.toStateValue(TransactionState.COMMITTED))
+            .put(Attribute.VERSION, Attribute.toVersionValue(2))
+            .put(Attribute.BEFORE_ID, Attribute.toBeforeIdValue(ANY_ID_1))
+            .put(Attribute.BEFORE_STATE, Attribute.toBeforeStateValue(TransactionState.COMMITTED))
+            .put(Attribute.BEFORE_VERSION, Attribute.toBeforeVersionValue(1))
+            .build();
+    when(result2.getValues()).thenReturn(values);
+
+    Map<Snapshot.Key, Optional<TransactionResult>> readSet = new HashMap<>();
+    Map<Snapshot.Key, Delete> deleteSet = new HashMap<>();
+    snapshot =
+        new Snapshot(
+            ANY_TX_ID,
+            Isolation.SNAPSHOT,
+            null,
+            parallelExecutor,
+            readSet,
+            new HashMap<>(),
+            new HashMap<>(),
+            deleteSet);
+    handler = new CrudHandler(storage, snapshot);
+    when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
+    when(storage.scan(scan)).thenReturn(scanner);
+
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME);
+
+    // Act
+    handler.delete(delete);
+    List<Result> results = handler.scan(scan);
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+    assertThat(results.get(0)).isEqualTo(result);
+
+    // check the delete set
+    assertThat(deleteSet.size()).isEqualTo(1);
+    assertThat(deleteSet).containsKey(new Snapshot.Key(delete));
+
+    // check if the scanned data is inserted correctly in the read set
+    assertThat(readSet.size()).isEqualTo(2);
+    Snapshot.Key key1 =
+        new Snapshot.Key(
+            scan.forNamespace().get(),
+            scan.forTable().get(),
+            scan.getPartitionKey(),
+            result.getClusteringKey().get());
+    assertThat(readSet.get(key1).isPresent()).isTrue();
+    assertThat(readSet.get(key1).get()).isEqualTo(new TransactionResult(result));
+    Snapshot.Key key2 =
+        new Snapshot.Key(
+            scan.forNamespace().get(),
+            scan.forTable().get(),
+            scan.getPartitionKey(),
+            result2.getClusteringKey().get());
+    assertThat(readSet.get(key2).isPresent()).isTrue();
+    assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
   }
 }
