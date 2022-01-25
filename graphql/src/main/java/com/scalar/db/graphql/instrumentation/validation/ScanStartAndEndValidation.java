@@ -11,6 +11,7 @@ import graphql.execution.instrumentation.fieldvalidation.FieldValidationEnvironm
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class ScanStartAndEndValidation implements FieldValidation {
@@ -25,30 +26,29 @@ public class ScanStartAndEndValidation implements FieldValidation {
         List<Map<String, Object>> start = (List<Map<String, Object>>) scan.get("start");
         if (start != null) {
           start.forEach(
-              clusteringKey -> {
-                validateClusteringKey(errors, "start", clusteringKey, fieldAndArguments);
-              });
+              clusteringKey ->
+                  validateClusteringKey("start", clusteringKey, fieldAndArguments)
+                      .ifPresent(errors::add));
         }
         List<Map<String, Object>> end = (List<Map<String, Object>>) scan.get("end");
         if (end != null) {
           end.forEach(
-              clusteringKey -> {
-                validateClusteringKey(errors, "end", clusteringKey, fieldAndArguments);
-              });
+              clusteringKey ->
+                  validateClusteringKey("end", clusteringKey, fieldAndArguments)
+                      .ifPresent(errors::add));
         }
       }
     }
     return errors;
   }
 
-  private void validateClusteringKey(
-      List<GraphQLError> errors,
-      String argName,
-      Map<String, Object> clusteringKey,
-      FieldAndArguments fieldAndArguments) {
+  private Optional<GraphQLError> validateClusteringKey(
+      String argName, Map<String, Object> clusteringKey, FieldAndArguments fieldAndArguments) {
     Set<String> valueKeys = Sets.intersection(clusteringKey.keySet(), Constants.SCALAR_VALUE_KEYS);
-    if (valueKeys.size() != 1) {
-      errors.add(
+    if (valueKeys.size() == 1) {
+      return Optional.empty();
+    } else {
+      return Optional.of(
           GraphqlErrorBuilder.newError()
               .message(
                   "the %s clustering key must have only one of %s",
