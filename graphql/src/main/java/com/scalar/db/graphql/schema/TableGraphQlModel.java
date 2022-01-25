@@ -1,6 +1,6 @@
 package com.scalar.db.graphql.schema;
 
-import static com.scalar.db.graphql.schema.SchemaUtils.dataTypeToGraphQLScalarType;
+import static com.scalar.db.graphql.schema.ScalarDbTypes.dataTypeToGraphQLScalarType;
 import static graphql.schema.GraphQLArgument.newArgument;
 import static graphql.schema.GraphQLEnumType.newEnum;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
@@ -49,7 +49,6 @@ public class TableGraphQlModel {
   private final GraphQLInputObjectType scanInputObjectType;
   private final GraphQLObjectType scanPayloadObjectType;
   private final GraphQLFieldDefinition queryScanField;
-  private final GraphQLObjectType primaryKeyOutputObjectType;
   private final GraphQLInputObjectType putValuesObjectType;
   private final GraphQLInputObjectType putInputObjectType;
   private final GraphQLFieldDefinition mutationPutField;
@@ -97,8 +96,6 @@ public class TableGraphQlModel {
       this.scanPayloadObjectType = createScanPayloadObjectType();
       this.queryScanField = createQueryScanField();
     }
-
-    this.primaryKeyOutputObjectType = createPrimaryKeyOutputObjectType();
 
     this.putValuesObjectType = createPutValuesObjectType();
     this.putInputObjectType = createPutInputObjectType();
@@ -196,12 +193,7 @@ public class TableGraphQlModel {
     return newInputObject()
         .name(objectType.getName() + "_ClusteringKey")
         .field(newInputObjectField().name("name").type(nonNull(clusteringKeyNameEnum)))
-        .field(newInputObjectField().name("intValue").type(Scalars.GraphQLInt))
-        .field(newInputObjectField().name("bigIntValue").type(CommonSchema.BIG_INT_SCALAR))
-        .field(newInputObjectField().name("floatValue").type(CommonSchema.FLOAT_32_SCALAR))
-        .field(newInputObjectField().name("doubleValue").type(Scalars.GraphQLFloat))
-        .field(newInputObjectField().name("textValue").type(Scalars.GraphQLString))
-        .field(newInputObjectField().name("booleanValue").type(Scalars.GraphQLBoolean))
+        .fields(ScalarDbTypes.getScalarValueInputObjectFields())
         .build();
   }
 
@@ -253,22 +245,6 @@ public class TableGraphQlModel {
         .type(scanPayloadObjectType)
         .argument(newArgument().name("scan").type(nonNull(scanInputObjectType)))
         .build();
-  }
-
-  private GraphQLObjectType createPrimaryKeyOutputObjectType() {
-    LinkedHashSet<String> keyNames = new LinkedHashSet<>();
-    keyNames.addAll(tableMetadata.getPartitionKeyNames());
-    keyNames.addAll(tableMetadata.getClusteringKeyNames());
-
-    GraphQLObjectType.Builder builder = newObject().name(objectType.getName() + "_KeyOutput");
-    keyNames.forEach(
-        keyName -> {
-          GraphQLScalarType type =
-              dataTypeToGraphQLScalarType(tableMetadata.getColumnDataType(keyName));
-          builder.field(newFieldDefinition().name(keyName).type(nonNull(type)));
-        });
-
-    return builder.build();
   }
 
   private GraphQLInputObjectType createPutValuesObjectType() {
@@ -415,10 +391,6 @@ public class TableGraphQlModel {
 
   public GraphQLObjectType getScanPayloadObjectType() {
     return scanPayloadObjectType;
-  }
-
-  public GraphQLObjectType getPrimaryKeyOutputObjectType() {
-    return primaryKeyOutputObjectType;
   }
 
   public GraphQLFieldDefinition getMutationPutField() {

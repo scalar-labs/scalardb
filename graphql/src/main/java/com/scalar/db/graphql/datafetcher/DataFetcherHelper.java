@@ -13,10 +13,10 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.Constants;
-import com.scalar.db.graphql.schema.DeleteConditionType;
-import com.scalar.db.graphql.schema.PutConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes;
+import com.scalar.db.graphql.schema.ScalarDbTypes.DeleteConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes.PutConditionType;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BooleanValue;
@@ -183,9 +183,9 @@ public class DataFetcherHelper {
           GraphQLScalarType graphQLScalarType = inputNameToGraphQLScalarTypeMap.get(name);
           if (Scalars.GraphQLInt.equals(graphQLScalarType)) {
             put.withValue(name, (Integer) value);
-          } else if (CommonSchema.BIG_INT_SCALAR.equals(graphQLScalarType)) {
+          } else if (ScalarDbTypes.BIG_INT_SCALAR.equals(graphQLScalarType)) {
             put.withValue(name, (Long) value);
-          } else if (CommonSchema.FLOAT_32_SCALAR.equals(graphQLScalarType)) {
+          } else if (ScalarDbTypes.FLOAT_32_SCALAR.equals(graphQLScalarType)) {
             put.withValue(name, (Float) value);
           } else if (Scalars.GraphQLFloat.equals(graphQLScalarType)) {
             put.withValue(name, (Double) value);
