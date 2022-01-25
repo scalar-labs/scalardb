@@ -169,6 +169,13 @@ public final class JdbcUtils {
           return true;
         }
         break;
+      case SQL_SERVER:
+        if (e.getErrorCode() == 1205) {
+          // Transaction was deadlocked on lock resources with another process and has been chosen
+          // as the deadlock victim
+          return true;
+        }
+        break;
       default:
         break;
     }
