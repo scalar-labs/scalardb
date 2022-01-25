@@ -2,7 +2,7 @@ package com.scalar.db.graphql.schema;
 
 import com.google.common.collect.ImmutableSet;
 
-public class Constants {
+public final class Constants {
   public static final String TRANSACTION_DIRECTIVE_NAME = "transaction";
   public static final String TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME = "txId";
   public static final String TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME = "commit";

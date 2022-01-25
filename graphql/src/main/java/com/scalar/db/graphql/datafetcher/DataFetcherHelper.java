@@ -14,10 +14,10 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.Constants;
-import com.scalar.db.graphql.schema.DeleteConditionType;
-import com.scalar.db.graphql.schema.PutConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes;
+import com.scalar.db.graphql.schema.ScalarDbTypes.DeleteConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes.PutConditionType;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BooleanValue;
@@ -34,6 +34,8 @@ import graphql.Scalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLScalarType;
+import graphql.schema.SelectedField;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -173,9 +175,9 @@ public class DataFetcherHelper {
           GraphQLScalarType graphQLScalarType = inputNameToGraphQLScalarTypeMap.get(name);
           if (Scalars.GraphQLInt.equals(graphQLScalarType)) {
             put.withValue(name, (Integer) value);
-          } else if (CommonSchema.BIG_INT_SCALAR.equals(graphQLScalarType)) {
+          } else if (ScalarDbTypes.BIG_INT_SCALAR.equals(graphQLScalarType)) {
             put.withValue(name, (Long) value);
-          } else if (CommonSchema.FLOAT_32_SCALAR.equals(graphQLScalarType)) {
+          } else if (ScalarDbTypes.FLOAT_32_SCALAR.equals(graphQLScalarType)) {
             put.withValue(name, (Float) value);
           } else if (Scalars.GraphQLFloat.equals(graphQLScalarType)) {
             put.withValue(name, (Double) value);
@@ -248,16 +250,22 @@ public class DataFetcherHelper {
     return delete;
   }
 
+  static Collection<String> getProjections(DataFetchingEnvironment environment) {
+    // Add specified field names of the get or scan GraphQL input to the Selection object as
+    // projections. The fields are filtered by "*/*" since they are represented in the following
+    // format:
+    // <object_type_name>_(Get|Scan)PayLoad.<object_type_name>/<object_type_name>.<field_name>
+    return environment.getSelectionSet().getFields("*/*").stream()
+        .map(SelectedField::getName)
+        .collect(Collectors.toList());
+  }
+
   String getNamespaceName() {
     return tableGraphQlModel.getNamespaceName();
   }
 
   String getTableName() {
     return tableGraphQlModel.getTableName();
-  }
-
-  LinkedHashSet<String> getFieldNames() {
-    return tableGraphQlModel.getFieldNames();
   }
 
   String getObjectTypeName() {

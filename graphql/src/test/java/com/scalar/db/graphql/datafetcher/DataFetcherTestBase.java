@@ -1,6 +1,8 @@
 package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
@@ -15,6 +17,12 @@ import graphql.execution.ResultPath;
 import graphql.language.Field;
 import graphql.language.SourceLocation;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.DataFetchingFieldSelectionSet;
+import graphql.schema.SelectedField;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.Before;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -24,6 +32,7 @@ public abstract class DataFetcherTestBase {
   protected static final String ANY_TABLE = "table1";
 
   @Mock protected DataFetchingEnvironment environment;
+  @Mock protected DataFetchingFieldSelectionSet selectionSet;
   @Mock protected GraphQLContext graphQlContext;
   @Mock protected DistributedStorage storage;
   @Mock protected DistributedTransaction transaction;
@@ -34,6 +43,11 @@ public abstract class DataFetcherTestBase {
 
     // Arrange
     when(environment.getGraphQlContext()).thenReturn(graphQlContext);
+
+    // Set empty selection set as default
+    when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
+    when(environment.getSelectionSet()).thenReturn(selectionSet);
+
     // Stub environment methods for errors
     when(environment.getField())
         .thenReturn(Field.newField("test").sourceLocation(SourceLocation.EMPTY).build());
@@ -48,6 +62,21 @@ public abstract class DataFetcherTestBase {
   }
 
   protected abstract void doSetUp() throws Exception;
+
+  protected void addSelectionSetToEnvironment(
+      DataFetchingEnvironment environment, String... fields) {
+    List<SelectedField> selectedFieldList =
+        Arrays.stream(fields)
+            .map(
+                field -> {
+                  SelectedField selectedField = mock(SelectedField.class);
+                  when(selectedField.getName()).thenReturn(field);
+                  return selectedField;
+                })
+            .collect(Collectors.toList());
+    when(selectionSet.getFields(anyString())).thenReturn(selectedFieldList);
+    when(environment.getSelectionSet()).thenReturn(selectionSet);
+  }
 
   protected void setTransactionStarted() {
     when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);

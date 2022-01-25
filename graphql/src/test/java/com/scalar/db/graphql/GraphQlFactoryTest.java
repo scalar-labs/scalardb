@@ -11,17 +11,18 @@ import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
-import com.scalar.db.graphql.schema.CommonSchema;
 import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.schema.ScalarDbTypes;
 import com.scalar.db.io.DataType;
 import com.scalar.db.service.StorageFactory;
 import com.scalar.db.service.TransactionFactory;
 import graphql.GraphQL;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.FieldCoordinates;
-import graphql.schema.GraphQLNamedInputType;
+import graphql.schema.GraphQLNamedType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLType;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.Before;
@@ -144,8 +145,8 @@ public class GraphQlFactoryTest {
     assertThat(schema.containsType("Query")).isTrue();
     assertThat(schema.containsType("Mutation")).isTrue();
     assertThat(schema.getDirective(Constants.TRANSACTION_DIRECTIVE_NAME)).isNotNull();
-    for (GraphQLNamedInputType type : CommonSchema.createCommonGraphQLTypes()) {
-      assertThat(schema.containsType(type.getName())).isTrue();
+    for (GraphQLType type : ScalarDbTypes.SCALAR_DB_GRAPHQL_TYPES) {
+      assertThat(schema.containsType(((GraphQLNamedType) type).getName())).isTrue();
     }
     Instrumentation instrumentation = graphql.getInstrumentation();
     Field field = instrumentation.getClass().getDeclaredField("instrumentations");

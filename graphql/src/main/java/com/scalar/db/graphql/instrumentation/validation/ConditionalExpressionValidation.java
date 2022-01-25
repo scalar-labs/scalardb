@@ -2,8 +2,8 @@ package com.scalar.db.graphql.instrumentation.validation;
 
 import com.google.common.collect.Sets;
 import com.scalar.db.graphql.schema.Constants;
-import com.scalar.db.graphql.schema.DeleteConditionType;
-import com.scalar.db.graphql.schema.PutConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes.DeleteConditionType;
+import com.scalar.db.graphql.schema.ScalarDbTypes.PutConditionType;
 import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;

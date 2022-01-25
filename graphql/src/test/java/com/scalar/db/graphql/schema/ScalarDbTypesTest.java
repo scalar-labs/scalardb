@@ -8,11 +8,11 @@ import graphql.Scalars;
 import graphql.schema.GraphQLScalarType;
 import org.junit.Test;
 
-public class SchemaUtilsTest {
+public class ScalarDbTypesTest {
   @Test
   public void dataTypeToGraphQLScalarType_BooleanGiven_ShouldReturnBoolean() {
     // Act
-    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.BOOLEAN);
+    GraphQLScalarType type = ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.BOOLEAN);
 
     // Assert
     assertThat(type).isEqualTo(Scalars.GraphQLBoolean);
@@ -21,16 +21,16 @@ public class SchemaUtilsTest {
   @Test
   public void dataTypeToGraphQLScalarType_FloatGiven_ShouldReturnCustomFloat32() {
     // Act
-    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.FLOAT);
+    GraphQLScalarType type = ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.FLOAT);
 
     // Assert
-    assertThat(type).isEqualTo(CommonSchema.FLOAT_32_SCALAR);
+    assertThat(type).isEqualTo(ScalarDbTypes.FLOAT_32_SCALAR);
   }
 
   @Test
   public void dataTypeToGraphQLScalarType_DoubleGiven_ShouldReturnFloat() {
     // Act
-    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.DOUBLE);
+    GraphQLScalarType type = ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.DOUBLE);
 
     // Assert
     assertThat(type).isEqualTo(Scalars.GraphQLFloat);
@@ -39,16 +39,16 @@ public class SchemaUtilsTest {
   @Test
   public void dataTypeToGraphQLScalarType_BigIntGiven_ShouldReturnCustomBigInt() {
     // Act
-    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.BIGINT);
+    GraphQLScalarType type = ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.BIGINT);
 
     // Assert
-    assertThat(type).isEqualTo(CommonSchema.BIG_INT_SCALAR);
+    assertThat(type).isEqualTo(ScalarDbTypes.BIG_INT_SCALAR);
   }
 
   @Test
   public void dataTypeToGraphQLScalarType_TextGiven_ShouldReturnString() {
     // Act
-    GraphQLScalarType type = SchemaUtils.dataTypeToGraphQLScalarType(DataType.TEXT);
+    GraphQLScalarType type = ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.TEXT);
 
     // Assert
     assertThat(type).isEqualTo(Scalars.GraphQLString);
@@ -57,7 +57,7 @@ public class SchemaUtilsTest {
   @Test
   public void dataTypeToGraphQLScalarType_BlobGiven_ShouldThrowIllegalArgumentException() {
     // Act Assert
-    assertThatThrownBy(() -> SchemaUtils.dataTypeToGraphQLScalarType(DataType.BLOB))
+    assertThatThrownBy(() -> ScalarDbTypes.dataTypeToGraphQLScalarType(DataType.BLOB))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }
