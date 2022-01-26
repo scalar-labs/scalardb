@@ -46,6 +46,14 @@ import org.junit.Test;
 @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
 
+  private enum OrderingType {
+    BOTH_SPECIFIED,
+    ONLY_FIRST_SPECIFIED,
+    BOTH_SPECIFIED_AND_REVERSED,
+    ONLY_FIRST_SPECIFIED_AND_REVERSED,
+    NOTHING
+  }
+
   private static final String TEST_NAME = "mul_ckey";
   private static final String NAMESPACE_BASE_NAME = "integration_testing_" + TEST_NAME + "_";
   private static final String PARTITION_KEY = "pkey";
@@ -264,14 +272,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean reverse : Arrays.asList(false, true)) {
-            scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
-                clusteringKeys,
-                firstClusteringKeyType,
-                firstClusteringKeyOrder,
-                secondClusteringKeyType,
-                secondClusteringKeyOrder,
-                reverse);
+          for (OrderingType orderingType : OrderingType.values()) {
+            for (boolean withLimit : Arrays.asList(false, true)) {
+              scan_WithoutClusteringKeyRange_ShouldReturnProperResult(
+                  clusteringKeys,
+                  firstClusteringKeyType,
+                  firstClusteringKeyOrder,
+                  secondClusteringKeyType,
+                  secondClusteringKeyOrder,
+                  orderingType,
+                  withLimit);
+            }
           }
         });
   }
@@ -282,30 +293,30 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order firstClusteringOrder,
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, null, null, orderingType);
 
-    List<ClusteringKey> expected = getExpected(clusteringKeys, null, null, null, null, reverse);
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            null,
+            null,
+            null,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -321,7 +332,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             null,
             null,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -329,16 +341,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    firstClusteringKeyOrder,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (boolean endInclusive : Arrays.asList(true, false)) {
+              for (OrderingType orderingType : OrderingType.values()) {
+                for (boolean withLimit : Arrays.asList(false, true)) {
+                  scan_WithFirstClusteringKeyRange_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      orderingType,
+                      withLimit);
+                }
               }
             }
           }
@@ -351,7 +366,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order firstClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey;
@@ -368,20 +384,6 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first), startInclusive)
-            .withEnd(new Key(endClusteringKey.first), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -389,7 +391,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             endClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -405,7 +425,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             null,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -413,16 +434,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    firstClusteringKeyOrder,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (boolean endInclusive : Arrays.asList(true, false)) {
+              for (OrderingType orderingType : OrderingType.values()) {
+                for (boolean withLimit : Arrays.asList(false, true)) {
+                  scan_WithFirstClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      orderingType,
+                      withLimit);
+                }
               }
             }
           }
@@ -435,7 +459,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order firstClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startAndEndClusteringKey;
@@ -447,20 +472,6 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(2, DataType.INT)).first);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startAndEndClusteringKey.first), startInclusive)
-            .withEnd(new Key(startAndEndClusteringKey.first), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -468,7 +479,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             startAndEndClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            startAndEndClusteringKey,
+            startInclusive,
+            startAndEndClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -484,7 +513,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             null,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -492,16 +522,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    firstClusteringKeyOrder,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (boolean endInclusive : Arrays.asList(true, false)) {
+              for (OrderingType orderingType : OrderingType.values()) {
+                for (boolean withLimit : Arrays.asList(false, true)) {
+                  scan_WithFirstClusteringKeyRangeWithMinAndMaxValue_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      orderingType,
+                      withLimit);
+                }
               }
             }
           }
@@ -514,28 +547,14 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order firstClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
         new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
     ClusteringKey endClusteringKey =
         new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
-
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first), startInclusive)
-            .withEnd(new Key(endClusteringKey.first), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -543,7 +562,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             endClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -559,7 +596,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             null,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -567,14 +605,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  startInclusive,
-                  reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyStartRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    startInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -585,7 +626,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       boolean startInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey;
@@ -597,21 +639,26 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(1, DataType.INT)).first);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first), startInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
     List<ClusteringKey> expected =
-        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            startClusteringKey,
+            startInclusive,
+            null,
+            null,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -627,7 +674,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             null,
             startInclusive,
             null,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -635,14 +683,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  startInclusive,
-                  reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    startInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -653,27 +704,32 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       boolean startInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey startClusteringKey =
         new ClusteringKey(getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
 
     Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first), startInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
-    List<ClusteringKey> expected =
-        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            startClusteringKey,
+            startInclusive,
+            null,
+            null,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -689,7 +745,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             null,
             startInclusive,
             null,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -697,14 +754,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  endInclusive,
-                  reverse);
+          for (boolean endInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyEndRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    endInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -715,7 +775,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey endClusteringKey;
@@ -727,21 +788,26 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(getFirstClusteringKeyIndex(3, DataType.INT)).first);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withEnd(new Key(endClusteringKey.first), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
     List<ClusteringKey> expected =
-        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            null,
+            null,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -751,7 +817,14 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         actual,
         expected,
         description(
-            firstClusteringKeyType, firstClusteringOrder, null, null, null, endInclusive, reverse));
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            null,
+            endInclusive,
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -759,14 +832,17 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       throws java.util.concurrent.ExecutionException, InterruptedException {
     execute(
         (clusteringKeys, firstClusteringKeyType, firstClusteringKeyOrder) -> {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  endInclusive,
-                  reverse);
+          for (boolean endInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithFirstClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    endInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -777,27 +853,32 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType firstClusteringKeyType,
       Order firstClusteringOrder,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     ClusteringKey endClusteringKey =
         new ClusteringKey(getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType));
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
 
     Scan scan =
-        new Scan(getPartitionKey())
-            .withEnd(new Key(endClusteringKey.first), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, reverse ? Order.DESC : Order.ASC))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType, firstClusteringOrder, DataType.INT, Order.ASC));
-
-    List<ClusteringKey> expected =
-        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            DataType.INT,
+            Order.ASC,
+            null,
+            null,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -807,7 +888,14 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         actual,
         expected,
         description(
-            firstClusteringKeyType, firstClusteringOrder, null, null, null, endInclusive, reverse));
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            null,
+            null,
+            null,
+            endInclusive,
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -819,18 +907,21 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    firstClusteringKeyOrder,
-                    secondClusteringKeyType,
-                    secondClusteringKeyOrder,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (boolean endInclusive : Arrays.asList(true, false)) {
+              for (OrderingType orderingType : OrderingType.values()) {
+                for (boolean withLimit : Arrays.asList(false, true)) {
+                  scan_WithSecondClusteringKeyRange_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      secondClusteringKeyType,
+                      secondClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      orderingType,
+                      withLimit);
+                }
               }
             }
           }
@@ -845,7 +936,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order secondClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
@@ -877,28 +969,6 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(14).first, clusteringKeys.get(14).second);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
-            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -906,7 +976,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             endClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -922,7 +1010,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -934,18 +1023,21 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean endInclusive : Arrays.asList(true, false)) {
-              for (Boolean reverse : Arrays.asList(false, true)) {
-                scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
-                    clusteringKeys,
-                    firstClusteringKeyType,
-                    firstClusteringKeyOrder,
-                    secondClusteringKeyType,
-                    secondClusteringKeyOrder,
-                    startInclusive,
-                    endInclusive,
-                    reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (boolean endInclusive : Arrays.asList(true, false)) {
+              for (OrderingType orderingType : OrderingType.values()) {
+                for (boolean withLimit : Arrays.asList(false, true)) {
+                  scan_WithSecondClusteringKeyRangeWithSameValues_ShouldReturnProperResult(
+                      clusteringKeys,
+                      firstClusteringKeyType,
+                      firstClusteringKeyOrder,
+                      secondClusteringKeyType,
+                      secondClusteringKeyOrder,
+                      startInclusive,
+                      endInclusive,
+                      orderingType,
+                      withLimit);
+                }
               }
             }
           }
@@ -960,7 +1052,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order secondClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
@@ -987,32 +1080,6 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(9).first, clusteringKeys.get(9).second);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(
-                new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
-                startInclusive)
-            .withEnd(
-                new Key(startAndEndClusteringKey.first, startAndEndClusteringKey.second),
-                endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -1020,7 +1087,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             startAndEndClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startAndEndClusteringKey,
+            startInclusive,
+            startAndEndClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1036,7 +1121,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -1048,20 +1134,23 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean useMinValueForFirstClusteringKeyValue : Arrays.asList(true, false)) {
-            for (Boolean startInclusive : Arrays.asList(true, false)) {
-              for (Boolean endInclusive : Arrays.asList(true, false)) {
-                for (Boolean reverse : Arrays.asList(false, true)) {
-                  scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
-                      clusteringKeys,
-                      firstClusteringKeyType,
-                      firstClusteringKeyOrder,
-                      useMinValueForFirstClusteringKeyValue,
-                      secondClusteringKeyType,
-                      secondClusteringKeyOrder,
-                      startInclusive,
-                      endInclusive,
-                      reverse);
+          for (boolean useMinValueForFirstClusteringKeyValue : Arrays.asList(true, false)) {
+            for (boolean startInclusive : Arrays.asList(true, false)) {
+              for (boolean endInclusive : Arrays.asList(true, false)) {
+                for (OrderingType orderingType : OrderingType.values()) {
+                  for (boolean withLimit : Arrays.asList(false, true)) {
+                    scan_WithSecondClusteringKeyRangeWithMinAndMaxValues_ShouldReturnProperResult(
+                        clusteringKeys,
+                        firstClusteringKeyType,
+                        firstClusteringKeyOrder,
+                        useMinValueForFirstClusteringKeyValue,
+                        secondClusteringKeyType,
+                        secondClusteringKeyOrder,
+                        startInclusive,
+                        endInclusive,
+                        orderingType,
+                        withLimit);
+                  }
                 }
               }
             }
@@ -1078,7 +1167,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       Order secondClusteringOrder,
       boolean startInclusive,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     Value<?> firstClusteringKeyValue =
@@ -1089,36 +1179,12 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
-
     ClusteringKey startClusteringKey =
         new ClusteringKey(
             firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
     ClusteringKey endClusteringKey =
         new ClusteringKey(
             firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
-
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
-            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
         getExpected(
             clusteringKeys,
@@ -1126,7 +1192,25 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             startInclusive,
             endClusteringKey,
             endInclusive,
-            reverse);
+            orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startClusteringKey,
+            startInclusive,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1142,7 +1226,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             startInclusive,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -1154,16 +1239,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  secondClusteringKeyType,
-                  secondClusteringKeyOrder,
-                  startInclusive,
-                  reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyStartRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    startInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -1176,7 +1264,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       boolean startInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
@@ -1203,29 +1292,26 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(4).first, clusteringKeys.get(4).second);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
-        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startClusteringKey,
+            startInclusive,
+            null,
+            null,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1241,7 +1327,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             startInclusive,
             null,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -1253,16 +1340,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean startInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  secondClusteringKeyType,
-                  secondClusteringKeyOrder,
-                  startInclusive,
-                  reverse);
+          for (boolean startInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyStartRangeWithMinValue_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    startInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -1275,7 +1365,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       boolean startInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     Value<?> firstClusteringKeyValue = getMinValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
@@ -1283,34 +1374,29 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
-
     ClusteringKey startClusteringKey =
         new ClusteringKey(
             firstClusteringKeyValue, getMinValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
+    List<ClusteringKey> expected =
+        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
 
     Scan scan =
-        new Scan(getPartitionKey())
-            .withStart(new Key(startClusteringKey.first, startClusteringKey.second), startInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
-    List<ClusteringKey> expected =
-        getExpected(clusteringKeys, startClusteringKey, startInclusive, null, null, reverse);
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            startClusteringKey,
+            startInclusive,
+            null,
+            null,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1326,7 +1412,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             startInclusive,
             null,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -1338,16 +1425,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  secondClusteringKeyType,
-                  secondClusteringKeyOrder,
-                  endInclusive,
-                  reverse);
+          for (boolean endInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyEndRange_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    endInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -1360,7 +1450,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     if (firstClusteringKeyType == DataType.BOOLEAN) {
@@ -1387,29 +1478,26 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
           new ClusteringKey(clusteringKeys.get(14).first, clusteringKeys.get(14).second);
     }
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
-        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            null,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1425,7 +1513,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             null,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   @Test
@@ -1437,16 +1526,19 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             firstClusteringKeyOrder,
             secondClusteringKeyType,
             secondClusteringKeyOrder) -> {
-          for (Boolean endInclusive : Arrays.asList(true, false)) {
-            for (Boolean reverse : Arrays.asList(false, true)) {
-              scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
-                  clusteringKeys,
-                  firstClusteringKeyType,
-                  firstClusteringKeyOrder,
-                  secondClusteringKeyType,
-                  secondClusteringKeyOrder,
-                  endInclusive,
-                  reverse);
+          for (boolean endInclusive : Arrays.asList(true, false)) {
+            for (OrderingType orderingType : OrderingType.values()) {
+              for (boolean withLimit : Arrays.asList(false, true)) {
+                scan_WithSecondClusteringKeyEndRangeWithMaxValue_ShouldReturnProperResult(
+                    clusteringKeys,
+                    firstClusteringKeyType,
+                    firstClusteringKeyOrder,
+                    secondClusteringKeyType,
+                    secondClusteringKeyOrder,
+                    endInclusive,
+                    orderingType,
+                    withLimit);
+              }
             }
           }
         });
@@ -1459,7 +1551,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       DataType secondClusteringKeyType,
       Order secondClusteringOrder,
       boolean endInclusive,
-      boolean reverse)
+      OrderingType orderingType,
+      boolean withLimit)
       throws ExecutionException, IOException {
     // Arrange
     Value<?> firstClusteringKeyValue = getMaxValue(FIRST_CLUSTERING_KEY, firstClusteringKeyType);
@@ -1467,34 +1560,30 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
         clusteringKeys.stream()
             .filter(c -> c.first.equals(firstClusteringKeyValue))
             .collect(Collectors.toList());
-
     ClusteringKey endClusteringKey =
         new ClusteringKey(
             firstClusteringKeyValue, getMaxValue(SECOND_CLUSTERING_KEY, secondClusteringKeyType));
 
-    Scan scan =
-        new Scan(getPartitionKey())
-            .withEnd(new Key(endClusteringKey.first, endClusteringKey.second), endInclusive)
-            .withOrdering(
-                new Ordering(
-                    FIRST_CLUSTERING_KEY,
-                    reverse ? TestUtils.reverseOrder(firstClusteringOrder) : firstClusteringOrder))
-            .withOrdering(
-                new Ordering(
-                    SECOND_CLUSTERING_KEY,
-                    reverse
-                        ? TestUtils.reverseOrder(secondClusteringOrder)
-                        : secondClusteringOrder))
-            .forNamespace(getNamespaceName(firstClusteringKeyType))
-            .forTable(
-                getTableName(
-                    firstClusteringKeyType,
-                    firstClusteringOrder,
-                    secondClusteringKeyType,
-                    secondClusteringOrder));
-
     List<ClusteringKey> expected =
-        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, reverse);
+        getExpected(clusteringKeys, null, null, endClusteringKey, endInclusive, orderingType);
+
+    int limit = getLimit(withLimit, expected);
+    if (limit > 0) {
+      expected = expected.subList(0, limit);
+    }
+
+    Scan scan =
+        getScan(
+            firstClusteringKeyType,
+            firstClusteringOrder,
+            secondClusteringKeyType,
+            secondClusteringOrder,
+            null,
+            null,
+            endClusteringKey,
+            endInclusive,
+            orderingType,
+            limit);
 
     // Act
     List<Result> actual = scanAll(scan);
@@ -1510,7 +1599,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
             secondClusteringOrder,
             null,
             endInclusive,
-            reverse));
+            orderingType,
+            withLimit));
   }
 
   private List<ClusteringKey> prepareRecords(
@@ -1695,7 +1785,8 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       @Nullable Order secondClusteringOrder,
       @Nullable Boolean startInclusive,
       @Nullable Boolean endInclusive,
-      boolean reverse) {
+      OrderingType orderingType,
+      boolean withLimit) {
     StringBuilder builder = new StringBuilder();
     builder.append(
         String.format(
@@ -1713,7 +1804,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
     if (endInclusive != null) {
       builder.append(String.format(", endInclusive: %s", endInclusive));
     }
-    builder.append(String.format(", reverse: %s", reverse));
+    builder.append(String.format(", orderingType: %s, withLimit: %b", orderingType, withLimit));
     return builder.toString();
   }
 
@@ -1749,7 +1840,7 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       @Nullable Boolean startInclusive,
       @Nullable ClusteringKey endClusteringKey,
       @Nullable Boolean endInclusive,
-      boolean reverse) {
+      OrderingType orderingType) {
     List<ClusteringKey> ret = new ArrayList<>();
     for (ClusteringKey clusteringKey : clusteringKeys) {
       if (startClusteringKey != null && startInclusive != null) {
@@ -1766,11 +1857,90 @@ public abstract class StorageMultipleClusteringKeyScanIntegrationTestBase {
       }
       ret.add(clusteringKey);
     }
-
-    if (reverse) {
+    if (orderingType == OrderingType.BOTH_SPECIFIED_AND_REVERSED
+        || orderingType == OrderingType.ONLY_FIRST_SPECIFIED_AND_REVERSED) {
       Collections.reverse(ret);
     }
     return ret;
+  }
+
+  private int getLimit(boolean withLimit, List<ClusteringKey> expected) {
+    int limit = 0;
+    if (withLimit && !expected.isEmpty()) {
+      if (expected.size() == 1) {
+        limit = 1;
+      } else {
+        limit = RANDOM.nextInt(expected.size() - 1) + 1;
+      }
+    }
+    return limit;
+  }
+
+  private Scan getScan(
+      DataType firstClusteringKeyType,
+      Order firstClusteringOrder,
+      DataType secondClusteringKeyType,
+      Order secondClusteringOrder,
+      @Nullable ClusteringKey startClusteringKey,
+      @Nullable Boolean startInclusive,
+      @Nullable ClusteringKey endClusteringKey,
+      @Nullable Boolean endInclusive,
+      OrderingType orderingType,
+      int limit) {
+    Scan scan =
+        new Scan(getPartitionKey())
+            .forNamespace(getNamespaceName(firstClusteringKeyType))
+            .forTable(
+                getTableName(
+                    firstClusteringKeyType,
+                    firstClusteringOrder,
+                    secondClusteringKeyType,
+                    secondClusteringOrder));
+    if (startClusteringKey != null && startInclusive != null) {
+      Key key;
+      if (startClusteringKey.second != null) {
+        key = new Key(startClusteringKey.first, startClusteringKey.second);
+      } else {
+        key = new Key(startClusteringKey.first);
+      }
+      scan.withStart(key, startInclusive);
+    }
+    if (endClusteringKey != null && endInclusive != null) {
+      Key key;
+      if (endClusteringKey.second != null) {
+        key = new Key(endClusteringKey.first, endClusteringKey.second);
+      } else {
+        key = new Key(endClusteringKey.first);
+      }
+      scan.withEnd(key, endInclusive);
+    }
+    switch (orderingType) {
+      case BOTH_SPECIFIED:
+        scan.withOrdering(new Ordering(FIRST_CLUSTERING_KEY, firstClusteringOrder))
+            .withOrdering(new Ordering(SECOND_CLUSTERING_KEY, secondClusteringOrder));
+        break;
+      case ONLY_FIRST_SPECIFIED:
+        scan.withOrdering(new Ordering(FIRST_CLUSTERING_KEY, firstClusteringOrder));
+        break;
+      case BOTH_SPECIFIED_AND_REVERSED:
+        scan.withOrdering(
+                new Ordering(FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)))
+            .withOrdering(
+                new Ordering(SECOND_CLUSTERING_KEY, TestUtils.reverseOrder(secondClusteringOrder)));
+        break;
+      case ONLY_FIRST_SPECIFIED_AND_REVERSED:
+        scan.withOrdering(
+            new Ordering(FIRST_CLUSTERING_KEY, TestUtils.reverseOrder(firstClusteringOrder)));
+        break;
+      case NOTHING:
+        break;
+      default:
+        throw new AssertionError();
+    }
+    if (limit > 0) {
+      scan.withLimit(limit);
+    }
+    return scan;
   }
 
   private void assertScanResult(

@@ -33,11 +33,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -199,7 +197,20 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     List<Result> actual = scanAll(scan);
 
     // Assert
-    assertScanResultWithoutOrdering(actual, pKey, columnName4, Arrays.asList(0, 1, 2));
+    assertThat(actual.size()).isEqualTo(3);
+    assertThat(actual.get(0).getValue(columnName1).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(actual.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(columnName1).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(1).getValue(columnName4).isPresent()).isTrue();
+    assertThat(actual.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(1);
+    assertThat(actual.get(2).getValue(columnName1).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(actual.get(2).getValue(columnName4).isPresent()).isTrue();
+    assertThat(actual.get(2).getValue(columnName4).get().getAsInt()).isEqualTo(2);
+
     actual.forEach(
         a -> {
           assertThat(a.getValue(columnName1).isPresent()).isTrue();
@@ -240,7 +251,19 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     result = scanner.one();
     assertThat(result.isPresent()).isFalse();
 
-    assertScanResultWithoutOrdering(results, pKey, columnName4, Arrays.asList(0, 1, 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(1);
+    assertThat(results.get(2).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(columnName4).get().getAsInt()).isEqualTo(2);
 
     scanner.close();
   }
@@ -320,8 +343,19 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(scan);
-    assertScanResultWithoutOrdering(
-        results, pKey, columnName4, Arrays.asList(pKey + cKey, pKey + cKey + 1, pKey + cKey + 2));
+    assertThat(results.size()).isEqualTo(3);
+    assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(pKey + cKey);
+    assertThat(results.get(1).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(pKey + cKey + 1);
+    assertThat(results.get(2).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(2).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(2).getValue(columnName4).get().getAsInt()).isEqualTo(pKey + cKey + 2);
   }
 
   @Test
@@ -344,7 +378,15 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(new Key(columnName1, 0)));
-    assertScanResultWithoutOrdering(results, 0, columnName4, Arrays.asList(0, 1));
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(1);
   }
 
   @Test
@@ -363,7 +405,15 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
 
     // Assert
     List<Result> results = scanAll(new Scan(partitionKey));
-    assertScanResultWithoutOrdering(results, pKey, columnName4, Arrays.asList(cKey + 1, cKey + 2));
+    assertThat(results.size()).isEqualTo(2);
+    assertThat(results.get(0).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(0).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(0).getValue(columnName4).get().getAsInt()).isEqualTo(cKey + 1);
+    assertThat(results.get(1).getValue(columnName1).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName1).get().getAsInt()).isEqualTo(0);
+    assertThat(results.get(1).getValue(columnName4).isPresent()).isTrue();
+    assertThat(results.get(1).getValue(columnName4).get().getAsInt()).isEqualTo(cKey + 2);
   }
 
   @Test
@@ -552,26 +602,5 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     try (Scanner scanner = storage.scan(scan)) {
       return scanner.all();
     }
-  }
-
-  private void assertScanResultWithoutOrdering(
-      List<Result> actual,
-      int expectedPartitionKeyValue,
-      String checkedColumn,
-      List<Integer> expectedValues) {
-    Set<Integer> expectedValuesSet = new HashSet<>(expectedValues);
-    assertThat(actual.size()).isEqualTo(expectedValues.size());
-
-    for (Result result : actual) {
-      assertThat(result.getValue(columnName1))
-          .isEqualTo(Optional.of(new IntValue(columnName1, expectedPartitionKeyValue)));
-      assertThat(result.getValue(checkedColumn).isPresent()).isTrue();
-
-      int actualClusteringKeyValue = result.getValue(checkedColumn).get().getAsInt();
-      assertThat(expectedValuesSet).contains(actualClusteringKeyValue);
-      expectedValuesSet.remove(actualClusteringKeyValue);
-    }
-
-    assertThat(expectedValuesSet).isEmpty();
   }
 }
