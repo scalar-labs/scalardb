@@ -115,10 +115,6 @@ public class Snapshot {
     deleteSet.put(key, delete);
   }
 
-  public boolean containsKey(Key key) {
-    return writeSet.containsKey(key) || deleteSet.containsKey(key) || readSet.containsKey(key);
-  }
-
   public boolean containsKeyInReadSet(Key key) {
     return readSet.containsKey(key);
   }

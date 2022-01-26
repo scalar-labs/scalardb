@@ -2209,6 +2209,31 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   }
 
   @Test
+  public void scan_DeleteGivenBefore_ShouldScan() throws TransactionException {
+    // Arrange
+    TwoPhaseConsensusCommit transaction = manager.start();
+    transaction.put(preparePut(0, 0, TABLE_1).withValue(BALANCE, 1));
+    transaction.put(preparePut(0, 1, TABLE_1).withValue(BALANCE, 1));
+    transaction.prepare();
+    transaction.commit();
+
+    // Act
+    TwoPhaseConsensusCommit transaction1 = manager.start();
+    transaction1.delete(prepareDelete(0, 0, TABLE_1));
+    Scan scan = prepareScan(0, 0, 1, TABLE_1);
+    List<Result> results = transaction1.scan(scan);
+    assertThatCode(
+            () -> {
+              transaction1.prepare();
+              transaction1.commit();
+            })
+        .doesNotThrowAnyException();
+
+    // Assert
+    assertThat(results.size()).isEqualTo(1);
+  }
+
+  @Test
   public void start_CorrectTransactionIdGiven_ShouldNotThrowAnyExceptions() {
     // Arrange
     String transactionId = ANY_ID_1;
