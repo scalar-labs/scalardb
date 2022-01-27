@@ -21,7 +21,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
@@ -119,7 +118,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private static void initManagerAndCoordinator(DatabaseConfig config) {
     ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
+    manager = new TwoPhaseConsensusCommitManager(storage, admin, consensusCommitConfig);
     coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 
@@ -233,17 +232,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     Optional<Result> result;
     if (isGet) {
       result = transaction.get(prepareGet(0, 0, TABLE_1));
@@ -253,6 +241,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       result = Optional.of(results.get(0));
     }
 
+    // Assert
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
@@ -281,17 +270,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     Optional<Result> result;
     if (isGet) {
       result = transaction.get(prepareGet(0, 0, TABLE_1));
@@ -301,6 +279,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       result = Optional.of(results.get(0));
     }
 
+    // Assert
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
@@ -321,7 +300,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          boolean isGet) throws ExecutionException, CoordinatorException {
+          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -330,24 +309,27 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+    Optional<Result> result;
+    if (isGet) {
+      result = transaction.get(prepareGet(0, 0, TABLE_1));
+    } else {
+      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+      assertThat(results.size()).isEqualTo(1);
+      result = Optional.of(results.get(0));
+    }
 
     // Assert
     assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getAccountId(result.get())).isEqualTo(0);
+    assertThat(getAccountType(result.get())).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
   public void
       get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         true);
   }
@@ -355,7 +337,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         false);
   }
@@ -371,17 +353,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     Optional<Result> result;
     if (isGet) {
       result = transaction.get(prepareGet(0, 0, TABLE_1));
@@ -391,13 +362,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       result = Optional.of(results.get(0));
     }
 
+    // Assert
+    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
+    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
-    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
@@ -415,140 +386,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
         false);
   }
 
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.COMMITTED);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    transaction.setBeforeRecoveryHook(
-        () -> {
-          TwoPhaseConsensusCommit another = manager.start();
-          assertThatThrownBy(
-                  () -> {
-                    if (isGet) {
-                      another.get(prepareGet(0, 0, TABLE_1));
-                    } else {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
-                    }
-                  })
-              .isInstanceOf(UncommittedRecordException.class);
-        });
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    Optional<Result> result;
-    if (isGet) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(1);
-      result = Optional.of(results.get(0));
-    }
-
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getAccountId(result.get())).isEqualTo(0);
-    assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(INITIAL_BALANCE); // a rolled forward value
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        false);
-  }
-
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, current, TransactionState.ABORTED);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    transaction.setBeforeRecoveryHook(
-        () -> {
-          TwoPhaseConsensusCommit another = manager.start();
-          assertThatThrownBy(
-                  () -> {
-                    if (isGet) {
-                      another.get(prepareGet(0, 0, TABLE_1));
-                    } else {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
-                    }
-                  })
-              .isInstanceOf(UncommittedRecordException.class);
-        });
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    Optional<Result> result;
-    if (isGet) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(1);
-      result = Optional.of(results.get(0));
-    }
-
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getAccountId(result.get())).isEqualTo(0);
-    assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        false);
-  }
-
   private void selection_SelectionGivenForDeletedWhenCoordinatorStateCommitted_ShouldRollforward(
       boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
     // Arrange
@@ -559,17 +396,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     if (isGet) {
       Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
       assertThat(result.isPresent()).isFalse(); // deleted
@@ -601,17 +427,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     Optional<Result> result;
     if (isGet) {
       result = transaction.get(prepareGet(0, 0, TABLE_1));
@@ -621,6 +436,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       result = Optional.of(results.get(0));
     }
 
+    // Assert
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
@@ -641,7 +457,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          boolean isGet) throws ExecutionException, CoordinatorException {
+          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
     // Arrange
     long prepared_at = System.currentTimeMillis();
     populatePreparedRecordAndCoordinatorStateRecord(
@@ -650,24 +466,27 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
+    Optional<Result> result;
+    if (isGet) {
+      result = transaction.get(prepareGet(0, 0, TABLE_1));
+    } else {
+      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+      assertThat(results.size()).isEqualTo(1);
+      result = Optional.of(results.get(0));
+    }
 
     // Assert
     assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+    assertThat(result.isPresent()).isTrue();
+    assertThat(getAccountId(result.get())).isEqualTo(0);
+    assertThat(getAccountType(result.get())).isEqualTo(0);
+    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
   }
 
   @Test
   public void
       get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         true);
   }
@@ -675,7 +494,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
   @Test
   public void
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException {
+          throws ExecutionException, CoordinatorException, CrudException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
         false);
   }
@@ -691,17 +510,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     TwoPhaseConsensusCommit transaction = manager.start();
 
     // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
     Optional<Result> result;
     if (isGet) {
       result = transaction.get(prepareGet(0, 0, TABLE_1));
@@ -711,13 +519,13 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       result = Optional.of(results.get(0));
     }
 
+    // Assert
+    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
+    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
     assertThat(result.isPresent()).isTrue();
     assertThat(getAccountId(result.get())).isEqualTo(0);
     assertThat(getAccountType(result.get())).isEqualTo(0);
     assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isTrue();
-    assertThat(coordinator.getState(ANY_ID_2).get().getState()).isEqualTo(TransactionState.ABORTED);
   }
 
   @Test
@@ -732,134 +540,6 @@ public class TwoPhaseConsensusCommitIntegrationTest {
       scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction()
           throws ExecutionException, TransactionException, CoordinatorException {
     selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
-        false);
-  }
-
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.COMMITTED);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    transaction.setBeforeRecoveryHook(
-        () -> {
-          TwoPhaseConsensusCommit another = manager.start();
-          assertThatThrownBy(
-                  () -> {
-                    if (isGet) {
-                      another.get(prepareGet(0, 0, TABLE_1));
-                    } else {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
-                    }
-                  })
-              .isInstanceOf(UncommittedRecordException.class);
-        });
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    if (isGet) {
-      Optional<Result> result = transaction.get(prepareGet(0, 0, TABLE_1));
-      assertThat(result.isPresent()).isFalse(); // deleted
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(0); // deleted
-    }
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateCommittedAndRolledForwardByAnother_ShouldRollforwardProperly(
-        false);
-  }
-
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-          boolean isGet) throws ExecutionException, TransactionException, CoordinatorException {
-    // Arrange
-    long current = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, current, TransactionState.ABORTED);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    transaction.setBeforeRecoveryHook(
-        () -> {
-          TwoPhaseConsensusCommit another = manager.start();
-          assertThatThrownBy(
-                  () -> {
-                    if (isGet) {
-                      another.get(prepareGet(0, 0, TABLE_1));
-                    } else {
-                      another.scan(prepareScan(0, 0, 0, TABLE_1));
-                    }
-                  })
-              .isInstanceOf(UncommittedRecordException.class);
-        });
-
-    // Act Assert
-    assertThatThrownBy(
-            () -> {
-              if (isGet) {
-                transaction.get(prepareGet(0, 0, TABLE_1));
-              } else {
-                transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-              }
-            })
-        .isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    Optional<Result> result;
-    if (isGet) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(1);
-      result = Optional.of(results.get(0));
-    }
-
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getAccountId(result.get())).isEqualTo(0);
-    assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly()
-          throws ExecutionException, TransactionException, CoordinatorException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateAbortedAndRolledBackByAnother_ShouldRollbackProperly(
         false);
   }
 

@@ -11,10 +11,8 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Selection;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
@@ -22,8 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A transaction manager that implements a transaction protocol on the basis of two-phase commit on
@@ -40,22 +36,18 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public class ConsensusCommit implements DistributedTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final RecoveryHandler recovery;
   private Optional<String> namespace;
   private Optional<String> tableName;
-  private Runnable beforeRecoveryHook;
+
   private Runnable beforeCommitHook;
 
-  public ConsensusCommit(CrudHandler crud, CommitHandler commit, RecoveryHandler recovery) {
+  public ConsensusCommit(CrudHandler crud, CommitHandler commit) {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
-    this.recovery = checkNotNull(recovery);
     namespace = Optional.empty();
     tableName = Optional.empty();
-    this.beforeRecoveryHook = () -> {};
     this.beforeCommitHook = () -> {};
   }
 
@@ -94,28 +86,16 @@ public class ConsensusCommit implements DistributedTransaction {
   public Optional<Result> get(Get get) throws CrudException {
     ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     List<String> projections = new ArrayList<>(get.getProjections());
-    get.clearProjections(); // project all
-    try {
-      return crud.get(get).map(r -> new FilteredResult(r, projections));
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(get, e.getResults());
-      throw e;
-    }
+    return crud.get(get).map(r -> new FilteredResult(r, projections));
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     List<String> projections = new ArrayList<>(scan.getProjections());
-    scan.clearProjections(); // project all
-    try {
-      return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, projections))
-          .collect(Collectors.toList());
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(scan, e.getResults());
-      throw e;
-    }
+    return crud.scan(scan).stream()
+        .map(r -> new FilteredResult(r, projections))
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -177,23 +157,7 @@ public class ConsensusCommit implements DistributedTransaction {
   }
 
   @VisibleForTesting
-  RecoveryHandler getRecoveryHandler() {
-    return recovery;
-  }
-
-  @VisibleForTesting
-  void setBeforeRecoveryHook(Runnable beforeRecoveryHook) {
-    this.beforeRecoveryHook = beforeRecoveryHook;
-  }
-
-  @VisibleForTesting
   void setBeforeCommitHook(Runnable beforeCommitHook) {
     this.beforeCommitHook = beforeCommitHook;
-  }
-
-  private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.debug("recover uncommitted records: {}", results);
-    beforeRecoveryHook.run();
-    results.forEach(r -> recovery.recover(selection, r));
   }
 }

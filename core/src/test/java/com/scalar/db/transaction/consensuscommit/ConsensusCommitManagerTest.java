@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
@@ -23,9 +24,17 @@ public class ConsensusCommitManagerTest {
   @SuppressWarnings("unused")
   private DistributedStorage storage;
 
+  @Mock
+  @SuppressWarnings("unused")
+  private DistributedStorageAdmin admin;
+
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
-  @Mock private RecoveryHandler recovery;
+
+  @Mock
+  @SuppressWarnings("unused")
+  private RecoveryHandler recovery;
+
   @Mock private CommitHandler commit;
   @InjectMocks private ConsensusCommitManager manager;
 
@@ -33,6 +42,7 @@ public class ConsensusCommitManagerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
+    // Arrange
     when(config.getIsolation()).thenReturn(Isolation.SNAPSHOT);
     when(config.getSerializableStrategy()).thenReturn(SerializableStrategy.EXTRA_READ);
   }
@@ -73,7 +83,7 @@ public class ConsensusCommitManagerTest {
   }
 
   @Test
-  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommitAndRecovery() {
+  public void start_CalledTwice_ReturnRespectiveConsensusCommitWithSharedCommit() {
     // Arrange
 
     // Act
@@ -87,9 +97,6 @@ public class ConsensusCommitManagerTest {
     assertThat(transaction1.getCommitHandler())
         .isEqualTo(transaction2.getCommitHandler())
         .isEqualTo(commit);
-    assertThat(transaction1.getRecoveryHandler())
-        .isEqualTo(transaction2.getRecoveryHandler())
-        .isEqualTo(recovery);
   }
 
   @Test

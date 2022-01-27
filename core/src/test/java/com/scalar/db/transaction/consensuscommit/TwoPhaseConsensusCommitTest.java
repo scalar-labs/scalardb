@@ -18,7 +18,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.Status;
@@ -44,7 +43,6 @@ public class TwoPhaseConsensusCommitTest {
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private RecoveryHandler recovery;
   @Mock private TwoPhaseConsensusCommitManager manager;
 
   @Before
@@ -64,8 +62,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     TransactionResult result = mock(TransactionResult.class);
     when(crud.get(get)).thenReturn(Optional.of(result));
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -75,33 +72,13 @@ public class TwoPhaseConsensusCommitTest {
 
     // Assert
     assertThat(actual).isPresent();
-    verify(recovery, never()).recover(get, result);
     verify(crud).get(get);
-  }
-
-  @Test
-  public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.get(get)).thenThrow(toThrow);
-    when(crud.getSnapshot()).thenReturn(snapshot);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act
-    assertThatThrownBy(() -> transaction.get(get)).isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(get, result);
   }
 
   @Test
   public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
     when(crud.scan(scan)).thenReturn(results);
@@ -118,8 +95,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void put_PutGiven_ShouldCallCrudHandlerPut() {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -132,8 +108,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -146,8 +121,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -160,8 +134,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -174,8 +147,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -190,8 +162,7 @@ public class TwoPhaseConsensusCommitTest {
   public void prepare_ProcessedCrudGiven_ShouldPrepareWithSnapshot()
       throws PreparationException, CommitException, UnknownTransactionStatusException {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
 
     // Act
@@ -205,8 +176,7 @@ public class TwoPhaseConsensusCommitTest {
   public void validate_ProcessedCrudGiven_ShouldPerformPreCommitValidationWithSnapshot()
       throws ValidationException, CommitException, UnknownTransactionStatusException {
     // Arrange
-    TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
+    TwoPhaseConsensusCommit transaction = new TwoPhaseConsensusCommit(crud, commit, false, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -223,7 +193,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true;
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -241,7 +211,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = false; // means it's a participant process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
@@ -261,7 +231,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.VALIDATED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
@@ -280,7 +250,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
@@ -296,7 +266,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
 
@@ -314,7 +284,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
     doThrow(CommitException.class).when(commit).prepare(snapshot, false);
 
@@ -334,7 +304,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = true; // means it's a coordinator process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     doThrow(CommitException.class).when(commit).commitState(snapshot);
@@ -353,7 +323,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = false; // means it's a participant process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     transaction.status = Status.PREPARED;
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
@@ -372,7 +342,7 @@ public class TwoPhaseConsensusCommitTest {
     // Arrange
     boolean isCoordinator = false; // means it's a participant process
     TwoPhaseConsensusCommit transaction =
-        new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, manager);
+        new TwoPhaseConsensusCommit(crud, commit, isCoordinator, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
     when(snapshot.getId()).thenReturn(ANY_TX_ID);
     doThrow(CommitException.class).when(commit).prepare(snapshot, false);

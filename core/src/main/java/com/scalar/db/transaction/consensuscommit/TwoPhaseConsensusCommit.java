@@ -10,7 +10,6 @@ import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.Selection;
 import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
@@ -18,7 +17,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -30,12 +28,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
 public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
-  private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
   @VisibleForTesting
   enum Status {
@@ -51,7 +46,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
 
   private final CrudHandler crud;
   private final CommitHandler commit;
-  private final RecoveryHandler recovery;
   private final boolean isCoordinator;
   private final TwoPhaseConsensusCommitManager manager;
 
@@ -61,18 +55,15 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   @VisibleForTesting Status status;
 
   // For test
-  private Runnable beforeRecoveryHook = () -> {};
   private Runnable beforePrepareHook = () -> {};
 
   public TwoPhaseConsensusCommit(
       CrudHandler crud,
       CommitHandler commit,
-      RecoveryHandler recovery,
       boolean isCoordinator,
       TwoPhaseConsensusCommitManager manager) {
     this.crud = crud;
     this.commit = commit;
-    this.recovery = recovery;
     this.isCoordinator = isCoordinator;
     this.manager = manager;
 
@@ -116,13 +107,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     updateTransactionExpirationTime();
     setTargetToIfNot(get);
     List<String> projections = new ArrayList<>(get.getProjections());
-    get.clearProjections(); // project all
-    try {
-      return crud.get(get).map(r -> new FilteredResult(r, projections));
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(get, e.getResults());
-      throw e;
-    }
+    return crud.get(get).map(r -> new FilteredResult(r, projections));
   }
 
   @Override
@@ -131,15 +116,9 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     updateTransactionExpirationTime();
     setTargetToIfNot(scan);
     List<String> projections = new ArrayList<>(scan.getProjections());
-    scan.clearProjections(); // project all
-    try {
-      return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, projections))
-          .collect(Collectors.toList());
-    } catch (UncommittedRecordException e) {
-      lazyRecovery(scan, e.getResults());
-      throw e;
-    }
+    return crud.scan(scan).stream()
+        .map(r -> new FilteredResult(r, projections))
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -310,16 +289,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   @VisibleForTesting
-  RecoveryHandler getRecoveryHandler() {
-    return recovery;
-  }
-
-  @VisibleForTesting
-  void setBeforeRecoveryHook(Runnable beforeRecoveryHook) {
-    this.beforeRecoveryHook = beforeRecoveryHook;
-  }
-
-  @VisibleForTesting
   void setBeforePrepareHook(Runnable beforePrepareHook) {
     this.beforePrepareHook = beforePrepareHook;
   }
@@ -335,12 +304,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     if (!isCoordinator) {
       manager.updateTransactionExpirationTime(crud.getSnapshot().getId());
     }
-  }
-
-  private void lazyRecovery(Selection selection, List<TransactionResult> results) {
-    LOGGER.debug("recover uncommitted records: " + results);
-    beforeRecoveryHook.run();
-    results.forEach(r -> recovery.recover(selection, r));
   }
 
   private void setTargetToIfNot(Operation operation) {

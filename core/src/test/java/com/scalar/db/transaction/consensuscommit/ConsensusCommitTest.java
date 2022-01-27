@@ -1,11 +1,9 @@
 package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,7 +15,6 @@ import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,7 +36,6 @@ public class ConsensusCommitTest {
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
-  @Mock private RecoveryHandler recovery;
   @InjectMocks private ConsensusCommit consensus;
 
   @Before
@@ -67,23 +63,7 @@ public class ConsensusCommitTest {
 
     // Assert
     assertThat(actual).isPresent();
-    verify(recovery, never()).recover(get, result);
     verify(crud).get(get);
-  }
-
-  @Test
-  public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
-    // Arrange
-    TransactionResult result = mock(TransactionResult.class);
-    UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
-    when(crud.get(get)).thenThrow(toThrow);
-    when(toThrow.getResults()).thenReturn(Collections.singletonList(result));
-
-    // Act Assert
-    assertThatThrownBy(() -> consensus.get(get)).isInstanceOf(UncommittedRecordException.class);
-
-    // Assert
-    verify(recovery).recover(get, result);
   }
 
   @Test
