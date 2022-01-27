@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -259,6 +258,7 @@ public class Snapshot {
     }
   }
 
+  @VisibleForTesting
   void toSerializableWithExtraRead(DistributedStorage storage)
       throws ExecutionException, CommitConflictException {
     if (!isExtraReadEnabled()) {
@@ -271,18 +271,19 @@ public class Snapshot {
     for (Map.Entry<Scan, List<Key>> entry : scanSet.entrySet()) {
       tasks.add(
           () -> {
-            Set<TransactionResult> currentReadSet = new HashSet<>();
+            Map<Key, TransactionResult> currentReadMap = new HashMap<>();
             Set<Key> validatedReadSet = new HashSet<>();
             Scanner scanner = null;
             try {
-              scanner = storage.scan(entry.getKey());
+              Scan scan = entry.getKey();
+              scanner = storage.scan(scan);
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
                 // Ignore records that this transaction has prepared (and that are in the write set)
                 if (transactionResult.getId().equals(id)) {
                   continue;
                 }
-                currentReadSet.add(transactionResult);
+                currentReadMap.put(new Key(scan, result), transactionResult);
               }
             } finally {
               if (scanner != null) {
@@ -299,15 +300,15 @@ public class Snapshot {
                 continue;
               }
               // Check if read records are not changed
-              if (readSet.get(key).isPresent()
-                  && !currentReadSet.contains(readSet.get(key).get())) {
+              TransactionResult latestResult = currentReadMap.get(key);
+              if (isChanged(Optional.of(latestResult), readSet.get(key))) {
                 throwExceptionDueToAntiDependency();
               }
               validatedReadSet.add(key);
             }
 
             // Check if the size of a read set by scan is not changed
-            if (currentReadSet.size() != validatedReadSet.size()) {
+            if (currentReadMap.size() != validatedReadSet.size()) {
               throwExceptionDueToAntiDependency();
             }
           });
@@ -336,15 +337,27 @@ public class Snapshot {
                     .forNamespace(key.getNamespace())
                     .forTable(key.getTable());
 
-            Optional<TransactionResult> result = storage.get(get).map(TransactionResult::new);
+            Optional<TransactionResult> latestResult = storage.get(get).map(TransactionResult::new);
             // Check if a read record is not changed
-            if (!result.equals(entry.getValue())) {
+            if (isChanged(latestResult, entry.getValue())) {
               throwExceptionDueToAntiDependency();
             }
           });
     }
 
     parallelExecutor.validate(tasks);
+  }
+
+  private boolean isChanged(
+      Optional<TransactionResult> latestResult, Optional<TransactionResult> result) {
+    if (latestResult.isPresent() != result.isPresent()) {
+      return true;
+    }
+    if (!latestResult.isPresent()) {
+      return false;
+    }
+    return !latestResult.get().getId().equals(result.get().getId())
+        || latestResult.get().getVersion() != result.get().getVersion();
   }
 
   private void throwExceptionDueToPotentialAntiDependency() throws CommitConflictException {
@@ -365,7 +378,7 @@ public class Snapshot {
   }
 
   @Immutable
-  static final class Key implements Comparable<Key> {
+  public static final class Key implements Comparable<Key> {
     private final String namespace;
     private final String table;
     private final com.scalar.db.io.Key partitionKey;
@@ -383,15 +396,11 @@ public class Snapshot {
       this((Operation) delete);
     }
 
-    public Key(
-        String namespace,
-        String table,
-        com.scalar.db.io.Key partitionKey,
-        @Nullable com.scalar.db.io.Key clusteringKey) {
-      this.namespace = namespace;
-      this.table = table;
-      this.partitionKey = partitionKey;
-      this.clusteringKey = Optional.ofNullable(clusteringKey);
+    public Key(Scan scan, Result result) {
+      this.namespace = scan.forNamespace().get();
+      this.table = scan.forTable().get();
+      this.partitionKey = result.getPartitionKey().get();
+      this.clusteringKey = result.getClusteringKey();
     }
 
     private Key(Operation operation) {

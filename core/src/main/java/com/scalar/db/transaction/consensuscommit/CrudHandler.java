@@ -13,7 +13,6 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UncommittedRecordException;
-import com.scalar.db.io.Key;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +72,7 @@ public class CrudHandler {
           throw new UncommittedRecordException(result, "the record needs recovery");
         }
 
-        Snapshot.Key key = getSnapshotKey(r, scan);
+        Snapshot.Key key = new Snapshot.Key(scan, r);
 
         if (!snapshot.containsKeyInReadSet(key)) {
           snapshot.put(key, Optional.of(result));
@@ -120,16 +119,6 @@ public class CrudHandler {
     } catch (ExecutionException e) {
       throw new CrudException("scan failed.", e);
     }
-  }
-
-  private Snapshot.Key getSnapshotKey(Result result, Scan scan) throws CrudException {
-    Optional<Key> partitionKey = result.getPartitionKey();
-    Optional<Key> clusteringKey = result.getClusteringKey();
-    return new Snapshot.Key(
-        scan.forNamespace().get(),
-        scan.forTable().get(),
-        partitionKey.orElseThrow(() -> new CrudException("can't get a snapshot key")),
-        clusteringKey.orElse(null));
   }
 
   public Snapshot getSnapshot() {

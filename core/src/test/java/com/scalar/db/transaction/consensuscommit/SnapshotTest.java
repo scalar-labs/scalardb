@@ -28,10 +28,10 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -41,6 +41,7 @@ public class SnapshotTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_ID = "id";
+  private static final int ANY_VERSION = 1;
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -74,10 +75,10 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
-    readSet = new ConcurrentHashMap<>();
-    scanSet = new ConcurrentHashMap<>();
-    writeSet = new ConcurrentHashMap<>();
-    deleteSet = new ConcurrentHashMap<>();
+    readSet = new HashMap<>();
+    scanSet = new HashMap<>();
+    writeSet = new HashMap<>();
+    deleteSet = new HashMap<>();
 
     return spy(
         new Snapshot(
@@ -93,6 +94,10 @@ public class SnapshotTest {
 
   private TransactionResult prepareResult(String txId) {
     TransactionResult result = mock(TransactionResult.class);
+    when(result.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
+    when(result.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
     when(result.getValues())
         .thenReturn(
             ImmutableMap.<String, Value<?>>builder()
@@ -100,7 +105,8 @@ public class SnapshotTest {
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_3))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
-                .put(Attribute.ID, new TextValue(txId))
+                .put(Attribute.ID, Attribute.toIdValue(txId))
+                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
     return result;
   }
@@ -267,12 +273,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Scan scan = prepareScan();
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            scan.getStartClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     List<Snapshot.Key> expected = Collections.singletonList(key);
 
     // Act
@@ -311,7 +312,8 @@ public class SnapshotTest {
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
-                .put(Attribute.ID, new TextValue(ANY_ID))
+                .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
+                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
     assertThat(actual.get().getValue(ANY_NAME_1).get().getAsString().get()).isEqualTo(ANY_TEXT_1);
     assertThat(actual.get().getValue(ANY_NAME_2).get().getAsString().get()).isEqualTo(ANY_TEXT_2);
@@ -597,12 +599,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Scan scan = prepareScan();
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            scan.getStartClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     Put put = preparePut();
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
@@ -684,10 +681,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Scan scan = prepareScan();
-    Get get = prepareGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
@@ -709,10 +705,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Scan scan = prepareScan();
-    Get get = prepareGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
@@ -775,25 +770,42 @@ public class SnapshotTest {
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
-    Snapshot.Key key1 =
-        new Snapshot.Key(
-            scan1.forNamespace().get(),
-            scan1.forTable().get(),
-            scan1.getPartitionKey(),
-            scan1.getStartClusteringKey().get());
-    Snapshot.Key key2 =
-        new Snapshot.Key(
-            scan2.forNamespace().get(),
-            scan2.forTable().get(),
-            scan2.getPartitionKey(),
-            scan2.getStartClusteringKey().get());
-
     Result result1 = mock(TransactionResult.class);
+    when(result1.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
+    when(result1.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
     when(result1.getValues())
-        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id1")));
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1,
+                new TextValue(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2,
+                new TextValue(ANY_NAME_2, ANY_TEXT_2),
+                Attribute.ID,
+                Attribute.toIdValue("id1"),
+                Attribute.VERSION,
+                Attribute.toVersionValue(ANY_VERSION)));
+
     Result result2 = mock(TransactionResult.class);
+    when(result2.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2))));
+    when(result2.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1))));
     when(result2.getValues())
-        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id2")));
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1,
+                new TextValue(ANY_NAME_1, ANY_TEXT_2),
+                ANY_NAME_2,
+                new TextValue(ANY_NAME_2, ANY_TEXT_1),
+                Attribute.ID,
+                Attribute.toIdValue("id2"),
+                Attribute.VERSION,
+                Attribute.toVersionValue(ANY_VERSION)));
+
+    Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
 
     snapshot.put(scan1, Collections.singletonList(key1));
     snapshot.put(scan2, Collections.singletonList(key2));
