@@ -14,7 +14,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import com.scalar.db.graphql.schema.ScalarDbTypes;
 import com.scalar.db.graphql.schema.ScalarDbTypes.DeleteConditionType;
 import com.scalar.db.graphql.schema.ScalarDbTypes.PutConditionType;
@@ -51,7 +51,7 @@ public class DataFetcherHelper {
   }
 
   static DistributedTransaction getCurrentTransaction(DataFetchingEnvironment environment) {
-    return environment.getGraphQlContext().get(Constants.CONTEXT_TRANSACTION_KEY);
+    return environment.getGraphQlContext().get(GraphQlConstants.CONTEXT_TRANSACTION_KEY);
   }
 
   static Value<?> createValueFromMap(String name, Map<String, Object> map) {
@@ -76,10 +76,10 @@ public class DataFetcherHelper {
   }
 
   private static Object getOneScalarValue(Map<String, Object> map) {
-    Set<String> valueKeys = Sets.intersection(map.keySet(), Constants.SCALAR_VALUE_KEYS);
+    Set<String> valueKeys = Sets.intersection(map.keySet(), GraphQlConstants.SCALAR_VALUE_KEYS);
     if (valueKeys.size() != 1) {
       throw new IllegalArgumentException(
-          "One and only one of " + Constants.SCALAR_VALUE_KEYS + " must be specified.");
+          "One and only one of " + GraphQlConstants.SCALAR_VALUE_KEYS + " must be specified.");
     }
     return map.get(valueKeys.stream().findFirst().get());
   }
@@ -88,7 +88,7 @@ public class DataFetcherHelper {
     String exName = exception.getClass().getSimpleName();
     return GraphqlErrorBuilder.newError(environment)
         .message("Scalar DB %s happened while fetching data: %s", exName, exception.getMessage())
-        .extensions(ImmutableMap.of(Constants.ERRORS_EXTENSIONS_EXCEPTION_KEY, exName))
+        .extensions(ImmutableMap.of(GraphQlConstants.ERRORS_EXTENSIONS_EXCEPTION_KEY, exName))
         .errorType(ErrorType.DataFetchingException)
         .build();
   }

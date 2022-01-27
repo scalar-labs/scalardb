@@ -1,8 +1,8 @@
-package com.scalar.db.graphql.schema;
+package com.scalar.db.graphql;
 
 import com.google.common.collect.ImmutableSet;
 
-public final class Constants {
+public final class GraphQlConstants {
   public static final String TRANSACTION_DIRECTIVE_NAME = "transaction";
   public static final String TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME = "txId";
   public static final String TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME = "commit";
@@ -12,5 +12,5 @@ public final class Constants {
       ImmutableSet.of(
           "intValue", "bigIntValue", "floatValue", "doubleValue", "textValue", "booleanValue");
 
-  private Constants() {}
+  private GraphQlConstants() {}
 }

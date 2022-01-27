@@ -1,7 +1,7 @@
 package com.scalar.db.graphql.instrumentation.validation;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
@@ -36,7 +36,7 @@ public class AbortFieldValidation implements FieldValidation {
 
     ImmutableList.Builder<GraphQLError> errors = ImmutableList.builder();
     List<Directive> transactionDirectives =
-        operationDefinition.getDirectives(Constants.TRANSACTION_DIRECTIVE_NAME);
+        operationDefinition.getDirectives(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME);
     SourceLocation location = abortField.get().getSourceLocation();
     if (transactionDirectives.isEmpty()) {
       errors.add(
@@ -44,9 +44,10 @@ public class AbortFieldValidation implements FieldValidation {
               "transaction directive with txId is required to abort transaction", location));
     } else {
       Directive directive = transactionDirectives.get(0); // @transaction is not repeatable
-      Argument txIdArg = directive.getArgument(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
+      Argument txIdArg =
+          directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
       Argument commitArg =
-          directive.getArgument(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
+          directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
       if (txIdArg == null
           || txIdArg.getValue() == null
           || txIdArg.getValue() instanceof NullValue) {

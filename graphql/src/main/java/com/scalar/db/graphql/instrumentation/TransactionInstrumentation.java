@@ -9,7 +9,7 @@ import com.scalar.db.exception.transaction.AbortException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import com.scalar.db.util.ActiveExpiringMap;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
@@ -69,16 +69,17 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     List<Directive> transactionDirectives =
         executionContext
             .getOperationDefinition()
-            .getDirectives(Constants.TRANSACTION_DIRECTIVE_NAME);
+            .getDirectives(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME);
 
     if (transactionDirectives.isEmpty()) {
       return SimpleInstrumentationContext.noOp();
     }
 
     Directive directive = transactionDirectives.get(0); // @transaction is not repeatable
-    Argument txIdArg = directive.getArgument(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
+    Argument txIdArg =
+        directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
     Argument commitArg =
-        directive.getArgument(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
+        directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
 
     DistributedTransaction transaction;
     if (txIdArg == null) {
@@ -107,7 +108,7 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
                     return new AbortExecutionException(message);
                   });
     }
-    graphQLContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    graphQLContext.put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
 
     boolean isCommitTrue =
         commitArg != null
@@ -169,7 +170,8 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
 
     // If a transaction is ongoing, transaction ID should be included in the "extensions" key of the
     // result.
-    DistributedTransaction transaction = graphQLContext.get(Constants.CONTEXT_TRANSACTION_KEY);
+    DistributedTransaction transaction =
+        graphQLContext.get(GraphQlConstants.CONTEXT_TRANSACTION_KEY);
     if (transaction == null) {
       return CompletableFuture.completedFuture(executionResult);
     }

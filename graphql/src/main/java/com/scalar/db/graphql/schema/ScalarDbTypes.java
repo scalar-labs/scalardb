@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableSet;
 import com.scalar.db.api.ConditionalExpression.Operator;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Scan.Ordering.Order;
+import com.scalar.db.graphql.GraphQlConstants;
 import com.scalar.db.io.DataType;
 import graphql.Scalars;
 import graphql.introspection.Introspection.DirectiveLocation;
@@ -28,14 +29,14 @@ import java.util.List;
 public final class ScalarDbTypes {
   public static final GraphQLDirective TRANSACTION_DIRECTIVE =
       newDirective()
-          .name(Constants.TRANSACTION_DIRECTIVE_NAME)
+          .name(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)
           .argument(
               newArgument()
-                  .name(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME)
+                  .name(GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME)
                   .type(Scalars.GraphQLString))
           .argument(
               newArgument()
-                  .name(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME)
+                  .name(GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME)
                   .type(Scalars.GraphQLBoolean))
           .validLocations(DirectiveLocation.MUTATION, DirectiveLocation.QUERY)
           .build();

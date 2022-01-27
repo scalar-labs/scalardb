@@ -1,7 +1,7 @@
 package com.scalar.db.graphql.instrumentation.validation;
 
 import com.google.common.collect.Sets;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import com.scalar.db.graphql.schema.ScalarDbTypes.DeleteConditionType;
 import com.scalar.db.graphql.schema.ScalarDbTypes.PutConditionType;
 import graphql.ErrorType;
@@ -97,10 +97,11 @@ public class ConditionalExpressionValidation implements FieldValidation {
           createError(
               "expressions must be present for " + type + " condition type", fieldAndArguments));
     } else if (expressions.stream()
-        .anyMatch(ex -> Sets.intersection(ex.keySet(), Constants.SCALAR_VALUE_KEYS).size() != 1)) {
+        .anyMatch(
+            ex -> Sets.intersection(ex.keySet(), GraphQlConstants.SCALAR_VALUE_KEYS).size() != 1)) {
       return Optional.of(
           createError(
-              "expression must have only one of " + Constants.SCALAR_VALUE_KEYS,
+              "expression must have only one of " + GraphQlConstants.SCALAR_VALUE_KEYS,
               fieldAndArguments));
     }
     return Optional.empty();
