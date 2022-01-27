@@ -16,7 +16,7 @@ import com.scalar.db.graphql.datafetcher.MutationMutateDataFetcher;
 import com.scalar.db.graphql.datafetcher.MutationPutDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryGetDataFetcher;
 import com.scalar.db.graphql.datafetcher.QueryScanDataFetcher;
-import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
+import com.scalar.db.graphql.instrumentation.TransactionInstrumentation;
 import com.scalar.db.graphql.instrumentation.validation.AbortFieldValidation;
 import com.scalar.db.graphql.instrumentation.validation.ConditionalExpressionValidation;
 import com.scalar.db.graphql.instrumentation.validation.ScanStartAndEndValidation;
