@@ -153,7 +153,7 @@ jobs:
 
       - run:
           name: Run integration test
-          no_output_timeout: 20m
+          no_output_timeout: 30m
           command: gradle integrationTestCosmos -Dscalardb.cosmos.uri=${COSMOS_URI} -Dscalardb.cosmos.password=${COSMOS_PASSWORD} -Dscalardb.cosmos.database_prefix="${CIRCLE_BUILD_NUM}_"
 
       - run:
