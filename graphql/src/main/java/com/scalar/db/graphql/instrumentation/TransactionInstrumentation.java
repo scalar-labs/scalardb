@@ -67,19 +67,15 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     GraphQLContext graphQLContext = executionContext.getGraphQLContext();
 
     List<Directive> transactionDirectives =
-        executionContext
-            .getOperationDefinition()
-            .getDirectives(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME);
+        executionContext.getOperationDefinition().getDirectives("transaction");
 
     if (transactionDirectives.isEmpty()) {
       return SimpleInstrumentationContext.noOp();
     }
 
     Directive directive = transactionDirectives.get(0); // @transaction is not repeatable
-    Argument txIdArg =
-        directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME);
-    Argument commitArg =
-        directive.getArgument(GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME);
+    Argument txIdArg = directive.getArgument("txId");
+    Argument commitArg = directive.getArgument("commit");
 
     DistributedTransaction transaction;
     if (txIdArg == null) {

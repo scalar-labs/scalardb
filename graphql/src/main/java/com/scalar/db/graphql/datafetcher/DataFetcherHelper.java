@@ -43,7 +43,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DataFetcherHelper {
-
   private final TableGraphQlModel tableGraphQlModel;
 
   public DataFetcherHelper(TableGraphQlModel tableGraphQlModel) {
@@ -91,7 +90,7 @@ public class DataFetcherHelper {
     String exName = exception.getClass().getSimpleName();
     return GraphqlErrorBuilder.newError(environment)
         .message("Scalar DB %s happened while fetching data: %s", exName, exception.getMessage())
-        .extensions(ImmutableMap.of(GraphQlConstants.ERRORS_EXTENSIONS_EXCEPTION_KEY, exName))
+        .extensions(ImmutableMap.of("exception", exName))
         .errorType(ErrorType.DataFetchingException)
         .build();
   }

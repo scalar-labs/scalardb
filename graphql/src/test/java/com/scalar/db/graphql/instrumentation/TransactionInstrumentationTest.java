@@ -85,7 +85,7 @@ public class TransactionInstrumentationTest {
   }
 
   private void prepareDirective(Directive transactionDirective) {
-    when(operationDefinition.getDirectives(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME))
+    when(operationDefinition.getDirectives("transaction"))
         .thenReturn(Collections.singletonList(transactionDirective));
   }
 
@@ -99,7 +99,7 @@ public class TransactionInstrumentationTest {
       throws Exception {
     // Arrange
     prepareForBeginExecuteOperationTests();
-    prepareDirective(new Directive(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME));
+    prepareDirective(new Directive("transaction"));
 
     // Act
     InstrumentationContext<ExecutionResult> context =
@@ -119,11 +119,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME,
-                    new BooleanValue(true)))
+            .name("transaction")
+            .argument(new Argument("commit", new BooleanValue(true)))
             .build());
 
     // Act
@@ -141,7 +138,7 @@ public class TransactionInstrumentationTest {
       throws Exception {
     // Arrange
     prepareForBeginExecuteOperationTests();
-    prepareDirective(new Directive(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME));
+    prepareDirective(new Directive("transaction"));
     when(transactionManager.start()).thenThrow(TransactionException.class);
 
     // Act Assert
@@ -159,11 +156,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
             .build());
     instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
@@ -185,15 +179,9 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
-            .argument(
-                new Argument(
-                    GraphQlConstants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME,
-                    new BooleanValue(true)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
+            .argument(new Argument("commit", new BooleanValue(true)))
             .build());
     instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
@@ -214,11 +202,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    GraphQlConstants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
             .build());
 
     // Act Assert

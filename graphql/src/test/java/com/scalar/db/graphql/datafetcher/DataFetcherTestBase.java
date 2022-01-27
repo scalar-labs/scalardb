@@ -90,7 +90,7 @@ public abstract class DataFetcherTestBase {
             .filter(
                 e ->
                     exName.equals(
-                        e.getExtensions().get(GraphQlConstants.ERRORS_EXTENSIONS_EXCEPTION_KEY)))
+                        e.getExtensions().get("exception")))
             .findFirst()
             .orElse(null);
     assertThat(error).isNotNull();

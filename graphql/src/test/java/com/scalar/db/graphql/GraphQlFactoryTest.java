@@ -143,7 +143,7 @@ public class GraphQlFactoryTest {
     assertThat(schema.containsType(TABLE_NAME_1)).isTrue();
     assertThat(schema.containsType("Query")).isTrue();
     assertThat(schema.containsType("Mutation")).isTrue();
-    assertThat(schema.getDirective(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)).isNotNull();
+    assertThat(schema.getDirective("transaction")).isNotNull();
     for (GraphQLType type : ScalarDbTypes.SCALAR_DB_GRAPHQL_TYPES) {
       assertThat(schema.containsType(((GraphQLNamedType) type).getName())).isTrue();
     }
@@ -238,7 +238,7 @@ public class GraphQlFactoryTest {
 
     // Assert
     GraphQLSchema schema = graphql.getGraphQLSchema();
-    assertThat(schema.getDirective(GraphQlConstants.TRANSACTION_DIRECTIVE_NAME)).isNull();
+    assertThat(schema.getDirective("transaction")).isNull();
     Instrumentation instrumentation = graphql.getInstrumentation();
 
     Field field = instrumentation.getClass().getDeclaredField("instrumentations");
