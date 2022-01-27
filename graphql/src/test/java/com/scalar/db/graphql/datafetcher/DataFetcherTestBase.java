@@ -87,10 +87,7 @@ public abstract class DataFetcherTestBase {
     String exName = exception.getClass().getSimpleName();
     GraphQLError error =
         result.getErrors().stream()
-            .filter(
-                e ->
-                    exName.equals(
-                        e.getExtensions().get("exception")))
+            .filter(e -> exName.equals(e.getExtensions().get("exception")))
             .findFirst()
             .orElse(null);
     assertThat(error).isNotNull();
