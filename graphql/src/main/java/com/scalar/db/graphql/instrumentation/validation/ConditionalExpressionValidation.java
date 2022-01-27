@@ -98,10 +98,12 @@ public class ConditionalExpressionValidation implements FieldValidation {
               "expressions must be present for " + type + " condition type", fieldAndArguments));
     } else if (expressions.stream()
         .anyMatch(
-            ex -> Sets.intersection(ex.keySet(), GraphQlConstants.SCALAR_VALUE_KEYS).size() != 1)) {
+            ex ->
+                Sets.intersection(ex.keySet(), GraphQlConstants.SCALAR_VALUE_FIELD_NAMES).size()
+                    != 1)) {
       return Optional.of(
           createError(
-              "expression must have only one of " + GraphQlConstants.SCALAR_VALUE_KEYS,
+              "expression must have only one of " + GraphQlConstants.SCALAR_VALUE_FIELD_NAMES,
               fieldAndArguments));
     }
     return Optional.empty();

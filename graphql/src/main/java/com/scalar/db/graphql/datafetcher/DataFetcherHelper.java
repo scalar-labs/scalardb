@@ -76,10 +76,13 @@ public class DataFetcherHelper {
   }
 
   private static Object getOneScalarValue(Map<String, Object> map) {
-    Set<String> valueKeys = Sets.intersection(map.keySet(), GraphQlConstants.SCALAR_VALUE_KEYS);
+    Set<String> valueKeys =
+        Sets.intersection(map.keySet(), GraphQlConstants.SCALAR_VALUE_FIELD_NAMES);
     if (valueKeys.size() != 1) {
       throw new IllegalArgumentException(
-          "One and only one of " + GraphQlConstants.SCALAR_VALUE_KEYS + " must be specified.");
+          "One and only one of "
+              + GraphQlConstants.SCALAR_VALUE_FIELD_NAMES
+              + " must be specified.");
     }
     return map.get(valueKeys.stream().findFirst().get());
   }

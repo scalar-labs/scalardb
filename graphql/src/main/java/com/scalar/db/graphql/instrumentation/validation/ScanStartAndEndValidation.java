@@ -45,7 +45,7 @@ public class ScanStartAndEndValidation implements FieldValidation {
   private Optional<GraphQLError> validateClusteringKey(
       String argName, Map<String, Object> clusteringKey, FieldAndArguments fieldAndArguments) {
     Set<String> valueKeys =
-        Sets.intersection(clusteringKey.keySet(), GraphQlConstants.SCALAR_VALUE_KEYS);
+        Sets.intersection(clusteringKey.keySet(), GraphQlConstants.SCALAR_VALUE_FIELD_NAMES);
     if (valueKeys.size() == 1) {
       return Optional.empty();
     } else {
@@ -53,7 +53,7 @@ public class ScanStartAndEndValidation implements FieldValidation {
           GraphqlErrorBuilder.newError()
               .message(
                   "the %s clustering key must have only one of %s",
-                  argName, GraphQlConstants.SCALAR_VALUE_KEYS)
+                  argName, GraphQlConstants.SCALAR_VALUE_FIELD_NAMES)
               .errorType(ErrorType.ValidationError)
               .path(fieldAndArguments.getPath())
               .location(fieldAndArguments.getField().getSourceLocation())
