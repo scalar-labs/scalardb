@@ -10,7 +10,7 @@ import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.graphql.datafetcher.TransactionInstrumentation;
+import com.scalar.db.graphql.instrumentation.TransactionInstrumentation;
 import com.scalar.db.graphql.schema.Constants;
 import com.scalar.db.graphql.schema.ScalarDbTypes;
 import com.scalar.db.io.DataType;

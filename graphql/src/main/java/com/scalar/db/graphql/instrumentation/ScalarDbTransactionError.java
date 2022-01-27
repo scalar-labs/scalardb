@@ -1,4 +1,4 @@
-package com.scalar.db.graphql.datafetcher;
+package com.scalar.db.graphql.instrumentation;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
