@@ -136,6 +136,7 @@ public class QueryScanDataFetcher
       return transaction.scan(scan);
     } else {
       LOGGER.debug("running Scan operation with storage: {}", scan);
+      helper.failIfConsensusCommitTransactionalTable();
       return ImmutableList.copyOf(storage.scan(scan));
     }
   }

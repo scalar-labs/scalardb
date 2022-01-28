@@ -1,6 +1,7 @@
 package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -18,6 +19,8 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.graphql.schema.TableGraphQlModel;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
+import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.Map;
 import org.junit.Test;
@@ -32,6 +35,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   private static final String COL5 = "c5";
   private static final String COL6 = "c5";
 
+  private TableMetadata tableMetadata;
   private MutationPutDataFetcher dataFetcher;
   private Put expectedPut;
   @Captor private ArgumentCaptor<Put> putCaptor;
@@ -39,7 +43,7 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
   @Override
   public void doSetUp() {
     // Arrange
-    TableMetadata tableMetadata =
+    tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -50,10 +54,12 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    TableGraphQlModel tableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata);
     dataFetcher =
-        spy(new MutationPutDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
+        spy(
+            new MutationPutDataFetcher(
+                storage,
+                new DataFetcherHelper(
+                    new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata))));
   }
 
   private void preparePutInputAndExpectedPut() {
@@ -141,5 +147,43 @@ public class MutationPutDataFetcherTest extends DataFetcherTestBase {
     // Assert
     assertThat(result.getData()).isFalse();
     assertThatDataFetcherResultHasErrorForException(result, exception);
+  }
+
+  private void prepareTransactionalTable() {
+    tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
+    dataFetcher =
+        new MutationPutDataFetcher(
+            storage,
+            new DataFetcherHelper(new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata)));
+  }
+
+  @Test
+  public void performPut_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    Put put = new Put(new Key(COL1, 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcher.performPut(environment, put))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).put(put);
+    verify(transaction, never()).put(put);
+  }
+
+  @Test
+  public void performPut_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    Put put = new Put(new Key(COL1, 1));
+
+    // Act
+    dataFetcher.performPut(environment, put);
+
+    // Assert
+    verify(storage, never()).put(put);
+    verify(transaction, times(1)).put(put);
   }
 }

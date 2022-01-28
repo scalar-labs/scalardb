@@ -31,6 +31,7 @@ import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.Scalars;
+import graphql.execution.AbortExecutionException;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLScalarType;
@@ -270,5 +271,14 @@ public class DataFetcherHelper {
 
   String getObjectTypeName() {
     return tableGraphQlModel.getObjectType().getName();
+  }
+
+  void failIfConsensusCommitTransactionalTable() {
+    if (tableGraphQlModel.isConsensusCommitTransactionalTable()) {
+      throw new AbortExecutionException(
+          "the table "
+              + getTableName()
+              + " has transactional meta columns, but being accessed with the storage method");
+    }
   }
 }

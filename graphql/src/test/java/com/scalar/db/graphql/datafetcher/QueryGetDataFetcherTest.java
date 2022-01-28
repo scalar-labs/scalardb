@@ -1,6 +1,7 @@
 package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,6 +27,8 @@ import com.scalar.db.io.DoubleValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
+import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +41,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
 
-  private TableGraphQlModel tableGraphQlModel;
+  private TableMetadata tableMetadata;
   private QueryGetDataFetcher dataFetcher;
   private Map<String, Object> getInput;
   private Get expectedGet;
@@ -46,7 +49,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   @Override
   public void doSetUp() {
     // Arrange
-    TableMetadata tableMetadata =
+    tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -54,8 +57,12 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
             .addPartitionKey(COL1)
             .addClusteringKey(COL2)
             .build();
-    tableGraphQlModel = new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata);
-    dataFetcher = spy(new QueryGetDataFetcher(storage, new DataFetcherHelper(tableGraphQlModel)));
+    dataFetcher =
+        spy(
+            new QueryGetDataFetcher(
+                storage,
+                new DataFetcherHelper(
+                    new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata))));
   }
 
   private void prepareGetInputAndExpectedGet() {
@@ -129,7 +136,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);
 
     // Assert
-    Map<String, Object> object = result.getData().get(tableGraphQlModel.getObjectType().getName());
+    Map<String, Object> object = result.getData().get(ANY_TABLE);
     assertThat(object)
         .containsOnly(entry(COL1, 1), entry(COL2, Optional.of("A")), entry(COL3, 2.0));
   }
@@ -194,5 +201,43 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
+  }
+
+  private void prepareTransactionalTable() {
+    tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
+    dataFetcher =
+        new QueryGetDataFetcher(
+            storage,
+            new DataFetcherHelper(new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata)));
+  }
+
+  @Test
+  public void performGet_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    Get get = new Get(new Key(COL1, 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcher.performGet(environment, get))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).get(get);
+    verify(transaction, never()).get(get);
+  }
+
+  @Test
+  public void performGet_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    Get get = new Get(new Key(COL1, 1));
+
+    // Act
+    dataFetcher.performGet(environment, get);
+
+    // Assert
+    verify(storage, never()).get(get);
+    verify(transaction, times(1)).get(get);
   }
 }
