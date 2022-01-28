@@ -20,7 +20,7 @@ import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLContext;
@@ -85,7 +85,7 @@ public class TransactionInstrumentationTest {
   }
 
   private void prepareDirective(Directive transactionDirective) {
-    when(operationDefinition.getDirectives(Constants.TRANSACTION_DIRECTIVE_NAME))
+    when(operationDefinition.getDirectives("transaction"))
         .thenReturn(Collections.singletonList(transactionDirective));
   }
 
@@ -99,7 +99,7 @@ public class TransactionInstrumentationTest {
       throws Exception {
     // Arrange
     prepareForBeginExecuteOperationTests();
-    prepareDirective(new Directive(Constants.TRANSACTION_DIRECTIVE_NAME));
+    prepareDirective(new Directive("transaction"));
 
     // Act
     InstrumentationContext<ExecutionResult> context =
@@ -107,7 +107,7 @@ public class TransactionInstrumentationTest {
 
     // Assert
     verify(transactionManager, times(1)).start();
-    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
     assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
@@ -119,10 +119,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME, new BooleanValue(true)))
+            .name("transaction")
+            .argument(new Argument("commit", new BooleanValue(true)))
             .build());
 
     // Act
@@ -131,7 +129,7 @@ public class TransactionInstrumentationTest {
 
     // Assert
     verify(transactionManager, times(1)).start();
-    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
     assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
@@ -140,7 +138,7 @@ public class TransactionInstrumentationTest {
       throws Exception {
     // Arrange
     prepareForBeginExecuteOperationTests();
-    prepareDirective(new Directive(Constants.TRANSACTION_DIRECTIVE_NAME));
+    prepareDirective(new Directive("transaction"));
     when(transactionManager.start()).thenThrow(TransactionException.class);
 
     // Act Assert
@@ -158,11 +156,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
             .build());
     instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
@@ -172,7 +167,7 @@ public class TransactionInstrumentationTest {
 
     // Assert
     verify(transactionManager, never()).start();
-    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
     assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
@@ -184,14 +179,9 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
-            .argument(
-                new Argument(
-                    Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME, new BooleanValue(true)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
+            .argument(new Argument("commit", new BooleanValue(true)))
             .build());
     instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
 
@@ -201,7 +191,7 @@ public class TransactionInstrumentationTest {
 
     // Assert
     verify(transactionManager, never()).start();
-    verify(graphQlContext).put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
     assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
   }
 
@@ -212,11 +202,8 @@ public class TransactionInstrumentationTest {
     prepareForBeginExecuteOperationTests();
     prepareDirective(
         Directive.newDirective()
-            .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-            .argument(
-                new Argument(
-                    Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME,
-                    new StringValue(ANY_TX_ID)))
+            .name("transaction")
+            .argument(new Argument("txId", new StringValue(ANY_TX_ID)))
             .build());
 
     // Act Assert
@@ -252,7 +239,7 @@ public class TransactionInstrumentationTest {
       throws Exception {
     // Arrange
     prepareForInstrumentExecutionResultTests();
-    graphQlContext.put(Constants.CONTEXT_TRANSACTION_KEY, transaction);
+    graphQlContext.put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
     Object originalData = ImmutableMap.of("data", 1);
     List<GraphQLError> originalErrors = ImmutableList.of(new AbortExecutionException());
     Map<Object, Object> originalExt = ImmutableMap.of("ext1", 1, "ext2", 2);
@@ -336,7 +323,8 @@ public class TransactionInstrumentationTest {
     ArgumentCaptor<InstrumentationExecutionParameters> captor =
         ArgumentCaptor.forClass(InstrumentationExecutionParameters.class);
     verify(instrumentation).instrumentExecutionResult(any(ExecutionResult.class), captor.capture());
-    assertThat(captor.getValue().getGraphQLContext().hasKey(Constants.CONTEXT_TRANSACTION_KEY))
+    assertThat(
+            captor.getValue().getGraphQLContext().hasKey(GraphQlConstants.CONTEXT_TRANSACTION_KEY))
         .isTrue();
   }
 

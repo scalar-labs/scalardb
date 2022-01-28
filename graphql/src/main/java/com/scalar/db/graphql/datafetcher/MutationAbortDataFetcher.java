@@ -2,7 +2,7 @@ package com.scalar.db.graphql.datafetcher;
 
 import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.exception.transaction.AbortException;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import graphql.GraphQLContext;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
@@ -17,7 +17,8 @@ public class MutationAbortDataFetcher implements DataFetcher<DataFetcherResult<B
   @Override
   public DataFetcherResult<Boolean> get(DataFetchingEnvironment environment) throws Exception {
     GraphQLContext graphQLContext = environment.getGraphQlContext();
-    DistributedTransaction transaction = graphQLContext.get(Constants.CONTEXT_TRANSACTION_KEY);
+    DistributedTransaction transaction =
+        graphQLContext.get(GraphQlConstants.CONTEXT_TRANSACTION_KEY);
     if (transaction == null) {
       LOGGER.warn("got abort mutation, but transaction was not found");
       return DataFetcherResult.<Boolean>newResult()

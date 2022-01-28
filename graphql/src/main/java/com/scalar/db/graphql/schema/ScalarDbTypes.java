@@ -28,15 +28,9 @@ import java.util.List;
 public final class ScalarDbTypes {
   public static final GraphQLDirective TRANSACTION_DIRECTIVE =
       newDirective()
-          .name(Constants.TRANSACTION_DIRECTIVE_NAME)
-          .argument(
-              newArgument()
-                  .name(Constants.TRANSACTION_DIRECTIVE_TX_ID_ARGUMENT_NAME)
-                  .type(Scalars.GraphQLString))
-          .argument(
-              newArgument()
-                  .name(Constants.TRANSACTION_DIRECTIVE_COMMIT_ARGUMENT_NAME)
-                  .type(Scalars.GraphQLBoolean))
+          .name("transaction")
+          .argument(newArgument().name("txId").type(Scalars.GraphQLString))
+          .argument(newArgument().name("commit").type(Scalars.GraphQLBoolean))
           .validLocations(DirectiveLocation.MUTATION, DirectiveLocation.QUERY)
           .build();
 

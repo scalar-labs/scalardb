@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedTransaction;
-import com.scalar.db.graphql.schema.Constants;
+import com.scalar.db.graphql.GraphQlConstants;
 import graphql.GraphQLContext;
 import graphql.GraphQLError;
 import graphql.Scalars;
@@ -79,7 +79,7 @@ public abstract class DataFetcherTestBase {
   }
 
   protected void setTransactionStarted() {
-    when(graphQlContext.get(Constants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
+    when(graphQlContext.get(GraphQlConstants.CONTEXT_TRANSACTION_KEY)).thenReturn(transaction);
   }
 
   protected void assertThatDataFetcherResultHasErrorForException(
@@ -87,9 +87,7 @@ public abstract class DataFetcherTestBase {
     String exName = exception.getClass().getSimpleName();
     GraphQLError error =
         result.getErrors().stream()
-            .filter(
-                e ->
-                    exName.equals(e.getExtensions().get(Constants.ERRORS_EXTENSIONS_EXCEPTION_KEY)))
+            .filter(e -> exName.equals(e.getExtensions().get("exception")))
             .findFirst()
             .orElse(null);
     assertThat(error).isNotNull();
