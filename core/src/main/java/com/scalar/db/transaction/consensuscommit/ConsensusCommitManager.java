@@ -43,7 +43,7 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     tableMetadataManager =
         new TransactionalTableMetadataManager(
             admin, config.getTableMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
     namespace = storage.getNamespace();
     tableName = storage.getTable();
