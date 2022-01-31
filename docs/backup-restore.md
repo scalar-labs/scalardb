@@ -35,15 +35,13 @@ Also, it is recommended to pause a long enough time (e.g., 10 seconds) and use t
 **Cassandra**
 
 Cassandra has a built-in replication mechanism, so you do not always have to create a transactionally-consistent backup.
-
-For example, if replication is properly set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
+For example, if the replication factor is set to 3 and only the data of one of the nodes in a cluster is lost, you do not need a transactionally-consistent backup because the node can be recovered with a normal (transactionally-inconsistent) snapshot and the repair mechanism.
 However, if the quorum of nodes of a cluster loses their data, we need a transactionally-consistent backup to restore the cluster to a certain transactionally-consistent point.
 
-If you want to create a transactionally-consistent cluster-wide backup, pause the application and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or 
-stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
+If you want to create a transactionally-consistent cluster-wide backup, pause the Scalar DB application (or Scalar DB server) and take the snapshots of nodes as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup), or stop the Cassandra cluster and take the copies of all the nodes' data, and start the cluster.
 
 To avoid mistakes, it is recommended to use [Cassy](https://github.com/scalar-labs/cassy).
-Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application of a Cassandra cluster.
+Cassy is also integrated with `scalar-admin` so it can issue a pause request to the Scalar DB application (or Scalar DB server) of a Cassandra cluster.
 Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getting-started.md#take-cluster-wide-consistent-backups) for more details.
 
 **Cosmos DB**
@@ -75,7 +73,7 @@ Please see [the doc](https://github.com/scalar-labs/cassy/blob/master/docs/getti
 
 ### Cosmos DB
 
-You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal) and change the default consistency to `STRONG` after restoring the backup.
+You can follow the [azure official guide](https://docs.microsoft.com/en-us/azure/cosmos-db/restore-account-continuous-backup#restore-account-portal). After restoring backups. change the default consistencies of the restored databases to `STRONG`
 It is recommended to use the mid-time of paused duration as a restore point as we explained earlier.
 
 ### DynamoDB
@@ -84,11 +82,14 @@ You can basically follow [the official doc](https://docs.aws.amazon.com/amazondy
 
 Specifically, please follow the steps below.
 
-* Select the mid-time of paused duration as the restore point.
-* Restore with PITR of table A to another table B
-* Take a backup of the restored table B (assume the backup is named backup B)
-* Remove table A
-* Create a table named A with backup B
+1. Create a backup
+   * Select the mid-time of paused duration as the restore point.
+   * Restore with PITR of table A to another table B
+   * Take a backup of the restored table B (assume the backup is named backup B)
+   * Remove table B 
+2. Restore from the backup 
+   * Remove table A
+   * Create a table named A with backup B
 
 Not that tables can only be restored one by one so you need to do the above steps for each table.
 
