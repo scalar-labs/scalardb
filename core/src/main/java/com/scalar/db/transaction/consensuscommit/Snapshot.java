@@ -276,6 +276,9 @@ public class Snapshot {
             Scanner scanner = null;
             try {
               Scan scan = entry.getKey();
+              // only get tx_id and tx_version columns because we use only them to compare
+              scan.clearProjections();
+              scan.withProjection(Attribute.ID).withProjection(Attribute.VERSION);
               scanner = storage.scan(scan);
               for (Result result : scanner) {
                 TransactionResult transactionResult = new TransactionResult(result);
@@ -331,8 +334,11 @@ public class Snapshot {
 
       tasks.add(
           () -> {
+            // only get tx_id and tx_version columns because we use only them to compare
             Get get =
                 new Get(key.getPartitionKey(), key.getClusteringKey().orElse(null))
+                    .withProjection(Attribute.ID)
+                    .withProjection(Attribute.VERSION)
                     .withConsistency(Consistency.LINEARIZABLE)
                     .forNamespace(key.getNamespace())
                     .forTable(key.getTable());

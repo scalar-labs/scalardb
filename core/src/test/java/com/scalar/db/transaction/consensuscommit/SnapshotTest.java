@@ -623,13 +623,15 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    when(storage.get(get)).thenReturn(Optional.of(txResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -644,14 +646,16 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
-    when(storage.get(get)).thenReturn(Optional.of(changedTxResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(changedTxResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -665,14 +669,16 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
-    when(storage.get(get)).thenReturn(Optional.of(txResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -690,13 +696,15 @@ public class SnapshotTest {
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -716,14 +724,16 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator())
         .thenReturn(Collections.singletonList((Result) changedTxResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -740,14 +750,16 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -816,11 +828,27 @@ public class SnapshotTest {
 
     Scanner scanner1 = mock(Scanner.class);
     when(scanner1.iterator()).thenReturn(Collections.singletonList(result1).iterator());
-    when(storage.scan(scan1)).thenReturn(scanner1);
+    Scan scan1WithProjections =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withProjection(Attribute.ID)
+            .withProjection(Attribute.VERSION);
+    when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
     when(scanner2.iterator()).thenReturn(Collections.singletonList(result2).iterator());
-    when(storage.scan(scan2)).thenReturn(scanner2);
+    Scan scan2WithProjections =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withProjection(Attribute.ID)
+            .withProjection(Attribute.VERSION);
+    when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
