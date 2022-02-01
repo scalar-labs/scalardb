@@ -90,7 +90,7 @@ Specifically, please follow the steps below.
    * Remove table A
    * Create a table named A with backup B
 
-Not that tables can only be restored one by one so you need to do the above steps for each table.
+Note that tables can only be restored one by one so you need to do the above steps for each table.
 
 Note also that some of the configurations such as PITR and auto scaling policies are reset to the default values for restored tables, so please manually configure required settings. See [the doc](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/CreateBackup.html#CreateBackup_HowItWorks-restore) for more detail.
 If you used the schema loader and didn't change any other configurations, executing the schema loader with the same schema file is one of the ways to restore the original configuration. It only sets missing configurations if a specified table exists.
