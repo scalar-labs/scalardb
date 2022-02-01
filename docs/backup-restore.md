@@ -1,6 +1,6 @@
 # A Guide on How to Backup and Restore Databases Used Through Scalar DB
 
-Since Scalar DB provides transaction capability on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care of backing up and restoring the databases in a transactionally-consistent way. 
+Since Scalar DB provides transaction capability on top of non-transactional (possibly transactional) databases non-invasively, you need to take special care of backing up and restoring the databases in a transactionally-consistent way.
 This document sets out some guidelines for backing up and restoring the databases that Scalar DB supports.
 
 ## Create Backup
@@ -51,9 +51,8 @@ To specify a transactionally-consistent restore point, please pause the Scalar D
 
 **DynamoDB**
 
-You must enable the point-in-time recovery (PITR) feature for DynamoDB tables.
+You must enable the point-in-time recovery (PITR) feature for DynamoDB tables. If you use [Scalar DB Schema Loader](https://github.com/scalar-labs/scalardb/tree/master/schema-loader) for creating schema, it enables PITR feature for tables by default.
 To specify a transactionally-consistent restore point, please pause the Scalar DB application of a DynamoDB as described in [the basic strategy](#basic-strategy-to-create-a-transactionally-consistent-backup).
-If you use Scalar DB Schema Loader, it enables PITR by default.
 
 ## Restore Backup
 
