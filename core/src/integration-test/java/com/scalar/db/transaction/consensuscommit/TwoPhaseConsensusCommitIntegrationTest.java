@@ -21,7 +21,6 @@ import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.TransactionException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.ValidationException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
@@ -119,7 +118,7 @@ public class TwoPhaseConsensusCommitIntegrationTest {
 
   private static void initManagerAndCoordinator(DatabaseConfig config) {
     ConsensusCommitConfig consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());
-    manager = new TwoPhaseConsensusCommitManager(storage, consensusCommitConfig);
+    manager = new TwoPhaseConsensusCommitManager(storage, admin, consensusCommitConfig);
     coordinator = new Coordinator(storage, consensusCommitConfig);
   }
 

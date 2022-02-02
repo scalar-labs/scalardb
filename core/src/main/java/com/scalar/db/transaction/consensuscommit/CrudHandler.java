@@ -12,9 +12,9 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -26,10 +26,15 @@ public class CrudHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CrudHandler.class);
   private final DistributedStorage storage;
   private final Snapshot snapshot;
+  private final TransactionalTableMetadataManager tableMetadataManager;
 
-  public CrudHandler(DistributedStorage storage, Snapshot snapshot) {
+  public CrudHandler(
+      DistributedStorage storage,
+      Snapshot snapshot,
+      TransactionalTableMetadataManager tableMetadataManager) {
     this.storage = checkNotNull(storage);
     this.snapshot = checkNotNull(snapshot);
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   public Optional<Result> get(Get get) throws CrudException {
@@ -41,12 +46,7 @@ public class CrudHandler {
     }
 
     result = getFromStorage(get);
-    if (!result.isPresent()) {
-      snapshot.put(key, result);
-      return snapshot.get(key).map(r -> r);
-    }
-
-    if (result.get().isCommitted()) {
+    if (!result.isPresent() || result.get().isCommitted()) {
       snapshot.put(key, result);
       return snapshot.get(key).map(r -> r);
     }
@@ -105,6 +105,12 @@ public class CrudHandler {
 
   private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
+      // only get after image columns
+      get.clearProjections();
+      LinkedHashSet<String> afterImageColumnNames =
+          tableMetadataManager.getTransactionalTableMetadata(get).getAfterImageColumnNames();
+      get.withProjections(afterImageColumnNames);
+
       get.withConsistency(Consistency.LINEARIZABLE);
       return storage.get(get).map(TransactionResult::new);
     } catch (ExecutionException e) {
@@ -114,6 +120,12 @@ public class CrudHandler {
 
   private Scanner getFromStorage(Scan scan) throws CrudException {
     try {
+      // only get after image columns
+      scan.clearProjections();
+      LinkedHashSet<String> afterImageColumnNames =
+          tableMetadataManager.getTransactionalTableMetadata(scan).getAfterImageColumnNames();
+      scan.withProjections(afterImageColumnNames);
+
       scan.withConsistency(Consistency.LINEARIZABLE);
       return storage.scan(scan);
     } catch (ExecutionException e) {
