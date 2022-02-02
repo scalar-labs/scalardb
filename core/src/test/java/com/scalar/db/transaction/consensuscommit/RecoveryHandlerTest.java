@@ -30,7 +30,6 @@ public class RecoveryHandlerTest {
   @Mock private Coordinator coordinator;
   @Mock private TransactionalTableMetadataManager tableMetadataManager;
   @Mock private Selection selection;
-  @Mock private ConsensusCommitConfig config;
 
   private RecoveryHandler handler;
 
@@ -39,10 +38,7 @@ public class RecoveryHandlerTest {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    handler =
-        spy(
-            new RecoveryHandler(
-                storage, coordinator, tableMetadataManager, new ParallelExecutor(config)));
+    handler = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
   }
 
   private void configureResult(Result mock, long preparedAt, TransactionState transactionState) {

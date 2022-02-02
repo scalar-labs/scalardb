@@ -24,17 +24,17 @@ public class CommitHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(CommitHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
-  private final RecoveryHandler recovery;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
   public CommitHandler(
       DistributedStorage storage,
       Coordinator coordinator,
-      RecoveryHandler recovery,
+      TransactionalTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
-    this.recovery = checkNotNull(recovery);
+    this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
@@ -165,6 +165,22 @@ public class CommitHandler {
   }
 
   public void rollbackRecords(Snapshot snapshot) {
-    recovery.rollbackRecords(snapshot);
+    LOGGER.debug("rollback from snapshot for {}", snapshot.getId());
+    try {
+      RollbackMutationComposer composer =
+          new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
+      snapshot.to(composer);
+      PartitionedMutations mutations = new PartitionedMutations(composer.get());
+
+      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
+      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
+      for (PartitionedMutations.Key key : orderedKeys) {
+        tasks.add(() -> storage.mutate(mutations.get(key)));
+      }
+      parallelExecutor.rollback(tasks);
+    } catch (Exception e) {
+      LOGGER.warn("rolling back records failed", e);
+      // ignore since records are recovered lazily
+    }
   }
 }
