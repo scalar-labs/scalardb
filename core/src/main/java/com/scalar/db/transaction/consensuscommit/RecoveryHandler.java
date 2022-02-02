@@ -211,10 +211,12 @@ public class RecoveryHandler {
     mutate(composer.get());
   }
 
-  private void abortIfExpired(Selection selection, TransactionResult result) {
+  private void abortIfExpired(Selection selection, TransactionResult result)
+      throws TransactionNotExpiredException {
     long current = System.currentTimeMillis();
     if (current <= result.getPreparedAt() + TRANSACTION_LIFETIME_MILLIS) {
-      return;
+      throw new TransactionNotExpiredException(
+          "the transaction " + result.getId() + " is not expired");
     }
 
     try {

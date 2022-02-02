@@ -10,7 +10,9 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.Selection;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import com.scalar.db.exception.transaction.CrudException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,11 +57,7 @@ public class CrudHandler {
     }
 
     // lazy recovery
-    try {
-      result = recovery.recover(get, result.get());
-    } catch (RecoveryException e) {
-      throw new CrudException("recovering a record failed", e);
-    }
+    result = lazyRecovery(get, result.get());
     snapshot.put(key, result);
     return snapshot.get(key).map(r -> r);
   }
@@ -82,16 +80,12 @@ public class CrudHandler {
 
         if (!result.isCommitted()) {
           // lazy recovery
-          try {
-            Optional<TransactionResult> recoveredResult = recovery.recover(scan, result);
-            if (!recoveredResult.isPresent()) {
-              // indicates the record is deleted in another transaction. skip it
-              continue;
-            }
-            result = recoveredResult.get();
-          } catch (RecoveryException e) {
-            throw new CrudException("recovering a record failed", e);
+          Optional<TransactionResult> recoveredResult = lazyRecovery(scan, result);
+          if (!recoveredResult.isPresent()) {
+            // indicates the record is deleted in another transaction. skip it
+            continue;
           }
+          result = recoveredResult.get();
         }
 
         Snapshot.Key key = new Snapshot.Key(scan, r);
@@ -152,6 +146,17 @@ public class CrudHandler {
       return storage.scan(scan);
     } catch (ExecutionException e) {
       throw new CrudException("scan failed.", e);
+    }
+  }
+
+  private Optional<TransactionResult> lazyRecovery(Selection selection, TransactionResult result)
+      throws CrudException {
+    try {
+      return recovery.recover(selection, result);
+    } catch (TransactionNotExpiredException e) {
+      throw new CrudConflictException("read a record that the active transaction is updating", e);
+    } catch (RecoveryException e) {
+      throw new CrudException("recovering a record failed", e);
     }
   }
 

@@ -326,77 +326,91 @@ public class RecoveryHandlerTest {
     assertThat(actual).isNotPresent();
   }
 
-  @Test
-  public void
-      recover_GetAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult()
-          throws CoordinatorException, RecoveryException, ExecutionException {
-    recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
-        prepareGet());
-  }
+  //  @Test
+  //  public void
+  //
+  // recover_GetAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult()
+  //          throws CoordinatorException, RecoveryException, ExecutionException {
+  //
+  // recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
+  //        prepareGet());
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // recover_ScanAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult()
+  //          throws CoordinatorException, RecoveryException, ExecutionException {
+  //
+  // recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
+  //        prepareScan());
+  //  }
+  //
+  //  private void
+  //
+  // recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
+  //          Selection selection) throws CoordinatorException, RecoveryException,
+  // ExecutionException {
+  //    // Arrange
+  //    TransactionResult result =
+  //        prepareResult(System.currentTimeMillis(), TransactionState.PREPARED, true);
+  //    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+  //    when(storage.get(any())).thenReturn(Optional.of(result));
+  //    doNothing().when(handler).rollforwardRecord(any(Selection.class),
+  // any(TransactionResult.class));
+  //
+  //    // Act
+  //    Optional<TransactionResult> actual = handler.recover(selection, result);
+  //
+  //    // Assert
+  //    verify(coordinator, never())
+  //        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+  //    verify(handler, never()).rollbackRecord(selection, result);
+  //    assertBeforeImageResult(actual);
+  //  }
 
-  @Test
-  public void
-      recover_ScanAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult()
-          throws CoordinatorException, RecoveryException, ExecutionException {
-    recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
-        prepareScan());
-  }
-
-  private void
-      recover_SelectionAndResultGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnBeforeImageResult(
-          Selection selection) throws CoordinatorException, RecoveryException, ExecutionException {
-    // Arrange
-    TransactionResult result =
-        prepareResult(System.currentTimeMillis(), TransactionState.PREPARED, true);
-    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
-    when(storage.get(any())).thenReturn(Optional.of(result));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
-
-    // Act
-    Optional<TransactionResult> actual = handler.recover(selection, result);
-
-    // Assert
-    verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
-    verify(handler, never()).rollbackRecord(selection, result);
-    assertBeforeImageResult(actual);
-  }
-
-  @Test
-  public void
-      recover_GetAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult()
-          throws CoordinatorException, RecoveryException, ExecutionException {
-    recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
-        prepareGet());
-  }
-
-  @Test
-  public void
-      recover_ScanAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult()
-          throws CoordinatorException, RecoveryException, ExecutionException {
-    recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
-        prepareScan());
-  }
-
-  private void
-      recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
-          Selection selection) throws CoordinatorException, RecoveryException, ExecutionException {
-    // Arrange
-    TransactionResult result =
-        prepareResult(System.currentTimeMillis(), TransactionState.PREPARED, false);
-    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
-    when(storage.get(any())).thenReturn(Optional.of(result));
-    doNothing().when(handler).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
-
-    // Act
-    Optional<TransactionResult> actual = handler.recover(selection, result);
-
-    // Assert
-    verify(coordinator, never())
-        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
-    verify(handler, never()).rollbackRecord(selection, result);
-    assertThat(actual).isNotPresent();
-  }
+  //  @Test
+  //  public void
+  //
+  // recover_GetAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult()
+  //          throws CoordinatorException, RecoveryException, ExecutionException {
+  //
+  // recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
+  //        prepareGet());
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // recover_ScanAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult()
+  //          throws CoordinatorException, RecoveryException, ExecutionException {
+  //
+  // recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
+  //        prepareScan());
+  //  }
+  //
+  //  private void
+  //
+  // recover_SelectionAndResultWithoutBeforeImageColumnsGivenWhenCoordinatorStateNotExistsAndNotExpired_ShouldNotRecoverRecordAndReturnEmptyResult(
+  //          Selection selection) throws CoordinatorException, RecoveryException,
+  // ExecutionException {
+  //    // Arrange
+  //    TransactionResult result =
+  //        prepareResult(System.currentTimeMillis(), TransactionState.PREPARED, false);
+  //    when(coordinator.getState(ANY_ID_1)).thenReturn(Optional.empty());
+  //    when(storage.get(any())).thenReturn(Optional.of(result));
+  //    doNothing().when(handler).rollforwardRecord(any(Selection.class),
+  // any(TransactionResult.class));
+  //
+  //    // Act
+  //    Optional<TransactionResult> actual = handler.recover(selection, result);
+  //
+  //    // Assert
+  //    verify(coordinator, never())
+  //        .putState(new Coordinator.State(ANY_ID_1, TransactionState.ABORTED));
+  //    verify(handler, never()).rollbackRecord(selection, result);
+  //    assertThat(actual).isNotPresent();
+  //  }
 
   @Test
   public void

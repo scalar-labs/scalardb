@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -363,56 +362,62 @@ public abstract class ConsensusCommitIntegrationTestBase {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(scan);
   }
 
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          Selection s)
-          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
-    // Arrange
-    long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
-    ConsensusCommit transaction = manager.start();
-
-    // Act
-    TransactionResult result;
-    if (s instanceof Get) {
-      Optional<Result> r = transaction.get((Get) s);
-      assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
-    }
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
-
-    assertThat(result.getId()).isEqualTo(ANY_ID_1);
-    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(1);
-    assertThat(result.getCommittedAt()).isEqualTo(1);
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan);
-  }
+  //  private void
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //          Selection s)
+  //          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
+  //    // Arrange
+  //    long prepared_at = System.currentTimeMillis();
+  //    populatePreparedRecordAndCoordinatorStateRecord(
+  //        storage, namespace1, TABLE_1, TransactionState.PREPARED, prepared_at, null);
+  //    ConsensusCommit transaction = manager.start();
+  //
+  //    // Act
+  //    TransactionResult result;
+  //    if (s instanceof Get) {
+  //      Optional<Result> r = transaction.get((Get) s);
+  //      assertThat(r).isPresent();
+  //      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+  //    } else {
+  //      List<Result> results = transaction.scan((Scan) s);
+  //      assertThat(results.size()).isEqualTo(1);
+  //      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+  //    }
+  //
+  //    // Assert
+  //    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
+  //    verify(recovery, never()).rollbackRecord(any(Selection.class),
+  // any(TransactionResult.class));
+  //    verify(coordinator, never()).putState(any(Coordinator.State.class));
+  //
+  //    assertThat(result.getId()).isEqualTo(ANY_ID_1);
+  //    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+  //    assertThat(result.getVersion()).isEqualTo(1);
+  //    assertThat(result.getCommittedAt()).isEqualTo(1);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
+  //    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        get);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, RecoveryException, CrudException {
+  //    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        scan);
+  //  }
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
@@ -550,56 +555,62 @@ public abstract class ConsensusCommitIntegrationTestBase {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(scan);
   }
 
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          Selection s)
-          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
-    // Arrange
-    long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
-    ConsensusCommit transaction = manager.start();
-
-    // Act
-    TransactionResult result;
-    if (s instanceof Get) {
-      Optional<Result> r = transaction.get((Get) s);
-      assertThat(r).isPresent();
-      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
-    } else {
-      List<Result> results = transaction.scan((Scan) s);
-      assertThat(results.size()).isEqualTo(1);
-      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
-    }
-
-    // Assert
-    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, never()).rollbackRecord(any(Selection.class), any(TransactionResult.class));
-    verify(coordinator, never()).putState(any(Coordinator.State.class));
-
-    assertThat(result.getId()).isEqualTo(ANY_ID_1);
-    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
-    assertThat(result.getVersion()).isEqualTo(1);
-    assertThat(result.getCommittedAt()).isEqualTo(1);
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
-    Get get = prepareGet(0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        get);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
-    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        scan);
-  }
+  //  private void
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //          Selection s)
+  //          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
+  //    // Arrange
+  //    long prepared_at = System.currentTimeMillis();
+  //    populatePreparedRecordAndCoordinatorStateRecord(
+  //        storage, namespace1, TABLE_1, TransactionState.DELETED, prepared_at, null);
+  //    ConsensusCommit transaction = manager.start();
+  //
+  //    // Act
+  //    TransactionResult result;
+  //    if (s instanceof Get) {
+  //      Optional<Result> r = transaction.get((Get) s);
+  //      assertThat(r).isPresent();
+  //      result = (TransactionResult) ((FilteredResult) r.get()).getOriginalResult();
+  //    } else {
+  //      List<Result> results = transaction.scan((Scan) s);
+  //      assertThat(results.size()).isEqualTo(1);
+  //      result = (TransactionResult) ((FilteredResult) results.get(0)).getOriginalResult();
+  //    }
+  //
+  //    // Assert
+  //    verify(recovery).recover(any(Selection.class), any(TransactionResult.class));
+  //    verify(recovery, never()).rollbackRecord(any(Selection.class),
+  // any(TransactionResult.class));
+  //    verify(coordinator, never()).putState(any(Coordinator.State.class));
+  //
+  //    assertThat(result.getId()).isEqualTo(ANY_ID_1);
+  //    Assertions.assertThat(result.getState()).isEqualTo(TransactionState.COMMITTED);
+  //    assertThat(result.getVersion()).isEqualTo(1);
+  //    assertThat(result.getCommittedAt()).isEqualTo(1);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
+  //    Get get = prepareGet(0, 0, namespace1, TABLE_1);
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        get);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException, RecoveryException {
+  //    Scan scan = prepareScan(0, 0, 0, namespace1, TABLE_1);
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        scan);
+  //  }
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(

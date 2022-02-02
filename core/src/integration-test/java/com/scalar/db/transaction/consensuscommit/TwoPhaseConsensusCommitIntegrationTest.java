@@ -298,49 +298,54 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     selection_SelectionGivenForPreparedWhenCoordinatorStateAborted_ShouldRollback(false);
   }
 
-  private void
-      selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
-    // Arrange
-    long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.PREPARED, prepared_at, null);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    // Act Assert
-    Optional<Result> result;
-    if (isGet) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(1);
-      result = Optional.of(results.get(0));
-    }
-
-    // Assert
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getAccountId(result.get())).isEqualTo(0);
-    assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-  }
-
-  @Test
-  public void
-      get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException {
-    selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        false);
-  }
+  //  private void
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
+  //    // Arrange
+  //    long prepared_at = System.currentTimeMillis();
+  //    populatePreparedRecordAndCoordinatorStateRecord(
+  //        TABLE_1, TransactionState.PREPARED, prepared_at, null);
+  //
+  //    TwoPhaseConsensusCommit transaction = manager.start();
+  //
+  //    // Act Assert
+  //    Optional<Result> result;
+  //    if (isGet) {
+  //      result = transaction.get(prepareGet(0, 0, TABLE_1));
+  //    } else {
+  //      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+  //      assertThat(results.size()).isEqualTo(1);
+  //      result = Optional.of(results.get(0));
+  //    }
+  //
+  //    // Assert
+  //    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+  //    assertThat(result.isPresent()).isTrue();
+  //    assertThat(getAccountId(result.get())).isEqualTo(0);
+  //    assertThat(getAccountType(result.get())).isEqualTo(0);
+  //    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // get_GetGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException {
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        true);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // scan_ScanGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException {
+  //
+  // selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        false);
+  //  }
 
   private void
       selection_SelectionGivenForPreparedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
@@ -455,49 +460,54 @@ public class TwoPhaseConsensusCommitIntegrationTest {
     selection_SelectionGivenForDeletedWhenCoordinatorStateAborted_ShouldRollback(false);
   }
 
-  private void
-      selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
-    // Arrange
-    long prepared_at = System.currentTimeMillis();
-    populatePreparedRecordAndCoordinatorStateRecord(
-        TABLE_1, TransactionState.DELETED, prepared_at, null);
-
-    TwoPhaseConsensusCommit transaction = manager.start();
-
-    // Act Assert
-    Optional<Result> result;
-    if (isGet) {
-      result = transaction.get(prepareGet(0, 0, TABLE_1));
-    } else {
-      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
-      assertThat(results.size()).isEqualTo(1);
-      result = Optional.of(results.get(0));
-    }
-
-    // Assert
-    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
-    assertThat(result.isPresent()).isTrue();
-    assertThat(getAccountId(result.get())).isEqualTo(0);
-    assertThat(getAccountType(result.get())).isEqualTo(0);
-    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
-  }
-
-  @Test
-  public void
-      get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        true);
-  }
-
-  @Test
-  public void
-      scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
-          throws ExecutionException, CoordinatorException, CrudException {
-    selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
-        false);
-  }
+  //  private void
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //          boolean isGet) throws ExecutionException, CoordinatorException, CrudException {
+  //    // Arrange
+  //    long prepared_at = System.currentTimeMillis();
+  //    populatePreparedRecordAndCoordinatorStateRecord(
+  //        TABLE_1, TransactionState.DELETED, prepared_at, null);
+  //
+  //    TwoPhaseConsensusCommit transaction = manager.start();
+  //
+  //    // Act Assert
+  //    Optional<Result> result;
+  //    if (isGet) {
+  //      result = transaction.get(prepareGet(0, 0, TABLE_1));
+  //    } else {
+  //      List<Result> results = transaction.scan(prepareScan(0, 0, 0, TABLE_1));
+  //      assertThat(results.size()).isEqualTo(1);
+  //      result = Optional.of(results.get(0));
+  //    }
+  //
+  //    // Assert
+  //    assertThat(coordinator.getState(ANY_ID_2).isPresent()).isFalse();
+  //    assertThat(result.isPresent()).isTrue();
+  //    assertThat(getAccountId(result.get())).isEqualTo(0);
+  //    assertThat(getAccountType(result.get())).isEqualTo(0);
+  //    assertThat(getBalance(result.get())).isEqualTo(0); // a rolled back value
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // get_GetGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException {
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        true);
+  //  }
+  //
+  //  @Test
+  //  public void
+  //
+  // scan_ScanGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction()
+  //          throws ExecutionException, CoordinatorException, CrudException {
+  //
+  // selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndNotExpired_ShouldNotAbortTransaction(
+  //        false);
+  //  }
 
   private void
       selection_SelectionGivenForDeletedWhenCoordinatorStateNotExistAndExpired_ShouldAbortTransaction(
