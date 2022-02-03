@@ -186,12 +186,7 @@ public class CrudHandlerTest {
     // Arrange
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            result.getClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, result);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
     doNothing()
         .when(snapshot)
@@ -238,12 +233,7 @@ public class CrudHandlerTest {
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            result.getClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, result);
     when(snapshot.get(scan))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(Collections.singletonList(key)));
@@ -295,12 +285,7 @@ public class CrudHandlerTest {
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            result.getClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, result);
     when(snapshot.get(scan)).thenReturn(Optional.empty());
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false).thenReturn(true);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
@@ -391,20 +376,10 @@ public class CrudHandlerTest {
 
     // check if the scanned data is inserted correctly in the read set
     assertThat(readSet.size()).isEqualTo(2);
-    Snapshot.Key key1 =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            result.getClusteringKey().get());
+    Snapshot.Key key1 = new Snapshot.Key(scan, result);
     assertThat(readSet.get(key1).isPresent()).isTrue();
     assertThat(readSet.get(key1).get()).isEqualTo(new TransactionResult(result));
-    Snapshot.Key key2 =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            result2.getClusteringKey().get());
+    Snapshot.Key key2 = new Snapshot.Key(scan, result2);
     assertThat(readSet.get(key2).isPresent()).isTrue();
     assertThat(readSet.get(key2).get()).isEqualTo(new TransactionResult(result2));
   }

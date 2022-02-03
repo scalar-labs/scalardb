@@ -28,10 +28,10 @@ import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -41,6 +41,7 @@ public class SnapshotTest {
   private static final String ANY_KEYSPACE_NAME = "keyspace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_ID = "id";
+  private static final int ANY_VERSION = 1;
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
   private static final String ANY_NAME_3 = "name3";
@@ -74,10 +75,10 @@ public class SnapshotTest {
   }
 
   private Snapshot prepareSnapshot(Isolation isolation, SerializableStrategy strategy) {
-    readSet = new ConcurrentHashMap<>();
-    scanSet = new ConcurrentHashMap<>();
-    writeSet = new ConcurrentHashMap<>();
-    deleteSet = new ConcurrentHashMap<>();
+    readSet = new HashMap<>();
+    scanSet = new HashMap<>();
+    writeSet = new HashMap<>();
+    deleteSet = new HashMap<>();
 
     return spy(
         new Snapshot(
@@ -93,6 +94,10 @@ public class SnapshotTest {
 
   private TransactionResult prepareResult(String txId) {
     TransactionResult result = mock(TransactionResult.class);
+    when(result.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
+    when(result.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
     when(result.getValues())
         .thenReturn(
             ImmutableMap.<String, Value<?>>builder()
@@ -100,7 +105,8 @@ public class SnapshotTest {
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_3))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
-                .put(Attribute.ID, new TextValue(txId))
+                .put(Attribute.ID, Attribute.toIdValue(txId))
+                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
     return result;
   }
@@ -267,12 +273,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Scan scan = prepareScan();
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            scan.getStartClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     List<Snapshot.Key> expected = Collections.singletonList(key);
 
     // Act
@@ -311,7 +312,8 @@ public class SnapshotTest {
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
                 .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
-                .put(Attribute.ID, new TextValue(ANY_ID))
+                .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
+                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
     assertThat(actual.get().getValue(ANY_NAME_1).get().getAsString().get()).isEqualTo(ANY_TEXT_1);
     assertThat(actual.get().getValue(ANY_NAME_2).get().getAsString().get()).isEqualTo(ANY_TEXT_2);
@@ -597,12 +599,7 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Scan scan = prepareScan();
-    Snapshot.Key key =
-        new Snapshot.Key(
-            scan.forNamespace().get(),
-            scan.forTable().get(),
-            scan.getPartitionKey(),
-            scan.getStartClusteringKey().get());
+    Snapshot.Key key = new Snapshot.Key(scan, prepareResult(ANY_ID));
     Put put = preparePut();
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
@@ -626,13 +623,15 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(get), Optional.of(txResult));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
-    when(storage.get(get)).thenReturn(Optional.of(txResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -647,14 +646,16 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult changedTxResult = prepareResult(ANY_ID + "x");
-    when(storage.get(get)).thenReturn(Optional.of(changedTxResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(changedTxResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -668,14 +669,16 @@ public class SnapshotTest {
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     TransactionResult txResult = prepareResult(ANY_ID);
-    when(storage.get(get)).thenReturn(Optional.of(txResult));
+    Get getWithProjections =
+        prepareAnotherGet().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.get(getWithProjections)).thenReturn(Optional.of(txResult));
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).get(get);
+    verify(storage).get(getWithProjections);
   }
 
   @Test
@@ -684,23 +687,24 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Scan scan = prepareScan();
-    Get get = prepareGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
     DistributedStorage storage = mock(DistributedStorage.class);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -709,10 +713,9 @@ public class SnapshotTest {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_READ);
     Scan scan = prepareScan();
-    Get get = prepareGet();
     Put put = preparePut();
     TransactionResult txResult = prepareResult(ANY_ID);
-    Snapshot.Key key = new Snapshot.Key(get);
+    Snapshot.Key key = new Snapshot.Key(scan, txResult);
     snapshot.put(key, Optional.of(txResult));
     snapshot.put(scan, Collections.singletonList(key));
     snapshot.put(new Snapshot.Key(put), put);
@@ -721,14 +724,16 @@ public class SnapshotTest {
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator())
         .thenReturn(Collections.singletonList((Result) changedTxResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -745,14 +750,16 @@ public class SnapshotTest {
     TransactionResult txResult = new TransactionResult(result);
     Scanner scanner = mock(Scanner.class);
     when(scanner.iterator()).thenReturn(Collections.singletonList((Result) txResult).iterator());
-    when(storage.scan(scan)).thenReturn(scanner);
+    Scan scanWithProjections =
+        prepareScan().withProjection(Attribute.ID).withProjection(Attribute.VERSION);
+    when(storage.scan(scanWithProjections)).thenReturn(scanner);
 
     // Act Assert
     assertThatThrownBy(() -> snapshot.toSerializableWithExtraRead(storage))
         .isInstanceOf(CommitConflictException.class);
 
     // Assert
-    verify(storage).scan(scan);
+    verify(storage).scan(scanWithProjections);
   }
 
   @Test
@@ -775,25 +782,42 @@ public class SnapshotTest {
             .forNamespace(ANY_KEYSPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
-    Snapshot.Key key1 =
-        new Snapshot.Key(
-            scan1.forNamespace().get(),
-            scan1.forTable().get(),
-            scan1.getPartitionKey(),
-            scan1.getStartClusteringKey().get());
-    Snapshot.Key key2 =
-        new Snapshot.Key(
-            scan2.forNamespace().get(),
-            scan2.forTable().get(),
-            scan2.getPartitionKey(),
-            scan2.getStartClusteringKey().get());
-
     Result result1 = mock(TransactionResult.class);
+    when(result1.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
+    when(result1.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
     when(result1.getValues())
-        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id1")));
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1,
+                new TextValue(ANY_NAME_1, ANY_TEXT_1),
+                ANY_NAME_2,
+                new TextValue(ANY_NAME_2, ANY_TEXT_2),
+                Attribute.ID,
+                Attribute.toIdValue("id1"),
+                Attribute.VERSION,
+                Attribute.toVersionValue(ANY_VERSION)));
+
     Result result2 = mock(TransactionResult.class);
+    when(result2.getPartitionKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2))));
+    when(result2.getClusteringKey())
+        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1))));
     when(result2.getValues())
-        .thenReturn(ImmutableMap.of(Attribute.ID, new TextValue(Attribute.ID, "id2")));
+        .thenReturn(
+            ImmutableMap.of(
+                ANY_NAME_1,
+                new TextValue(ANY_NAME_1, ANY_TEXT_2),
+                ANY_NAME_2,
+                new TextValue(ANY_NAME_2, ANY_TEXT_1),
+                Attribute.ID,
+                Attribute.toIdValue("id2"),
+                Attribute.VERSION,
+                Attribute.toVersionValue(ANY_VERSION)));
+
+    Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
+    Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
 
     snapshot.put(scan1, Collections.singletonList(key1));
     snapshot.put(scan2, Collections.singletonList(key2));
@@ -804,11 +828,27 @@ public class SnapshotTest {
 
     Scanner scanner1 = mock(Scanner.class);
     when(scanner1.iterator()).thenReturn(Collections.singletonList(result1).iterator());
-    when(storage.scan(scan1)).thenReturn(scanner1);
+    Scan scan1WithProjections =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withProjection(Attribute.ID)
+            .withProjection(Attribute.VERSION);
+    when(storage.scan(scan1WithProjections)).thenReturn(scanner1);
 
     Scanner scanner2 = mock(Scanner.class);
     when(scanner2.iterator()).thenReturn(Collections.singletonList(result2).iterator());
-    when(storage.scan(scan2)).thenReturn(scanner2);
+    Scan scan2WithProjections =
+        new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
+            .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
+            .withConsistency(Consistency.LINEARIZABLE)
+            .forNamespace(ANY_KEYSPACE_NAME)
+            .forTable(ANY_TABLE_NAME)
+            .withProjection(Attribute.ID)
+            .withProjection(Attribute.VERSION);
+    when(storage.scan(scan2WithProjections)).thenReturn(scanner2);
 
     // Act Assert
     assertThatCode(() -> snapshot.toSerializableWithExtraRead(storage)).doesNotThrowAnyException();
