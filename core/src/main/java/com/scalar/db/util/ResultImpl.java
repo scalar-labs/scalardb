@@ -1,4 +1,4 @@
-package com.scalar.db.storage.common;
+package com.scalar.db.util;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
