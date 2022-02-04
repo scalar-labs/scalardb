@@ -4,8 +4,10 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 
 @SuppressFBWarnings("UR_UNINIT_READ_CALLED_FROM_SUPER_CONSTRUCTOR")
+@Immutable
 public class ImmutableLinkedHashSet<E> extends LinkedHashSet<E> {
 
   private final boolean immutable;

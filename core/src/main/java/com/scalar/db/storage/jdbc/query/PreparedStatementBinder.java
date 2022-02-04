@@ -10,7 +10,9 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import javax.annotation.concurrent.NotThreadSafe;
 
+@NotThreadSafe
 public class PreparedStatementBinder implements ValueVisitor {
 
   private final PreparedStatement preparedStatement;
