@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -152,7 +152,13 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     when(mockResult2.getValue(COL1)).thenReturn(Optional.of(new IntValue(2)));
     when(mockResult2.getValue(COL2)).thenReturn(Optional.of(new TextValue("B")));
     when(mockResult2.getValue(COL3)).thenReturn(Optional.of(new BigIntValue(3L)));
-    doReturn(Arrays.asList(mockResult1, mockResult2))
+    doAnswer(
+            invocation -> {
+              // clearProjections() is called when run with ConsensusCommit or
+              // TwoPhaseConsensusCommit
+              ((Scan) invocation.getArgument(1)).clearProjections();
+              return Arrays.asList(mockResult1, mockResult2);
+            })
         .when(dataFetcher)
         .performScan(eq(environment), any(Scan.class));
 

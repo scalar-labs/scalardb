@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -130,7 +130,15 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     when(mockResult.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
     when(mockResult.getValue(COL3)).thenReturn(Optional.of(new DoubleValue(2.0)));
-    doReturn(Optional.of(mockResult)).when(dataFetcher).performGet(eq(environment), any(Get.class));
+    doAnswer(
+            invocation -> {
+              // clearProjections() is called when run with ConsensusCommit or
+              // TwoPhaseConsensusCommit
+              ((Get) invocation.getArgument(1)).clearProjections();
+              return Optional.of(mockResult);
+            })
+        .when(dataFetcher)
+        .performGet(eq(environment), any(Get.class));
 
     // Act
     DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);

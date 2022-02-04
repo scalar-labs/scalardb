@@ -12,6 +12,8 @@ import com.scalar.db.exception.transaction.CrudException;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -40,10 +42,11 @@ public class QueryGetDataFetcher
         DataFetcherResult.newResult();
     ImmutableMap.Builder<String, Object> data = ImmutableMap.builder();
     try {
+      List<String> projections = new ArrayList<>(get.getProjections());
       performGet(environment, get)
           .ifPresent(
               dbResult -> {
-                for (String fieldName : get.getProjections()) {
+                for (String fieldName : projections) {
                   dbResult.getValue(fieldName).ifPresent(value -> data.put(fieldName, value.get()));
                 }
               });

@@ -18,6 +18,7 @@ import com.scalar.db.io.Key;
 import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -46,9 +47,10 @@ public class QueryScanDataFetcher
         DataFetcherResult.newResult();
     ImmutableList.Builder<Map<String, Object>> list = ImmutableList.builder();
     try {
+      List<String> projections = new ArrayList<>(scan.getProjections());
       for (Result dbResult : performScan(environment, scan)) {
         ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
-        for (String fieldName : scan.getProjections()) {
+        for (String fieldName : projections) {
           dbResult.getValue(fieldName).ifPresent(value -> map.put(fieldName, value.get()));
         }
         list.add(map.build());
