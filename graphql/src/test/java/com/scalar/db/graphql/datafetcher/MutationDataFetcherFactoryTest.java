@@ -2,6 +2,10 @@ package com.scalar.db.graphql.datafetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -11,6 +15,7 @@ import com.scalar.db.api.Consistency;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.DeleteIf;
 import com.scalar.db.api.DeleteIfExists;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
@@ -23,14 +28,17 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitUtils;
+import graphql.execution.AbortExecutionException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
-public class DataFetcherHelperTest {
-  private static final String ANY_NAMESPACE = "namespace1";
-  private static final String ANY_TABLE = "table1";
+public class MutationDataFetcherFactoryTest extends DataFetcherTestBase {
   private static final String COL1 = "c1";
   private static final String COL2 = "c2";
   private static final String COL3 = "c3";
@@ -44,17 +52,18 @@ public class DataFetcherHelperTest {
   private static final long ANY_LONG = 4L;
   private static final boolean ANY_BOOLEAN = false;
 
-  private TableGraphQlModel storageTableGraphQlModel;
+  private MutationDataFetcherFactory dataFetcherFactory;
+  private TableMetadata tableMetadata;
+
   private Map<String, Object> putInput;
   private Put expectedPut;
   private Map<String, Object> deleteInput;
   private Delete expectedDelete;
-  private DataFetcherHelper helper;
 
   @Before
   public void setUp() {
     // Arrange
-    TableMetadata storageTableMetadata =
+    tableMetadata =
         TableMetadata.newBuilder()
             .addColumn(COL1, DataType.INT)
             .addColumn(COL2, DataType.TEXT)
@@ -67,9 +76,9 @@ public class DataFetcherHelperTest {
             .addClusteringKey(COL3)
             .addClusteringKey(COL4)
             .build();
-    storageTableGraphQlModel =
-        new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, storageTableMetadata);
-    helper = new DataFetcherHelper(storageTableGraphQlModel);
+    dataFetcherFactory =
+        new MutationDataFetcherFactory(
+            new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage);
   }
 
   private void preparePutInputAndExpectedPut() {
@@ -99,7 +108,7 @@ public class DataFetcherHelperTest {
     preparePutInputAndExpectedPut();
 
     // Act
-    Put actual = helper.createPut(putInput);
+    Put actual = dataFetcherFactory.createPut(putInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedPut);
@@ -113,7 +122,7 @@ public class DataFetcherHelperTest {
     expectedPut.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Put actual = helper.createPut(putInput);
+    Put actual = dataFetcherFactory.createPut(putInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedPut);
@@ -127,7 +136,7 @@ public class DataFetcherHelperTest {
     expectedPut.withCondition(new PutIfExists());
 
     // Act
-    Put actual = helper.createPut(putInput);
+    Put actual = dataFetcherFactory.createPut(putInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedPut);
@@ -141,7 +150,7 @@ public class DataFetcherHelperTest {
     expectedPut.withCondition(new PutIfNotExists());
 
     // Act
-    Put actual = helper.createPut(putInput);
+    Put actual = dataFetcherFactory.createPut(putInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedPut);
@@ -166,7 +175,7 @@ public class DataFetcherHelperTest {
             new ConditionalExpression(COL3, new FloatValue(2.0F), Operator.LTE)));
 
     // Act
-    Put actual = helper.createPut(putInput);
+    Put actual = dataFetcherFactory.createPut(putInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedPut);
@@ -180,7 +189,7 @@ public class DataFetcherHelperTest {
     putInput.put("condition", ImmutableMap.of("type", "PutIf"));
 
     // Act Assert
-    assertThatThrownBy(() -> helper.createPut(putInput))
+    assertThatThrownBy(() -> dataFetcherFactory.createPut(putInput))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -209,7 +218,7 @@ public class DataFetcherHelperTest {
     prepareDeleteInputAndExpectedDelete();
 
     // Act
-    Delete actual = helper.createDelete(deleteInput);
+    Delete actual = dataFetcherFactory.createDelete(deleteInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedDelete);
@@ -223,7 +232,7 @@ public class DataFetcherHelperTest {
     expectedDelete.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Delete actual = helper.createDelete(deleteInput);
+    Delete actual = dataFetcherFactory.createDelete(deleteInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedDelete);
@@ -238,7 +247,7 @@ public class DataFetcherHelperTest {
     expectedDelete.withCondition(new DeleteIfExists());
 
     // Act
-    Delete actual = helper.createDelete(deleteInput);
+    Delete actual = dataFetcherFactory.createDelete(deleteInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedDelete);
@@ -263,7 +272,7 @@ public class DataFetcherHelperTest {
             new ConditionalExpression(COL3, new FloatValue(2.0F), Operator.LTE)));
 
     // Act
-    Delete actual = helper.createDelete(deleteInput);
+    Delete actual = dataFetcherFactory.createDelete(deleteInput);
 
     // Assert
     assertThat(actual).isEqualTo(expectedDelete);
@@ -277,7 +286,202 @@ public class DataFetcherHelperTest {
     deleteInput.put("condition", ImmutableMap.of("type", "DeleteIf"));
 
     // Act Assert
-    assertThatThrownBy(() -> helper.createDelete(deleteInput))
+    assertThatThrownBy(() -> dataFetcherFactory.createDelete(deleteInput))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private void prepareTransactionalTable() {
+    tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
+    dataFetcherFactory =
+        new MutationDataFetcherFactory(
+            new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage);
+  }
+
+  @Test
+  public void performPut_WhenTransactionNotStarted_ShouldUseStorage() throws Exception {
+    // Arrange
+    Put put = new Put(new Key(COL1, 1));
+
+    // Act
+    dataFetcherFactory.performPut(dataFetchingEnvironment, put);
+
+    // Assert
+    verify(storage, times(1)).put(put);
+    verify(transaction, never()).get(any());
+  }
+
+  @Test
+  public void performPut_WhenTransactionStarted_ShouldUseTransaction() throws Exception {
+    // Arrange
+    Put put = new Put(new Key(COL1, 1));
+    setTransactionStarted();
+
+    // Act
+    dataFetcherFactory.performPut(dataFetchingEnvironment, put);
+
+    // Assert
+    verify(storage, never()).get(any());
+    verify(transaction, times(1)).put(put);
+  }
+
+  @Test
+  public void performPut_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    Put put = new Put(new Key(COL1, 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcherFactory.performPut(dataFetchingEnvironment, put))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).put(put);
+    verify(transaction, never()).put(put);
+  }
+
+  @Test
+  public void performPut_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+      throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    Put put = new Put(new Key(COL1, 1));
+
+    // Act
+    dataFetcherFactory.performPut(dataFetchingEnvironment, put);
+
+    // Assert
+    verify(storage, never()).put(put);
+    verify(transaction, times(1)).put(put);
+  }
+
+  @Test
+  public void
+      performDelete_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    Delete delete = new Delete(new Key(COL1, 1));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcherFactory.performDelete(dataFetchingEnvironment, delete))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).delete(delete);
+    verify(transaction, never()).delete(delete);
+  }
+
+  @Test
+  public void
+      performDelete_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    Delete delete = new Delete(new Key(COL1, 1));
+
+    // Act
+    dataFetcherFactory.performDelete(dataFetchingEnvironment, delete);
+
+    // Assert
+    verify(storage, never()).delete(delete);
+    verify(transaction, times(1)).delete(delete);
+  }
+
+  @Test
+  public void
+      performPutList_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    List<Put> putList = Collections.singletonList(new Put(new Key(COL1, 1)));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcherFactory.performPut(dataFetchingEnvironment, putList))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).put(putList);
+    verify(transaction, never()).put(putList);
+  }
+
+  @Test
+  public void
+      performPutList_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    List<Put> putList = Collections.singletonList(new Put(new Key(COL1, 1)));
+
+    // Act
+    dataFetcherFactory.performPut(dataFetchingEnvironment, putList);
+
+    // Assert
+    verify(storage, never()).put(putList);
+    verify(transaction, times(1)).put(putList);
+  }
+
+  @Test
+  public void
+      performDeleteList_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    List<Delete> deleteList = Collections.singletonList(new Delete(new Key(COL1, 1)));
+
+    // Act Assert
+    assertThatThrownBy(() -> dataFetcherFactory.performDelete(dataFetchingEnvironment, deleteList))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).delete(deleteList);
+    verify(transaction, never()).delete(deleteList);
+  }
+
+  @Test
+  public void
+      performDeleteList_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    List<Delete> deleteList = Collections.singletonList(new Delete(new Key(COL1, 1)));
+
+    // Act
+    dataFetcherFactory.performDelete(dataFetchingEnvironment, deleteList);
+
+    // Assert
+    verify(storage, never()).delete(deleteList);
+    verify(transaction, times(1)).delete(deleteList);
+  }
+
+  @Test
+  public void
+      performMutate_WhenTransactionalMetadataTableIsAccessedWithStorage_ShouldThrowException()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    List<Mutation> mutationList =
+        Arrays.asList(new Put(new Key(COL1, 1)), new Delete(new Key(COL1, 1)));
+
+    // Act Assert
+    assertThatThrownBy(
+            () -> dataFetcherFactory.performMutate(dataFetchingEnvironment, mutationList))
+        .isInstanceOf(AbortExecutionException.class);
+    verify(storage, never()).mutate(mutationList);
+    verify(transaction, never()).mutate(mutationList);
+  }
+
+  @Test
+  public void
+      performMutate_WhenTransactionalMetadataTableIsAccessedWithTransaction_ShouldRunCommand()
+          throws Exception {
+    // Arrange
+    prepareTransactionalTable();
+    setTransactionStarted();
+    List<Mutation> mutationList =
+        Arrays.asList(new Put(new Key(COL1, 1)), new Delete(new Key(COL1, 1)));
+
+    // Act
+    dataFetcherFactory.performMutate(dataFetchingEnvironment, mutationList);
+
+    // Assert
+    verify(storage, never()).mutate(mutationList);
+    verify(transaction, times(1)).mutate(mutationList);
   }
 }

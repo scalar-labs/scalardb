@@ -33,6 +33,7 @@ import graphql.execution.DataFetcherResult;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -46,8 +47,8 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   private Map<String, Object> getInput;
   private Get expectedGet;
 
-  @Override
-  public void doSetUp() {
+  @Before
+  public void setUp() {
     // Arrange
     tableMetadata =
         TableMetadata.newBuilder()
@@ -60,9 +61,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     dataFetcher =
         spy(
             new QueryGetDataFetcher(
-                storage,
-                new DataFetcherHelper(
-                    new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata))));
+                new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage));
   }
 
   private void prepareGetInputAndExpectedGet() {
@@ -71,7 +70,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     // })
     getInput = new HashMap<>();
     getInput.put("key", ImmutableMap.of(COL1, 1, COL2, "A"));
-    when(environment.getArgument("get")).thenReturn(getInput);
+    when(dataFetchingEnvironment.getArgument("get")).thenReturn(getInput);
 
     expectedGet =
         new Get(new Key(COL1, 1), new Key(COL2, "A"))
@@ -85,7 +84,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     prepareGetInputAndExpectedGet();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     verify(storage, times(1)).get(expectedGet);
@@ -99,7 +98,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     setTransactionStarted();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -112,11 +111,11 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     prepareGetInputAndExpectedGet();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     ArgumentCaptor<Get> argument = ArgumentCaptor.forClass(Get.class);
-    verify(dataFetcher, times(1)).performGet(eq(environment), argument.capture());
+    verify(dataFetcher, times(1)).performGet(eq(dataFetchingEnvironment), argument.capture());
     assertThat(argument.getValue()).isEqualTo(expectedGet);
   }
 
@@ -124,16 +123,19 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenGetSucceeds_ShouldReturnResultAsMap() throws Exception {
     // Arrange
     prepareGetInputAndExpectedGet();
-    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+    addSelectionSetToEnvironment(dataFetchingEnvironment, COL1, COL2, COL3);
 
     Result mockResult = mock(Result.class);
     when(mockResult.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
     when(mockResult.getValue(COL2)).thenReturn(Optional.of(new TextValue("A")));
     when(mockResult.getValue(COL3)).thenReturn(Optional.of(new DoubleValue(2.0)));
-    doReturn(Optional.of(mockResult)).when(dataFetcher).performGet(eq(environment), any(Get.class));
+    doReturn(Optional.of(mockResult))
+        .when(dataFetcher)
+        .performGet(eq(dataFetchingEnvironment), any(Get.class));
 
     // Act
-    DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, Map<String, Object>>> result =
+        dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     Map<String, Object> object = result.getData().get(ANY_TABLE);
@@ -146,10 +148,11 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareGetInputAndExpectedGet();
     ExecutionException exception = new ExecutionException("error");
-    doThrow(exception).when(dataFetcher).performGet(eq(environment), any(Get.class));
+    doThrow(exception).when(dataFetcher).performGet(eq(dataFetchingEnvironment), any(Get.class));
 
     // Act
-    DataFetcherResult<Map<String, Map<String, Object>>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, Map<String, Object>>> result =
+        dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     assertThat(result.getData()).isNull();
@@ -162,7 +165,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     prepareGetInputAndExpectedGet();
 
     // Act
-    Get actual = dataFetcher.createGet(getInput, environment);
+    Get actual = dataFetcher.createGet(getInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
@@ -176,7 +179,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     expectedGet.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Get actual = dataFetcher.createGet(getInput, environment);
+    Get actual = dataFetcher.createGet(getInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
@@ -193,11 +196,11 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     //     c2, c3
     //   }
     // }
-    addSelectionSetToEnvironment(environment, COL2, COL3);
+    addSelectionSetToEnvironment(dataFetchingEnvironment, COL2, COL3);
     expectedGet.withProjections(ImmutableList.of(COL2, COL3));
 
     // Act
-    Get actual = dataFetcher.createGet(getInput, environment);
+    Get actual = dataFetcher.createGet(getInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedGet);
@@ -207,8 +210,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
     dataFetcher =
         new QueryGetDataFetcher(
-            storage,
-            new DataFetcherHelper(new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata)));
+            new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage);
   }
 
   @Test
@@ -219,7 +221,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     Get get = new Get(new Key(COL1, 1));
 
     // Act Assert
-    assertThatThrownBy(() -> dataFetcher.performGet(environment, get))
+    assertThatThrownBy(() -> dataFetcher.performGet(dataFetchingEnvironment, get))
         .isInstanceOf(AbortExecutionException.class);
     verify(storage, never()).get(get);
     verify(transaction, never()).get(get);
@@ -234,7 +236,7 @@ public class QueryGetDataFetcherTest extends DataFetcherTestBase {
     Get get = new Get(new Key(COL1, 1));
 
     // Act
-    dataFetcher.performGet(environment, get);
+    dataFetcher.performGet(dataFetchingEnvironment, get);
 
     // Assert
     verify(storage, never()).get(get);

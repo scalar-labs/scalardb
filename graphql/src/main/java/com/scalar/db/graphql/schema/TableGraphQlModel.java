@@ -351,10 +351,6 @@ public class TableGraphQlModel {
     return isConsensusCommitTransactionalTable;
   }
 
-  public LinkedHashSet<String> getFieldNames() {
-    return fieldNames;
-  }
-
   public GraphQLObjectType getObjectType() {
     return objectType;
   }
