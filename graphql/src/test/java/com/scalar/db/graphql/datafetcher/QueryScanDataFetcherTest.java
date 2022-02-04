@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -53,8 +54,8 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   private Map<String, Object> scanInput;
   private Scan expectedScan;
 
-  @Override
-  protected void doSetUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     // Arrange
     tableMetadata =
         TableMetadata.newBuilder()
@@ -73,9 +74,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     dataFetcher =
         spy(
             new QueryScanDataFetcher(
-                storage,
-                new DataFetcherHelper(
-                    new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata))));
+                new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage));
 
     // Mock scanner for storage
     Scanner mockScanner = mock(Scanner.class);
@@ -89,7 +88,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // })
     scanInput = new HashMap<>();
     scanInput.put("partitionKey", ImmutableMap.of(COL1, 1, COL2, "A"));
-    when(environment.getArgument("scan")).thenReturn(scanInput);
+    when(dataFetchingEnvironment.getArgument("scan")).thenReturn(scanInput);
 
     expectedScan =
         new Scan(new Key(new IntValue(COL1, 1), new TextValue(COL2, "A")))
@@ -103,7 +102,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     prepareScanInputAndExpectedScan();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     verify(storage, times(1)).scan(expectedScan);
@@ -117,7 +116,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     setTransactionStarted();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     verify(storage, never()).get(any());
@@ -130,11 +129,11 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     prepareScanInputAndExpectedScan();
 
     // Act
-    dataFetcher.get(environment);
+    dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     ArgumentCaptor<Scan> argument = ArgumentCaptor.forClass(Scan.class);
-    verify(dataFetcher, times(1)).performScan(eq(environment), argument.capture());
+    verify(dataFetcher, times(1)).performScan(eq(dataFetchingEnvironment), argument.capture());
     assertThat(argument.getValue()).isEqualTo(expectedScan);
   }
 
@@ -142,7 +141,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
   public void get_WhenScanSucceeds_ShouldReturnListData() throws Exception {
     // Arrange
     prepareScanInputAndExpectedScan();
-    addSelectionSetToEnvironment(environment, COL1, COL2, COL3);
+    addSelectionSetToEnvironment(dataFetchingEnvironment, COL1, COL2, COL3);
 
     Result mockResult1 = mock(Result.class);
     when(mockResult1.getValue(COL1)).thenReturn(Optional.of(new IntValue(1)));
@@ -160,10 +159,11 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
               return Arrays.asList(mockResult1, mockResult2);
             })
         .when(dataFetcher)
-        .performScan(eq(environment), any(Scan.class));
+        .performScan(eq(dataFetchingEnvironment), any(Scan.class));
 
     // Act
-    DataFetcherResult<Map<String, List<Map<String, Object>>>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, List<Map<String, Object>>>> result =
+        dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     List<Map<String, Object>> list = result.getData().get(ANY_TABLE);
@@ -179,10 +179,11 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     // Arrange
     prepareScanInputAndExpectedScan();
     ExecutionException exception = new ExecutionException("error");
-    doThrow(exception).when(dataFetcher).performScan(eq(environment), any(Scan.class));
+    doThrow(exception).when(dataFetcher).performScan(eq(dataFetchingEnvironment), any(Scan.class));
 
     // Act
-    DataFetcherResult<Map<String, List<Map<String, Object>>>> result = dataFetcher.get(environment);
+    DataFetcherResult<Map<String, List<Map<String, Object>>>> result =
+        dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     assertThat(result.getData()).isNull();
@@ -195,7 +196,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     prepareScanInputAndExpectedScan();
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -209,7 +210,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withConsistency(Consistency.EVENTUAL);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -226,7 +227,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withStart(new Key(new BigIntValue(COL3, 1L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -243,7 +244,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withEnd(new Key(new BigIntValue(COL3, 10L)), false);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -264,7 +265,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
         .withOrdering(new Scan.Ordering(COL3, Scan.Ordering.Order.DESC));
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -278,7 +279,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     expectedScan.withLimit(100);
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -295,11 +296,11 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     //     c2, c3
     //   }
     // }
-    addSelectionSetToEnvironment(environment, COL2, COL3);
+    addSelectionSetToEnvironment(dataFetchingEnvironment, COL2, COL3);
     expectedScan.withProjections(ImmutableList.of(COL2, COL3));
 
     // Act
-    Scan actual = dataFetcher.createScan(scanInput, environment);
+    Scan actual = dataFetcher.createScan(scanInput, dataFetchingEnvironment);
 
     // Assert
     assertThat(actual).isEqualTo(expectedScan);
@@ -309,8 +310,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     tableMetadata = ConsensusCommitUtils.buildTransactionalTableMetadata(tableMetadata);
     dataFetcher =
         new QueryScanDataFetcher(
-            storage,
-            new DataFetcherHelper(new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata)));
+            new TableGraphQlModel(ANY_NAMESPACE, ANY_TABLE, tableMetadata), storage);
   }
 
   @Test
@@ -321,7 +321,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     Scan scan = new Scan(new Key(COL1, 1));
 
     // Act Assert
-    assertThatThrownBy(() -> dataFetcher.performScan(environment, scan))
+    assertThatThrownBy(() -> dataFetcher.performScan(dataFetchingEnvironment, scan))
         .isInstanceOf(AbortExecutionException.class);
     verify(storage, never()).scan(scan);
     verify(transaction, never()).scan(scan);
@@ -336,7 +336,7 @@ public class QueryScanDataFetcherTest extends DataFetcherTestBase {
     Scan scan = new Scan(new Key(COL1, 1));
 
     // Act
-    dataFetcher.performScan(environment, scan);
+    dataFetcher.performScan(dataFetchingEnvironment, scan);
 
     // Assert
     verify(storage, never()).scan(scan);

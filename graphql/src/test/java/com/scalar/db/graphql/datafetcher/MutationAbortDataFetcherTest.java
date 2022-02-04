@@ -7,13 +7,14 @@ import static org.mockito.Mockito.verify;
 import com.scalar.db.exception.transaction.AbortException;
 import graphql.execution.AbortExecutionException;
 import graphql.execution.DataFetcherResult;
+import org.junit.Before;
 import org.junit.Test;
 
 public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   private MutationAbortDataFetcher dataFetcher;
 
-  @Override
-  protected void doSetUp() {
+  @Before
+  public void setUp() {
     // Arrange
     dataFetcher = new MutationAbortDataFetcher();
   }
@@ -24,7 +25,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
     setTransactionStarted();
 
     // Act
-    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
+    DataFetcherResult<Boolean> result = dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     verify(transaction).abort();
@@ -35,7 +36,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
   @Test
   public void get_WhenTransactionIsNotPresent_ShouldReturnFalseWithErrors() throws Exception {
     // Act
-    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
+    DataFetcherResult<Boolean> result = dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     assertThat(result.getData()).isFalse();
@@ -53,7 +54,7 @@ public class MutationAbortDataFetcherTest extends DataFetcherTestBase {
     doThrow(exception).when(transaction).abort();
 
     // Act
-    DataFetcherResult<Boolean> result = dataFetcher.get(environment);
+    DataFetcherResult<Boolean> result = dataFetcher.get(dataFetchingEnvironment);
 
     // Assert
     assertThat(result.getData()).isFalse();

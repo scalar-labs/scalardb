@@ -31,37 +31,33 @@ public abstract class DataFetcherTestBase {
   protected static final String ANY_NAMESPACE = "namespace1";
   protected static final String ANY_TABLE = "table1";
 
-  @Mock protected DataFetchingEnvironment environment;
+  @Mock protected DataFetchingEnvironment dataFetchingEnvironment;
   @Mock protected DataFetchingFieldSelectionSet selectionSet;
   @Mock protected GraphQLContext graphQlContext;
   @Mock protected DistributedStorage storage;
   @Mock protected DistributedTransaction transaction;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUpBase() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
     // Arrange
-    when(environment.getGraphQlContext()).thenReturn(graphQlContext);
+    when(dataFetchingEnvironment.getGraphQlContext()).thenReturn(graphQlContext);
 
     // Set empty selection set as default
     when(selectionSet.getFields(anyString())).thenReturn(Collections.emptyList());
-    when(environment.getSelectionSet()).thenReturn(selectionSet);
+    when(dataFetchingEnvironment.getSelectionSet()).thenReturn(selectionSet);
 
     // Stub environment methods for errors
-    when(environment.getField())
+    when(dataFetchingEnvironment.getField())
         .thenReturn(Field.newField("test").sourceLocation(SourceLocation.EMPTY).build());
-    when(environment.getExecutionStepInfo())
+    when(dataFetchingEnvironment.getExecutionStepInfo())
         .thenReturn(
             ExecutionStepInfo.newExecutionStepInfo()
                 .type(Scalars.GraphQLString)
                 .path(ResultPath.parse(""))
                 .build());
-
-    doSetUp();
   }
-
-  protected abstract void doSetUp() throws Exception;
 
   protected void addSelectionSetToEnvironment(
       DataFetchingEnvironment environment, String... fields) {
