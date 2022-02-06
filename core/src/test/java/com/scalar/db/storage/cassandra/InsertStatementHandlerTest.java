@@ -256,6 +256,22 @@ public class InsertStatementHandlerTest {
   }
 
   @Test
+  public void bind_PutOperationWithNullValueGiven_ShouldBindProperly() {
+    // Arrange
+    configureBehavior(null);
+    put = preparePutWithClusteringKey();
+    put.withNullValue(ANY_NAME_3);
+
+    // Act
+    handler.bind(prepared, put);
+
+    // Assert
+    verify(bound).setString(0, ANY_TEXT_1);
+    verify(bound).setString(1, ANY_TEXT_2);
+    verify(bound).setToNull(2);
+  }
+
+  @Test
   public void setConsistency_PutOperationWithStrongConsistencyGiven_ShouldPrepareWithQuorum() {
     // Arrange
     configureBehavior(null);

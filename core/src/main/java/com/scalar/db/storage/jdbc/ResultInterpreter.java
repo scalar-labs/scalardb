@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -32,40 +34,54 @@ public class ResultInterpreter {
   }
 
   public Result interpret(ResultSet resultSet) throws SQLException {
-    Map<String, Value<?>> values = new HashMap<>();
+    Map<String, Optional<Value<?>>> values = new HashMap<>();
     if (projections.isEmpty()) {
       for (String projection : metadata.getColumnNames()) {
-        values.put(projection, getValue(projection, resultSet));
+        values.put(projection, Optional.ofNullable(getValue(projection, resultSet)));
       }
     } else {
       for (String projection : projections) {
-        values.put(projection, getValue(projection, resultSet));
+        values.put(projection, Optional.ofNullable(getValue(projection, resultSet)));
       }
     }
     return new ResultImpl(values, metadata);
   }
 
+  @Nullable
   private Value<?> getValue(String name, ResultSet resultSet) throws SQLException {
+    Value<?> ret;
+
     DataType dataType = metadata.getColumnDataType(name);
     switch (dataType) {
       case BOOLEAN:
-        return new BooleanValue(name, resultSet.getBoolean(name));
+        ret = new BooleanValue(name, resultSet.getBoolean(name));
+        break;
       case INT:
-        return new IntValue(name, resultSet.getInt(name));
+        ret = new IntValue(name, resultSet.getInt(name));
+        break;
       case BIGINT:
-        return new BigIntValue(name, resultSet.getLong(name));
+        ret = new BigIntValue(name, resultSet.getLong(name));
+        break;
       case FLOAT:
         // To handle Float.MAX_VALUE in MySQL, we need to get the value as double, then cast it to
         // float
-        return new FloatValue(name, (float) resultSet.getDouble(name));
+        ret = new FloatValue(name, (float) resultSet.getDouble(name));
+        break;
       case DOUBLE:
-        return new DoubleValue(name, resultSet.getDouble(name));
+        ret = new DoubleValue(name, resultSet.getDouble(name));
+        break;
       case TEXT:
-        return new TextValue(name, resultSet.getString(name));
+        ret = new TextValue(name, resultSet.getString(name));
+        break;
       case BLOB:
-        return new BlobValue(name, resultSet.getBytes(name));
+        ret = new BlobValue(name, resultSet.getBytes(name));
+        break;
       default:
         throw new AssertionError();
     }
+    if (resultSet.wasNull()) {
+      return null;
+    }
+    return ret;
   }
 }

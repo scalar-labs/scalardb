@@ -7,8 +7,6 @@ import static com.scalar.db.transaction.consensuscommit.Attribute.toIdValue;
 import static com.scalar.db.transaction.consensuscommit.Attribute.toVersionValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.ConditionalExpression;
@@ -18,11 +16,14 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfNotExists;
-import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +49,17 @@ public class PrepareMutationComposerTest {
   private static final int ANY_INT_1 = 100;
   private static final int ANY_INT_2 = 200;
   private static final int ANY_INT_3 = 300;
+
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionalTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.INT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
+
   private PrepareMutationComposer composer;
   private List<Mutation> mutations;
 
@@ -74,35 +86,33 @@ public class PrepareMutationComposerTest {
         .forTable(ANY_TABLE_NAME);
   }
 
-  private void configureResult(Result mock) {
-    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
-    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
-
-    ImmutableMap<String, Value<?>> values =
-        ImmutableMap.<String, Value<?>>builder()
-            .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
-            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
-            .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))
-            .put(Attribute.COMMITTED_AT, Attribute.toCommittedAtValue(ANY_TIME_4))
-            .put(Attribute.STATE, Attribute.toStateValue(TransactionState.COMMITTED))
-            .put(Attribute.VERSION, Attribute.toVersionValue(2))
+  private TransactionResult prepareResult() {
+    ImmutableMap<String, Optional<Value<?>>> values =
+        ImmutableMap.<String, Optional<Value<?>>>builder()
+            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .put(ANY_NAME_3, Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)))
+            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+            .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)))
+            .put(Attribute.COMMITTED_AT, Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)))
+            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)))
+            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(2)))
             .put(
                 Attribute.BEFORE_PREFIX + ANY_NAME_3,
-                new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
-            .put(Attribute.BEFORE_ID, Attribute.toBeforeIdValue(ANY_ID_1))
-            .put(Attribute.BEFORE_PREPARED_AT, Attribute.toBeforePreparedAtValue(ANY_TIME_1))
-            .put(Attribute.BEFORE_COMMITTED_AT, Attribute.toBeforeCommittedAtValue(ANY_TIME_2))
-            .put(Attribute.BEFORE_STATE, Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .put(Attribute.BEFORE_VERSION, Attribute.toBeforeVersionValue(1))
+                Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)))
+            .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+            .put(
+                Attribute.BEFORE_PREPARED_AT,
+                Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+            .put(
+                Attribute.BEFORE_COMMITTED_AT,
+                Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+            .put(
+                Attribute.BEFORE_STATE,
+                Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+            .put(Attribute.BEFORE_VERSION, Optional.of(Attribute.toBeforeVersionValue(1)))
             .build();
-
-    when(mock.getValues()).thenReturn(values);
-  }
-
-  private TransactionResult prepareResult() {
-    Result result = mock(Result.class);
-    configureResult(result);
-    return new TransactionResult(result);
+    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
   }
 
   @Test

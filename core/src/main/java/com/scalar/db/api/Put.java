@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -26,7 +27,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class Put extends Mutation {
-  private final Map<String, Value<?>> values;
+  private final Map<String, Optional<Value<?>>> values;
 
   /**
    * Constructs a {@code Put} with the specified partition {@link Key}.
@@ -61,7 +62,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(Value<?> value) {
-    values.put(value.getName(), value);
+    values.put(value.getName(), Optional.of(value));
     return this;
   }
 
@@ -73,7 +74,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, boolean value) {
-    values.put(name, new BooleanValue(name, value));
+    values.put(name, Optional.of(new BooleanValue(name, value)));
     return this;
   }
 
@@ -85,7 +86,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, int value) {
-    values.put(name, new IntValue(name, value));
+    values.put(name, Optional.of(new IntValue(name, value)));
     return this;
   }
 
@@ -97,7 +98,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, long value) {
-    values.put(name, new BigIntValue(name, value));
+    values.put(name, Optional.of(new BigIntValue(name, value)));
     return this;
   }
 
@@ -109,7 +110,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, float value) {
-    values.put(name, new FloatValue(name, value));
+    values.put(name, Optional.of(new FloatValue(name, value)));
     return this;
   }
 
@@ -121,7 +122,7 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, double value) {
-    values.put(name, new DoubleValue(name, value));
+    values.put(name, Optional.of(new DoubleValue(name, value)));
     return this;
   }
 
@@ -133,7 +134,11 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, @Nullable String value) {
-    values.put(name, new TextValue(name, value));
+    if (value == null) {
+      withNullValue(name);
+    } else {
+      values.put(name, Optional.of(new TextValue(name, value)));
+    }
     return this;
   }
 
@@ -145,7 +150,11 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, @Nullable byte[] value) {
-    values.put(name, new BlobValue(name, value));
+    if (value == null) {
+      withNullValue(name);
+    } else {
+      values.put(name, Optional.of(new BlobValue(name, value)));
+    }
     return this;
   }
 
@@ -157,7 +166,11 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, @Nullable ByteBuffer value) {
-    values.put(name, new BlobValue(name, value));
+    if (value == null) {
+      withNullValue(name);
+    } else {
+      values.put(name, Optional.of(new BlobValue(name, value)));
+    }
     return this;
   }
 
@@ -168,7 +181,18 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValues(Collection<Value<?>> values) {
-    values.forEach(v -> this.values.put(v.getName(), v));
+    values.forEach(v -> this.values.put(v.getName(), Optional.of(v)));
+    return this;
+  }
+
+  /**
+   * Adds NULL value for the specified name of the value.
+   *
+   * @param name a name of the value
+   * @return this object
+   */
+  public Put withNullValue(String name) {
+    values.put(name, Optional.empty());
     return this;
   }
 
@@ -177,7 +201,7 @@ public class Put extends Mutation {
    *
    * @return a map of {@code Value}s
    */
-  public Map<String, Value<?>> getValues() {
+  public Map<String, Optional<Value<?>>> getValues() {
     return ImmutableMap.copyOf(values);
   }
 

@@ -1,5 +1,6 @@
 package com.scalar.db.storage.jdbc.query;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import java.util.List;
 import java.util.Objects;
@@ -21,19 +22,19 @@ public final class QueryBuilder {
     return new SelectQuery.Builder(rdbEngine, projections);
   }
 
-  public InsertQuery.Builder insertInto(String schema, String table) {
-    return new InsertQuery.Builder(rdbEngine, schema, table);
+  public InsertQuery.Builder insertInto(String schema, String table, TableMetadata tableMetadata) {
+    return new InsertQuery.Builder(rdbEngine, schema, table, tableMetadata);
   }
 
-  public UpdateQuery.Builder update(String schema, String table) {
-    return new UpdateQuery.Builder(rdbEngine, schema, table);
+  public UpdateQuery.Builder update(String schema, String table, TableMetadata tableMetadata) {
+    return new UpdateQuery.Builder(rdbEngine, schema, table, tableMetadata);
   }
 
-  public DeleteQuery.Builder deleteFrom(String schema, String table) {
-    return new DeleteQuery.Builder(rdbEngine, schema, table);
+  public DeleteQuery.Builder deleteFrom(String schema, String table, TableMetadata tableMetadata) {
+    return new DeleteQuery.Builder(rdbEngine, schema, table, tableMetadata);
   }
 
-  public UpsertQuery.Builder upsertInto(String schema, String table) {
-    return new UpsertQuery.Builder(rdbEngine, schema, table);
+  public UpsertQuery.Builder upsertInto(String schema, String table, TableMetadata tableMetadata) {
+    return new UpsertQuery.Builder(rdbEngine, schema, table, tableMetadata);
   }
 }

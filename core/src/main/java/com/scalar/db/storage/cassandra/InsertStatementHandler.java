@@ -66,7 +66,7 @@ public class InsertStatementHandler extends MutateStatementHandler {
     put.getPartitionKey().forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
     put.getClusteringKey()
         .ifPresent(k -> k.forEach(v -> insert.value(quoteIfNecessary(v.getName()), bindMarker())));
-    put.getValues().forEach((k, v) -> insert.value(quoteIfNecessary(v.getName()), bindMarker()));
+    put.getValues().forEach((k, v) -> insert.value(quoteIfNecessary(k), bindMarker()));
 
     setCondition(insert, put);
 
@@ -79,7 +79,15 @@ public class InsertStatementHandler extends MutateStatementHandler {
     // bind in the prepared order
     put.getPartitionKey().forEach(v -> v.accept(binder));
     put.getClusteringKey().ifPresent(k -> k.forEach(v -> v.accept(binder)));
-    put.getValues().forEach((k, v) -> v.accept(binder));
+    put.getValues()
+        .forEach(
+            (k, v) -> {
+              if (v.isPresent()) {
+                v.get().accept(binder);
+              } else {
+                binder.bindNullValue();
+              }
+            });
 
     // it calls for consistency, but actually nothing to bind here
     bindCondition(binder, put);

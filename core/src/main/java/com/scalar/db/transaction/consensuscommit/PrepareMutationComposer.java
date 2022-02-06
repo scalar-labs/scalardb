@@ -56,16 +56,23 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
             .forTable(base.forTable().get())
             .withConsistency(Consistency.LINEARIZABLE);
 
-    List<Value<?>> values = new ArrayList<>();
-    values.add(Attribute.toIdValue(id));
-    values.add(Attribute.toStateValue(TransactionState.PREPARED));
-    values.add(Attribute.toPreparedAtValue(current));
-    values.addAll(base.getValues().values());
+    put.withValue(Attribute.toIdValue(id));
+    put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
+    put.withValue(Attribute.toPreparedAtValue(current));
+    base.getValues()
+        .forEach(
+            (k, v) -> {
+              if (v.isPresent()) {
+                put.withValue(v.get());
+              } else {
+                put.withNullValue(k);
+              }
+            });
 
     if (result != null) { // overwrite existing record
-      values.addAll(createBeforeValues(base, result));
+      put.withValues(createBeforeValues(base, result));
       int version = result.getVersion();
-      values.add(Attribute.toVersionValue(version + 1));
+      put.withValue(Attribute.toVersionValue(version + 1));
 
       // check if the record is not interrupted by other conflicting transactions
       put.withCondition(
@@ -73,13 +80,12 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
               new ConditionalExpression(VERSION, toVersionValue(version), Operator.EQ),
               new ConditionalExpression(ID, toIdValue(result.getId()), Operator.EQ)));
     } else { // initial record
-      values.add(Attribute.toVersionValue(1));
+      put.withValue(Attribute.toVersionValue(1));
 
       // check if the record is not created by other conflicting transactions
       put.withCondition(new PutIfNotExists());
     }
 
-    put.withValues(values);
     mutations.add(put);
   }
 

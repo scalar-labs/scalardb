@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -31,7 +33,7 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Record record) {
-    Map<String, Value<?>> ret = new HashMap<>();
+    Map<String, Optional<Value<?>>> ret = new HashMap<>();
 
     Map<String, Object> recordValues = record.getValues();
     if (projections.isEmpty()) {
@@ -52,31 +54,30 @@ public class ResultInterpreter {
   }
 
   private void add(
-      Map<String, Value<?>> values, String name, Object value, TableMetadata metadata) {
-    values.put(name, convert(value, name, metadata.getColumnDataType(name)));
+      Map<String, Optional<Value<?>>> values, String name, Object value, TableMetadata metadata) {
+    values.put(name, Optional.ofNullable(convert(value, name, metadata.getColumnDataType(name))));
   }
 
-  private Value<?> convert(Object recordValue, String name, DataType dataType) {
-    // When recordValue is NULL, the value will be the default value.
-    // It is the same behavior as the datastax C* driver
+  @Nullable
+  private Value<?> convert(@Nullable Object recordValue, String name, DataType dataType) {
+    if (recordValue == null) {
+      return null;
+    }
     switch (dataType) {
       case BOOLEAN:
-        return new BooleanValue(name, recordValue != null && (boolean) recordValue);
+        return new BooleanValue(name, (boolean) recordValue);
       case INT:
-        return new IntValue(name, recordValue == null ? 0 : ((Number) recordValue).intValue());
+        return new IntValue(name, ((Number) recordValue).intValue());
       case BIGINT:
-        return new BigIntValue(name, recordValue == null ? 0L : ((Number) recordValue).longValue());
+        return new BigIntValue(name, ((Number) recordValue).longValue());
       case FLOAT:
-        return new FloatValue(
-            name, recordValue == null ? 0.0f : ((Number) recordValue).floatValue());
+        return new FloatValue(name, ((Number) recordValue).floatValue());
       case DOUBLE:
-        return new DoubleValue(
-            name, recordValue == null ? 0.0 : ((Number) recordValue).doubleValue());
+        return new DoubleValue(name, ((Number) recordValue).doubleValue());
       case TEXT:
-        return new TextValue(name, recordValue == null ? null : (String) recordValue);
+        return new TextValue(name, (String) recordValue);
       case BLOB:
-        return new BlobValue(
-            name, recordValue == null ? null : Base64.getDecoder().decode((String) recordValue));
+        return new BlobValue(name, Base64.getDecoder().decode((String) recordValue));
       default:
         throw new AssertionError();
     }

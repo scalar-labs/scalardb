@@ -2,10 +2,8 @@ package com.scalar.db.storage.dynamo;
 
 import com.scalar.db.api.Operation;
 import com.scalar.db.api.TableMetadata;
-import com.scalar.db.io.Value;
 import com.scalar.db.storage.dynamo.bytes.KeyBytesEncoder;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -90,12 +88,5 @@ public class DynamoOperation {
     return Optional.of(
         new KeyBytesEncoder()
             .encode(operation.getClusteringKey().get(), metadata.getClusteringOrders()));
-  }
-
-  Map<String, AttributeValue> toMap(Collection<Value<?>> values) {
-    MapVisitor visitor = new MapVisitor();
-    values.forEach(v -> v.accept(visitor));
-
-    return visitor.get();
   }
 }

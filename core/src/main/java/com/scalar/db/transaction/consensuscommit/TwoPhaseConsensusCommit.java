@@ -23,7 +23,6 @@ import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
@@ -78,12 +77,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public Optional<Result> get(Get originalGet) throws CrudException {
+  public Optional<Result> get(Get get) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    Get get = copyAndSetTargetToIfNot(originalGet);
+    get = copyAndSetTargetToIfNot(get);
     try {
-      return crud.get(get).map(r -> new FilteredResult(r, originalGet.getProjections()));
+      return crud.get(get);
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
@@ -91,14 +90,12 @@ public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   }
 
   @Override
-  public List<Result> scan(Scan originalScan) throws CrudException {
+  public List<Result> scan(Scan scan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    Scan scan = copyAndSetTargetToIfNot(originalScan);
+    scan = copyAndSetTargetToIfNot(scan);
     try {
-      return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, originalScan.getProjections()))
-          .collect(Collectors.toList());
+      return crud.scan(scan);
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
       throw e;

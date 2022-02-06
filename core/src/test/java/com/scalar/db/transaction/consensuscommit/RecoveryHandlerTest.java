@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -11,11 +10,14 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.DistributedStorage;
-import com.scalar.db.api.Result;
 import com.scalar.db.api.Selection;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,8 +25,17 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class RecoveryHandlerTest {
+  private static final String ANY_NAME_1 = "name1";
+  private static final String ANY_TEXT_1 = "text1";
   private static final String ANY_ID_1 = "id1";
   private static final long ANY_TIME_1 = 100;
+
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionalTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addPartitionKey(ANY_NAME_1)
+              .build());
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
@@ -41,28 +52,24 @@ public class RecoveryHandlerTest {
     handler = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
   }
 
-  private void configureResult(Result mock, long preparedAt, TransactionState transactionState) {
-    ImmutableMap<String, Value<?>> values =
-        ImmutableMap.<String, Value<?>>builder()
-            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_1))
-            .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(preparedAt))
-            .put(Attribute.STATE, Attribute.toStateValue(transactionState))
-            .put(Attribute.VERSION, Attribute.toVersionValue(1))
+  private TransactionResult prepareResult(long preparedAt, TransactionState transactionState) {
+    ImmutableMap<String, Optional<Value<?>>> values =
+        ImmutableMap.<String, Optional<Value<?>>>builder()
+            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_1)))
+            .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(preparedAt)))
+            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(transactionState)))
+            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(1)))
             .build();
-
-    when(mock.getValues()).thenReturn(values);
+    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
   }
 
   private TransactionResult preparePreparedResult(long preparedAt) {
-    Result result = mock(Result.class);
-    configureResult(result, preparedAt, TransactionState.PREPARED);
-    return new TransactionResult(result);
+    return prepareResult(preparedAt, TransactionState.PREPARED);
   }
 
   private TransactionResult prepareCommittedResult(long preparedAt) {
-    Result result = mock(Result.class);
-    configureResult(result, preparedAt, TransactionState.COMMITTED);
-    return new TransactionResult(result);
+    return prepareResult(preparedAt, TransactionState.COMMITTED);
   }
 
   @Test

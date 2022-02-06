@@ -161,7 +161,7 @@ public class JdbcServiceTest {
   @Test
   public void whenPutOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {
     // Arrange
-    when(queryBuilder.upsertInto(any(), any())).thenReturn(upsertQueryBuilder);
+    when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -177,14 +177,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).upsertInto(any(), any());
+    verify(queryBuilder).upsertInto(any(), any(), any());
   }
 
   @Test
   public void whenPutOperationWithPutIfConditionExecuted_shouldReturnTrueAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.update(any(), any())).thenReturn(updateQueryBuilder);
+    when(queryBuilder.update(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
@@ -206,14 +206,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).update(any(), any());
+    verify(queryBuilder).update(any(), any(), any());
   }
 
   @Test
   public void whenPutOperationWithPutIfConditionFails_shouldReturnFalseAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.update(any(), any())).thenReturn(updateQueryBuilder);
+    when(queryBuilder.update(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
@@ -235,14 +235,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isFalse();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).update(any(), any());
+    verify(queryBuilder).update(any(), any(), any());
   }
 
   @Test
   public void whenPutOperationWithPutIfExistsConditionExecuted_shouldReturnTrueAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.update(any(), any())).thenReturn(updateQueryBuilder);
+    when(queryBuilder.update(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
@@ -261,14 +261,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).update(any(), any());
+    verify(queryBuilder).update(any(), any(), any());
   }
 
   @Test
   public void whenPutOperationWithPutIfExistsConditionFails_shouldReturnFalseAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.update(any(), any())).thenReturn(updateQueryBuilder);
+    when(queryBuilder.update(any(), any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.set(any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.where(any(), any())).thenReturn(updateQueryBuilder);
     when(updateQueryBuilder.build()).thenReturn(updateQuery);
@@ -287,7 +287,7 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isFalse();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).update(any(), any());
+    verify(queryBuilder).update(any(), any(), any());
   }
 
   @Test
@@ -295,7 +295,7 @@ public class JdbcServiceTest {
       whenPutOperationWithPutIfNotExistsConditionExecuted_shouldReturnTrueAndCallQueryBuilder()
           throws Exception {
     // Arrange
-    when(queryBuilder.insertInto(any(), any())).thenReturn(insertQueryBuilder);
+    when(queryBuilder.insertInto(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -312,7 +312,7 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).insertInto(any(), any());
+    verify(queryBuilder).insertInto(any(), any(), any());
   }
 
   @Test
@@ -320,7 +320,7 @@ public class JdbcServiceTest {
       whenPutOperationWithPutIfNotExistsConditionFails_shouldReturnFalseAndCallQueryBuilder()
           throws Exception {
     // Arrange
-    when(queryBuilder.insertInto(any(), any())).thenReturn(insertQueryBuilder);
+    when(queryBuilder.insertInto(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.values(any(), any(), any())).thenReturn(insertQueryBuilder);
     when(insertQueryBuilder.build()).thenReturn(insertQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -339,13 +339,13 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isFalse();
     verify(operationChecker).check(any(Put.class));
-    verify(queryBuilder).insertInto(any(), any());
+    verify(queryBuilder).insertInto(any(), any(), any());
   }
 
   @Test
   public void whenDeleteOperationExecuted_shouldReturnTrueAndCallQueryBuilder() throws Exception {
     // Arrange
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -357,14 +357,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 
   @Test
   public void whenDeleteOperationWithDeleteIfConditionExecuted_shouldReturnTrueAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -384,14 +384,14 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 
   @Test
   public void whenDeleteOperationWithDeleteIfConditionFails_shouldReturnFalseAndCallQueryBuilder()
       throws Exception {
     // Arrange
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -411,7 +411,7 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isFalse();
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 
   @Test
@@ -419,7 +419,7 @@ public class JdbcServiceTest {
       whenDeleteOperationWithDeleteIfExistsConditionExecuted_shouldReturnTrueAndCallQueryBuilder()
           throws Exception {
     // Arrange
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -436,7 +436,7 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isTrue();
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 
   @Test
@@ -444,7 +444,7 @@ public class JdbcServiceTest {
       whenDeleteOperationWithDeleteIfExistsConditionFails_shouldReturnFalseAndCallQueryBuilder()
           throws Exception {
     // Arrange
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
@@ -461,7 +461,7 @@ public class JdbcServiceTest {
     // Assert
     assertThat(ret).isFalse();
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 
   @Test
@@ -469,11 +469,11 @@ public class JdbcServiceTest {
     // Arrange
     when(connection.prepareStatement(any())).thenReturn(preparedStatement);
 
-    when(queryBuilder.upsertInto(any(), any())).thenReturn(upsertQueryBuilder);
+    when(queryBuilder.upsertInto(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.values(any(), any(), any())).thenReturn(upsertQueryBuilder);
     when(upsertQueryBuilder.build()).thenReturn(upsertQuery);
 
-    when(queryBuilder.deleteFrom(any(), any())).thenReturn(deleteQueryBuilder);
+    when(queryBuilder.deleteFrom(any(), any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.where(any(), any())).thenReturn(deleteQueryBuilder);
     when(deleteQueryBuilder.build()).thenReturn(deleteQuery);
 
@@ -491,7 +491,7 @@ public class JdbcServiceTest {
     verify(operationChecker).check(anyList());
     verify(operationChecker).check(any(Put.class));
     verify(operationChecker).check(any(Delete.class));
-    verify(queryBuilder).upsertInto(any(), any());
-    verify(queryBuilder).deleteFrom(any(), any());
+    verify(queryBuilder).upsertInto(any(), any(), any());
+    verify(queryBuilder).deleteFrom(any(), any(), any());
   }
 }

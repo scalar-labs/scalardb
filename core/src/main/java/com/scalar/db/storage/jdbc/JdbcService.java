@@ -137,11 +137,12 @@ public class JdbcService {
 
   public boolean put(Put put, Connection connection) throws SQLException, ExecutionException {
     operationChecker.check(put);
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(put);
 
     if (!put.getCondition().isPresent()) {
       UpsertQuery upsertQuery =
           queryBuilder
-              .upsertInto(put.forNamespace().get(), put.forTable().get())
+              .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
               .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
               .build();
       try (PreparedStatement preparedStatement = connection.prepareStatement(upsertQuery.sql())) {
@@ -150,18 +151,19 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalMutator(put, connection, queryBuilder).mutate();
+      return new ConditionalMutator(put, tableMetadata, connection, queryBuilder).mutate();
     }
   }
 
   public boolean delete(Delete delete, Connection connection)
       throws SQLException, ExecutionException {
     operationChecker.check(delete);
+    TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(delete);
 
     if (!delete.getCondition().isPresent()) {
       DeleteQuery deleteQuery =
           queryBuilder
-              .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
+              .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
               .where(delete.getPartitionKey(), delete.getClusteringKey())
               .build();
       try (PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery.sql())) {
@@ -170,7 +172,7 @@ public class JdbcService {
         return true;
       }
     } else {
-      return new ConditionalMutator(delete, connection, queryBuilder).mutate();
+      return new ConditionalMutator(delete, tableMetadata, connection, queryBuilder).mutate();
     }
   }
 

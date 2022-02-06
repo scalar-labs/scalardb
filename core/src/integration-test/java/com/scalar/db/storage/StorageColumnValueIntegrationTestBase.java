@@ -22,7 +22,10 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.service.StorageFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -164,6 +167,63 @@ public abstract class StorageColumnValueIntegrationTestBase {
       assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
       assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
       assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+      assertThat(actual.get().getContainedColumnNames())
+          .isEqualTo(
+              new HashSet<>(
+                  Arrays.asList(
+                      PARTITION_KEY,
+                      COL_NAME1,
+                      COL_NAME2,
+                      COL_NAME3,
+                      COL_NAME4,
+                      COL_NAME5,
+                      COL_NAME6,
+                      COL_NAME7)));
+
+      assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+      assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+      assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+      assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+      assertThat(actual.get().contains(COL_NAME1)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME1)).isFalse();
+      assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+      assertThat(actual.get().getObject(COL_NAME1)).isEqualTo(col1Value.get());
+
+      assertThat(actual.get().contains(COL_NAME2)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME2)).isFalse();
+      assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+      assertThat(actual.get().getObject(COL_NAME2)).isEqualTo(col2Value.get());
+
+      assertThat(actual.get().contains(COL_NAME3)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME3)).isFalse();
+      assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+      assertThat(actual.get().getObject(COL_NAME3)).isEqualTo(col3Value.get());
+
+      assertThat(actual.get().contains(COL_NAME4)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME4)).isFalse();
+      assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+      assertThat(actual.get().getObject(COL_NAME4)).isEqualTo(col4Value.get());
+
+      assertThat(actual.get().contains(COL_NAME5)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME5)).isFalse();
+      assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+      assertThat(actual.get().getObject(COL_NAME5)).isEqualTo(col5Value.get());
+
+      assertThat(actual.get().contains(COL_NAME6)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME6)).isFalse();
+      assertThat(actual.get().getText(COL_NAME6)).isEqualTo(col6Value.get().get());
+      assertThat(actual.get().getObject(COL_NAME6)).isEqualTo(col6Value.get().get());
+
+      assertThat(actual.get().contains(COL_NAME7)).isTrue();
+      assertThat(actual.get().isNull(COL_NAME7)).isFalse();
+      assertThat(actual.get().getBlob(COL_NAME7)).isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+      assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7))
+          .isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+      assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isEqualTo(col7Value.get().get());
+      assertThat(actual.get().getObject(COL_NAME7))
+          .isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
     }
   }
 
@@ -214,6 +274,62 @@ public abstract class StorageColumnValueIntegrationTestBase {
     assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
     assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
     assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    PARTITION_KEY,
+                    COL_NAME1,
+                    COL_NAME2,
+                    COL_NAME3,
+                    COL_NAME4,
+                    COL_NAME5,
+                    COL_NAME6,
+                    COL_NAME7)));
+
+    assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+    assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+    assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+    assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+    assertThat(actual.get().contains(COL_NAME1)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME1)).isFalse();
+    assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+    assertThat(actual.get().getObject(COL_NAME1)).isEqualTo(col1Value.get());
+
+    assertThat(actual.get().contains(COL_NAME2)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME2)).isFalse();
+    assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+    assertThat(actual.get().getObject(COL_NAME2)).isEqualTo(col2Value.get());
+
+    assertThat(actual.get().contains(COL_NAME3)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME3)).isFalse();
+    assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+    assertThat(actual.get().getObject(COL_NAME3)).isEqualTo(col3Value.get());
+
+    assertThat(actual.get().contains(COL_NAME4)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME4)).isFalse();
+    assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+    assertThat(actual.get().getObject(COL_NAME4)).isEqualTo(col4Value.get());
+
+    assertThat(actual.get().contains(COL_NAME5)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME5)).isFalse();
+    assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+    assertThat(actual.get().getObject(COL_NAME5)).isEqualTo(col5Value.get());
+
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isFalse();
+    assertThat(actual.get().getText(COL_NAME6)).isEqualTo(col6Value.get().get());
+    assertThat(actual.get().getObject(COL_NAME6)).isEqualTo(col6Value.get().get());
+
+    assertThat(actual.get().contains(COL_NAME7)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME7)).isFalse();
+    assertThat(actual.get().getBlob(COL_NAME7)).isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+    assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7))
+        .isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+    assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isEqualTo(col7Value.get().get());
+    assertThat(actual.get().getObject(COL_NAME7)).isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
   }
 
   @Test
@@ -263,29 +379,85 @@ public abstract class StorageColumnValueIntegrationTestBase {
     assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
     assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
     assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    PARTITION_KEY,
+                    COL_NAME1,
+                    COL_NAME2,
+                    COL_NAME3,
+                    COL_NAME4,
+                    COL_NAME5,
+                    COL_NAME6,
+                    COL_NAME7)));
+
+    assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+    assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+    assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+    assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+    assertThat(actual.get().contains(COL_NAME1)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME1)).isFalse();
+    assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+    assertThat(actual.get().getObject(COL_NAME1)).isEqualTo(col1Value.get());
+
+    assertThat(actual.get().contains(COL_NAME2)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME2)).isFalse();
+    assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+    assertThat(actual.get().getObject(COL_NAME2)).isEqualTo(col2Value.get());
+
+    assertThat(actual.get().contains(COL_NAME3)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME3)).isFalse();
+    assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+    assertThat(actual.get().getObject(COL_NAME3)).isEqualTo(col3Value.get());
+
+    assertThat(actual.get().contains(COL_NAME4)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME4)).isFalse();
+    assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+    assertThat(actual.get().getObject(COL_NAME4)).isEqualTo(col4Value.get());
+
+    assertThat(actual.get().contains(COL_NAME5)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME5)).isFalse();
+    assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+    assertThat(actual.get().getObject(COL_NAME5)).isEqualTo(col5Value.get());
+
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isFalse();
+    assertThat(actual.get().getText(COL_NAME6)).isEqualTo(col6Value.get().get());
+    assertThat(actual.get().getObject(COL_NAME6)).isEqualTo(col6Value.get().get());
+
+    assertThat(actual.get().contains(COL_NAME7)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME7)).isFalse();
+    assertThat(actual.get().getBlob(COL_NAME7)).isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+    assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7))
+        .isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
+    assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isEqualTo(col7Value.get().get());
+    assertThat(actual.get().getObject(COL_NAME7)).isEqualTo(ByteBuffer.wrap(col7Value.get().get()));
   }
 
   @Test
   public void put_WithNullValues_ShouldPutCorrectly() throws ExecutionException {
     // Arrange
     IntValue partitionKeyValue = new IntValue(PARTITION_KEY, 1);
-    BooleanValue col1Value = new BooleanValue(COL_NAME1, true);
-    IntValue col2Value = new IntValue(COL_NAME2, 1);
-    BigIntValue col3Value = new BigIntValue(COL_NAME3, 1L);
-    FloatValue col4Value = new FloatValue(COL_NAME4, 1.0f);
-    DoubleValue col5Value = new DoubleValue(COL_NAME5, 1.0d);
-    TextValue col6Value = (TextValue) getNullValue(COL_NAME6, DataType.TEXT);
-    BlobValue col7Value = (BlobValue) getNullValue(COL_NAME7, DataType.BLOB);
+    BooleanValue col1Value = new BooleanValue(COL_NAME1, false);
+    IntValue col2Value = new IntValue(COL_NAME2, 0);
+    BigIntValue col3Value = new BigIntValue(COL_NAME3, 0L);
+    FloatValue col4Value = new FloatValue(COL_NAME4, 0.0f);
+    DoubleValue col5Value = new DoubleValue(COL_NAME5, 0.0d);
+    TextValue col6Value = new TextValue(COL_NAME6, (String) null);
+    BlobValue col7Value = new BlobValue(COL_NAME7, (byte[]) null);
 
     Put put =
         new Put(new Key(partitionKeyValue))
-            .withValue(col1Value)
-            .withValue(col2Value)
-            .withValue(col3Value)
-            .withValue(col4Value)
-            .withValue(col5Value)
-            .withValue(col6Value)
-            .withValue(col7Value)
+            .withNullValue(COL_NAME1)
+            .withNullValue(COL_NAME2)
+            .withNullValue(COL_NAME3)
+            .withNullValue(COL_NAME4)
+            .withNullValue(COL_NAME5)
+            .withNullValue(COL_NAME6)
+            .withNullValue(COL_NAME7)
             .forNamespace(namespace)
             .forTable(TABLE);
 
@@ -312,6 +484,273 @@ public abstract class StorageColumnValueIntegrationTestBase {
     assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
     assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
     assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    PARTITION_KEY,
+                    COL_NAME1,
+                    COL_NAME2,
+                    COL_NAME3,
+                    COL_NAME4,
+                    COL_NAME5,
+                    COL_NAME6,
+                    COL_NAME7)));
+
+    assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+    assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+    assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+    assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+    assertThat(actual.get().contains(COL_NAME1)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME1)).isTrue();
+    assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+    assertThat(actual.get().getObject(COL_NAME1)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME2)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME2)).isTrue();
+    assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+    assertThat(actual.get().getObject(COL_NAME2)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME3)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME3)).isTrue();
+    assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+    assertThat(actual.get().getObject(COL_NAME3)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME4)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME4)).isTrue();
+    assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+    assertThat(actual.get().getObject(COL_NAME4)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME5)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME5)).isTrue();
+    assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+    assertThat(actual.get().getObject(COL_NAME5)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isTrue();
+    assertThat(actual.get().getText(COL_NAME6)).isNull();
+    assertThat(actual.get().getObject(COL_NAME6)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME7)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME7)).isTrue();
+    assertThat(actual.get().getBlob(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isNull();
+    assertThat(actual.get().getObject(COL_NAME7)).isNull();
+  }
+
+  @Test
+  public void put_WithNullValues_AfterPuttingRandomValues_ShouldPutCorrectly()
+      throws ExecutionException {
+    // Arrange
+    IntValue partitionKeyValue = new IntValue(PARTITION_KEY, 1);
+    BooleanValue col1Value = new BooleanValue(COL_NAME1, false);
+    IntValue col2Value = new IntValue(COL_NAME2, 0);
+    BigIntValue col3Value = new BigIntValue(COL_NAME3, 0L);
+    FloatValue col4Value = new FloatValue(COL_NAME4, 0.0f);
+    DoubleValue col5Value = new DoubleValue(COL_NAME5, 0.0d);
+    TextValue col6Value = new TextValue(COL_NAME6, (String) null);
+    BlobValue col7Value = new BlobValue(COL_NAME7, (byte[]) null);
+
+    Put putForRandomValues =
+        new Put(new Key(partitionKeyValue))
+            .withValue(getRandomValue(RANDOM, COL_NAME1, DataType.BOOLEAN))
+            .withValue(getRandomValue(RANDOM, COL_NAME2, DataType.INT))
+            .withValue(getRandomValue(RANDOM, COL_NAME3, DataType.BIGINT))
+            .withValue(getRandomValue(RANDOM, COL_NAME4, DataType.FLOAT))
+            .withValue(getRandomValue(RANDOM, COL_NAME5, DataType.DOUBLE))
+            .withValue(getRandomValue(RANDOM, COL_NAME6, DataType.TEXT))
+            .withValue(getRandomValue(RANDOM, COL_NAME7, DataType.BLOB))
+            .forNamespace(namespace)
+            .forTable(TABLE);
+
+    Put putForNullValues =
+        new Put(new Key(partitionKeyValue))
+            .withNullValue(COL_NAME1)
+            .withNullValue(COL_NAME2)
+            .withNullValue(COL_NAME3)
+            .withNullValue(COL_NAME4)
+            .withNullValue(COL_NAME5)
+            .withNullValue(COL_NAME6)
+            .withNullValue(COL_NAME7)
+            .forNamespace(namespace)
+            .forTable(TABLE);
+
+    // Act
+    storage.put(putForRandomValues);
+    storage.put(putForNullValues);
+
+    // Assert
+    Optional<Result> actual =
+        storage.get(new Get(new Key(partitionKeyValue)).forNamespace(namespace).forTable(TABLE));
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getValue(PARTITION_KEY).isPresent()).isTrue();
+    assertThat(actual.get().getValue(PARTITION_KEY).get()).isEqualTo(partitionKeyValue);
+    assertThat(actual.get().getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1).get()).isEqualTo(col1Value);
+    assertThat(actual.get().getValue(COL_NAME2).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME2).get()).isEqualTo(col2Value);
+    assertThat(actual.get().getValue(COL_NAME3).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME3).get()).isEqualTo(col3Value);
+    assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME4).get()).isEqualTo(col4Value);
+    assertThat(actual.get().getValue(COL_NAME5).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME5).get()).isEqualTo(col5Value);
+    assertThat(actual.get().getValue(COL_NAME6).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
+    assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    PARTITION_KEY,
+                    COL_NAME1,
+                    COL_NAME2,
+                    COL_NAME3,
+                    COL_NAME4,
+                    COL_NAME5,
+                    COL_NAME6,
+                    COL_NAME7)));
+
+    assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+    assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+    assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+    assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+    assertThat(actual.get().contains(COL_NAME1)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME1)).isTrue();
+    assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+    assertThat(actual.get().getObject(COL_NAME1)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME2)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME2)).isTrue();
+    assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+    assertThat(actual.get().getObject(COL_NAME2)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME3)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME3)).isTrue();
+    assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+    assertThat(actual.get().getObject(COL_NAME3)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME4)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME4)).isTrue();
+    assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+    assertThat(actual.get().getObject(COL_NAME4)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME5)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME5)).isTrue();
+    assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+    assertThat(actual.get().getObject(COL_NAME5)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isTrue();
+    assertThat(actual.get().getText(COL_NAME6)).isNull();
+    assertThat(actual.get().getObject(COL_NAME6)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME7)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME7)).isTrue();
+    assertThat(actual.get().getBlob(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isNull();
+    assertThat(actual.get().getObject(COL_NAME7)).isNull();
+  }
+
+  @Test
+  public void put_WithoutValues_ShouldPutCorrectly() throws ExecutionException {
+    // Arrange
+    IntValue partitionKeyValue = new IntValue(PARTITION_KEY, 1);
+    BooleanValue col1Value = new BooleanValue(COL_NAME1, false);
+    IntValue col2Value = new IntValue(COL_NAME2, 0);
+    BigIntValue col3Value = new BigIntValue(COL_NAME3, 0L);
+    FloatValue col4Value = new FloatValue(COL_NAME4, 0.0f);
+    DoubleValue col5Value = new DoubleValue(COL_NAME5, 0.0d);
+    TextValue col6Value = new TextValue(COL_NAME6, (String) null);
+    BlobValue col7Value = new BlobValue(COL_NAME7, (byte[]) null);
+
+    Put put = new Put(new Key(partitionKeyValue)).forNamespace(namespace).forTable(TABLE);
+
+    // Act
+    storage.put(put);
+
+    // Assert
+    Optional<Result> actual =
+        storage.get(new Get(new Key(partitionKeyValue)).forNamespace(namespace).forTable(TABLE));
+    assertThat(actual).isPresent();
+    assertThat(actual.get().getValue(PARTITION_KEY).isPresent()).isTrue();
+    assertThat(actual.get().getValue(PARTITION_KEY).get()).isEqualTo(partitionKeyValue);
+    assertThat(actual.get().getValue(COL_NAME1).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME1).get()).isEqualTo(col1Value);
+    assertThat(actual.get().getValue(COL_NAME2).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME2).get()).isEqualTo(col2Value);
+    assertThat(actual.get().getValue(COL_NAME3).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME3).get()).isEqualTo(col3Value);
+    assertThat(actual.get().getValue(COL_NAME4).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME4).get()).isEqualTo(col4Value);
+    assertThat(actual.get().getValue(COL_NAME5).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME5).get()).isEqualTo(col5Value);
+    assertThat(actual.get().getValue(COL_NAME6).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME6).get()).isEqualTo(col6Value);
+    assertThat(actual.get().getValue(COL_NAME7).isPresent()).isTrue();
+    assertThat(actual.get().getValue(COL_NAME7).get()).isEqualTo(col7Value);
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    PARTITION_KEY,
+                    COL_NAME1,
+                    COL_NAME2,
+                    COL_NAME3,
+                    COL_NAME4,
+                    COL_NAME5,
+                    COL_NAME6,
+                    COL_NAME7)));
+
+    assertThat(actual.get().contains(PARTITION_KEY)).isTrue();
+    assertThat(actual.get().isNull(PARTITION_KEY)).isFalse();
+    assertThat(actual.get().getInt(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+    assertThat(actual.get().getObject(PARTITION_KEY)).isEqualTo(partitionKeyValue.get());
+
+    assertThat(actual.get().contains(COL_NAME1)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME1)).isTrue();
+    assertThat(actual.get().getBoolean(COL_NAME1)).isEqualTo(col1Value.get());
+    assertThat(actual.get().getObject(COL_NAME1)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME2)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME2)).isTrue();
+    assertThat(actual.get().getInt(COL_NAME2)).isEqualTo(col2Value.get());
+    assertThat(actual.get().getObject(COL_NAME2)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME3)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME3)).isTrue();
+    assertThat(actual.get().getBigInt(COL_NAME3)).isEqualTo(col3Value.get());
+    assertThat(actual.get().getObject(COL_NAME3)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME4)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME4)).isTrue();
+    assertThat(actual.get().getFloat(COL_NAME4)).isEqualTo(col4Value.get());
+    assertThat(actual.get().getObject(COL_NAME4)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME5)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME5)).isTrue();
+    assertThat(actual.get().getDouble(COL_NAME5)).isEqualTo(col5Value.get());
+    assertThat(actual.get().getObject(COL_NAME5)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME6)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME6)).isTrue();
+    assertThat(actual.get().getText(COL_NAME6)).isNull();
+    assertThat(actual.get().getObject(COL_NAME6)).isNull();
+
+    assertThat(actual.get().contains(COL_NAME7)).isTrue();
+    assertThat(actual.get().isNull(COL_NAME7)).isTrue();
+    assertThat(actual.get().getBlob(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsByteBuffer(COL_NAME7)).isNull();
+    assertThat(actual.get().getBlobAsBytes(COL_NAME7)).isNull();
+    assertThat(actual.get().getObject(COL_NAME7)).isNull();
   }
 
   protected Value<?> getRandomValue(Random random, String columnName, DataType dataType) {
@@ -324,9 +763,5 @@ public abstract class StorageColumnValueIntegrationTestBase {
 
   protected Value<?> getMaxValue(String columnName, DataType dataType) {
     return TestUtils.getMaxValue(columnName, dataType);
-  }
-
-  protected Value<?> getNullValue(String columnName, DataType dataType) {
-    return TestUtils.getNullValue(columnName, dataType);
   }
 }

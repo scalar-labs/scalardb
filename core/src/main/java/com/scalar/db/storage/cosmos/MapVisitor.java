@@ -87,7 +87,7 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value.get().ifPresent(s -> values.put(value.getName(), s));
+    values.put(value.getName(), value.get().orElse(null));
   }
 
   /**
@@ -97,8 +97,17 @@ public class MapVisitor implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
-    value
-        .get()
-        .ifPresent(b -> values.put(value.getName(), ByteBuffer.allocate(b.length).put(b).flip()));
+    values.put(
+        value.getName(),
+        value.get().map(b -> ByteBuffer.allocate(b.length).put(b).flip()).orElse(null));
+  }
+
+  /**
+   * Adds a NULL value for the specified name
+   *
+   * @param name a name
+   */
+  public void addNullValue(String name) {
+    values.put(name, null);
   }
 }

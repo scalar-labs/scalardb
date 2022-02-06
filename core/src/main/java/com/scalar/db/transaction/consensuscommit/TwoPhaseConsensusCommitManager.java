@@ -143,7 +143,8 @@ public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransa
 
   private TwoPhaseConsensusCommit createNewTransaction(
       String txId, boolean isCoordinator, Isolation isolation, SerializableStrategy strategy) {
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
 
     TwoPhaseConsensusCommit transaction =

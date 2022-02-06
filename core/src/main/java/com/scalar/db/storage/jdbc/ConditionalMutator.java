@@ -9,6 +9,7 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.PutIfExists;
 import com.scalar.db.api.PutIfNotExists;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.storage.jdbc.query.DeleteQuery;
 import com.scalar.db.storage.jdbc.query.InsertQuery;
 import com.scalar.db.storage.jdbc.query.Query;
@@ -30,15 +31,21 @@ import javax.annotation.concurrent.NotThreadSafe;
 public class ConditionalMutator implements MutationConditionVisitor {
 
   private final Mutation mutation;
+  private final TableMetadata tableMetadata;
   private final Connection connection;
   private final QueryBuilder queryBuilder;
 
   private boolean isMutated;
   private SQLException sqlException;
 
-  public ConditionalMutator(Mutation mutation, Connection connection, QueryBuilder queryBuilder) {
+  public ConditionalMutator(
+      Mutation mutation,
+      TableMetadata tableMetadata,
+      Connection connection,
+      QueryBuilder queryBuilder) {
     assert mutation.getCondition().isPresent();
     this.mutation = mutation;
+    this.tableMetadata = tableMetadata;
     this.connection = connection;
     this.queryBuilder = queryBuilder;
   }
@@ -60,7 +67,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
-            .update(put.forNamespace().get(), put.forTable().get())
+            .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey(), condition.getExpressions())
             .build();
@@ -72,7 +79,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     UpdateQuery updateQuery =
         queryBuilder
-            .update(put.forNamespace().get(), put.forTable().get())
+            .update(put.forNamespace().get(), put.forTable().get(), tableMetadata)
             .set(put.getValues())
             .where(put.getPartitionKey(), put.getClusteringKey())
             .build();
@@ -84,7 +91,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Put put = (Put) mutation;
     InsertQuery insertQuery =
         queryBuilder
-            .insertInto(put.forNamespace().get(), put.forTable().get())
+            .insertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
             .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
             .build();
     try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery.sql())) {
@@ -105,7 +112,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Delete delete = (Delete) mutation;
     DeleteQuery deleteQuery =
         queryBuilder
-            .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
+            .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
             .where(delete.getPartitionKey(), delete.getClusteringKey(), condition.getExpressions())
             .build();
     executeMutate(deleteQuery);
@@ -116,7 +123,7 @@ public class ConditionalMutator implements MutationConditionVisitor {
     Delete delete = (Delete) mutation;
     DeleteQuery deleteQuery =
         queryBuilder
-            .deleteFrom(delete.forNamespace().get(), delete.forTable().get())
+            .deleteFrom(delete.forNamespace().get(), delete.forTable().get(), tableMetadata)
             .where(delete.getPartitionKey(), delete.getClusteringKey())
             .build();
     executeMutate(deleteQuery);
