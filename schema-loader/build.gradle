@@ -265,5 +265,7 @@ check.dependsOn += spotbugsIntegrationTest
 if (!project.gradle.startParameter.taskNames.isEmpty() &&
         (project.gradle.startParameter.taskNames[0].endsWith('publish') ||
                 project.gradle.startParameter.taskNames[0].endsWith('publishToMavenLocal'))) {
+    // not to publish the fat jar
+    project.gradle.startParameter.excludedTaskNames= ["shadowJar"]
     apply from: 'archive.gradle'
 }
