@@ -11,8 +11,8 @@ import java.io.InputStream;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
-@Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+@Immutable
 public class GrpcConfig extends DatabaseConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "grpc.";

@@ -11,8 +11,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 /** A class that manages and caches table metadata */
+@ThreadSafe
 public class TableMetadataManager {
 
   private final LoadingCache<TableKey, Optional<TableMetadata>> tableMetadataCache;

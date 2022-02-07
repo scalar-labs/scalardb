@@ -10,7 +10,7 @@ import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.ResultImpl;
+import com.scalar.db.util.ResultImpl;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;

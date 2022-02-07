@@ -11,7 +11,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.ResultImpl;
+import com.scalar.db.util.ResultImpl;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;

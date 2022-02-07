@@ -8,7 +8,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class ActiveExpiringMap<K, V> {
   private final ConcurrentMap<K, ValueHolder<V>> map;
   private final long valueLifetimeMillis;

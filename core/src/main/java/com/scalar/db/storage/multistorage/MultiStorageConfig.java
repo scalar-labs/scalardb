@@ -14,8 +14,8 @@ import java.util.Map;
 import java.util.Properties;
 import javax.annotation.concurrent.Immutable;
 
-@Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+@Immutable
 public class MultiStorageConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";

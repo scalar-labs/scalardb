@@ -1,7 +1,7 @@
-package com.scalar.db.exception.transaction;
+package com.scalar.db.transaction.consensuscommit;
 
 import com.google.common.collect.ImmutableList;
-import com.scalar.db.transaction.consensuscommit.TransactionResult;
+import com.scalar.db.exception.transaction.CrudConflictException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

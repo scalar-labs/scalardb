@@ -29,7 +29,6 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.rpc.MutateCondition;
 import com.scalar.db.rpc.Order;
-import com.scalar.db.storage.common.ResultImpl;
 import java.util.Map;
 import java.util.stream.Collectors;
 
