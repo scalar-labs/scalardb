@@ -11,7 +11,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class TransactionalTableMetadataManager {
 
   private final LoadingCache<TableKey, Optional<TransactionalTableMetadata>> tableMetadataCache;

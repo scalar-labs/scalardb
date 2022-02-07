@@ -5,7 +5,9 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BigIntValue;
 import java.nio.ByteBuffer;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class BigIntBytesEncoder implements BytesEncoder<BigIntValue> {
 
   BigIntBytesEncoder() {}

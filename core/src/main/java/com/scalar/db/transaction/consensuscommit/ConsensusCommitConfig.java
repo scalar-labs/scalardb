@@ -17,8 +17,8 @@ import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+@Immutable
 public class ConsensusCommitConfig {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitConfig.class);
 

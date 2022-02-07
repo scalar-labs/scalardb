@@ -3,7 +3,9 @@ package com.scalar.db.server;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class LockFreeGateKeeper implements GateKeeper {
 
   private final AtomicBoolean isOpen;
