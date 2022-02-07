@@ -14,7 +14,6 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.util.ScalarDbUtils;
 import java.util.ArrayList;
@@ -94,7 +93,6 @@ public class ConsensusCommit implements DistributedTransaction {
   public Optional<Result> get(Get get) throws CrudException {
     ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     List<String> projections = new ArrayList<>(get.getProjections());
-    get.clearProjections(); // project all
     try {
       return crud.get(get).map(r -> new FilteredResult(r, projections));
     } catch (UncommittedRecordException e) {
@@ -107,7 +105,6 @@ public class ConsensusCommit implements DistributedTransaction {
   public List<Result> scan(Scan scan) throws CrudException {
     ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     List<String> projections = new ArrayList<>(scan.getProjections());
-    scan.clearProjections(); // project all
     try {
       return crud.scan(scan).stream()
           .map(r -> new FilteredResult(r, projections))

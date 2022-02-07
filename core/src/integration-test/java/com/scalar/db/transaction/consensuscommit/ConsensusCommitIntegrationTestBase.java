@@ -28,7 +28,6 @@ import com.scalar.db.exception.storage.NoMutationException;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
@@ -104,7 +103,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(
-            storage, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
+            storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
   }
 
   protected void initialize() throws Exception {}
@@ -516,8 +515,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2))
-        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     TransactionResult result;
     if (s instanceof Get) {
       Optional<Result> r = transaction.get((Get) s);
@@ -587,7 +585,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {
@@ -865,8 +863,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2))
-        .rollforwardRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollforwardRecord(any(Selection.class), any(TransactionResult.class));
     if (s instanceof Get) {
       assertThat(transaction.get((Get) s).isPresent()).isFalse();
     } else {
@@ -928,7 +925,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
 
     // Assert
     verify(recovery, times(2)).recover(any(Selection.class), any(TransactionResult.class));
-    verify(recovery, times(2)).rollbackRecord(any(Selection.class), any(TransactionResult.class));
+    verify(recovery).rollbackRecord(any(Selection.class), any(TransactionResult.class));
     // rollback called twice but executed once actually
     TransactionResult result;
     if (s instanceof Get) {

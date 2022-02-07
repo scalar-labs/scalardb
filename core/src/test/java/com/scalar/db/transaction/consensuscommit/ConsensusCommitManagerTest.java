@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scalar.db.api.DistributedStorage;
+import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
@@ -22,6 +23,10 @@ public class ConsensusCommitManagerTest {
   @Mock
   @SuppressWarnings("unused")
   private DistributedStorage storage;
+
+  @Mock
+  @SuppressWarnings("unused")
+  private DistributedStorageAdmin admin;
 
   @Mock private ConsensusCommitConfig config;
   @Mock private Coordinator coordinator;
