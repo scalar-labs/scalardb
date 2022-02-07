@@ -50,6 +50,7 @@ public class DatabaseConfigTest {
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.needOperationCopy()).isEqualTo(true);
   }
 
   @Test
@@ -73,6 +74,7 @@ public class DatabaseConfigTest {
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.needOperationCopy()).isEqualTo(true);
   }
 
   @Test
@@ -96,6 +98,7 @@ public class DatabaseConfigTest {
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.needOperationCopy()).isEqualTo(true);
   }
 
   @Test
@@ -121,6 +124,7 @@ public class DatabaseConfigTest {
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(-1);
+    assertThat(config.needOperationCopy()).isEqualTo(true);
   }
 
   @Test
@@ -138,8 +142,6 @@ public class DatabaseConfigTest {
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
     props.setProperty(DatabaseConfig.CONTACT_PORT, Integer.toString(-1));
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
 
     // Act Assert
     assertThatThrownBy(() -> new DatabaseConfig(props))
@@ -151,8 +153,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "cassandra");
 
     // Act
@@ -160,11 +160,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
     assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
   }
@@ -174,8 +169,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "cosmos");
 
     // Act
@@ -183,11 +176,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Cosmos.class);
     assertThat(config.getAdminClass()).isEqualTo(CosmosAdmin.class);
   }
@@ -197,8 +185,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "dynamo");
 
     // Act
@@ -206,11 +192,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(Dynamo.class);
     assertThat(config.getAdminClass()).isEqualTo(DynamoAdmin.class);
   }
@@ -220,8 +201,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
 
     // Act
@@ -229,11 +208,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
   }
@@ -249,9 +223,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isNull();
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isFalse();
-    assertThat(config.getPassword().isPresent()).isFalse();
     assertThat(config.getStorageClass()).isEqualTo(MultiStorage.class);
     assertThat(config.getAdminClass()).isEqualTo(MultiStorageAdmin.class);
   }
@@ -261,8 +232,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "grpc");
 
     // Act
@@ -270,11 +239,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
     assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
   }
@@ -284,8 +248,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "WrongStorage");
 
     // Act Assert
@@ -299,8 +261,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "consensus-commit");
 
     // Act
@@ -308,13 +268,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
-    assertThat(config.getStorageClass()).isEqualTo(Cassandra.class);
-    assertThat(config.getAdminClass()).isEqualTo(CassandraAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(ConsensusCommitManager.class);
   }
 
@@ -324,8 +277,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "jdbc");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
 
@@ -334,11 +285,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(JdbcDatabase.class);
     assertThat(config.getAdminClass()).isEqualTo(JdbcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(JdbcTransactionManager.class);
@@ -350,8 +296,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "cassandra");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "jdbc");
 
@@ -366,8 +310,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "grpc");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
 
@@ -376,11 +318,6 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getStorageClass()).isEqualTo(GrpcStorage.class);
     assertThat(config.getAdminClass()).isEqualTo(GrpcAdmin.class);
     assertThat(config.getTransactionManagerClass()).isEqualTo(GrpcTransactionManager.class);
@@ -392,8 +329,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.STORAGE, "cassandra");
     props.setProperty(DatabaseConfig.TRANSACTION_MANAGER, "grpc");
 
@@ -407,8 +342,6 @@ public class DatabaseConfigTest {
     // Arrange
     Properties props = new Properties();
     props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
-    props.setProperty(DatabaseConfig.USERNAME, ANY_USERNAME);
-    props.setProperty(DatabaseConfig.PASSWORD, ANY_PASSWORD);
     props.setProperty(DatabaseConfig.TABLE_METADATA_CACHE_EXPIRATION_TIME_SECS, "3600");
 
     // Act
@@ -416,11 +349,21 @@ public class DatabaseConfigTest {
 
     // Assert
     assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
-    assertThat(config.getContactPort()).isEqualTo(0);
-    assertThat(config.getUsername().isPresent()).isTrue();
-    assertThat(config.getUsername().get()).isEqualTo(ANY_USERNAME);
-    assertThat(config.getPassword().isPresent()).isTrue();
-    assertThat(config.getPassword().get()).isEqualTo(ANY_PASSWORD);
     assertThat(config.getTableMetadataCacheExpirationTimeSecs()).isEqualTo(3600);
+  }
+
+  @Test
+  public void constructor_PropertiesWithNeedOperationCopyGiven_ShouldLoadProperly() {
+    // Arrange
+    Properties props = new Properties();
+    props.setProperty(DatabaseConfig.CONTACT_POINTS, ANY_HOST);
+    props.setProperty(DatabaseConfig.NEED_OPERATION_COPY, "false");
+
+    // Act
+    DatabaseConfig config = new DatabaseConfig(props);
+
+    // Assert
+    assertThat(config.getContactPoints()).isEqualTo(Collections.singletonList(ANY_HOST));
+    assertThat(config.needOperationCopy()).isEqualTo(false);
   }
 }

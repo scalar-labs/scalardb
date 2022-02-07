@@ -33,6 +33,10 @@ public class Get extends Selection {
     super(partitionKey, clusteringKey);
   }
 
+  public Get(Get get) {
+    super(get);
+  }
+
   @Override
   public Get forNamespace(String namespace) {
     return (Get) super.forNamespace(namespace);

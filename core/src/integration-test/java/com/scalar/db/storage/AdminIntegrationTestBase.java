@@ -84,7 +84,7 @@ public abstract class AdminIntegrationTestBase {
     if (!initialized) {
       initialize();
       StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+          new StorageFactory(TestUtils.configureForTest(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace1 = getNamespace1();
       namespace2 = getNamespace2();

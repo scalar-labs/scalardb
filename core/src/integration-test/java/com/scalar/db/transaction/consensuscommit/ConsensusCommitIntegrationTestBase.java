@@ -83,7 +83,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      DatabaseConfig config = TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME);
+      DatabaseConfig config = TestUtils.configureForTest(getDatabaseConfig(), TEST_NAME);
       StorageFactory factory = new StorageFactory(config);
       admin = factory.getAdmin();
       consensusCommitConfig = new ConsensusCommitConfig(config.getProperties());

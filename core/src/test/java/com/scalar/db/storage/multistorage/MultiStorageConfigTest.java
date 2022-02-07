@@ -53,6 +53,8 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("cassandra");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("cassandra");
+    assertThat(c.needOperationCopy()).isEqualTo(false);
+
     assertThat(config.getDatabaseConfigMap().containsKey("mysql")).isTrue();
     c = config.getDatabaseConfigMap().get("mysql");
     assertThat(c.getStorageClass()).isEqualTo(JdbcDatabase.class);
@@ -62,6 +64,7 @@ public class MultiStorageConfigTest {
     assertThat(c.getUsername().get()).isEqualTo("root");
     assertThat(c.getPassword().isPresent()).isTrue();
     assertThat(c.getPassword().get()).isEqualTo("mysql");
+    assertThat(c.needOperationCopy()).isEqualTo(false);
 
     assertThat(config.getTableStorageMap().size()).isEqualTo(3);
     assertThat(config.getTableStorageMap().get("user.order")).isEqualTo("cassandra");

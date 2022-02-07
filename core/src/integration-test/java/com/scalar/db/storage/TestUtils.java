@@ -18,12 +18,15 @@ import com.scalar.db.storage.dynamo.DynamoConfig;
 import com.scalar.db.storage.jdbc.JdbcAdmin;
 import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.stream.IntStream;
+import javax.annotation.Nullable;
 import org.apache.commons.lang3.RandomStringUtils;
 
 public final class TestUtils {
@@ -149,48 +152,67 @@ public final class TestUtils {
   }
 
   /**
-   * Add a suffix to the metadata database/namespace/schema name and the consensus-commit
-   * coordinator table name.
+   * Configures DatabaseConfig for integration tests.
+   *
+   * <p>This methods does the following:
+   *
+   * <ul>
+   *   <li>Add a suffix to the metadata database/namespace/schema name and the consensus-commit
+   *       coordinator table name
+   *   <li>Set "scalar.db.need_operation_copy" to false if Consensus Commit is used
+   * </ul>
    *
    * @param config the original config
    * @param testName used for the suffix
    * @return config added the suffix
    */
-  public static DatabaseConfig addSuffix(DatabaseConfig config, String testName) {
+  public static DatabaseConfig configureForTest(DatabaseConfig config, @Nullable String testName) {
     Properties properties = new Properties();
     properties.putAll(config.getProperties());
 
-    // for Cosmos
-    String tableMetadataDatabase = properties.getProperty(CosmosConfig.TABLE_METADATA_DATABASE);
-    if (tableMetadataDatabase == null) {
-      tableMetadataDatabase = CosmosAdmin.METADATA_DATABASE;
-    }
-    properties.setProperty(
-        CosmosConfig.TABLE_METADATA_DATABASE, tableMetadataDatabase + "_" + testName);
+    // Add a suffix to the metadata database/namespace/schema name and the consensus-commit
+    // coordinator table name
+    if (testName != null) {
+      // for Cosmos
+      String tableMetadataDatabase = properties.getProperty(CosmosConfig.TABLE_METADATA_DATABASE);
+      if (tableMetadataDatabase == null) {
+        tableMetadataDatabase = CosmosAdmin.METADATA_DATABASE;
+      }
+      properties.setProperty(
+          CosmosConfig.TABLE_METADATA_DATABASE, tableMetadataDatabase + "_" + testName);
 
-    // for Dynamo
-    String tableMetadataNamespace = properties.getProperty(DynamoConfig.TABLE_METADATA_NAMESPACE);
-    if (tableMetadataNamespace == null) {
-      tableMetadataNamespace = DynamoAdmin.METADATA_NAMESPACE;
-    }
-    properties.setProperty(
-        DynamoConfig.TABLE_METADATA_NAMESPACE, tableMetadataNamespace + "_" + testName);
+      // for Dynamo
+      String tableMetadataNamespace = properties.getProperty(DynamoConfig.TABLE_METADATA_NAMESPACE);
+      if (tableMetadataNamespace == null) {
+        tableMetadataNamespace = DynamoAdmin.METADATA_NAMESPACE;
+      }
+      properties.setProperty(
+          DynamoConfig.TABLE_METADATA_NAMESPACE, tableMetadataNamespace + "_" + testName);
 
-    // for JDBC
-    String tableMetadataSchema = properties.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
-    if (tableMetadataSchema == null) {
-      tableMetadataSchema = JdbcAdmin.METADATA_SCHEMA;
-    }
-    properties.setProperty(JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
+      // for JDBC
+      String tableMetadataSchema = properties.getProperty(JdbcConfig.TABLE_METADATA_SCHEMA);
+      if (tableMetadataSchema == null) {
+        tableMetadataSchema = JdbcAdmin.METADATA_SCHEMA;
+      }
+      properties.setProperty(
+          JdbcConfig.TABLE_METADATA_SCHEMA, tableMetadataSchema + "_" + testName);
 
-    // for consensus-commit
-    String coordinatorNamespace =
-        properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
-    if (coordinatorNamespace == null) {
-      coordinatorNamespace = Coordinator.NAMESPACE;
+      // for consensus-commit
+      String coordinatorNamespace =
+          properties.getProperty(ConsensusCommitConfig.COORDINATOR_NAMESPACE);
+      if (coordinatorNamespace == null) {
+        coordinatorNamespace = Coordinator.NAMESPACE;
+      }
+      properties.setProperty(
+          ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
     }
-    properties.setProperty(
-        ConsensusCommitConfig.COORDINATOR_NAMESPACE, coordinatorNamespace + "_" + testName);
+
+    // Set "scalar.db.need_operation_copy" to false if Consensus Commit is used
+    if (config.getTransactionManagerClass() == ConsensusCommitManager.class
+        || config.getTwoPhaseCommitTransactionManagerClass()
+            == TwoPhaseConsensusCommitManager.class) {
+      properties.setProperty(DatabaseConfig.NEED_OPERATION_COPY, "false");
+    }
 
     return new DatabaseConfig(properties);
   }

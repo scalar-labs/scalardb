@@ -17,6 +17,7 @@ import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.config.DatabaseConfig;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
@@ -33,18 +34,18 @@ import org.slf4j.LoggerFactory;
  * @author Hiroyuki Yamada
  */
 @ThreadSafe
-public class Cassandra implements DistributedStorage {
+public class Cassandra extends AbstractDistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Cassandra.class);
   private final StatementHandlerManager handlers;
   private final BatchHandler batch;
   private final ClusterManager clusterManager;
   private final TableMetadataManager metadataManager;
   private final OperationChecker operationChecker;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public Cassandra(DatabaseConfig config) {
+    super(config);
+
     clusterManager = new ClusterManager(config);
     Session session = clusterManager.getSession();
 
@@ -64,42 +65,13 @@ public class Cassandra implements DistributedStorage {
             new CassandraAdmin(clusterManager, config),
             config.getTableMetadataCacheExpirationTimeSecs());
     operationChecker = new OperationChecker(metadataManager);
-
-    namespace = Optional.empty();
-    tableName = Optional.empty();
-  }
-
-  @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
   }
 
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
     LOGGER.debug("executing get operation with " + get);
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+    get = setTargetToIfNot(get);
     operationChecker.check(get);
     TableMetadata metadata = metadataManager.getTableMetadata(get);
     ScalarDbUtils.addProjectionsForKeys(get, metadata);
@@ -120,7 +92,7 @@ public class Cassandra implements DistributedStorage {
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
     LOGGER.debug("executing scan operation with " + scan);
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+    scan = setTargetToIfNot(scan);
     operationChecker.check(scan);
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
@@ -133,7 +105,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void put(Put put) throws ExecutionException {
     LOGGER.debug("executing put operation with " + put);
-    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
+    put = setTargetToIfNot(put);
     operationChecker.check(put);
     handlers.get(put).handle(put);
   }
@@ -147,7 +119,7 @@ public class Cassandra implements DistributedStorage {
   @Override
   public void delete(Delete delete) throws ExecutionException {
     LOGGER.debug("executing delete operation with " + delete);
-    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
+    delete = setTargetToIfNot(delete);
     operationChecker.check(delete);
     handlers.delete().handle(delete);
   }
@@ -172,7 +144,7 @@ public class Cassandra implements DistributedStorage {
       return;
     }
 
-    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
+    mutations = setTargetToIfNot(mutations);
     operationChecker.check(mutations);
     for (Mutation mutation : mutations) {
       operationChecker.check(mutation);

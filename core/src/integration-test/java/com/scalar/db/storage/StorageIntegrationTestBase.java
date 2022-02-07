@@ -64,7 +64,8 @@ public abstract class StorageIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       initialize();
-      StorageFactory factory = new StorageFactory(getDatabaseConfig());
+      StorageFactory factory =
+          new StorageFactory(TestUtils.configureForTest(getDatabaseConfig(), null));
       admin = factory.getAdmin();
       namespace = getNamespace();
       createTable();

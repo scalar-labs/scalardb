@@ -14,12 +14,26 @@ import com.scalar.db.storage.jdbc.JdbcConfig;
 import com.scalar.db.storage.multistorage.MultiStorageConfig;
 import com.scalar.db.storage.rpc.GrpcConfig;
 import com.scalar.db.transaction.consensuscommit.ConsensusCommitConfig;
+import com.scalar.db.transaction.consensuscommit.ConsensusCommitManager;
+import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommitManager;
+import java.util.Properties;
 
 public class TransactionModule extends AbstractModule {
   private final DatabaseConfig config;
 
   public TransactionModule(DatabaseConfig config) {
-    this.config = config;
+    if (config.getTransactionManagerClass() == ConsensusCommitManager.class
+        || config.getTwoPhaseCommitTransactionManagerClass()
+            == TwoPhaseConsensusCommitManager.class) {
+      // since operations are copied in the Consensus Commit layer, we don't need to copy operations
+      // in the storage
+      Properties props = new Properties();
+      props.putAll(config.getProperties());
+      props.put(DatabaseConfig.NEED_OPERATION_COPY, "false");
+      this.config = new DatabaseConfig(props);
+    } else {
+      this.config = config;
+    }
   }
 
   @Override

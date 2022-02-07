@@ -6,42 +6,34 @@ import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
-public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction {
+public class GrpcTwoPhaseCommitTransaction extends AbstractTwoPhaseCommitTransaction {
 
   private final String txId;
   private final GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream;
   private final boolean isCoordinator;
   private final GrpcTwoPhaseCommitTransactionManager manager;
 
-  private Optional<String> namespace;
-  private Optional<String> tableName;
-
   public GrpcTwoPhaseCommitTransaction(
       String txId,
       GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream,
       boolean isCoordinator,
-      GrpcTwoPhaseCommitTransactionManager manager,
-      Optional<String> namespace,
-      Optional<String> tableName) {
+      GrpcTwoPhaseCommitTransactionManager manager) {
     this.txId = txId;
     this.stream = stream;
     this.isCoordinator = isCoordinator;
     this.manager = manager;
-    this.namespace = namespace;
-    this.tableName = tableName;
   }
 
   @Override
@@ -50,49 +42,23 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public Optional<Result> get(Get get) throws CrudException {
     updateTransactionExpirationTime();
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+    get = setTargetToIfNot(get);
     return stream.get(get);
   }
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
     updateTransactionExpirationTime();
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+    scan = setTargetToIfNot(scan);
     return stream.scan(scan);
   }
 
   @Override
   public void put(Put put) throws CrudException {
     updateTransactionExpirationTime();
-    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
+    put = setTargetToIfNot(put);
     stream.mutate(put);
   }
 
@@ -104,7 +70,7 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   @Override
   public void delete(Delete delete) throws CrudException {
     updateTransactionExpirationTime();
-    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
+    delete = setTargetToIfNot(delete);
     stream.mutate(delete);
   }
 
@@ -116,7 +82,7 @@ public class GrpcTwoPhaseCommitTransaction implements TwoPhaseCommitTransaction 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws CrudException {
     updateTransactionExpirationTime();
-    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
+    mutations = setTargetToIfNot(mutations);
     stream.mutate(mutations);
   }
 

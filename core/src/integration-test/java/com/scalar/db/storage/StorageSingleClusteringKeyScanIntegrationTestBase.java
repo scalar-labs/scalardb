@@ -65,7 +65,7 @@ public abstract class StorageSingleClusteringKeyScanIntegrationTestBase {
   public void setUp() throws Exception {
     if (!initialized) {
       StorageFactory factory =
-          new StorageFactory(TestUtils.addSuffix(getDatabaseConfig(), TEST_NAME));
+          new StorageFactory(TestUtils.configureForTest(getDatabaseConfig(), TEST_NAME));
       admin = factory.getAdmin();
       namespace = getNamespace();
       clusteringKeyTypes = getClusteringKeyTypes();

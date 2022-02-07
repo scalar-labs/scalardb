@@ -6,7 +6,6 @@ import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
@@ -16,7 +15,7 @@ import javax.annotation.concurrent.Immutable;
 
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
 @Immutable
-public class MultiStorageConfig {
+public class MultiStorageConfig extends DatabaseConfig {
 
   public static final String PREFIX = DatabaseConfig.PREFIX + "multi_storage.";
   public static final String STORAGES = PREFIX + "storages";
@@ -26,43 +25,32 @@ public class MultiStorageConfig {
 
   private static final String MULTI_STORAGE = "multi-storage";
 
-  private final Properties props;
-
   private Map<String, DatabaseConfig> databaseConfigMap;
   private Map<String, String> tableStorageMap;
   private Map<String, String> namespaceStorageMap;
   private String defaultStorage;
 
   public MultiStorageConfig(File propertiesFile) throws IOException {
-    try (FileInputStream stream = new FileInputStream(propertiesFile)) {
-      props = new Properties();
-      props.load(stream);
-    }
-    load();
+    super(propertiesFile);
   }
 
   public MultiStorageConfig(InputStream stream) throws IOException {
-    props = new Properties();
-    props.load(stream);
-    load();
+    super(stream);
   }
 
   public MultiStorageConfig(Properties properties) {
-    props = new Properties();
-    props.putAll(properties);
-    load();
+    super(properties);
   }
 
-  public Properties getProperties() {
-    return props;
-  }
-
-  private void load() {
+  @Override
+  protected void load() {
     String storage = getString(getProperties(), DatabaseConfig.STORAGE, null);
     if (storage == null || !storage.equals(MULTI_STORAGE)) {
       throw new IllegalArgumentException(
           DatabaseConfig.STORAGE + " should be '" + MULTI_STORAGE + "'");
     }
+
+    super.load();
 
     loadDatabaseConfigs();
     loadTableStorageMapping();
@@ -81,13 +69,17 @@ public class MultiStorageConfig {
     ImmutableMap.Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
     for (String storage : storages.split(",", -1)) {
       Properties dbProps = new Properties();
-      for (String propertyName : props.stringPropertyNames()) {
+      for (String propertyName : getProperties().stringPropertyNames()) {
         if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
           dbProps.put(
               propertyName.replace("multi_storage.storages." + storage + ".", ""),
-              props.getProperty(propertyName));
+              getProperties().getProperty(propertyName));
         }
       }
+
+      // since operations are copied in MultiStorage, we don't need to copy operations in the
+      // storage
+      dbProps.put(DatabaseConfig.NEED_OPERATION_COPY, "false");
 
       if (dbProps.getProperty(DatabaseConfig.STORAGE).equals(MULTI_STORAGE)) {
         throw new IllegalArgumentException(

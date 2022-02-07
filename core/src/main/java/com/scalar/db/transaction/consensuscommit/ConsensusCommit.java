@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
@@ -15,7 +14,7 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.transaction.common.AbstractDistributedTransaction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,13 +37,11 @@ import org.slf4j.LoggerFactory;
  * and read-only anomalies, which are known to be usual SI anomalies.
  */
 @NotThreadSafe
-public class ConsensusCommit implements DistributedTransaction {
+public class ConsensusCommit extends AbstractDistributedTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommit.class);
   private final CrudHandler crud;
   private final CommitHandler commit;
   private final RecoveryHandler recovery;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
   private Runnable beforeRecoveryHook;
   private Runnable beforeCommitHook;
 
@@ -52,8 +49,6 @@ public class ConsensusCommit implements DistributedTransaction {
     this.crud = checkNotNull(crud);
     this.commit = checkNotNull(commit);
     this.recovery = checkNotNull(recovery);
-    namespace = Optional.empty();
-    tableName = Optional.empty();
     this.beforeRecoveryHook = () -> {};
     this.beforeCommitHook = () -> {};
   }
@@ -64,34 +59,8 @@ public class ConsensusCommit implements DistributedTransaction {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public Optional<Result> get(Get get) throws CrudException {
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+    get = setTargetToIfNot(get);
     List<String> projections = new ArrayList<>(get.getProjections());
     try {
       return crud.get(get).map(r -> new FilteredResult(r, projections));
@@ -103,7 +72,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+    scan = setTargetToIfNot(scan);
     List<String> projections = new ArrayList<>(scan.getProjections());
     try {
       return crud.scan(scan).stream()
@@ -117,7 +86,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void put(Put put) {
-    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
+    put = setTargetToIfNot(put);
     crud.put(put);
   }
 
@@ -129,7 +98,7 @@ public class ConsensusCommit implements DistributedTransaction {
 
   @Override
   public void delete(Delete delete) {
-    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
+    delete = setTargetToIfNot(delete);
     crud.delete(delete);
   }
 

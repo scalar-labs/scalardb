@@ -29,6 +29,10 @@ import org.mockito.MockitoAnnotations;
 
 public class JdbcDatabaseTest {
 
+  private static final String NAMESPACE = "ns";
+  private static final String TABLE = "tbl";
+
+  @Mock private JdbcConfig config;
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
@@ -44,10 +48,12 @@ public class JdbcDatabaseTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
-    jdbcDatabase =
-        new JdbcDatabase(dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
 
+    // Arrange
     when(dataSource.getConnection()).thenReturn(connection);
+
+    jdbcDatabase =
+        new JdbcDatabase(config, dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
   }
 
   @Test
@@ -55,11 +61,11 @@ public class JdbcDatabaseTest {
     // Arrange
 
     // Act
-    Get get = new Get(new Key("p1", "val"));
+    Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.get(get);
 
     // Assert
-    verify(jdbcService).get(any(), any(), any(), any());
+    verify(jdbcService).get(any(), any());
     verify(connection).close();
   }
 
@@ -68,12 +74,12 @@ public class JdbcDatabaseTest {
       whenGetOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.get(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.get(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.get(get);
             })
         .isInstanceOf(ExecutionException.class);
@@ -83,16 +89,16 @@ public class JdbcDatabaseTest {
   @Test
   public void whenScanOperationExecutedAndScannerClosed_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.getScanner(any(), any(), any(), any()))
+    when(jdbcService.getScanner(any(), any()))
         .thenReturn(new ScannerImpl(resultInterpreter, connection, preparedStatement, resultSet));
 
     // Act
-    Scan scan = new Scan(new Key("p1", "val"));
+    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     Scanner scanner = jdbcDatabase.scan(scan);
     scanner.close();
 
     // Assert
-    verify(jdbcService).getScanner(any(), any(), any(), any());
+    verify(jdbcService).getScanner(any(), any());
     verify(connection).close();
   }
 
@@ -101,12 +107,12 @@ public class JdbcDatabaseTest {
       whenScanOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.getScanner(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.getScanner(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Scan scan = new Scan(new Key("p1", "val"));
+              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.scan(scan);
             })
         .isInstanceOf(ExecutionException.class);
@@ -116,14 +122,18 @@ public class JdbcDatabaseTest {
   @Test
   public void whenPutOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
+    when(jdbcService.put(any(), any())).thenReturn(true);
 
     // Act
-    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+    Put put =
+        new Put(new Key("p1", "val1"))
+            .withValue("v1", "val2")
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE);
     jdbcDatabase.put(put);
 
     // Assert
-    verify(jdbcService).put(any(), any(), any(), any());
+    verify(jdbcService).put(any(), any());
     verify(connection).close();
   }
 
@@ -132,7 +142,7 @@ public class JdbcDatabaseTest {
       whenPutOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenReturn(false);
+    when(jdbcService.put(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -140,7 +150,9 @@ public class JdbcDatabaseTest {
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
-                      .withCondition(new PutIfNotExists());
+                      .withCondition(new PutIfNotExists())
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               jdbcDatabase.put(put);
             })
         .isInstanceOf(NoMutationException.class);
@@ -152,12 +164,16 @@ public class JdbcDatabaseTest {
       whenPutOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               jdbcDatabase.put(put);
             })
         .isInstanceOf(ExecutionException.class);
@@ -167,14 +183,14 @@ public class JdbcDatabaseTest {
   @Test
   public void whenDeleteOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);
+    when(jdbcService.delete(any(), any())).thenReturn(true);
 
     // Act
-    Delete delete = new Delete(new Key("p1", "val1"));
+    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.delete(delete);
 
     // Assert
-    verify(jdbcService).delete(any(), any(), any(), any());
+    verify(jdbcService).delete(any(), any());
     verify(connection).close();
   }
 
@@ -183,12 +199,16 @@ public class JdbcDatabaseTest {
       whenDeleteOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any(), any(), any())).thenReturn(false);
+    when(jdbcService.delete(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
+              Delete delete =
+                  new Delete(new Key("p1", "val1"))
+                      .withCondition(new DeleteIfExists())
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(NoMutationException.class);
@@ -200,12 +220,13 @@ public class JdbcDatabaseTest {
       whenDeleteOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.delete(delete);
             })
         .isInstanceOf(ExecutionException.class);
@@ -215,15 +236,19 @@ public class JdbcDatabaseTest {
   @Test
   public void whenMutateOperationExecuted_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(true);
+    when(jdbcService.mutate(any(), any())).thenReturn(true);
 
     // Act
-    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
-    Delete delete = new Delete(new Key("p1", "val1"));
+    Put put =
+        new Put(new Key("p1", "val1"))
+            .withValue("v1", "val2")
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE);
+    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     jdbcDatabase.mutate(Arrays.asList(put, delete));
 
     // Assert
-    verify(jdbcService).mutate(any(), any(), any(), any());
+    verify(jdbcService).mutate(any(), any());
     verify(connection).close();
   }
 
@@ -232,7 +257,7 @@ public class JdbcDatabaseTest {
       whenMutateOperationWithConditionExecutedAndJdbcServiceReturnsFalse_shouldThrowNoMutationException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any())).thenReturn(false);
+    when(jdbcService.mutate(any(), any())).thenReturn(false);
 
     // Act Assert
     assertThatThrownBy(
@@ -240,8 +265,14 @@ public class JdbcDatabaseTest {
               Put put =
                   new Put(new Key("p1", "val1"))
                       .withValue("v1", "val2")
-                      .withCondition(new PutIfNotExists());
-              Delete delete = new Delete(new Key("p1", "val1")).withCondition(new DeleteIfExists());
+                      .withCondition(new PutIfNotExists())
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1"))
+                      .withCondition(new DeleteIfExists())
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(NoMutationException.class);
@@ -253,13 +284,18 @@ public class JdbcDatabaseTest {
       whenMutateOperationExecutedAndJdbcServiceThrowsSQLException_shouldThrowExecutionException()
           throws Exception {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.mutate(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(ExecutionException.class);
@@ -270,14 +306,19 @@ public class JdbcDatabaseTest {
   public void mutate_withConflictError_shouldThrowRetriableExecutionException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.mutate(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.mutate(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               jdbcDatabase.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(RetriableExecutionException.class);

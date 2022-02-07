@@ -48,7 +48,7 @@ public class JdbcTransactionIntegrationTest {
 
   @BeforeClass
   public static void setUpBeforeClass() throws ExecutionException {
-    DatabaseConfig databaseConfig = TestUtils.addSuffix(JdbcEnv.getJdbcConfig(), TEST_NAME);
+    DatabaseConfig databaseConfig = TestUtils.configureForTest(JdbcEnv.getJdbcConfig(), TEST_NAME);
     JdbcConfig config = new JdbcConfig(databaseConfig.getProperties());
     StorageFactory factory = new StorageFactory(config);
     admin = factory.getAdmin();

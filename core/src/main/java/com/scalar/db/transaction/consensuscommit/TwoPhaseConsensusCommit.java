@@ -6,12 +6,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -21,7 +19,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
-public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
+public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
   @VisibleForTesting
@@ -53,9 +51,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   private final RecoveryHandler recovery;
   private final boolean isCoordinator;
   private final TwoPhaseConsensusCommitManager manager;
-
-  private Optional<String> namespace = Optional.empty();
-  private Optional<String> tableName = Optional.empty();
 
   @VisibleForTesting Status status;
 
@@ -84,36 +79,10 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public Optional<Result> get(Get get) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    setTargetToIfNot(get);
+    get = setTargetToIfNot(get);
     List<String> projections = new ArrayList<>(get.getProjections());
     try {
       return crud.get(get).map(r -> new FilteredResult(r, projections));
@@ -127,7 +96,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   public List<Result> scan(Scan scan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    setTargetToIfNot(scan);
+    scan = setTargetToIfNot(scan);
     List<String> projections = new ArrayList<>(scan.getProjections());
     try {
       return crud.scan(scan).stream()
@@ -155,7 +124,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void putInternal(Put put) {
-    setTargetToIfNot(put);
+    put = setTargetToIfNot(put);
     crud.put(put);
   }
 
@@ -175,7 +144,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void deleteInternal(Delete delete) {
-    setTargetToIfNot(delete);
+    delete = setTargetToIfNot(delete);
     crud.delete(delete);
   }
 
@@ -338,9 +307,5 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     LOGGER.debug("recover uncommitted records: " + results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
-  }
-
-  private void setTargetToIfNot(Operation operation) {
-    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
   }
 }
