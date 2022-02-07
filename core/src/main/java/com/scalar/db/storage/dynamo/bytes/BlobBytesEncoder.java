@@ -5,7 +5,9 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BlobValue;
 import java.nio.ByteBuffer;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class BlobBytesEncoder implements BytesEncoder<BlobValue> {
 
   private static final byte TERM = (byte) 0x00;

@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A metadata class for a table of Scalar DB to know the type of each column
  *
  * @author Yuji Ito
  */
+@NotThreadSafe
 public class CosmosTableMetadata {
   private String id;
   private LinkedHashSet<String> partitionKeyNames;

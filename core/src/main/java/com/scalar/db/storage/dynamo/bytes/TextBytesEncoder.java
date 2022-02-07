@@ -6,7 +6,9 @@ import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.TextValue;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class TextBytesEncoder implements BytesEncoder<TextValue> {
   private static final byte TERM = 0x00;
 

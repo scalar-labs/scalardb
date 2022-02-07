@@ -17,8 +17,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
-@Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+@Immutable
 public class TableSchema {
 
   private static final String COLUMNS = "columns";

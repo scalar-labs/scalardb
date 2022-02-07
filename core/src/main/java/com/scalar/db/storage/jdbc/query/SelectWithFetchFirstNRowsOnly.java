@@ -1,5 +1,8 @@
 package com.scalar.db.storage.jdbc.query;
 
+import javax.annotation.concurrent.ThreadSafe;
+
+@ThreadSafe
 public class SelectWithFetchFirstNRowsOnly extends SimpleSelectQuery {
 
   private final int limit;
