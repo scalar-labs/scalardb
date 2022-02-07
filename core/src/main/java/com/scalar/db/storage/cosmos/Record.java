@@ -4,12 +4,14 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A record class that Cosmos DB uses for storing a document based on Scalar DB data model.
  *
  * @author Yuji Ito
  */
+@NotThreadSafe
 public class Record {
   private String id = "";
   private String concatenatedPartitionKey = "";
