@@ -15,6 +15,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
