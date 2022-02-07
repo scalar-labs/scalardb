@@ -105,7 +105,7 @@ public class CrudHandler {
 
   private Optional<TransactionResult> getFromStorage(Get get) throws CrudException {
     try {
-      // only get after image columns
+      // get only after image columns
       get.clearProjections();
       LinkedHashSet<String> afterImageColumnNames =
           tableMetadataManager.getTransactionalTableMetadata(get).getAfterImageColumnNames();

@@ -50,12 +50,12 @@ public class RecoveryHandler {
     }
 
     if (!latestResult.isPresent()) {
-      // indicates the record is deleted in another transaction
+      // indicates the record has been deleted by another transaction
       return;
     }
 
     if (latestResult.get().isCommitted()) {
-      // indicates the record is committed in another transaction
+      // indicates the record has been committed by another transaction
       return;
     }
 
