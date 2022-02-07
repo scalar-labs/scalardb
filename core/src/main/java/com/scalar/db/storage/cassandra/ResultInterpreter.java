@@ -12,7 +12,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.storage.common.ResultImpl;
+import com.scalar.db.util.ResultImpl;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
