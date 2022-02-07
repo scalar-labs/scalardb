@@ -18,7 +18,6 @@ import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.PreparationConflictException;
 import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
@@ -116,7 +115,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     updateTransactionExpirationTime();
     setTargetToIfNot(get);
     List<String> projections = new ArrayList<>(get.getProjections());
-    get.clearProjections(); // project all
     try {
       return crud.get(get).map(r -> new FilteredResult(r, projections));
     } catch (UncommittedRecordException e) {
@@ -131,7 +129,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     updateTransactionExpirationTime();
     setTargetToIfNot(scan);
     List<String> projections = new ArrayList<>(scan.getProjections());
-    scan.clearProjections(); // project all
     try {
       return crud.scan(scan).stream()
           .map(r -> new FilteredResult(r, projections))

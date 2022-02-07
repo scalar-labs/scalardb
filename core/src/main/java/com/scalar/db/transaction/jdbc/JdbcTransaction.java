@@ -30,9 +30,6 @@ import org.slf4j.LoggerFactory;
 /**
  * This indicates a transaction session of JDBC.
  *
- * <p>Note that the isolation level in a transaction is always SERIALIZABLE in this implementation.
- * Even if the isolation level is specified in the configuration, it will be ignored.
- *
  * @author Toshihiro Suzuki
  */
 @NotThreadSafe

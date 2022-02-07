@@ -16,10 +16,11 @@ import com.scalar.db.api.Get;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
-import com.scalar.db.exception.transaction.UncommittedRecordException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import java.util.Arrays;
@@ -49,6 +50,7 @@ public class CrudHandlerTest {
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
+  @Mock private TransactionalTableMetadataManager tableMetadataManager;
   @Mock private ParallelExecutor parallelExecutor;
   @Mock private Scanner scanner;
   @Mock private Result result;
@@ -56,6 +58,18 @@ public class CrudHandlerTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(tableMetadataManager.getTransactionalTableMetadata(any()))
+        .thenReturn(
+            new TransactionalTableMetadata(
+                ConsensusCommitUtils.buildTransactionalTableMetadata(
+                    TableMetadata.newBuilder()
+                        .addColumn(ANY_NAME_1, DataType.TEXT)
+                        .addColumn(ANY_NAME_2, DataType.TEXT)
+                        .addPartitionKey(ANY_NAME_1)
+                        .addClusteringKey(ANY_NAME_2)
+                        .build())));
   }
 
   private Get prepareGet() {
@@ -259,7 +273,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -306,7 +320,7 @@ public class CrudHandlerTest {
     Scan scan = prepareScan();
     result = prepareResult(true, TransactionState.COMMITTED);
     snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
-    handler = new CrudHandler(storage, snapshot);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -353,7 +367,7 @@ public class CrudHandlerTest {
             new HashMap<>(),
             new HashMap<>(),
             deleteSet);
-    handler = new CrudHandler(storage, snapshot);
+    handler = new CrudHandler(storage, snapshot, tableMetadataManager);
     when(scanner.iterator()).thenReturn(Arrays.asList(result, result2).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
