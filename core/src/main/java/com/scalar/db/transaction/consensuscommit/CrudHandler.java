@@ -120,7 +120,7 @@ public class CrudHandler {
 
   private Scanner getFromStorage(Scan scan) throws CrudException {
     try {
-      // only get after image columns
+      // get only after image columns
       scan.clearProjections();
       LinkedHashSet<String> afterImageColumnNames =
           tableMetadataManager.getTransactionalTableMetadata(scan).getAfterImageColumnNames();
