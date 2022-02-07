@@ -15,12 +15,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@code Result} to filter out unprojected columns and transactional columns.
  */
+@Immutable
 public class FilteredResult implements Result {
   private static final Logger LOGGER = LoggerFactory.getLogger(FilteredResult.class);
 

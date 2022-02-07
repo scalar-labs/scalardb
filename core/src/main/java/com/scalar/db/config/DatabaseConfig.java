@@ -39,8 +39,8 @@ import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
-@Immutable
 @SuppressFBWarnings("JCIP_FIELD_ISNT_FINAL_IN_IMMUTABLE_CLASS")
+@Immutable
 public class DatabaseConfig {
   private final Properties props;
   private List<String> contactPoints;

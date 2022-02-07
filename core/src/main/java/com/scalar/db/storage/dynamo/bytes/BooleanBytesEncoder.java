@@ -5,7 +5,9 @@ import static com.scalar.db.storage.dynamo.bytes.BytesUtils.mask;
 import com.scalar.db.api.Scan.Ordering.Order;
 import com.scalar.db.io.BooleanValue;
 import java.nio.ByteBuffer;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class BooleanBytesEncoder implements BytesEncoder<BooleanValue> {
   private static final byte FALSE = 0x00;
   private static final byte TRUE = 0x01;

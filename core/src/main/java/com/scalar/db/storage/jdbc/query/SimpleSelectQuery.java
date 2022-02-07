@@ -14,7 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.concurrent.ThreadSafe;
 
+@ThreadSafe
 public class SimpleSelectQuery implements SelectQuery {
 
   private final TableMetadata tableMetadata;
