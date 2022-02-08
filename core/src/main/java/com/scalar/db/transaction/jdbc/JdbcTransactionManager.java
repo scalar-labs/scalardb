@@ -2,7 +2,6 @@ package com.scalar.db.transaction.jdbc;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
@@ -14,9 +13,9 @@ import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
 import com.scalar.db.storage.jdbc.query.QueryBuilder;
+import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.util.TableMetadataManager;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.concurrent.ThreadSafe;
 import org.apache.commons.dbcp2.BasicDataSource;
@@ -24,15 +23,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class JdbcTransactionManager implements DistributedTransactionManager {
+public class JdbcTransactionManager extends AbstractDistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransactionManager.class);
 
   private final BasicDataSource dataSource;
   private final BasicDataSource tableMetadataDataSource;
   private final RdbEngine rdbEngine;
   private final JdbcService jdbcService;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public JdbcTransactionManager(JdbcConfig config) {
@@ -48,8 +45,6 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
     OperationChecker operationChecker = new OperationChecker(tableMetadataManager);
     QueryBuilder queryBuilder = new QueryBuilder(rdbEngine);
     jdbcService = new JdbcService(tableMetadataManager, operationChecker, queryBuilder);
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @VisibleForTesting
@@ -65,32 +60,6 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public JdbcTransaction start() throws TransactionException {
     String txId = UUID.randomUUID().toString();
     return start(txId);
@@ -99,8 +68,11 @@ public class JdbcTransactionManager implements DistributedTransactionManager {
   @Override
   public JdbcTransaction start(String txId) throws TransactionException {
     try {
-      return new JdbcTransaction(
-          txId, jdbcService, dataSource.getConnection(), rdbEngine, namespace, tableName);
+      JdbcTransaction transaction =
+          new JdbcTransaction(txId, jdbcService, dataSource.getConnection(), rdbEngine);
+      getNamespace().ifPresent(transaction::withNamespace);
+      getTable().ifPresent(transaction::withTable);
+      return transaction;
     } catch (SQLException e) {
       throw new TransactionException("failed to start the transaction", e);
     }

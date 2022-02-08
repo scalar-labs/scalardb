@@ -51,10 +51,8 @@ public class JdbcService {
     this.queryBuilder = Objects.requireNonNull(queryBuilder);
   }
 
-  public Optional<Result> get(
-      Get get, Connection connection, Optional<String> namespace, Optional<String> tableName)
+  public Optional<Result> get(Get get, Connection connection)
       throws SQLException, ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(get);
     ScalarDbUtils.addProjectionsForKeys(get, tableMetadata);
@@ -84,10 +82,8 @@ public class JdbcService {
   }
 
   @SuppressFBWarnings("OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE")
-  public Scanner getScanner(
-      Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
+  public Scanner getScanner(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
@@ -103,10 +99,8 @@ public class JdbcService {
         resultSet);
   }
 
-  public List<Result> scan(
-      Scan scan, Connection connection, Optional<String> namespace, Optional<String> tableName)
+  public List<Result> scan(Scan scan, Connection connection)
       throws SQLException, ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata tableMetadata = tableMetadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, tableMetadata);
@@ -141,10 +135,7 @@ public class JdbcService {
         .build();
   }
 
-  public boolean put(
-      Put put, Connection connection, Optional<String> namespace, Optional<String> tableName)
-      throws SQLException, ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
+  public boolean put(Put put, Connection connection) throws SQLException, ExecutionException {
     operationChecker.check(put);
 
     if (!put.getCondition().isPresent()) {
@@ -163,10 +154,8 @@ public class JdbcService {
     }
   }
 
-  public boolean delete(
-      Delete delete, Connection connection, Optional<String> namespace, Optional<String> tableName)
+  public boolean delete(Delete delete, Connection connection)
       throws SQLException, ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
 
     if (!delete.getCondition().isPresent()) {
@@ -185,23 +174,18 @@ public class JdbcService {
     }
   }
 
-  public boolean mutate(
-      List<? extends Mutation> mutations,
-      Connection connection,
-      Optional<String> namespace,
-      Optional<String> tableName)
+  public boolean mutate(List<? extends Mutation> mutations, Connection connection)
       throws SQLException, ExecutionException {
     checkArgument(mutations.size() != 0);
-    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
     operationChecker.check(mutations);
 
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        if (!put((Put) mutation, connection, namespace, tableName)) {
+        if (!put((Put) mutation, connection)) {
           return false;
         }
       } else {
-        if (!delete((Delete) mutation, connection, namespace, tableName)) {
+        if (!delete((Delete) mutation, connection)) {
           return false;
         }
       }

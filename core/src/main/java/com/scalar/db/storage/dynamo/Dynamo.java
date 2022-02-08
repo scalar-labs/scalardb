@@ -13,6 +13,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.storage.common.checker.OperationChecker;
 import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
@@ -37,7 +38,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
  * @author Yuji Ito
  */
 @ThreadSafe
-public class Dynamo implements DistributedStorage {
+public class Dynamo extends AbstractDistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dynamo.class);
   private final DynamoDbClient client;
   private final TableMetadataManager metadataManager;
@@ -46,8 +47,6 @@ public class Dynamo implements DistributedStorage {
   private final DeleteStatementHandler deleteStatementHandler;
   private final BatchHandler batchHandler;
   private final OperationChecker operationChecker;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public Dynamo(DynamoConfig config) {
@@ -61,9 +60,6 @@ public class Dynamo implements DistributedStorage {
                         config.getUsername().orElse(null), config.getPassword().orElse(null))))
             .region(Region.of(config.getContactPoints().get(0)))
             .build();
-
-    namespace = Optional.empty();
-    tableName = Optional.empty();
 
     metadataManager =
         new TableMetadataManager(
@@ -79,35 +75,9 @@ public class Dynamo implements DistributedStorage {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+    get = copyAndSetTargetToIfNot(get);
     operationChecker.check(get);
     TableMetadata metadata = metadataManager.getTableMetadata(get);
     ScalarDbUtils.addProjectionsForKeys(get, metadata);
@@ -126,7 +96,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+    scan = copyAndSetTargetToIfNot(scan);
     operationChecker.check(scan);
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
     ScalarDbUtils.addProjectionsForKeys(scan, metadata);
@@ -138,7 +108,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
+    put = copyAndSetTargetToIfNot(put);
     operationChecker.check(put);
 
     putStatementHandler.handle(put);
@@ -151,7 +121,7 @@ public class Dynamo implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
+    delete = copyAndSetTargetToIfNot(delete);
     operationChecker.check(delete);
 
     deleteStatementHandler.handle(delete);
@@ -175,7 +145,7 @@ public class Dynamo implements DistributedStorage {
       return;
     }
 
-    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
+    mutations = copyAndSetTargetToIfNot(mutations);
     operationChecker.check(mutations);
     for (Mutation mutation : mutations) {
       operationChecker.check(mutation);

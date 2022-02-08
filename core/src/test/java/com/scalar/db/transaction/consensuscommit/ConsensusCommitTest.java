@@ -18,6 +18,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.io.Key;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,10 +32,13 @@ import org.mockito.MockitoAnnotations;
 public class ConsensusCommitTest {
   private static final String ANY_NAMESPACE = "namespace";
   private static final String ANY_TABLE_NAME = "table";
-  @Mock private Get get;
-  @Mock private Scan scan;
-  @Mock private Put put;
-  @Mock private Delete delete;
+  private static final String ANY_NAME_1 = "name1";
+  private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_TEXT_1 = "text1";
+  private static final String ANY_TEXT_2 = "text2";
+  private static final String ANY_TEXT_3 = "text3";
+
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
@@ -44,20 +48,42 @@ public class ConsensusCommitTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+  }
 
-    when(get.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(get.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(scan.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(scan.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(put.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(put.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(delete.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(delete.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+  private Get prepareGet() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Get(partitionKey, clusteringKey)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareScan() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+  }
+
+  private Put preparePut() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Put(partitionKey, clusteringKey)
+        .withValue(ANY_NAME_3, ANY_TEXT_3)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Delete prepareDelete() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
   public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
     // Arrange
+    Get get = prepareGet();
     TransactionResult result = mock(TransactionResult.class);
     when(crud.get(get)).thenReturn(Optional.of(result));
 
@@ -73,6 +99,7 @@ public class ConsensusCommitTest {
   @Test
   public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
     // Arrange
+    Get get = prepareGet();
     TransactionResult result = mock(TransactionResult.class);
     UncommittedRecordException toThrow = mock(UncommittedRecordException.class);
     when(crud.get(get)).thenThrow(toThrow);
@@ -88,6 +115,7 @@ public class ConsensusCommitTest {
   @Test
   public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
     // Arrange
+    Scan scan = prepareScan();
     TransactionResult result = mock(TransactionResult.class);
     List<Result> results = Collections.singletonList(result);
     when(crud.scan(scan)).thenReturn(results);
@@ -103,6 +131,7 @@ public class ConsensusCommitTest {
   @Test
   public void put_PutGiven_ShouldCallCrudHandlerPut() {
     // Arrange
+    Put put = preparePut();
     doNothing().when(crud).put(put);
 
     // Act Assert
@@ -115,6 +144,7 @@ public class ConsensusCommitTest {
   @Test
   public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
     // Arrange
+    Put put = preparePut();
     doNothing().when(crud).put(put);
 
     // Act Assert
@@ -127,6 +157,7 @@ public class ConsensusCommitTest {
   @Test
   public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
     // Arrange
+    Delete delete = prepareDelete();
     doNothing().when(crud).delete(delete);
 
     // Act Assert
@@ -139,6 +170,7 @@ public class ConsensusCommitTest {
   @Test
   public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
     // Arrange
+    Delete delete = prepareDelete();
     doNothing().when(crud).delete(delete);
 
     // Act Assert
@@ -151,6 +183,8 @@ public class ConsensusCommitTest {
   @Test
   public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
     // Arrange
+    Put put = preparePut();
+    Delete delete = prepareDelete();
     doNothing().when(crud).put(put);
     doNothing().when(crud).delete(delete);
 
