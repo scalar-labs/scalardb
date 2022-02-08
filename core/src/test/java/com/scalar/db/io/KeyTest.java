@@ -3,6 +3,7 @@ package com.scalar.db.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -133,6 +134,22 @@ public class KeyTest {
   }
 
   @Test
+  public void constructor_WithSingleByteBufferValue_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+    Key key = new Key(name, ByteBuffer.wrap(value));
+
+    // Act
+    List<Value<?>> values = key.get();
+
+    // Assert
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(Arrays.equals(values.get(0).getAsBytes().get(), value)).isTrue();
+  }
+
+  @Test
   public void constructor_WithMultipleNamesAndValues_ShouldReturnWhatsSet() {
     // Arrange
     Key key1 = new Key("key1", true, "key2", 5678);
@@ -144,7 +161,7 @@ public class KeyTest {
             "key7",
             "blob_key".getBytes(StandardCharsets.UTF_8),
             "key8",
-            1357,
+            ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)),
             "key9",
             2468);
     Key key4 = new Key("key1", true, "key2", 5678, "key3", 1234L, "key4", 4.56f, "key5", 1.23);
@@ -169,7 +186,9 @@ public class KeyTest {
     assertThat(values3.get(0)).isEqualTo(new TextValue("key6", "string_key"));
     assertThat(values3.get(1))
         .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
-    assertThat(values3.get(2)).isEqualTo(new IntValue("key8", 1357));
+    assertThat(values3.get(2))
+        .isEqualTo(
+            new BlobValue("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8))));
     assertThat(values3.get(3)).isEqualTo(new IntValue("key9", 2468));
 
     assertThat(values4.size()).isEqualTo(5);
@@ -206,15 +225,16 @@ public class KeyTest {
             .add("key5", 1.23)
             .add("key6", "string_key")
             .add("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
-            .add(new IntValue("key8", 1357))
-            .addAll(Arrays.asList(new IntValue("key9", 2468), new BigIntValue("key10", 1111L)))
+            .add("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)))
+            .add(new IntValue("key9", 1357))
+            .addAll(Arrays.asList(new IntValue("key10", 2468), new BigIntValue("key11", 1111L)))
             .build();
 
     // Act
     List<Value<?>> values = key.get();
 
     // Assert
-    assertThat(values.size()).isEqualTo(10);
+    assertThat(values.size()).isEqualTo(11);
     assertThat(values.get(0)).isEqualTo(new BooleanValue("key1", true));
     assertThat(values.get(1)).isEqualTo(new IntValue("key2", 5678));
     assertThat(values.get(2)).isEqualTo(new BigIntValue("key3", 1234L));
@@ -223,9 +243,12 @@ public class KeyTest {
     assertThat(values.get(5)).isEqualTo(new TextValue("key6", "string_key"));
     assertThat(values.get(6))
         .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
-    assertThat(values.get(7)).isEqualTo(new IntValue("key8", 1357));
-    assertThat(values.get(8)).isEqualTo(new IntValue("key9", 2468));
-    assertThat(values.get(9)).isEqualTo(new BigIntValue("key10", 1111L));
+    assertThat(values.get(7))
+        .isEqualTo(
+            new BlobValue("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8))));
+    assertThat(values.get(8)).isEqualTo(new IntValue("key9", 1357));
+    assertThat(values.get(9)).isEqualTo(new IntValue("key10", 2468));
+    assertThat(values.get(10)).isEqualTo(new BigIntValue("key11", 1111L));
   }
 
   @Test

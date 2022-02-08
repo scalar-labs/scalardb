@@ -13,6 +13,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
@@ -102,11 +103,12 @@ public class PutTest {
         .withValue("val4", 4.56f)
         .withValue("val5", 1.23)
         .withValue("val6", "string_value")
-        .withValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8));
+        .withValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))
+        .withValue("val8", ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
 
     // Assert
     Map<String, Value<?>> values = put.getValues();
-    assertThat(values.size()).isEqualTo(7);
+    assertThat(values.size()).isEqualTo(8);
     assertThat(values.get("val1")).isEqualTo(new BooleanValue("val1", true));
     assertThat(values.get("val2")).isEqualTo(new IntValue("val2", 5678));
     assertThat(values.get("val3")).isEqualTo(new BigIntValue("val3", 1234L));
@@ -115,6 +117,8 @@ public class PutTest {
     assertThat(values.get("val6")).isEqualTo(new TextValue("val6", "string_value"));
     assertThat(values.get("val7"))
         .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values.get("val8"))
+        .isEqualTo(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
   }
 
   @Test
