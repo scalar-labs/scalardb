@@ -155,7 +155,7 @@ public class ValueBinderTest {
   public void visit_AcceptCalledMultipleTimesWithNullValue_ShouldSkipNull() {
     // Arrange
     IntValue value1 = new IntValue(ANY_NAME, ANY_INT);
-    BlobValue value2 = new BlobValue(ANY_NAME, null);
+    BlobValue value2 = new BlobValue(ANY_NAME, (byte[]) null);
     TextValue value3 = new TextValue(ANY_NAME, (byte[]) null);
     IntValue value4 = new IntValue(ANY_NAME, ANY_INT);
     ValueBinder binder = new ValueBinder(bound);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
@@ -16,10 +17,25 @@ public class BlobValueTest {
   private static final byte[] SOME_TEXT_BYTES = SOME_TEXT.getBytes(StandardCharsets.UTF_8);
 
   @Test
-  public void get_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+  public void get_ProperByteArrayValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
     byte[] expected = SOME_TEXT_BYTES;
     BlobValue value = new BlobValue(ANY_NAME, expected);
+
+    // Act
+    Optional<byte[]> actual = value.get();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(Arrays.equals(expected, actual.get())).isTrue();
+    assertThat(expected == actual.get()).isFalse();
+  }
+
+  @Test
+  public void get_ProperByteBufferValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    byte[] expected = SOME_TEXT_BYTES;
+    BlobValue value = new BlobValue(ANY_NAME, ByteBuffer.wrap(expected));
 
     // Act
     Optional<byte[]> actual = value.get();
@@ -121,7 +137,7 @@ public class BlobValueTest {
   @Test
   public void copyWith_WithValueEmpty_ShouldReturnNewBlobWithValueEmpty() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue oneValue = new BlobValue(ANY_NAME, (byte[]) null);
 
     // Act
     BlobValue newValue = oneValue.copyWith("new name");
@@ -244,7 +260,7 @@ public class BlobValueTest {
   public void compareTo_ThisNonNullAndGivenNull_ShouldReturnPositive() {
     // Arrange
     BlobValue oneValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
-    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, (byte[]) null);
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -256,7 +272,7 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisNullAndGivenNonNull_ShouldReturnNegative() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, null);
+    BlobValue oneValue = new BlobValue(ANY_NAME, (byte[]) null);
     BlobValue anotherValue = new BlobValue(ANY_NAME, "some_value".getBytes(StandardCharsets.UTF_8));
 
     // Act
@@ -269,8 +285,8 @@ public class BlobValueTest {
   @Test
   public void compareTo_ThisAndGivenAreNull_ShouldReturnZero() {
     // Arrange
-    BlobValue oneValue = new BlobValue(ANY_NAME, null);
-    BlobValue anotherValue = new BlobValue(ANY_NAME, null);
+    BlobValue oneValue = new BlobValue(ANY_NAME, (byte[]) null);
+    BlobValue anotherValue = new BlobValue(ANY_NAME, (byte[]) null);
 
     // Act
     int actual = oneValue.compareTo(anotherValue);
@@ -282,6 +298,7 @@ public class BlobValueTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new BlobValue(null, null)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new BlobValue(null, (byte[]) null))
+        .isInstanceOf(NullPointerException.class);
   }
 }
