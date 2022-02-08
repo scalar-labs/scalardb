@@ -8,6 +8,7 @@ import com.scalar.db.io.FloatValue;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.ByteBuffer;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
@@ -113,6 +114,17 @@ public class ConditionalExpression {
    * @param operator operator used to compare the target value specified with the name and the value
    */
   public ConditionalExpression(String name, byte[] value, Operator operator) {
+    this(name, new BlobValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, ByteBuffer value, Operator operator) {
     this(name, new BlobValue(value), operator);
   }
 

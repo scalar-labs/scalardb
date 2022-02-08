@@ -140,7 +140,7 @@ public final class TestUtils {
   public static Value<?> getNullValue(String columnName, DataType dataType) {
     switch (dataType) {
       case BLOB:
-        return new BlobValue(columnName, null); // null value
+        return new BlobValue(columnName, (byte[]) null); // null value
       case TEXT:
         return new TextValue(columnName, (String) null); // null value
       default:

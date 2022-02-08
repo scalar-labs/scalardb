@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -117,6 +118,16 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
   }
 
   /**
+   * Constructs a {@code Key} with a single {@link Value} as a byte buffer type
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public Key(String name, ByteBuffer value) {
+    values = Collections.singletonList(new BlobValue(name, value));
+  }
+
+  /**
    * Constructs a {@code Key} with multiple {@link Value}s
    *
    * @param n1 name of the 1st {@code Value}
@@ -204,6 +215,8 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
       return new TextValue(name, (String) value);
     } else if (value instanceof byte[]) {
       return new BlobValue(name, (byte[]) value);
+    } else if (value instanceof ByteBuffer) {
+      return new BlobValue(name, (ByteBuffer) value);
     } else {
       throw new IllegalArgumentException(
           "Unsupported type, name: " + name + ", type: " + value.getClass().getName());
@@ -416,6 +429,11 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     }
 
     public Builder add(String name, byte[] value) {
+      values.add(new BlobValue(name, value));
+      return this;
+    }
+
+    public Builder add(String name, ByteBuffer value) {
       values.add(new BlobValue(name, value));
       return this;
     }

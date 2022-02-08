@@ -61,7 +61,7 @@ public class ResultInterpreter {
       case BLOB:
         ByteBuffer buffer = row.getBytes(name);
         if (buffer == null) {
-          return new BlobValue(name, null);
+          return new BlobValue(name, (byte[]) null);
         }
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
