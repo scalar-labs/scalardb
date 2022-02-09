@@ -54,7 +54,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
             admin, config.getTableMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
-    recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
 
     if (config.isActiveTransactionsManagementEnabled()) {
