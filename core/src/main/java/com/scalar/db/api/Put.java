@@ -49,6 +49,11 @@ public class Put extends Mutation {
     values = new LinkedHashMap<>();
   }
 
+  public Put(Put put) {
+    super(put);
+    values = new LinkedHashMap<>(put.values);
+  }
+
   /**
    * Adds the specified {@link Value} to the list of put values.
    *

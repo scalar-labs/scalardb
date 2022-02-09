@@ -76,7 +76,24 @@ public class ScanTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new Scan(null)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Scan((Key) null)).isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_ScanGiven_ShouldCopyProperly() {
+    // Arrange
+    Scan scan =
+        prepareScan()
+            .withLimit(100)
+            .withConsistency(Consistency.EVENTUAL)
+            .forNamespace("n1")
+            .forTable("t1");
+
+    // Act
+    Scan actual = new Scan(scan);
+
+    // Assert
+    assertThat(actual).isEqualTo(scan);
   }
 
   @Test

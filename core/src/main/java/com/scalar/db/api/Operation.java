@@ -35,6 +35,14 @@ public abstract class Operation {
     consistency = Consistency.SEQUENTIAL;
   }
 
+  public Operation(Operation operation) {
+    this.partitionKey = operation.partitionKey;
+    this.clusteringKey = operation.clusteringKey;
+    namespace = operation.namespace;
+    tableName = operation.tableName;
+    consistency = operation.consistency;
+  }
+
   /**
    * Returns the namespace for this operation
    *

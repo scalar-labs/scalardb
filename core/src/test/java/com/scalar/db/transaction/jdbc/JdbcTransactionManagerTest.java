@@ -32,6 +32,9 @@ import org.mockito.MockitoAnnotations;
 
 public class JdbcTransactionManagerTest {
 
+  private static final String NAMESPACE = "ns";
+  private static final String TABLE = "tbl";
+
   @Mock private BasicDataSource dataSource;
   @Mock private BasicDataSource tableMetadataDataSource;
   @Mock private JdbcService jdbcService;
@@ -43,38 +46,43 @@ public class JdbcTransactionManagerTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(dataSource.getConnection()).thenReturn(connection);
     manager =
         new JdbcTransactionManager(
             dataSource, tableMetadataDataSource, RdbEngine.MYSQL, jdbcService);
-
-    when(dataSource.getConnection()).thenReturn(connection);
   }
 
   @Test
   public void whenSomeOperationsExecutedAndCommit_shouldCallJdbcService() throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any())).thenReturn(Collections.emptyList());
-    when(jdbcService.put(any(), any(), any(), any())).thenReturn(true);
-    when(jdbcService.delete(any(), any(), any(), any())).thenReturn(true);
+    when(jdbcService.scan(any(), any())).thenReturn(Collections.emptyList());
+    when(jdbcService.put(any(), any())).thenReturn(true);
+    when(jdbcService.delete(any(), any())).thenReturn(true);
 
     // Act
     JdbcTransaction transaction = manager.start();
-    Get get = new Get(new Key("p1", "val"));
+    Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     transaction.get(get);
-    Scan scan = new Scan(new Key("p1", "val"));
+    Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
     transaction.scan(scan);
-    Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+    Put put =
+        new Put(new Key("p1", "val1"))
+            .withValue("v1", "val2")
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE);
     transaction.put(put);
-    Delete delete = new Delete(new Key("p1", "val1"));
+    Delete delete = new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
     transaction.delete(delete);
     transaction.mutate(Arrays.asList(put, delete));
     transaction.commit();
 
     // Assert
-    verify(jdbcService).get(any(), any(), any(), any());
-    verify(jdbcService).scan(any(), any(), any(), any());
-    verify(jdbcService, times(2)).put(any(), any(), any(), any());
-    verify(jdbcService, times(2)).delete(any(), any(), any(), any());
+    verify(jdbcService).get(any(), any());
+    verify(jdbcService).scan(any(), any());
+    verify(jdbcService, times(2)).put(any(), any());
+    verify(jdbcService, times(2)).delete(any(), any());
     verify(connection).commit();
     verify(connection).close();
   }
@@ -83,13 +91,13 @@ public class JdbcTransactionManagerTest {
   public void whenGetOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
       throws Exception {
     // Arrange
-    when(jdbcService.get(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.get(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
             })
         .isInstanceOf(CrudException.class);
@@ -99,14 +107,14 @@ public class JdbcTransactionManagerTest {
   public void get_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.get(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.get(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -116,13 +124,13 @@ public class JdbcTransactionManagerTest {
   public void whenScanOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
       throws Exception {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.scan(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Scan scan = new Scan(new Key("p1", "val"));
+              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.scan(scan);
             })
         .isInstanceOf(CrudException.class);
@@ -132,14 +140,14 @@ public class JdbcTransactionManagerTest {
   public void scan_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.scan(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.scan(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Scan scan = new Scan(new Key("p1", "val"));
+              Scan scan = new Scan(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.scan(scan);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -149,13 +157,17 @@ public class JdbcTransactionManagerTest {
   public void whenPutOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
       throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               transaction.put(put);
             })
         .isInstanceOf(CrudException.class);
@@ -165,14 +177,18 @@ public class JdbcTransactionManagerTest {
   public void put_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               transaction.put(put);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -183,13 +199,14 @@ public class JdbcTransactionManagerTest {
       whenDeleteOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
     // Arrange
-    when(jdbcService.delete(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.delete(delete);
             })
         .isInstanceOf(CrudException.class);
@@ -199,14 +216,15 @@ public class JdbcTransactionManagerTest {
   public void delete_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.delete(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.delete(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.delete(delete);
             })
         .isInstanceOf(CrudConflictException.class);
@@ -217,14 +235,19 @@ public class JdbcTransactionManagerTest {
       whenMutateOperationsExecutedAndJdbcServiceThrowsSQLException_shouldThrowCrudException()
           throws Exception {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudException.class);
@@ -234,15 +257,20 @@ public class JdbcTransactionManagerTest {
   public void mutate_withConflictError_shouldThrowCrudConflictException()
       throws SQLException, ExecutionException {
     // Arrange
-    when(jdbcService.put(any(), any(), any(), any())).thenThrow(sqlException);
+    when(jdbcService.put(any(), any())).thenThrow(sqlException);
     when(sqlException.getErrorCode()).thenReturn(1213);
 
     // Act Assert
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
-              Delete delete = new Delete(new Key("p1", "val1"));
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
+              Delete delete =
+                  new Delete(new Key("p1", "val1")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.mutate(Arrays.asList(put, delete));
             })
         .isInstanceOf(CrudConflictException.class);
@@ -257,9 +285,13 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               transaction.put(put);
               transaction.commit();
             })
@@ -277,9 +309,13 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               transaction.put(put);
               transaction.abort();
             })
@@ -298,9 +334,13 @@ public class JdbcTransactionManagerTest {
     assertThatThrownBy(
             () -> {
               JdbcTransaction transaction = manager.start();
-              Get get = new Get(new Key("p1", "val"));
+              Get get = new Get(new Key("p1", "val")).forNamespace(NAMESPACE).forTable(TABLE);
               transaction.get(get);
-              Put put = new Put(new Key("p1", "val1")).withValue("v1", "val2");
+              Put put =
+                  new Put(new Key("p1", "val1"))
+                      .withValue("v1", "val2")
+                      .forNamespace(NAMESPACE)
+                      .forTable(TABLE);
               transaction.put(put);
               transaction.commit();
             })
