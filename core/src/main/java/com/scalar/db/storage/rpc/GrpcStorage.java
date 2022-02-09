@@ -5,7 +5,6 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
@@ -19,8 +18,8 @@ import com.scalar.db.rpc.DistributedStorageGrpc;
 import com.scalar.db.rpc.GetRequest;
 import com.scalar.db.rpc.GetResponse;
 import com.scalar.db.rpc.MutateRequest;
+import com.scalar.db.storage.common.AbstractDistributedStorage;
 import com.scalar.db.util.ProtoUtils;
-import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableSupplier;
 import com.scalar.db.util.retry.Retry;
@@ -37,7 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcStorage implements DistributedStorage {
+public class GrpcStorage extends AbstractDistributedStorage {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcStorage.class);
   private static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
@@ -58,9 +57,6 @@ public class GrpcStorage implements DistributedStorage {
   private final DistributedStorageGrpc.DistributedStorageBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
 
-  private Optional<String> namespace;
-  private Optional<String> tableName;
-
   @Inject
   public GrpcStorage(GrpcConfig config) {
     this.config = config;
@@ -77,8 +73,6 @@ public class GrpcStorage implements DistributedStorage {
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @VisibleForTesting
@@ -92,39 +86,11 @@ public class GrpcStorage implements DistributedStorage {
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
-  public Optional<Result> get(Get get) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
+  public Optional<Result> get(Get originalGet) throws ExecutionException {
+    Get get = copyAndSetTargetToIfNot(originalGet);
     return execute(
         () -> {
           GetResponse response =
@@ -140,8 +106,8 @@ public class GrpcStorage implements DistributedStorage {
   }
 
   @Override
-  public Scanner scan(Scan scan) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
+  public Scanner scan(Scan originalScan) throws ExecutionException {
+    Scan scan = copyAndSetTargetToIfNot(originalScan);
     return executeWithRetries(
         () -> {
           TableMetadata tableMetadata = metadataManager.getTableMetadata(scan);
@@ -152,6 +118,7 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
+    put = copyAndSetTargetToIfNot(put);
     mutate(put);
   }
 
@@ -162,6 +129,7 @@ public class GrpcStorage implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
+    delete = copyAndSetTargetToIfNot(delete);
     mutate(delete);
   }
 
@@ -171,7 +139,6 @@ public class GrpcStorage implements DistributedStorage {
   }
 
   private void mutate(Mutation mutation) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(mutation, namespace, tableName);
     execute(
         () -> {
           blockingStub
@@ -183,8 +150,8 @@ public class GrpcStorage implements DistributedStorage {
   }
 
   @Override
-  public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    ScalarDbUtils.setTargetToIfNot(mutations, namespace, tableName);
+  public void mutate(List<? extends Mutation> originalMutations) throws ExecutionException {
+    List<? extends Mutation> mutations = copyAndSetTargetToIfNot(originalMutations);
     execute(
         () -> {
           MutateRequest.Builder builder = MutateRequest.newBuilder();

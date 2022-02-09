@@ -4,7 +4,6 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.Isolation;
 import com.scalar.db.api.SerializableStrategy;
 import com.scalar.db.api.TransactionState;
@@ -16,6 +15,7 @@ import com.scalar.db.rpc.GetTransactionStateRequest;
 import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.TableMetadataManager;
 import com.scalar.db.util.ThrowableSupplier;
@@ -26,7 +26,6 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.netty.NettyChannelBuilder;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -34,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTransactionManager implements DistributedTransactionManager {
+public class GrpcTransactionManager extends AbstractDistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(GrpcTransactionManager.class);
   static final int DEFAULT_SCALAR_DB_SERVER_PORT = 60051;
 
@@ -55,9 +54,6 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
   private final DistributedTransactionGrpc.DistributedTransactionBlockingStub blockingStub;
   private final TableMetadataManager metadataManager;
 
-  private Optional<String> namespace;
-  private Optional<String> tableName;
-
   @Inject
   public GrpcTransactionManager(GrpcConfig config) {
     this.config = config;
@@ -74,8 +70,6 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     metadataManager =
         new TableMetadataManager(
             new GrpcAdmin(channel, config), config.getTableMetadataCacheExpirationTimeSecs());
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @VisibleForTesting
@@ -89,34 +83,6 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
     this.stub = stub;
     this.blockingStub = blockingStub;
     this.metadataManager = metadataManager;
-    namespace = Optional.empty();
-    tableName = Optional.empty();
-  }
-
-  @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
   }
 
   @Override
@@ -135,7 +101,10 @@ public class GrpcTransactionManager implements DistributedTransactionManager {
           GrpcTransactionOnBidirectionalStream stream =
               new GrpcTransactionOnBidirectionalStream(config, stub, metadataManager);
           String transactionId = stream.startTransaction(txId);
-          return new GrpcTransaction(transactionId, stream, namespace, tableName);
+          GrpcTransaction transaction = new GrpcTransaction(transactionId, stream);
+          getNamespace().ifPresent(transaction::withNamespace);
+          getTable().ifPresent(transaction::withTable);
+          return transaction;
         },
         EXCEPTION_FACTORY);
   }

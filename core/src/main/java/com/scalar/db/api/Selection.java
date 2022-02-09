@@ -25,6 +25,11 @@ public abstract class Selection extends Operation {
     projections = new ArrayList<>();
   }
 
+  public Selection(Selection selection) {
+    super(selection);
+    projections = new ArrayList<>(selection.projections);
+  }
+
   /**
    * Appends the specified name of {@link Value} to the list of projections.
    *

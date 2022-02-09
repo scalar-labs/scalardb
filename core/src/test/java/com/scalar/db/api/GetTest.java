@@ -136,7 +136,24 @@ public class GetTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new Get(null)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Get((Key) null)).isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_GetGiven_ShouldCopyProperly() {
+    // Arrange
+    Get get =
+        prepareGet()
+            .withProjection("c1")
+            .withConsistency(Consistency.EVENTUAL)
+            .forNamespace("n1")
+            .forTable("t1");
+
+    // Act
+    Get actual = new Get(get);
+
+    // Assert
+    assertThat(actual).isEqualTo(get);
   }
 
   @Test
