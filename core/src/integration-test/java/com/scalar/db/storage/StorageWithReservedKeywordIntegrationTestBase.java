@@ -58,7 +58,6 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
   @Before
   public void setUp() throws Exception {
     if (!initialized) {
-      initialize();
       StorageFactory factory = new StorageFactory(getDatabaseConfig());
       admin = factory.getAdmin();
       namespace = getNamespace();
@@ -76,8 +75,6 @@ public abstract class StorageWithReservedKeywordIntegrationTestBase {
     truncateTable();
     storage.with(namespace, tableName);
   }
-
-  protected void initialize() {}
 
   protected abstract DatabaseConfig getDatabaseConfig();
 
