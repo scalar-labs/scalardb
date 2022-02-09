@@ -32,7 +32,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class BatchHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -84,13 +84,13 @@ public class BatchHandlerTest {
     Put put1 =
         new Put(partitionKey, clusteringKey1)
             .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Key clusteringKey2 = new Key(ANY_NAME_2, ANY_TEXT_3);
     Put put2 =
         new Put(partitionKey, clusteringKey2)
             .withValue(ANY_NAME_3, ANY_INT_1)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     return Arrays.asList(put1, put2);
   }

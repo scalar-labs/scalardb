@@ -7,7 +7,7 @@ import com.scalar.db.io.Key;
 import org.junit.Test;
 
 public class SnapshotKeyTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -20,20 +20,20 @@ public class SnapshotKeyTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithoutClusteringKey() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareAnotherGet() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
