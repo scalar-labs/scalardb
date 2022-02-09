@@ -768,7 +768,7 @@ public class OperationCheckerTest {
   public void
       whenCheckingPutOperationWithPartitionKeyWithNullTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
-    Key partitionKey = Key.newBuilder().add(PKEY1, 1).add(PKEY2, (String) null).build();
+    Key partitionKey = Key.newBuilder().addInt(PKEY1, 1).addText(PKEY2, null).build();
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<Value<?>> values =
         Arrays.asList(
@@ -809,7 +809,7 @@ public class OperationCheckerTest {
       whenCheckingPutOperationWithClusteringKeyWithNullTextValue_shouldThrowIllegalArgumentException() {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
-    Key clusteringKey = Key.newBuilder().add(CKEY1, 2).add(CKEY2, (String) null).build();
+    Key clusteringKey = Key.newBuilder().addInt(CKEY1, 2).addText(CKEY2, null).build();
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
