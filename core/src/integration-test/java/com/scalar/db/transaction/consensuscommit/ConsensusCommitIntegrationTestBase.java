@@ -78,6 +78,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   private DistributedStorage storage;
   private Coordinator coordinator;
   private RecoveryHandler recovery;
+  private CommitHandler commit;
 
   @Before
   public void setUp() throws Exception {
@@ -99,14 +100,10 @@ public abstract class ConsensusCommitIntegrationTestBase {
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    recovery =
-        spy(
-            new RecoveryHandler(
-                storage,
-                coordinator,
-                new TransactionalTableMetadataManager(admin, -1),
-                parallelExecutor));
-    CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
+    TransactionalTableMetadataManager tableMetadataManager =
+        new TransactionalTableMetadataManager(admin, -1);
+    recovery = spy(new RecoveryHandler(storage, coordinator, tableMetadataManager));
+    commit = spy(new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor));
     manager =
         new ConsensusCommitManager(
             storage, admin, consensusCommitConfig, coordinator, parallelExecutor, recovery, commit);
@@ -1183,7 +1180,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 
@@ -1259,7 +1256,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(Snapshot.class));
     ConsensusCommit another = manager.start();
     Optional<Result> fromResult = another.get(gets1.get(from));
     assertThat(fromResult).isPresent();
@@ -1327,7 +1324,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = prepareGets(namespace2, table2);
 
@@ -1560,7 +1557,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
     assertThatThrownBy(transaction::commit).isInstanceOf(CommitException.class);
 
     // Assert
-    verify(recovery).rollbackRecords(any(Snapshot.class));
+    verify(commit).rollbackRecords(any(Snapshot.class));
     List<Get> gets1 = prepareGets(namespace1, table1);
     List<Get> gets2 = differentTables ? prepareGets(namespace2, table2) : gets1;
 

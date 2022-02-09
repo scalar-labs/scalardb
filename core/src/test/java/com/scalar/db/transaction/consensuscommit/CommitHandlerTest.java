@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -43,7 +44,7 @@ public class CommitHandlerTest {
 
   @Mock private DistributedStorage storage;
   @Mock private Coordinator coordinator;
-  @Mock private RecoveryHandler recovery;
+  @Mock private TransactionalTableMetadataManager tableMetadataManager;
   @Mock private ConsensusCommitConfig config;
 
   private CommitHandler handler;
@@ -52,7 +53,11 @@ public class CommitHandlerTest {
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
 
-    handler = new CommitHandler(storage, coordinator, recovery, new ParallelExecutor(config));
+    // Arrange
+    handler =
+        spy(
+            new CommitHandler(
+                storage, coordinator, tableMetadataManager, new ParallelExecutor(config)));
   }
 
   private Put preparePut1() {
@@ -158,7 +163,7 @@ public class CommitHandlerTest {
     ExecutionException toThrow = mock(NoMutationException.class);
     doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -169,7 +174,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -180,7 +185,7 @@ public class CommitHandlerTest {
     ExecutionException toThrow = mock(RetriableExecutionException.class);
     doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -191,7 +196,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -202,7 +207,7 @@ public class CommitHandlerTest {
     ExecutionException toThrow = mock(ExecutionException.class);
     doThrow(toThrow).when(storage).mutate(anyList());
     doNothing().when(coordinator).putState(any(Coordinator.State.class));
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -213,7 +218,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -232,7 +237,7 @@ public class CommitHandlerTest {
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
@@ -242,7 +247,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -269,7 +274,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -296,7 +301,7 @@ public class CommitHandlerTest {
     verify(coordinator, never())
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -311,7 +316,7 @@ public class CommitHandlerTest {
         .when(coordinator)
         .putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     doNothing().when(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot))
@@ -322,7 +327,7 @@ public class CommitHandlerTest {
     verify(storage, times(2)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -353,7 +358,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -374,7 +379,7 @@ public class CommitHandlerTest {
     doReturn(Optional.of(new Coordinator.State(ANY_ID, TransactionState.ABORTED)))
         .when(coordinator)
         .getState(ANY_ID);
-    doNothing().when(recovery).rollbackRecords(any(Snapshot.class));
+    doNothing().when(handler).rollbackRecords(any(Snapshot.class));
 
     // Act
     assertThatThrownBy(() -> handler.commit(snapshot)).isInstanceOf(CommitException.class);
@@ -384,7 +389,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery).rollbackRecords(snapshot);
+    verify(handler).rollbackRecords(snapshot);
   }
 
   @Test
@@ -413,7 +418,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -442,7 +447,7 @@ public class CommitHandlerTest {
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
     verify(coordinator).getState(ANY_ID);
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 
   @Test
@@ -464,6 +469,6 @@ public class CommitHandlerTest {
     verify(storage, times(3)).mutate(anyList());
     verify(coordinator).putState(new Coordinator.State(ANY_ID, TransactionState.COMMITTED));
     verify(coordinator, never()).putState(new Coordinator.State(ANY_ID, TransactionState.ABORTED));
-    verify(recovery, never()).rollbackRecords(snapshot);
+    verify(handler, never()).rollbackRecords(snapshot);
   }
 }
