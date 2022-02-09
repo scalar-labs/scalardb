@@ -41,7 +41,7 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
     tableMetadataManager =
         new TransactionalTableMetadataManager(
             admin, config.getTableMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, parallelExecutor);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
     commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
   }
 

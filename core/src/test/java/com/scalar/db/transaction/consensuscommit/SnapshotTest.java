@@ -187,7 +187,7 @@ public class SnapshotTest {
         .forTable(ANY_TABLE_NAME);
   }
 
-  private void configureBehavior() {
+  private void configureBehavior() throws ExecutionException {
     doNothing().when(prepareComposer).add(any(Put.class), any(TransactionResult.class));
     doNothing().when(prepareComposer).add(any(Delete.class), any(TransactionResult.class));
     doNothing().when(commitComposer).add(any(Put.class), any(TransactionResult.class));
@@ -407,7 +407,7 @@ public class SnapshotTest {
 
   @Test
   public void to_PrepareMutationComposerGivenAndSnapshotIsolationSet_ShouldCallComposerProperly()
-      throws CommitConflictException {
+      throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -430,7 +430,7 @@ public class SnapshotTest {
   @Test
   public void
       to_PrepareMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException {
+          throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -452,7 +452,7 @@ public class SnapshotTest {
 
   @Test
   public void to_CommitMutationComposerGiven_ShouldCallComposerProperly()
-      throws CommitConflictException {
+      throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -474,7 +474,7 @@ public class SnapshotTest {
   @Test
   public void
       to_CommitMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException {
+          throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();
@@ -498,7 +498,7 @@ public class SnapshotTest {
 
   @Test
   public void to_RollbackMutationComposerGiven_ShouldCallComposerProperly()
-      throws CommitConflictException {
+      throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Put put = preparePut();
@@ -521,7 +521,7 @@ public class SnapshotTest {
   @Test
   public void
       to_RollbackMutationComposerGivenAndSerializableWithExtraWriteIsolationSet_ShouldCallComposerProperly()
-          throws CommitConflictException {
+          throws CommitConflictException, ExecutionException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SERIALIZABLE, SerializableStrategy.EXTRA_WRITE);
     Put put = preparePut();

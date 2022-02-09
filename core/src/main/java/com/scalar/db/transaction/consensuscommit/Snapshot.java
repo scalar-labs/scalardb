@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -144,21 +145,19 @@ public class Snapshot {
     return Optional.empty();
   }
 
-  public void to(MutationComposer composer) throws CommitConflictException {
+  public void to(MutationComposer composer) throws ExecutionException, CommitConflictException {
     toSerializableWithExtraWrite(composer);
 
-    writeSet.forEach(
-        (key, value) -> {
-          TransactionResult result =
-              readSet.containsKey(key) ? readSet.get(key).orElse(null) : null;
-          composer.add(value, result);
-        });
-    deleteSet.forEach(
-        (key, value) -> {
-          TransactionResult result =
-              readSet.containsKey(key) ? readSet.get(key).orElse(null) : null;
-          composer.add(value, result);
-        });
+    for (Entry<Key, Put> entry : writeSet.entrySet()) {
+      TransactionResult result =
+          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
+      composer.add(entry.getValue(), result);
+    }
+    for (Entry<Key, Delete> entry : deleteSet.entrySet()) {
+      TransactionResult result =
+          readSet.containsKey(entry.getKey()) ? readSet.get(entry.getKey()).orElse(null) : null;
+      composer.add(entry.getValue(), result);
+    }
   }
 
   private boolean isWriteSetOverlappedWith(Scan scan) {
@@ -217,7 +216,8 @@ public class Snapshot {
   }
 
   @VisibleForTesting
-  void toSerializableWithExtraWrite(MutationComposer composer) throws CommitConflictException {
+  void toSerializableWithExtraWrite(MutationComposer composer)
+      throws ExecutionException, CommitConflictException {
     if (isolation != Isolation.SERIALIZABLE || strategy != SerializableStrategy.EXTRA_WRITE) {
       return;
     }

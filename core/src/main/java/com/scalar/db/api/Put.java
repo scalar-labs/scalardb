@@ -11,6 +11,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -144,6 +145,18 @@ public class Put extends Mutation {
    * @return this object
    */
   public Put withValue(String name, @Nullable byte[] value) {
+    values.put(name, new BlobValue(name, value));
+    return this;
+  }
+
+  /**
+   * Adds the specified Blob value to the list of put values.
+   *
+   * @param name a name of the value
+   * @param value a value to put
+   * @return this object
+   */
+  public Put withValue(String name, @Nullable ByteBuffer value) {
     values.put(name, new BlobValue(name, value));
     return this;
   }

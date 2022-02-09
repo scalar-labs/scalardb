@@ -27,12 +27,17 @@ public class RecoveryHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(RecoveryHandler.class);
   private final DistributedStorage storage;
   private final Coordinator coordinator;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
 
   public RecoveryHandler(
-      DistributedStorage storage, Coordinator coordinator, ParallelExecutor parallelExecutor) {
+      DistributedStorage storage,
+      Coordinator coordinator,
+      TransactionalTableMetadataManager tableMetadataManager,
+      ParallelExecutor parallelExecutor) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
+    this.tableMetadataManager = checkNotNull(tableMetadataManager);
     this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
@@ -100,7 +105,8 @@ public class RecoveryHandler {
   public void rollbackRecords(Snapshot snapshot) {
     LOGGER.debug("rollback from snapshot for {}", snapshot.getId());
     try {
-      RollbackMutationComposer composer = new RollbackMutationComposer(snapshot.getId(), storage);
+      RollbackMutationComposer composer =
+          new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
       snapshot.to(composer);
       PartitionedMutations mutations = new PartitionedMutations(composer.get());
 
@@ -123,9 +129,15 @@ public class RecoveryHandler {
         selection.getPartitionKey(),
         selection.getClusteringKey(),
         result.getId());
-    RollbackMutationComposer composer = new RollbackMutationComposer(result.getId(), storage);
-    composer.add(selection, result);
-    mutate(composer.get());
+    try {
+      RollbackMutationComposer composer =
+          new RollbackMutationComposer(result.getId(), storage, tableMetadataManager);
+      composer.add(selection, result);
+      mutate(composer.get());
+    } catch (Exception e) {
+      LOGGER.warn("rolling back a record failed", e);
+      // ignore since the record is recovered lazily
+    }
   }
 
   @VisibleForTesting
