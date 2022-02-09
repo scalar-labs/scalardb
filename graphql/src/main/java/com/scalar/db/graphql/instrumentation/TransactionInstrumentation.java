@@ -26,6 +26,8 @@ import graphql.language.Argument;
 import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.StringValue;
+import graphql.language.Value;
+import graphql.language.VariableReference;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +80,21 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     Argument commitArg = directive.getArgument("commit");
 
     DistributedTransaction transaction;
+
+    String txId;
     if (txIdArg == null) {
+      txId = null;
+    } else {
+      Value<?> value = txIdArg.getValue();
+      if (value instanceof StringValue) {
+        txId = ((StringValue) value).getValue();
+      } else if (value instanceof VariableReference) {
+        txId = (String) executionContext.getVariables().get(((VariableReference) value).getName());
+      } else {
+        throw new IllegalStateException("Unexpected value of txId: " + value);
+      }
+    }
+    if (txId == null) {
       // start a new transaction
       try {
         transaction = transactionManager.start();
@@ -89,7 +105,6 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
       }
     } else {
       // continue an existing transaction
-      String txId = ((StringValue) txIdArg.getValue()).getValue();
       transaction =
           activeTransactions
               .get(txId)
@@ -106,11 +121,23 @@ public class TransactionInstrumentation extends SimpleInstrumentation {
     }
     graphQLContext.put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
 
-    boolean isCommitTrue =
-        commitArg != null
-            && commitArg.getValue() != null
-            && ((BooleanValue) commitArg.getValue()).isValue();
-    if (isCommitTrue) {
+    boolean isCommit;
+    if (commitArg == null) {
+      isCommit = false;
+    } else {
+      Value<?> value = commitArg.getValue();
+      if (value == null) {
+        isCommit = false;
+      } else if (value instanceof BooleanValue) {
+        isCommit = ((BooleanValue) value).isValue();
+      } else if (value instanceof VariableReference) {
+        Object v = executionContext.getVariables().get(((VariableReference) value).getName());
+        isCommit = v != null && (Boolean) v;
+      } else {
+        throw new IllegalStateException("Unexpected value of commit: " + value);
+      }
+    }
+    if (isCommit) {
       return SimpleInstrumentationContext.whenCompleted(
           (executionResult, throwable) -> {
             activeTransactions.remove(transaction.getId());

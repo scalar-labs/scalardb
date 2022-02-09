@@ -36,6 +36,7 @@ import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.OperationDefinition;
 import graphql.language.StringValue;
+import graphql.language.VariableReference;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -108,7 +109,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, times(1)).start();
     verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+    assertThat(context).isEqualTo(SimpleInstrumentationContext.noOp());
   }
 
   @Test
@@ -130,7 +131,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, times(1)).start();
     verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+    assertThat(context).isNotEqualTo(SimpleInstrumentationContext.noOp());
   }
 
   @Test
@@ -168,7 +169,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, never()).start();
     verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+    assertThat(context).isEqualTo(SimpleInstrumentationContext.noOp());
   }
 
   @Test
@@ -192,7 +193,7 @@ public class TransactionInstrumentationTest {
     // Assert
     verify(transactionManager, never()).start();
     verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
-    assertThat(context).isInstanceOf(SimpleInstrumentationContext.class);
+    assertThat(context).isNotEqualTo(SimpleInstrumentationContext.noOp());
   }
 
   @Test
@@ -212,6 +213,104 @@ public class TransactionInstrumentationTest {
         .isInstanceOf(AbortExecutionException.class);
     verify(transactionManager, never()).start();
     verify(graphQlContext, never()).put(any(), any());
+  }
+
+  @Test
+  public void beginExecuteOperation_DirectiveWithTxIdAsVariableGiven_ShouldLoadExistingTransaction()
+      throws Exception {
+    // Arrange
+    // query q1($tx_id_var_name: String) @transaction(txId: $tx_id_var_name) { ... }
+    // variables: {"tx_id_var_name": "XXX"}
+    prepareForBeginExecuteOperationTests();
+    prepareDirective(
+        Directive.newDirective()
+            .name("transaction")
+            .argument(new Argument("txId", new VariableReference("tx_id_var_name")))
+            .build());
+    when(executionContext.getVariables()).thenReturn(ImmutableMap.of("tx_id_var_name", ANY_TX_ID));
+    instrumentation.activeTransactions.put(ANY_TX_ID, transaction);
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, never()).start();
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isEqualTo(SimpleInstrumentationContext.noOp());
+  }
+
+  @Test
+  public void
+      beginExecuteOperation_DirectiveWithTxIdVariableGivenButNoValueGiven_ShouldStartTransaction()
+          throws Exception {
+    // Arrange
+    // query q1($tx_id_var_name: String) @transaction(txId: $tx_id_var_name) { ... }
+    // variables: {}
+    prepareForBeginExecuteOperationTests();
+    prepareDirective(
+        Directive.newDirective()
+            .name("transaction")
+            .argument(new Argument("txId", new VariableReference("tx_id_var_name")))
+            .build());
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, times(1)).start();
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isEqualTo(SimpleInstrumentationContext.noOp());
+  }
+
+  @Test
+  public void
+      beginExecuteOperation_DirectiveWithCommitTrueAsVariableGiven_ShouldStartTransactionAndCommit()
+          throws Exception {
+    // Arrange
+    // query q1($commit_var_name: Boolean) @transaction(commit: $commit_var_name) { ... }
+    // variables: {"commit_var_name": true}
+    prepareForBeginExecuteOperationTests();
+    prepareDirective(
+        Directive.newDirective()
+            .name("transaction")
+            .argument(new Argument("commit", new VariableReference("commit_var_name")))
+            .build());
+    when(executionContext.getVariables()).thenReturn(ImmutableMap.of("commit_var_name", true));
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, times(1)).start();
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isNotEqualTo(SimpleInstrumentationContext.noOp());
+  }
+
+  @Test
+  public void
+      beginExecuteOperation_DirectiveWithCommitAsVariableGivenButNoVariableGiven_ShoulNotCommitTransaction()
+          throws Exception {
+    // Arrange
+    // query q1($commit_var_name: Boolean) @transaction(commit: $commit_var_name) { ... }
+    // variables: {}
+    prepareForBeginExecuteOperationTests();
+    prepareDirective(
+        Directive.newDirective()
+            .name("transaction")
+            .argument(new Argument("commit", new VariableReference("commit_var_name")))
+            .build());
+
+    // Act
+    InstrumentationContext<ExecutionResult> context =
+        instrumentation.beginExecuteOperation(instrumentationExecuteOperationParameters);
+
+    // Assert
+    verify(transactionManager, times(1)).start();
+    verify(graphQlContext).put(GraphQlConstants.CONTEXT_TRANSACTION_KEY, transaction);
+    assertThat(context).isEqualTo(SimpleInstrumentationContext.noOp());
   }
 
   private void prepareForInstrumentExecutionResultTests() {
