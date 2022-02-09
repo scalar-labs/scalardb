@@ -72,8 +72,8 @@ public class SchemaLoaderCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    LOGGER.info("Config path: " + configPath);
-    LOGGER.info("Schema path: " + schemaFile);
+    LOGGER.info("Config path: {}", configPath);
+    LOGGER.info("Schema path: {}", schemaFile);
 
     if (!deleteTables) {
       Map<String, String> options = new HashMap<>();

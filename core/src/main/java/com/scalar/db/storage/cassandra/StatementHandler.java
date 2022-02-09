@@ -45,13 +45,9 @@ public abstract class StatementHandler {
   @Nonnull
   public ResultSet handle(Operation operation) throws ExecutionException {
     try {
-      LOGGER.debug(operation + " is started.");
-      ResultSet results = handleInternal(operation);
-      LOGGER.debug(operation + " is executed normally.");
-      return results;
-
+      return handleInternal(operation);
     } catch (RuntimeException e) {
-      LOGGER.error(e.getMessage());
+      LOGGER.error(e.getMessage(), e);
       throw new ExecutionException(e.getMessage(), e);
     }
   }
@@ -78,13 +74,10 @@ public abstract class StatementHandler {
    */
   @Nonnull
   protected PreparedStatement prepare(String queryString) {
-    LOGGER.debug("query to prepare : [" + queryString + "].");
     PreparedStatement prepared = cache.get(queryString);
     if (prepared == null) {
       prepared = session.prepare(queryString);
       cache.put(queryString, prepared);
-    } else {
-      LOGGER.debug("there was a hit in the statement cache for [" + queryString + "].");
     }
     return prepared;
   }

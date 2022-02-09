@@ -31,7 +31,7 @@ public abstract class StorageSpecificCommand {
 
   protected void execute(Properties props, Map<String, String> options)
       throws SchemaLoaderException {
-    LOGGER.info("Schema path: " + schemaFile);
+    LOGGER.info("Schema path: {}", schemaFile);
 
     // Parse the schema file
     SchemaParser parser = getSchemaParser(options);

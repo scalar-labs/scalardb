@@ -658,10 +658,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       } catch (Exception e) {
         if (!(e instanceof ObjectNotFoundException)) {
           LOGGER.warn(
-              "Deleting scaling policy "
-                  + deleteScalingPolicyRequest.policyName()
-                  + " failed. "
-                  + e);
+              "The scaling policy " + deleteScalingPolicyRequest.policyName() + " is not found.");
         }
       }
     }
@@ -673,10 +670,9 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       } catch (Exception e) {
         if (!(e instanceof ObjectNotFoundException)) {
           LOGGER.warn(
-              "Deregistering scalable target "
+              "The scalable target "
                   + deregisterScalableTargetRequest.resourceId()
-                  + " failed. "
-                  + e);
+                  + " is not found");
         }
       }
     }

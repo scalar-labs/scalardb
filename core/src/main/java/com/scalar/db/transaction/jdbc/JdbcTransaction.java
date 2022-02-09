@@ -84,7 +84,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     // Ignore the condition in the put
     if (put.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: " + put);
+      LOGGER.warn("ignoring the condition of the mutation: {}", put);
       put.withCondition(null);
     }
 
@@ -111,7 +111,7 @@ public class JdbcTransaction extends AbstractDistributedTransaction {
 
     // Ignore the condition in the delete
     if (delete.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: " + delete);
+      LOGGER.warn("ignoring the condition of the mutation: {}", delete);
       delete.withCondition(null);
     }
 

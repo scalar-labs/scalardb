@@ -84,7 +84,7 @@ public class BatchHandler {
   }
 
   private void throwException(CosmosException exception) throws ExecutionException {
-    LOGGER.error(exception.getMessage());
+    LOGGER.error(exception.getMessage(), exception);
     int statusCode = exception.getSubStatusCode();
 
     if (statusCode == CosmosErrorCode.PRECONDITION_FAILED.get()) {
