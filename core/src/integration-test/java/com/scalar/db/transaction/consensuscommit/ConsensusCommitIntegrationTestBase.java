@@ -99,7 +99,13 @@ public abstract class ConsensusCommitIntegrationTestBase {
     truncateTables();
     storage = spy(originalStorage);
     coordinator = spy(new Coordinator(storage, consensusCommitConfig));
-    recovery = spy(new RecoveryHandler(storage, coordinator, parallelExecutor));
+    recovery =
+        spy(
+            new RecoveryHandler(
+                storage,
+                coordinator,
+                new TransactionalTableMetadataManager(admin, -1),
+                parallelExecutor));
     CommitHandler commit = spy(new CommitHandler(storage, coordinator, recovery, parallelExecutor));
     manager =
         new ConsensusCommitManager(

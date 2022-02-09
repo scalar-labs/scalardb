@@ -23,10 +23,13 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,11 +58,25 @@ public class RollbackMutationComposerTest {
   private RollbackMutationComposer composer;
   private List<Mutation> mutations;
   @Mock private DistributedStorage storage;
+  @Mock private TransactionalTableMetadataManager tableMetadataManager;
 
   @Before
   public void setUp() throws Exception {
     mutations = new ArrayList<>();
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(tableMetadataManager.getTransactionalTableMetadata(any()))
+        .thenReturn(
+            new TransactionalTableMetadata(
+                ConsensusCommitUtils.buildTransactionalTableMetadata(
+                    TableMetadata.newBuilder()
+                        .addColumn(ANY_NAME_1, DataType.TEXT)
+                        .addColumn(ANY_NAME_2, DataType.TEXT)
+                        .addColumn(ANY_NAME_3, DataType.INT)
+                        .addPartitionKey(ANY_NAME_1)
+                        .addClusteringKey(ANY_NAME_2)
+                        .build())));
   }
 
   private Get prepareGet() {
@@ -95,6 +112,8 @@ public class RollbackMutationComposerTest {
 
     ImmutableMap<String, Value<?>> values =
         ImmutableMap.<String, Value<?>>builder()
+            .put(ANY_NAME_1, new TextValue(ANY_NAME_1, ANY_TEXT_1))
+            .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
             .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
             .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
             .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))
@@ -160,7 +179,7 @@ public class RollbackMutationComposerTest {
   @Test
   public void add_GetAndPreparedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareResult(TransactionState.PREPARED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Get get = prepareGet();
@@ -186,9 +205,9 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_GetAndDeletedResultByThisGiven_ShouldComposePut() {
+  public void add_GetAndDeletedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareResult(TransactionState.DELETED);
     Get get = prepareGet();
 
@@ -212,9 +231,10 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_GetAndPreparedResultGivenAndBeforeResultNotGiven_ShouldComposeDelete() {
+  public void add_GetAndPreparedResultGivenAndBeforeResultNotGiven_ShouldComposeDelete()
+      throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareInitialResult(ANY_ID_2, TransactionState.PREPARED);
     Get get = prepareGet();
 
@@ -240,7 +260,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndNullResultGivenAndOldResultGivenFromStorage_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.PREPARED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
@@ -257,7 +277,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndNullResultGivenAndEmptyResultGivenFromStorage_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
     Put put = preparePut();
 
@@ -273,7 +293,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndResultFromSnapshotGivenAndPreparedResultGivenFromStorage_ShouldComposePut()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult resultInSnapshot = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     TransactionResult result = prepareResult(TransactionState.PREPARED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
@@ -303,7 +323,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndResultFromSnapshotGivenAndDeletedResultGivenFromStorage_ShouldComposePut()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult resultInSnapshot = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     TransactionResult result = prepareResult(TransactionState.DELETED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
@@ -332,7 +352,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndResultFromSnapshotGivenAndResultFromStorageHasDifferentId_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     when(storage.get(any(Get.class))).thenReturn(Optional.of(result));
     Put put = preparePut();
@@ -349,7 +369,7 @@ public class RollbackMutationComposerTest {
   public void add_PutAndResultFromSnapshotGivenAndItsAlreadyRollbackDeleted_ShouldDoNothing()
       throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareInitialResult(ANY_ID_1, TransactionState.COMMITTED);
     when(storage.get(any(Get.class))).thenReturn(Optional.empty());
     Put put = preparePut();
@@ -363,9 +383,9 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_ScanAndPreparedResultByThisGiven_ShouldComposePut() {
+  public void add_ScanAndPreparedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareResult(TransactionState.PREPARED);
     Scan scan = prepareScan();
 
@@ -390,9 +410,9 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_ScanAndDeletedResultByThisGiven_ShouldComposePut() {
+  public void add_ScanAndDeletedResultByThisGiven_ShouldComposePut() throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareResult(TransactionState.DELETED);
     Scan scan = prepareScan();
 
@@ -416,9 +436,10 @@ public class RollbackMutationComposerTest {
   }
 
   @Test
-  public void add_ScanAndPreparedResultByThisGivenAndBeforeResultNotGiven_ShouldComposeDelete() {
+  public void add_ScanAndPreparedResultByThisGivenAndBeforeResultNotGiven_ShouldComposeDelete()
+      throws ExecutionException {
     // Arrange
-    composer = new RollbackMutationComposer(ANY_ID_2, storage, mutations);
+    composer = new RollbackMutationComposer(ANY_ID_2, storage, tableMetadataManager, mutations);
     TransactionResult result = prepareInitialResult(ANY_ID_2, TransactionState.PREPARED);
     Scan scan = prepareScan();
 

@@ -19,16 +19,13 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.PutIf;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
-import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,35 +34,39 @@ import org.slf4j.LoggerFactory;
 public class RollbackMutationComposer extends AbstractMutationComposer {
   private static final Logger LOGGER = LoggerFactory.getLogger(RollbackMutationComposer.class);
   private final DistributedStorage storage;
+  private final TransactionalTableMetadataManager tableMetadataManager;
 
-  public RollbackMutationComposer(String id, DistributedStorage storage) {
+  public RollbackMutationComposer(
+      String id,
+      DistributedStorage storage,
+      TransactionalTableMetadataManager tableMetadataManager) {
     super(id);
     this.storage = storage;
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   @VisibleForTesting
-  RollbackMutationComposer(String id, DistributedStorage storage, List<Mutation> mutations) {
+  RollbackMutationComposer(
+      String id,
+      DistributedStorage storage,
+      TransactionalTableMetadataManager tableMetadataManager,
+      List<Mutation> mutations) {
     super(id, mutations, System.currentTimeMillis());
     this.storage = storage;
+    this.tableMetadataManager = tableMetadataManager;
   }
 
   /** rollback in either prepare phase in commit or lazy recovery phase in read */
   @Override
-  public void add(Operation base, TransactionResult result) {
+  public void add(Operation base, TransactionResult result) throws ExecutionException {
     TransactionResult latest;
     if (result == null || !result.getId().equals(id)) {
       // rollback from snapshot
-      try {
-        latest = getLatestResult(base, result).orElse(null);
-      } catch (ExecutionException e) {
-        LOGGER.warn("failed to get the latest result", e);
-        return;
-      }
+      latest = getLatestResult(base, result).orElse(null);
       if (latest == null) {
         LOGGER.debug("the record was not prepared or has already rollback deleted");
         return;
       }
-
       if (!latest.getId().equals(id)) {
         LOGGER.debug(
             "the record is not prepared (yet) by this transaction or has already rolled back");
@@ -84,27 +85,23 @@ public class RollbackMutationComposer extends AbstractMutationComposer {
     }
   }
 
-  private Put composePut(Operation base, TransactionResult result) {
+  private Put composePut(Operation base, TransactionResult result) throws ExecutionException {
     assert result.getState().equals(TransactionState.PREPARED)
         || result.getState().equals(TransactionState.DELETED);
+
+    TransactionalTableMetadata metadata = tableMetadataManager.getTransactionalTableMetadata(base);
+    LinkedHashSet<String> beforeImageColumnNames = metadata.getBeforeImageColumnNames();
 
     Map<String, Value<?>> map = new HashMap<>();
     result
         .getValues()
         .forEach(
             (k, v) -> {
-              if (k.startsWith(Attribute.BEFORE_PREFIX)) {
+              if (beforeImageColumnNames.contains(k)) {
                 String key = k.substring(Attribute.BEFORE_PREFIX.length());
                 map.put(key, v.copyWith(key));
               }
             });
-
-    // remove keys
-    Stream.of(
-            base.getPartitionKey().get(),
-            getClusteringKey(base, result).map(Key::get).orElse(Collections.emptyList()))
-        .flatMap(Collection::stream)
-        .forEach(v -> map.remove(v.getName()));
 
     return new Put(base.getPartitionKey(), getClusteringKey(base, result).orElse(null))
         .forNamespace(base.forNamespace().get())
