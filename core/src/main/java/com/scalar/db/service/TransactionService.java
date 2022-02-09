@@ -10,7 +10,7 @@ import com.scalar.db.exception.transaction.TransactionException;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
 
-/** @deprecated As of release 3.5.0. Will be removed in release 4.0.0. */
+/** @deprecated As of release 3.5.0. Will be removed in release 5.0.0 */
 @Deprecated
 @ThreadSafe
 public class TransactionService implements DistributedTransactionManager {

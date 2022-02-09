@@ -8,7 +8,6 @@ import static com.scalar.db.util.retry.Retry.executeWithRetries;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.rpc.AbortRequest;
@@ -18,12 +17,12 @@ import com.scalar.db.rpc.GetTransactionStateResponse;
 import com.scalar.db.rpc.TwoPhaseCommitTransactionGrpc;
 import com.scalar.db.storage.rpc.GrpcAdmin;
 import com.scalar.db.storage.rpc.GrpcConfig;
+import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.util.ActiveExpiringMap;
 import com.scalar.db.util.ProtoUtils;
 import com.scalar.db.util.TableMetadataManager;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyChannelBuilder;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -31,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTransactionManager {
+public class GrpcTwoPhaseCommitTransactionManager extends AbstractTwoPhaseCommitTransactionManager {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(GrpcTwoPhaseCommitTransactionManager.class);
 
@@ -46,9 +45,6 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
 
   @Nullable
   private final ActiveExpiringMap<String, GrpcTwoPhaseCommitTransaction> activeTransactions;
-
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public GrpcTwoPhaseCommitTransactionManager(GrpcConfig config) {
@@ -82,8 +78,6 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
     } else {
       activeTransactions = null;
     }
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @VisibleForTesting
@@ -102,34 +96,6 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
     } else {
       activeTransactions = null;
     }
-    namespace = Optional.empty();
-    tableName = Optional.empty();
-  }
-
-  @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
   }
 
   @Override
@@ -149,8 +115,11 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
           GrpcTwoPhaseCommitTransactionOnBidirectionalStream stream =
               new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
           String transactionId = stream.startTransaction(txId);
-          return new GrpcTwoPhaseCommitTransaction(
-              transactionId, stream, true, this, namespace, tableName);
+          GrpcTwoPhaseCommitTransaction transaction =
+              new GrpcTwoPhaseCommitTransaction(transactionId, stream, true, this);
+          getNamespace().ifPresent(transaction::withNamespace);
+          getTable().ifPresent(transaction::withTable);
+          return transaction;
         },
         EXCEPTION_FACTORY);
   }
@@ -163,7 +132,9 @@ public class GrpcTwoPhaseCommitTransactionManager implements TwoPhaseCommitTrans
               new GrpcTwoPhaseCommitTransactionOnBidirectionalStream(config, stub, metadataManager);
           stream.joinTransaction(txId);
           GrpcTwoPhaseCommitTransaction transaction =
-              new GrpcTwoPhaseCommitTransaction(txId, stream, false, this, namespace, tableName);
+              new GrpcTwoPhaseCommitTransaction(txId, stream, false, this);
+          getNamespace().ifPresent(transaction::withNamespace);
+          getTable().ifPresent(transaction::withTable);
           if (activeTransactions != null) {
             if (activeTransactions.putIfAbsent(txId, transaction) != null) {
               transaction.rollback();

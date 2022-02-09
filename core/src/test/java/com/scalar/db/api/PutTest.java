@@ -166,7 +166,25 @@ public class PutTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new Put(null)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Put((Key) null)).isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_PutGiven_ShouldCopyProperly() {
+    // Arrange
+    Put put =
+        preparePut()
+            .withValue("c1", 1)
+            .withCondition(new PutIfExists())
+            .withConsistency(Consistency.EVENTUAL)
+            .forNamespace("n1")
+            .forTable("t1");
+
+    // Act
+    Put actual = new Put(put);
+
+    // Assert
+    assertThat(actual).isEqualTo(put);
   }
 
   @Test

@@ -27,7 +27,7 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @param name name of the {@code Value}
    * @param value content of the {@code Value} in byte array
-   * @deprecated As of release 3.5.0. Will be removed in release 4.0.0
+   * @deprecated As of release 3.5.0. Will be removed in release 5.0.0
    */
   @Deprecated
   public TextValue(String name, @Nullable byte[] value) {
@@ -43,7 +43,7 @@ public final class TextValue implements Value<Optional<String>> {
    * Constructs a {@code TextValue} with the specified value. The name of this value is anonymous.
    *
    * @param value content of the {@code Value}
-   * @deprecated As of release 3.5.0. Will be removed in release 4.0.0
+   * @deprecated As of release 3.5.0. Will be removed in release 5.0.0
    */
   @Deprecated
   public TextValue(@Nullable byte[] value) {
@@ -86,7 +86,7 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
    * @deprecated As of release 3.2.0, replaced by {@link #getAsBytes()}. Will be removed in release
-   *     4.0.0.
+   *     5.0.0
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated
@@ -100,7 +100,7 @@ public final class TextValue implements Value<Optional<String>> {
    *
    * @return an {@code Optional} of the content of this {@code Value} in {@code String}
    * @deprecated As of release 3.2.0, replaced by {@link #getAsString()}. Will be removed in release
-   *     4.0.0.
+   *     5.0.0
    */
   @SuppressWarnings("InlineMeSuggester")
   @Deprecated

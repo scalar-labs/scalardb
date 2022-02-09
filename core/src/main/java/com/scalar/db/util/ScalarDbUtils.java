@@ -1,7 +1,12 @@
 package com.scalar.db.util;
 
 import com.google.common.collect.Streams;
+import com.scalar.db.api.Delete;
+import com.scalar.db.api.Get;
+import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Operation;
+import com.scalar.db.api.Put;
+import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Value;
@@ -9,17 +14,65 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public final class ScalarDbUtils {
 
-  public static void setTargetToIfNot(
-      List<? extends Operation> operations,
-      Optional<String> namespace,
-      Optional<String> tableName) {
-    operations.forEach(o -> setTargetToIfNot(o, namespace, tableName));
+  private ScalarDbUtils() {}
+
+  @SuppressWarnings("unchecked")
+  public static <T extends Mutation> List<T> copyAndSetTargetToIfNot(
+      List<T> mutations, Optional<String> namespace, Optional<String> tableName) {
+    return mutations.stream()
+        .map(
+            m -> {
+              if (m instanceof Put) {
+                return (T) copyAndSetTargetToIfNot((Put) m, namespace, tableName);
+              } else { // Delete
+                return (T) copyAndSetTargetToIfNot((Delete) m, namespace, tableName);
+              }
+            })
+        .collect(Collectors.toList());
   }
 
-  public static void setTargetToIfNot(
+  public static Get copyAndSetTargetToIfNot(
+      Get get, Optional<String> namespace, Optional<String> tableName) {
+    Get ret = new Get(get); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Scan copyAndSetTargetToIfNot(
+      Scan scan, Optional<String> namespace, Optional<String> tableName) {
+    Scan ret = new Scan(scan); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Mutation copyAndSetTargetToIfNot(
+      Mutation mutation, Optional<String> namespace, Optional<String> tableName) {
+    if (mutation instanceof Put) {
+      return copyAndSetTargetToIfNot((Put) mutation, namespace, tableName);
+    } else { // Delete
+      return copyAndSetTargetToIfNot((Delete) mutation, namespace, tableName);
+    }
+  }
+
+  public static Put copyAndSetTargetToIfNot(
+      Put put, Optional<String> namespace, Optional<String> tableName) {
+    Put ret = new Put(put); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  public static Delete copyAndSetTargetToIfNot(
+      Delete delete, Optional<String> namespace, Optional<String> tableName) {
+    Delete ret = new Delete(delete); // copy
+    setTargetToIfNot(ret, namespace, tableName);
+    return ret;
+  }
+
+  private static void setTargetToIfNot(
       Operation operation, Optional<String> namespace, Optional<String> tableName) {
     if (!operation.forNamespace().isPresent()) {
       operation.forNamespace(namespace.orElse(null));

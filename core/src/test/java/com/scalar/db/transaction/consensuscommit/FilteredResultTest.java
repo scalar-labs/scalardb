@@ -44,7 +44,7 @@ public class FilteredResultTest {
   private Result result;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     // Arrange
     Map<String, Value<?>> values =
         ImmutableMap.<String, Value<?>>builder()

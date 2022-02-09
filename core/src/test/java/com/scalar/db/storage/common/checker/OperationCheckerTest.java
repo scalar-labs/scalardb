@@ -25,12 +25,10 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
-import com.scalar.db.util.ScalarDbUtils;
 import com.scalar.db.util.TableMetadataManager;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -38,8 +36,8 @@ import org.mockito.MockitoAnnotations;
 
 public class OperationCheckerTest {
 
-  private static final Optional<String> NAMESPACE = Optional.of("s1");
-  private static final Optional<String> TABLE_NAME = Optional.of("t1");
+  private static final String NAMESPACE = "s1";
+  private static final String TABLE_NAME = "t1";
   private static final String PKEY1 = "p1";
   private static final String PKEY2 = "p2";
   private static final String CKEY1 = "c1";
@@ -83,8 +81,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Returning null means table not found
     when(metadataManager.getTableMetadata(any())).thenReturn(null);
@@ -100,8 +101,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
@@ -113,8 +117,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, "v4");
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -128,8 +135,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, "p3", "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -143,8 +153,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, "1", PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -158,8 +171,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, "c3", "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -173,8 +189,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, "2", CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -188,8 +207,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -211,8 +233,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -233,8 +256,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -255,8 +279,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -277,8 +302,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -299,8 +325,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -320,8 +347,9 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -340,8 +368,9 @@ public class OperationCheckerTest {
             .withStart(startClusteringKey)
             .withEnd(endClusteringKey)
             .withProjections(projections)
-            .withLimit(limit);
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -363,8 +392,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -387,8 +417,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -411,8 +442,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -435,8 +467,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -459,8 +492,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -482,8 +516,9 @@ public class OperationCheckerTest {
             .withProjections(projections)
             .withLimit(limit)
             .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.DESC))
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.DESC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -505,8 +540,9 @@ public class OperationCheckerTest {
             .withEnd(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY2, Scan.Ordering.Order.ASC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -522,8 +558,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -538,8 +578,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = null;
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
@@ -555,8 +599,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -573,8 +621,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -591,8 +643,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -608,8 +664,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue("v4", true));
     MutationCondition condition = new PutIfExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -625,8 +685,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new TextValue(COL1, "1"), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new PutIfNotExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -645,8 +709,12 @@ public class OperationCheckerTest {
     MutationCondition condition =
         new PutIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -663,8 +731,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIfExists();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -680,8 +752,12 @@ public class OperationCheckerTest {
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
     MutationCondition condition = new DeleteIf();
-    Put put = new Put(partitionKey, clusteringKey).withValues(values).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -697,8 +773,11 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -714,8 +793,11 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -731,8 +813,11 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -748,8 +833,11 @@ public class OperationCheckerTest {
     List<Value<?>> values =
         Arrays.asList(
             new IntValue(COL1, 1), new DoubleValue(COL2, 0.1), new BooleanValue(COL3, true));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -776,8 +864,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, (byte[]) null);
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -804,8 +895,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, new byte[0]);
     Key clusteringKey = new Key(CKEY1, new byte[] {1, 1, 1});
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -832,8 +926,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, new byte[] {1, 1, 1});
     Key clusteringKey = new Key(CKEY1, (byte[]) null);
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -860,8 +957,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, new byte[] {1, 1, 1});
     Key clusteringKey = new Key(CKEY1, new byte[0]);
     List<Value<?>> values = Collections.singletonList(new IntValue(COL1, 1));
-    Put put = new Put(partitionKey, clusteringKey).withValues(values);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValues(values)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(put))
@@ -876,8 +976,11 @@ public class OperationCheckerTest {
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new IntValue(1), ConditionalExpression.Operator.EQ));
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
@@ -889,8 +992,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = null;
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(delete)).doesNotThrowAnyException();
@@ -903,8 +1009,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, "p3", "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new DeleteIfExists();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -918,8 +1027,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, "c3", "val1");
     MutationCondition condition = new DeleteIfExists();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -933,8 +1045,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = null;
     MutationCondition condition = new DeleteIfExists();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -947,8 +1062,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIf();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -962,8 +1080,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIfExists();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -977,8 +1098,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
     MutationCondition condition = new PutIfNotExists();
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -994,8 +1118,11 @@ public class OperationCheckerTest {
     MutationCondition condition =
         new DeleteIf(
             new ConditionalExpression(COL1, new TextValue("1"), ConditionalExpression.Operator.EQ));
-    Delete delete = new Delete(partitionKey, clusteringKey).withCondition(condition);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(delete))
@@ -1007,10 +1134,13 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
-    Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
-    Delete delete = new Delete(partitionKey, clusteringKey);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValue(COL1, 1)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey, clusteringKey).forNamespace(NAMESPACE).forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(Arrays.asList(put, delete)))
@@ -1033,10 +1163,13 @@ public class OperationCheckerTest {
     Key partitionKey1 = new Key(PKEY1, 1, PKEY2, "val1");
     Key partitionKey2 = new Key(PKEY1, 2, PKEY2, "val2");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val3");
-    Put put = new Put(partitionKey1, clusteringKey).withValue(COL1, 1);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
-    Delete delete = new Delete(partitionKey2, clusteringKey);
-    ScalarDbUtils.setTargetToIfNot(delete, NAMESPACE, TABLE_NAME);
+    Put put =
+        new Put(partitionKey1, clusteringKey)
+            .withValue(COL1, 1)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+    Delete delete =
+        new Delete(partitionKey2, clusteringKey).forNamespace(NAMESPACE).forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
@@ -1049,10 +1182,12 @@ public class OperationCheckerTest {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val3");
-    Put put = new Put(partitionKey, clusteringKey).withValue(COL1, 1);
-    ScalarDbUtils.setTargetToIfNot(put, NAMESPACE, TABLE_NAME);
-    Delete delete = new Delete(partitionKey, clusteringKey);
-    ScalarDbUtils.setTargetToIfNot(delete, Optional.of("s2"), TABLE_NAME);
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValue(COL1, 1)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+    Delete delete = new Delete(partitionKey, clusteringKey).forNamespace("s2").forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(Arrays.asList(put, delete)))
@@ -1065,8 +1200,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(COL1, 1);
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(get)).doesNotThrowAnyException();
@@ -1079,8 +1217,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(COL2, 0.1d);
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1094,8 +1235,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(COL1, "1");
     Key clusteringKey = null;
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1109,8 +1253,11 @@ public class OperationCheckerTest {
     Key partitionKey = new Key(COL1, 1);
     Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val2");
     List<String> projections = Arrays.asList(COL1, COL2, COL3);
-    Get get = new Get(partitionKey, clusteringKey).withProjections(projections);
-    ScalarDbUtils.setTargetToIfNot(get, NAMESPACE, TABLE_NAME);
+    Get get =
+        new Get(partitionKey, clusteringKey)
+            .withProjections(projections)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(get))
@@ -1131,8 +1278,9 @@ public class OperationCheckerTest {
             .withStart(startClusteringKey)
             .withStart(endClusteringKey)
             .withProjections(projections)
-            .withLimit(limit);
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatCode(() -> operationChecker.check(scan)).doesNotThrowAnyException();
@@ -1152,8 +1300,9 @@ public class OperationCheckerTest {
             .withStart(startClusteringKey)
             .withStart(endClusteringKey)
             .withProjections(projections)
-            .withLimit(limit);
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1174,8 +1323,9 @@ public class OperationCheckerTest {
             .withStart(startClusteringKey)
             .withStart(endClusteringKey)
             .withProjections(projections)
-            .withLimit(limit);
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1196,8 +1346,9 @@ public class OperationCheckerTest {
             .withStart(startClusteringKey)
             .withStart(endClusteringKey)
             .withProjections(projections)
-            .withLimit(limit);
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withLimit(limit)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
@@ -1219,8 +1370,9 @@ public class OperationCheckerTest {
             .withStart(endClusteringKey)
             .withProjections(projections)
             .withLimit(limit)
-            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC));
-    ScalarDbUtils.setTargetToIfNot(scan, NAMESPACE, TABLE_NAME);
+            .withOrdering(new Scan.Ordering(CKEY1, Scan.Ordering.Order.ASC))
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
 
     // Act Assert
     assertThatThrownBy(() -> operationChecker.check(scan))
