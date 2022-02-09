@@ -86,7 +86,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
   private void add(Delete base, TransactionResult result) {
     if (result == null) {
       throw new IllegalArgumentException(
-          "the record to be deleted must be existing " + "and read beforehand");
+          "the record to be deleted must be existing and read beforehand");
     }
 
     Put put =

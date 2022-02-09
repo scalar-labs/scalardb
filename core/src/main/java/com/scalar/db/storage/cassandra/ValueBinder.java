@@ -13,8 +13,6 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.ValueVisitor;
 import java.nio.ByteBuffer;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A visitor class to bind {@code Value}s to a {@link BoundStatement}
@@ -23,7 +21,6 @@ import org.slf4j.LoggerFactory;
  */
 @NotThreadSafe
 public final class ValueBinder implements ValueVisitor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ValueBinder.class);
   private final BoundStatement bound;
   private int i;
 
@@ -44,7 +41,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BooleanValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     bound.setBool(i++, value.get());
   }
 
@@ -55,7 +51,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(IntValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     bound.setInt(i++, value.get());
   }
 
@@ -66,7 +61,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BigIntValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     bound.setLong(i++, value.get());
   }
 
@@ -77,7 +71,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(FloatValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     bound.setFloat(i++, value.get());
   }
 
@@ -88,7 +81,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(DoubleValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     bound.setDouble(i++, value.get());
   }
 
@@ -99,7 +91,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     value.get().ifPresent(s -> bound.setString(i, s));
     i++;
   }
@@ -111,7 +102,6 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
-    LOGGER.debug(value.get() + " is bound to " + i);
     value
         .get()
         .ifPresent(

@@ -98,7 +98,6 @@ public class Cassandra implements DistributedStorage {
   @Override
   @Nonnull
   public Optional<Result> get(Get get) throws ExecutionException {
-    LOGGER.debug("executing get operation with " + get);
     ScalarDbUtils.setTargetToIfNot(get, namespace, tableName);
     operationChecker.check(get);
     TableMetadata metadata = metadataManager.getTableMetadata(get);
@@ -119,7 +118,6 @@ public class Cassandra implements DistributedStorage {
   @Override
   @Nonnull
   public Scanner scan(Scan scan) throws ExecutionException {
-    LOGGER.debug("executing scan operation with " + scan);
     ScalarDbUtils.setTargetToIfNot(scan, namespace, tableName);
     operationChecker.check(scan);
     TableMetadata metadata = metadataManager.getTableMetadata(scan);
@@ -132,7 +130,6 @@ public class Cassandra implements DistributedStorage {
 
   @Override
   public void put(Put put) throws ExecutionException {
-    LOGGER.debug("executing put operation with " + put);
     ScalarDbUtils.setTargetToIfNot(put, namespace, tableName);
     operationChecker.check(put);
     handlers.get(put).handle(put);
@@ -140,13 +137,11 @@ public class Cassandra implements DistributedStorage {
 
   @Override
   public void put(List<Put> puts) throws ExecutionException {
-    LOGGER.debug("executing batch-put operation with " + puts);
     mutate(puts);
   }
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
-    LOGGER.debug("executing delete operation with " + delete);
     ScalarDbUtils.setTargetToIfNot(delete, namespace, tableName);
     operationChecker.check(delete);
     handlers.delete().handle(delete);
@@ -154,13 +149,11 @@ public class Cassandra implements DistributedStorage {
 
   @Override
   public void delete(List<Delete> deletes) throws ExecutionException {
-    LOGGER.debug("executing batch-delete operation with " + deletes);
     mutate(deletes);
   }
 
   @Override
   public void mutate(List<? extends Mutation> mutations) throws ExecutionException {
-    LOGGER.debug("executing batch-mutate operation with " + mutations);
     checkArgument(mutations.size() != 0);
     if (mutations.size() == 1) {
       Mutation mutation = mutations.get(0);

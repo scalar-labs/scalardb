@@ -115,7 +115,7 @@ public class JdbcTransaction implements DistributedTransaction {
   public void put(Put put) throws CrudException {
     // Ignore the condition in the put
     if (put.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: " + put);
+      LOGGER.warn("ignoring the condition of the mutation: {}", put);
       put.withCondition(null);
     }
 
@@ -140,7 +140,7 @@ public class JdbcTransaction implements DistributedTransaction {
   public void delete(Delete delete) throws CrudException {
     // Ignore the condition in the delete
     if (delete.getCondition().isPresent()) {
-      LOGGER.warn("ignoring the condition of the mutation: " + delete);
+      LOGGER.warn("ignoring the condition of the mutation: {}", delete);
       delete.withCondition(null);
     }
 

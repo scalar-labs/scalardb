@@ -63,7 +63,7 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
               TRANSACTION_LIFETIME_MILLIS,
               TRANSACTION_EXPIRATION_INTERVAL_MILLIS,
               t -> {
-                LOGGER.warn("the transaction is expired. transactionId: " + t.getId());
+                LOGGER.warn("the transaction is expired. transactionId: {}", t.getId());
                 try {
                   t.rollback();
                 } catch (RollbackException e) {
