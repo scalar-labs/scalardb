@@ -1,6 +1,7 @@
 package com.scalar.db.storage.multistorage;
 
 import static com.scalar.db.config.ConfigUtils.getString;
+import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.config.DatabaseConfig;
@@ -73,13 +74,13 @@ public class MultiStorageConfig {
   }
 
   private void loadDatabaseConfigs() {
-    String storages = getString(getProperties(), STORAGES, null);
+    String[] storages = getStringArray(getProperties(), STORAGES, null);
     if (storages == null) {
       databaseConfigMap = Collections.emptyMap();
       return;
     }
     ImmutableMap.Builder<String, DatabaseConfig> builder = ImmutableMap.builder();
-    for (String storage : storages.split(",", -1)) {
+    for (String storage : storages) {
       Properties dbProps = new Properties();
       for (String propertyName : props.stringPropertyNames()) {
         if (propertyName.startsWith(STORAGES + "." + storage + ".")) {
@@ -99,13 +100,13 @@ public class MultiStorageConfig {
   }
 
   private void loadTableStorageMapping() {
-    String tableMapping = getString(getProperties(), TABLE_MAPPING, null);
+    String[] tableMapping = getStringArray(getProperties(), TABLE_MAPPING, null);
     if (tableMapping == null) {
       tableStorageMap = Collections.emptyMap();
       return;
     }
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-    for (String tableAndStorage : tableMapping.split(",", -1)) {
+    for (String tableAndStorage : tableMapping) {
       String[] s = tableAndStorage.split(":", -1);
       String table = s[0];
       String storage = s[1];
@@ -116,13 +117,13 @@ public class MultiStorageConfig {
   }
 
   private void loadNamespaceStorageMapping() {
-    String namespaceMapping = getString(getProperties(), NAMESPACE_MAPPING, null);
+    String[] namespaceMapping = getStringArray(getProperties(), NAMESPACE_MAPPING, null);
     if (namespaceMapping == null) {
       namespaceStorageMap = Collections.emptyMap();
       return;
     }
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-    for (String namespaceAndStorage : namespaceMapping.split(",", -1)) {
+    for (String namespaceAndStorage : namespaceMapping) {
       String[] s = namespaceAndStorage.split(":", -1);
       String namespace = s[0];
       String storage = s[1];
