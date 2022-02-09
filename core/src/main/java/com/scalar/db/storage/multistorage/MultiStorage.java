@@ -15,7 +15,7 @@ import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.service.StorageFactory;
-import com.scalar.db.util.ScalarDbUtils;
+import com.scalar.db.storage.common.AbstractDistributedStorage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,15 +34,12 @@ import javax.annotation.concurrent.ThreadSafe;
  * @author Toshihiro Suzuki
  */
 @ThreadSafe
-public class MultiStorage implements DistributedStorage {
+public class MultiStorage extends AbstractDistributedStorage {
 
   private final Map<String, DistributedStorage> tableStorageMap;
   private final Map<String, DistributedStorage> namespaceStorageMap;
   private final DistributedStorage defaultStorage;
   private final List<DistributedStorage> storages;
-
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public MultiStorage(MultiStorageConfig config) {
@@ -72,13 +69,11 @@ public class MultiStorage implements DistributedStorage {
                 namespaceStorageMap.put(table, nameStorageMap.get(storageName)));
 
     defaultStorage = nameStorageMap.get(config.getDefaultStorage());
-
-    namespace = Optional.empty();
-    tableName = Optional.empty();
   }
 
   @VisibleForTesting
   MultiStorage(
+      MultiStorageConfig config,
       Map<String, DistributedStorage> tableStorageMap,
       Map<String, DistributedStorage> namespaceStorageMap,
       DistributedStorage defaultStorage) {
@@ -89,43 +84,20 @@ public class MultiStorage implements DistributedStorage {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public Optional<Result> get(Get get) throws ExecutionException {
+    get = copyAndSetTargetToIfNot(get);
     return getStorage(get).get(get);
   }
 
   @Override
   public Scanner scan(Scan scan) throws ExecutionException {
+    scan = copyAndSetTargetToIfNot(scan);
     return getStorage(scan).scan(scan);
   }
 
   @Override
   public void put(Put put) throws ExecutionException {
+    put = copyAndSetTargetToIfNot(put);
     getStorage(put).put(put);
   }
 
@@ -136,6 +108,7 @@ public class MultiStorage implements DistributedStorage {
 
   @Override
   public void delete(Delete delete) throws ExecutionException {
+    delete = copyAndSetTargetToIfNot(delete);
     getStorage(delete).delete(delete);
   }
 
@@ -157,11 +130,11 @@ public class MultiStorage implements DistributedStorage {
       return;
     }
 
+    mutations = copyAndSetTargetToIfNot(mutations);
     getStorage(mutations.get(0)).mutate(mutations);
   }
 
   private DistributedStorage getStorage(Operation operation) {
-    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
     String fullTaleName = operation.forFullTableName().get();
     DistributedStorage storage = tableStorageMap.get(fullTaleName);
     if (storage != null) {

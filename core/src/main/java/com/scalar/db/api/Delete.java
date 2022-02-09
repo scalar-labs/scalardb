@@ -32,6 +32,10 @@ public class Delete extends Mutation {
     super(partitionKey, clusteringKey);
   }
 
+  public Delete(Delete delete) {
+    super(delete);
+  }
+
   @Override
   public Delete forNamespace(String namespace) {
     return (Delete) super.forNamespace(namespace);

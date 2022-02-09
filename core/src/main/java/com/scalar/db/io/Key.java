@@ -308,132 +308,97 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
     private Builder() {}
 
     /**
+     * Adds Boolean value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     boolean)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addBoolean(String name, boolean value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, boolean value) {
       values.add(new BooleanValue(name, value));
       return this;
     }
 
     /**
+     * Adds Int value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     int)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addInt(String name, int value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, int value) {
       values.add(new IntValue(name, value));
       return this;
     }
 
     /**
+     * Adds BigInt value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     long)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addBigInt(String name, long value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, long value) {
       values.add(new BigIntValue(name, value));
       return this;
     }
 
     /**
+     * Adds Float value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     float)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addFloat(String name, float value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, float value) {
       values.add(new FloatValue(name, value));
       return this;
     }
 
     /**
+     * Adds Double value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     double)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addDouble(String name, double value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, double value) {
       values.add(new DoubleValue(name, value));
       return this;
     }
 
     /**
+     * Adds Text value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use @{@link #add(String,
-     *     String)} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addText(String name, String value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, String value) {
       values.add(new TextValue(name, value));
       return this;
     }
 
     /**
+     * Adds Blob value.
+     *
      * @param name name of the {@code Value}
      * @param value content of the {@code Value}
      * @return a builder object
-     * @deprecated As of release 2.5.0. Will be removed in release 4.0.0. Use {@link #add(String,
-     *     byte[])} instead
      */
-    @SuppressWarnings("InlineMeSuggester")
-    @Deprecated
     public Builder addBlob(String name, byte[] value) {
-      return add(name, value);
-    }
-
-    public Builder add(String name, byte[] value) {
       values.add(new BlobValue(name, value));
       return this;
     }
 
-    public Builder add(String name, ByteBuffer value) {
+    /**
+     * Adds Blob value.
+     *
+     * @param name name of the {@code Value}
+     * @param value content of the {@code Value}
+     * @return a builder object
+     */
+    public Builder addBlob(String name, ByteBuffer value) {
       values.add(new BlobValue(name, value));
       return this;
     }

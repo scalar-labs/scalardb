@@ -6,12 +6,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.scalar.db.api.Delete;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
-import com.scalar.db.api.Operation;
 import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
-import com.scalar.db.api.TwoPhaseCommitTransaction;
 import com.scalar.db.exception.transaction.CommitConflictException;
 import com.scalar.db.exception.transaction.CommitException;
 import com.scalar.db.exception.transaction.CrudException;
@@ -21,8 +19,7 @@ import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationConflictException;
 import com.scalar.db.exception.transaction.ValidationException;
-import com.scalar.db.util.ScalarDbUtils;
-import java.util.ArrayList;
+import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransaction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @NotThreadSafe
-public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
+public class TwoPhaseConsensusCommit extends AbstractTwoPhaseCommitTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(TwoPhaseConsensusCommit.class);
 
   @VisibleForTesting
@@ -53,9 +50,6 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   private final RecoveryHandler recovery;
   private final boolean isCoordinator;
   private final TwoPhaseConsensusCommitManager manager;
-
-  private Optional<String> namespace = Optional.empty();
-  private Optional<String> tableName = Optional.empty();
 
   @VisibleForTesting Status status;
 
@@ -84,39 +78,12 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
-  public Optional<Result> get(Get get) throws CrudException {
+  public Optional<Result> get(Get originalGet) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    setTargetToIfNot(get);
-    List<String> projections = new ArrayList<>(get.getProjections());
+    Get get = copyAndSetTargetToIfNot(originalGet);
     try {
-      return crud.get(get).map(r -> new FilteredResult(r, projections));
+      return crud.get(get).map(r -> new FilteredResult(r, originalGet.getProjections()));
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
@@ -124,14 +91,13 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   @Override
-  public List<Result> scan(Scan scan) throws CrudException {
+  public List<Result> scan(Scan originalScan) throws CrudException {
     checkStatus("The transaction is not active", Status.ACTIVE);
     updateTransactionExpirationTime();
-    setTargetToIfNot(scan);
-    List<String> projections = new ArrayList<>(scan.getProjections());
+    Scan scan = copyAndSetTargetToIfNot(originalScan);
     try {
       return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, projections))
+          .map(r -> new FilteredResult(r, originalScan.getProjections()))
           .collect(Collectors.toList());
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
@@ -155,7 +121,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void putInternal(Put put) {
-    setTargetToIfNot(put);
+    put = copyAndSetTargetToIfNot(put);
     crud.put(put);
   }
 
@@ -175,7 +141,7 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
   }
 
   private void deleteInternal(Delete delete) {
-    setTargetToIfNot(delete);
+    delete = copyAndSetTargetToIfNot(delete);
     crud.delete(delete);
   }
 
@@ -338,9 +304,5 @@ public class TwoPhaseConsensusCommit implements TwoPhaseCommitTransaction {
     LOGGER.debug("recover uncommitted records: " + results);
     beforeRecoveryHook.run();
     results.forEach(r -> recovery.recover(selection, r));
-  }
-
-  private void setTargetToIfNot(Operation operation) {
-    ScalarDbUtils.setTargetToIfNot(operation, namespace, tableName);
   }
 }

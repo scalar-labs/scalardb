@@ -218,14 +218,14 @@ public class KeyTest {
     // Arrange
     Key key =
         Key.newBuilder()
-            .add("key1", true)
-            .add("key2", 5678)
-            .add("key3", 1234L)
-            .add("key4", 4.56f)
-            .add("key5", 1.23)
-            .add("key6", "string_key")
-            .add("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
-            .add("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)))
+            .addBoolean("key1", true)
+            .addInt("key2", 5678)
+            .addBigInt("key3", 1234L)
+            .addFloat("key4", 4.56f)
+            .addDouble("key5", 1.23)
+            .addText("key6", "string_key")
+            .addBlob("key7", "blob_key".getBytes(StandardCharsets.UTF_8))
+            .addBlob("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)))
             .add(new IntValue("key9", 1357))
             .addAll(Arrays.asList(new IntValue("key10", 2468), new BigIntValue("key11", 1111L)))
             .build();

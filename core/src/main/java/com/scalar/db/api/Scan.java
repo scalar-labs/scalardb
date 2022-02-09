@@ -42,6 +42,16 @@ public class Scan extends Selection {
     limit = 0;
   }
 
+  public Scan(Scan scan) {
+    super(scan);
+    startClusteringKey = scan.startClusteringKey;
+    startInclusive = scan.startInclusive;
+    endClusteringKey = scan.endClusteringKey;
+    endInclusive = scan.endInclusive;
+    orderings = new ArrayList<>(scan.orderings);
+    limit = scan.limit;
+  }
+
   /**
    * Sets the specified clustering key as a starting point for scan. The boundary is inclusive.
    *

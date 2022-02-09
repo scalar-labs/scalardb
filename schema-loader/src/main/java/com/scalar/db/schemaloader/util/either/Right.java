@@ -3,7 +3,7 @@ package com.scalar.db.schemaloader.util.either;
 import javax.annotation.Nullable;
 
 public class Right<L, R> extends Either<L, R> {
-  @Nullable public R rightValue;
+  @Nullable public final R rightValue;
 
   public Right(@Nullable R b) {
     rightValue = b;

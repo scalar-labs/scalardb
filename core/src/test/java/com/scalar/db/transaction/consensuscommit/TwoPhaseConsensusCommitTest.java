@@ -20,6 +20,7 @@ import com.scalar.db.exception.transaction.PreparationException;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.exception.transaction.ValidationException;
+import com.scalar.db.io.Key;
 import com.scalar.db.transaction.consensuscommit.TwoPhaseConsensusCommit.Status;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,12 +35,14 @@ public class TwoPhaseConsensusCommitTest {
 
   private static final String ANY_NAMESPACE = "namespace";
   private static final String ANY_TABLE_NAME = "table";
+  private static final String ANY_NAME_1 = "name1";
+  private static final String ANY_NAME_2 = "name2";
+  private static final String ANY_NAME_3 = "name3";
+  private static final String ANY_TEXT_1 = "text1";
+  private static final String ANY_TEXT_2 = "text2";
+  private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TX_ID = "any_id";
 
-  @Mock private Get get;
-  @Mock private Scan scan;
-  @Mock private Put put;
-  @Mock private Delete delete;
   @Mock private Snapshot snapshot;
   @Mock private CrudHandler crud;
   @Mock private CommitHandler commit;
@@ -49,20 +52,42 @@ public class TwoPhaseConsensusCommitTest {
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+  }
 
-    when(get.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(get.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(scan.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(scan.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(put.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(put.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
-    when(delete.forNamespace()).thenReturn(Optional.of(ANY_NAMESPACE));
-    when(delete.forTable()).thenReturn(Optional.of(ANY_TABLE_NAME));
+  private Get prepareGet() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Get(partitionKey, clusteringKey)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Scan prepareScan() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE).forTable(ANY_TABLE_NAME);
+  }
+
+  private Put preparePut() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Put(partitionKey, clusteringKey)
+        .withValue(ANY_NAME_3, ANY_TEXT_3)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
+  }
+
+  private Delete prepareDelete() {
+    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
+    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
+    return new Delete(partitionKey, clusteringKey)
+        .forNamespace(ANY_NAMESPACE)
+        .forTable(ANY_TABLE_NAME);
   }
 
   @Test
   public void get_GetGiven_ShouldCallCrudHandlerGet() throws CrudException {
     // Arrange
+    Get get = prepareGet();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     TransactionResult result = mock(TransactionResult.class);
@@ -81,6 +106,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void get_GetForUncommittedRecordGiven_ShouldRecoverRecord() throws CrudException {
     // Arrange
+    Get get = prepareGet();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     TransactionResult result = mock(TransactionResult.class);
@@ -99,6 +125,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void scan_ScanGiven_ShouldCallCrudHandlerScan() throws CrudException {
     // Arrange
+    Scan scan = prepareScan();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     TransactionResult result = mock(TransactionResult.class);
@@ -117,6 +144,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void put_PutGiven_ShouldCallCrudHandlerPut() {
     // Arrange
+    Put put = preparePut();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -131,6 +159,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void put_TwoPutsGiven_ShouldCallCrudHandlerPutTwice() {
     // Arrange
+    Put put = preparePut();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -145,6 +174,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void delete_DeleteGiven_ShouldCallCrudHandlerDelete() {
     // Arrange
+    Delete delete = prepareDelete();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -159,6 +189,7 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void delete_TwoDeletesGiven_ShouldCallCrudHandlerDeleteTwice() {
     // Arrange
+    Delete delete = prepareDelete();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
@@ -173,6 +204,8 @@ public class TwoPhaseConsensusCommitTest {
   @Test
   public void mutate_PutAndDeleteGiven_ShouldCallCrudHandlerPutAndDelete() {
     // Arrange
+    Put put = preparePut();
+    Delete delete = prepareDelete();
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, false, manager);
     when(crud.getSnapshot()).thenReturn(snapshot);
