@@ -3,7 +3,6 @@ package com.scalar.db.transaction.consensuscommit;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.scalar.db.api.Consistency;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.Get;
@@ -13,8 +12,6 @@ import com.scalar.db.api.Selection;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.io.Key;
-import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.concurrent.ThreadSafe;
@@ -28,17 +25,14 @@ public class RecoveryHandler {
   private final DistributedStorage storage;
   private final Coordinator coordinator;
   private final TransactionalTableMetadataManager tableMetadataManager;
-  private final ParallelExecutor parallelExecutor;
 
   public RecoveryHandler(
       DistributedStorage storage,
       Coordinator coordinator,
-      TransactionalTableMetadataManager tableMetadataManager,
-      ParallelExecutor parallelExecutor) {
+      TransactionalTableMetadataManager tableMetadataManager) {
     this.storage = checkNotNull(storage);
     this.coordinator = checkNotNull(coordinator);
     this.tableMetadataManager = checkNotNull(tableMetadataManager);
-    this.parallelExecutor = checkNotNull(parallelExecutor);
   }
 
   // lazy recovery in read phase
@@ -99,26 +93,6 @@ public class RecoveryHandler {
       return result.getClusteringKey();
     } else {
       return selection.getClusteringKey();
-    }
-  }
-
-  public void rollbackRecords(Snapshot snapshot) {
-    LOGGER.debug("rollback from snapshot for {}", snapshot.getId());
-    try {
-      RollbackMutationComposer composer =
-          new RollbackMutationComposer(snapshot.getId(), storage, tableMetadataManager);
-      snapshot.to(composer);
-      PartitionedMutations mutations = new PartitionedMutations(composer.get());
-
-      ImmutableList<PartitionedMutations.Key> orderedKeys = mutations.getOrderedKeys();
-      List<ParallelExecutorTask> tasks = new ArrayList<>(orderedKeys.size());
-      for (PartitionedMutations.Key key : orderedKeys) {
-        tasks.add(() -> storage.mutate(mutations.get(key)));
-      }
-      parallelExecutor.rollback(tasks);
-    } catch (Exception e) {
-      LOGGER.warn("rolling back records failed", e);
-      // ignore since records are recovered lazily
     }
   }
 
