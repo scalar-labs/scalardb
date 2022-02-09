@@ -111,7 +111,7 @@ public class CommitHandler {
       if (state.equals(TransactionState.ABORTED)) {
         rollbackRecords(snapshot);
         throw new CommitException(
-            "committing state in coordinator failed. " + "the transaction is aborted", e);
+            "committing state in coordinator failed. the transaction is aborted", e);
       }
     }
     LOGGER.debug("transaction {} is committed successfully at {}", id, System.currentTimeMillis());

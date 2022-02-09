@@ -76,7 +76,7 @@ public class ScalarDbServer implements Callable<Integer> {
 
     server = builder.build().start();
 
-    LOGGER.info("Scalar DB server started, listening on " + config.getPort());
+    LOGGER.info("Scalar DB server started, listening on {}", config.getPort());
   }
 
   public void addShutdownHook() {

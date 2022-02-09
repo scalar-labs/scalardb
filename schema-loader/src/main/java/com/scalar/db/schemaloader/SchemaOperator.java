@@ -37,82 +37,68 @@ public class SchemaOperator {
 
   public void createTables(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
     for (TableSchema tableSchema : tableSchemaList) {
-      String tableNamespace = tableSchema.getNamespace();
+      String namespace = tableSchema.getNamespace();
       String tableName = tableSchema.getTable();
 
-      createNamespace(tableNamespace, tableSchema.getOptions());
-      if (tableExists(tableNamespace, tableName)) {
-        LOGGER.warn(
-            "Table " + tableName + " in the namespace " + tableNamespace + " already exists.");
+      createNamespace(namespace, tableSchema.getOptions());
+      if (tableExists(namespace, tableName)) {
+        LOGGER.warn("Table {} in the namespace {} already exists.", tableName, namespace);
       } else {
         createTable(tableSchema);
       }
     }
   }
 
-  private void createNamespace(String tableNamespace, Map<String, String> options)
+  private void createNamespace(String namespace, Map<String, String> options)
       throws SchemaLoaderException {
     try {
-      admin.createNamespace(tableNamespace, true, options);
+      admin.createNamespace(namespace, true, options);
     } catch (ExecutionException e) {
-      throw new SchemaLoaderException("Creating the namespace " + tableNamespace + " failed.", e);
+      throw new SchemaLoaderException("Creating the namespace " + namespace + " failed.", e);
     }
   }
 
   private void createTable(TableSchema tableSchema) throws SchemaLoaderException {
-    String tableNamespace = tableSchema.getNamespace();
+    String namespace = tableSchema.getNamespace();
     String tableName = tableSchema.getTable();
     try {
       if (tableSchema.isTransactionalTable()) {
         consensusCommitAdmin.createTransactionalTable(
-            tableNamespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+            namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       } else {
         admin.createTable(
-            tableNamespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
+            namespace, tableName, tableSchema.getTableMetadata(), tableSchema.getOptions());
       }
-      LOGGER.info(
-          "Creating the table "
-              + tableName
-              + " in the namespace "
-              + tableNamespace
-              + " succeeded.");
+      LOGGER.info("Creating the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
-          "Creating the table " + tableName + " in the namespace " + tableNamespace + " failed.",
-          e);
+          "Creating the table " + tableName + " in the namespace " + namespace + " failed.", e);
     }
   }
 
   public void deleteTables(List<TableSchema> tableSchemaList) throws SchemaLoaderException {
     Set<String> namespaces = new HashSet<>();
     for (TableSchema tableSchema : tableSchemaList) {
-      String tableNamespace = tableSchema.getNamespace();
+      String namespace = tableSchema.getNamespace();
       String tableName = tableSchema.getTable();
 
-      if (!tableExists(tableNamespace, tableName)) {
-        LOGGER.warn(
-            "Table " + tableName + " in the namespace " + tableNamespace + " doesn't exist.");
+      if (!tableExists(namespace, tableName)) {
+        LOGGER.warn("Table {} in the namespace {} doesn't exist.", tableName, namespace);
       } else {
-        dropTable(tableNamespace, tableName);
-        namespaces.add(tableNamespace);
+        dropTable(namespace, tableName);
+        namespaces.add(namespace);
       }
     }
     dropNamespaces(namespaces);
   }
 
-  private void dropTable(String tableNamespace, String tableName) throws SchemaLoaderException {
+  private void dropTable(String namespace, String tableName) throws SchemaLoaderException {
     try {
-      admin.dropTable(tableNamespace, tableName);
-      LOGGER.info(
-          "Deleting the table "
-              + tableName
-              + " in the namespace "
-              + tableNamespace
-              + " succeeded.");
+      admin.dropTable(namespace, tableName);
+      LOGGER.info("Deleting the table {} in the namespace {} succeeded.", tableName, namespace);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
-          "Deleting the table " + tableName + " in the namespace " + tableNamespace + " failed.",
-          e);
+          "Deleting the table " + tableName + " in the namespace " + namespace + " failed.", e);
     }
   }
 
@@ -126,16 +112,15 @@ public class SchemaOperator {
     }
   }
 
-  private boolean tableExists(String tableNamespace, String tableName)
-      throws SchemaLoaderException {
+  private boolean tableExists(String namespace, String tableName) throws SchemaLoaderException {
     try {
-      return admin.tableExists(tableNamespace, tableName);
+      return admin.tableExists(namespace, tableName);
     } catch (ExecutionException e) {
       throw new SchemaLoaderException(
           "Checking the existence of the table "
               + tableName
               + " in the namespace "
-              + tableNamespace
+              + namespace
               + " failed.",
           e);
     }

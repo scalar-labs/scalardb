@@ -44,7 +44,7 @@ public abstract class StatementHandler {
     try {
       return execute(operation);
     } catch (RuntimeException e) {
-      LOGGER.error(e.getMessage());
+      LOGGER.error(e.getMessage(), e);
       throw new ExecutionException(e.getMessage(), e);
     }
   }
