@@ -77,7 +77,24 @@ public class DeleteTest {
   @Test
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
-    assertThatThrownBy(() -> new Delete(null)).isInstanceOf(NullPointerException.class);
+    assertThatThrownBy(() -> new Delete((Key) null)).isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void constructor_DeleteGiven_ShouldCopyProperly() {
+    // Arrange
+    Delete del =
+        prepareDelete()
+            .withCondition(new DeleteIfExists())
+            .withConsistency(Consistency.EVENTUAL)
+            .forNamespace("n1")
+            .forTable("t1");
+
+    // Act
+    Delete actual = new Delete(del);
+
+    // Assert
+    assertThat(actual).isEqualTo(del);
   }
 
   @Test
