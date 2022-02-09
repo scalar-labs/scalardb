@@ -7,10 +7,10 @@ import com.google.common.base.Strings;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TransactionState;
-import com.scalar.db.api.TwoPhaseCommitTransactionManager;
 import com.scalar.db.exception.transaction.RollbackException;
 import com.scalar.db.exception.transaction.TransactionException;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.common.AbstractTwoPhaseCommitTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import com.scalar.db.util.ActiveExpiringMap;
 import java.util.Optional;
@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransactionManager {
+public class TwoPhaseConsensusCommitManager extends AbstractTwoPhaseCommitTransactionManager {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(TwoPhaseConsensusCommitManager.class);
 
@@ -38,9 +38,6 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
 
-  private Optional<String> namespace = Optional.empty();
-  private Optional<String> tableName = Optional.empty();
-
   @Nullable private final ActiveExpiringMap<String, TwoPhaseConsensusCommit> activeTransactions;
 
   @Inject
@@ -54,8 +51,8 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
             admin, config.getTableMetadataCacheExpirationTimeSecs());
     coordinator = new Coordinator(storage, config);
     parallelExecutor = new ParallelExecutor(config);
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
-    commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
 
     if (config.isActiveTransactionsManagementEnabled()) {
       activeTransactions =
@@ -99,32 +96,6 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     } else {
       activeTransactions = null;
     }
-  }
-
-  @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
   }
 
   @Override
@@ -178,8 +149,8 @@ public class TwoPhaseConsensusCommitManager implements TwoPhaseCommitTransaction
     TwoPhaseConsensusCommit transaction =
         new TwoPhaseConsensusCommit(crud, commit, recovery, isCoordinator, this);
 
-    namespace.ifPresent(transaction::withNamespace);
-    tableName.ifPresent(transaction::withTable);
+    getNamespace().ifPresent(transaction::withNamespace);
+    getTable().ifPresent(transaction::withTable);
     return transaction;
   }
 

@@ -8,9 +8,9 @@ import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
-import com.scalar.db.api.DistributedTransactionManager;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
+import com.scalar.db.transaction.common.AbstractDistributedTransactionManager;
 import com.scalar.db.transaction.consensuscommit.Coordinator.State;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ThreadSafe
-public class ConsensusCommitManager implements DistributedTransactionManager {
+public class ConsensusCommitManager extends AbstractDistributedTransactionManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ConsensusCommitManager.class);
   private final DistributedStorage storage;
   private final DistributedStorageAdmin admin;
@@ -29,8 +29,6 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
   private final ParallelExecutor parallelExecutor;
   private final RecoveryHandler recovery;
   private final CommitHandler commit;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   @Inject
   public ConsensusCommitManager(
@@ -43,10 +41,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     tableMetadataManager =
         new TransactionalTableMetadataManager(
             admin, config.getTableMetadataCacheExpirationTimeSecs());
-    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
-    commit = new CommitHandler(storage, coordinator, recovery, parallelExecutor);
-    namespace = storage.getNamespace();
-    tableName = storage.getTable();
+    recovery = new RecoveryHandler(storage, coordinator, tableMetadataManager);
+    commit = new CommitHandler(storage, coordinator, tableMetadataManager, parallelExecutor);
   }
 
   @VisibleForTesting
@@ -68,34 +64,6 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     this.parallelExecutor = parallelExecutor;
     this.recovery = recovery;
     this.commit = commit;
-    namespace = storage.getNamespace();
-    tableName = storage.getTable();
-  }
-
-  @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
   }
 
   @Override
@@ -167,8 +135,8 @@ public class ConsensusCommitManager implements DistributedTransactionManager {
     Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
-    namespace.ifPresent(consensus::withNamespace);
-    tableName.ifPresent(consensus::withTable);
+    getNamespace().ifPresent(consensus::withNamespace);
+    getTable().ifPresent(consensus::withTable);
     return consensus;
   }
 

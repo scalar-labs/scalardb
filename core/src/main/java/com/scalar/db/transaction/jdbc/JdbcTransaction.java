@@ -3,7 +3,6 @@ package com.scalar.db.transaction.jdbc;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.scalar.db.api.Delete;
-import com.scalar.db.api.DistributedTransaction;
 import com.scalar.db.api.Get;
 import com.scalar.db.api.Mutation;
 import com.scalar.db.api.Put;
@@ -19,6 +18,7 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.storage.jdbc.JdbcService;
 import com.scalar.db.storage.jdbc.JdbcUtils;
 import com.scalar.db.storage.jdbc.RdbEngine;
+import com.scalar.db.transaction.common.AbstractDistributedTransaction;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -33,29 +33,20 @@ import org.slf4j.LoggerFactory;
  * @author Toshihiro Suzuki
  */
 @NotThreadSafe
-public class JdbcTransaction implements DistributedTransaction {
+public class JdbcTransaction extends AbstractDistributedTransaction {
   private static final Logger LOGGER = LoggerFactory.getLogger(JdbcTransaction.class);
 
   private final String txId;
   private final JdbcService jdbcService;
   private final Connection connection;
   private final RdbEngine rdbEngine;
-  private Optional<String> namespace;
-  private Optional<String> tableName;
 
   JdbcTransaction(
-      String txId,
-      JdbcService jdbcService,
-      Connection connection,
-      RdbEngine rdbEngine,
-      Optional<String> namespace,
-      Optional<String> tableName) {
+      String txId, JdbcService jdbcService, Connection connection, RdbEngine rdbEngine) {
     this.txId = txId;
     this.jdbcService = jdbcService;
     this.connection = connection;
     this.rdbEngine = rdbEngine;
-    this.namespace = namespace;
-    this.tableName = tableName;
   }
 
   @Override
@@ -64,35 +55,10 @@ public class JdbcTransaction implements DistributedTransaction {
   }
 
   @Override
-  public void with(String namespace, String tableName) {
-    this.namespace = Optional.ofNullable(namespace);
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public void withNamespace(String namespace) {
-    this.namespace = Optional.ofNullable(namespace);
-  }
-
-  @Override
-  public Optional<String> getNamespace() {
-    return namespace;
-  }
-
-  @Override
-  public void withTable(String tableName) {
-    this.tableName = Optional.ofNullable(tableName);
-  }
-
-  @Override
-  public Optional<String> getTable() {
-    return tableName;
-  }
-
-  @Override
   public Optional<Result> get(Get get) throws CrudException {
+    get = copyAndSetTargetToIfNot(get);
     try {
-      return jdbcService.get(get, connection, namespace, tableName);
+      return jdbcService.get(get, connection);
     } catch (SQLException e) {
       throw createCrudException(e, "get operation failed");
     } catch (ExecutionException e) {
@@ -102,8 +68,9 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public List<Result> scan(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
     try {
-      return jdbcService.scan(scan, connection, namespace, tableName);
+      return jdbcService.scan(scan, connection);
     } catch (SQLException e) {
       throw createCrudException(e, "scan operation failed");
     } catch (ExecutionException e) {
@@ -113,6 +80,8 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void put(Put put) throws CrudException {
+    put = copyAndSetTargetToIfNot(put);
+
     // Ignore the condition in the put
     if (put.getCondition().isPresent()) {
       LOGGER.warn("ignoring the condition of the mutation: {}", put);
@@ -120,7 +89,7 @@ public class JdbcTransaction implements DistributedTransaction {
     }
 
     try {
-      jdbcService.put(put, connection, namespace, tableName);
+      jdbcService.put(put, connection);
     } catch (SQLException e) {
       throw createCrudException(e, "put operation failed");
     } catch (ExecutionException e) {
@@ -138,6 +107,8 @@ public class JdbcTransaction implements DistributedTransaction {
 
   @Override
   public void delete(Delete delete) throws CrudException {
+    delete = copyAndSetTargetToIfNot(delete);
+
     // Ignore the condition in the delete
     if (delete.getCondition().isPresent()) {
       LOGGER.warn("ignoring the condition of the mutation: {}", delete);
@@ -145,7 +116,7 @@ public class JdbcTransaction implements DistributedTransaction {
     }
 
     try {
-      jdbcService.delete(delete, connection, namespace, tableName);
+      jdbcService.delete(delete, connection);
     } catch (SQLException e) {
       throw createCrudException(e, "delete operation failed");
     } catch (ExecutionException e) {

@@ -21,6 +21,11 @@ public abstract class Mutation extends Operation {
     condition = Optional.empty();
   }
 
+  public Mutation(Mutation mutation) {
+    super(mutation);
+    condition = mutation.condition;
+  }
+
   /**
    * Returns the {@link MutationCondition}
    *

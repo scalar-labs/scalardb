@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.scalar.db.config.ConfigUtils.getInt;
 import static com.scalar.db.config.ConfigUtils.getLong;
 import static com.scalar.db.config.ConfigUtils.getString;
+import static com.scalar.db.config.ConfigUtils.getStringArray;
 
 import com.scalar.db.api.DistributedStorage;
 import com.scalar.db.api.DistributedStorageAdmin;
@@ -121,7 +122,7 @@ public class DatabaseConfig {
     if (storageClass != MultiStorage.class) {
       contactPoints =
           Arrays.asList(
-              Objects.requireNonNull(getString(getProperties(), CONTACT_POINTS, null)).split(","));
+              Objects.requireNonNull(getStringArray(getProperties(), CONTACT_POINTS, null)));
       contactPort = getInt(getProperties(), CONTACT_PORT, 0);
       checkArgument(contactPort >= 0);
       username = getString(getProperties(), USERNAME, null);
