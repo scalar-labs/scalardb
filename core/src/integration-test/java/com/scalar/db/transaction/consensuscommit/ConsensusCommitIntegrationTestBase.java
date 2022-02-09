@@ -1200,7 +1200,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   @Test
   public void
       commit_ConflictingPutsForSameTableGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
-          throws CrudException, CommitConflictException {
+          throws CrudException {
     commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
         namespace1, TABLE_1, namespace1, TABLE_1);
   }
@@ -1208,7 +1208,7 @@ public abstract class ConsensusCommitIntegrationTestBase {
   @Test
   public void
       commit_ConflictingPutsForDifferentTablesGivenForNonExisting_ShouldCommitOneAndAbortTheOther()
-          throws CrudException, CommitConflictException {
+          throws CrudException {
     commit_ConflictingPutsGivenForNonExisting_ShouldCommitOneAndAbortTheOther(
         namespace1, TABLE_1, namespace2, TABLE_2);
   }
