@@ -101,7 +101,7 @@ public final class ProtoUtils {
         if (value.getBlobValue().hasValue()) {
           return new BlobValue(value.getName(), value.getBlobValue().getValue().toByteArray());
         } else {
-          return new BlobValue(value.getName(), null);
+          return new BlobValue(value.getName(), (byte[]) null);
         }
       default:
         throw new AssertionError();

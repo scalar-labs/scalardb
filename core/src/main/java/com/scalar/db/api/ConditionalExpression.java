@@ -1,6 +1,14 @@
 package com.scalar.db.api;
 
+import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import java.nio.ByteBuffer;
 import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
@@ -30,6 +38,94 @@ public class ConditionalExpression {
     this.value = value;
     this.operator = operator;
     checkOperator(operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, boolean value, Operator operator) {
+    this(name, new BooleanValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, int value, Operator operator) {
+    this(name, new IntValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, long value, Operator operator) {
+    this(name, new BigIntValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, float value, Operator operator) {
+    this(name, new FloatValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, double value, Operator operator) {
+    this(name, new DoubleValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, String value, Operator operator) {
+    this(name, new TextValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, byte[] value, Operator operator) {
+    this(name, new BlobValue(value), operator);
+  }
+
+  /**
+   * Constructs a {@code ConditionalExpression} with the specified name, value and operator.
+   *
+   * @param name name of target value
+   * @param value value used to compare with the target value
+   * @param operator operator used to compare the target value specified with the name and the value
+   */
+  public ConditionalExpression(String name, ByteBuffer value, Operator operator) {
+    this(name, new BlobValue(value), operator);
   }
 
   /**

@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.primitives.UnsignedBytes;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,6 +50,32 @@ public final class BlobValue implements Value<Optional<byte[]>> {
     this(ANONYMOUS, value);
   }
 
+  /**
+   * Constructs a {@code BlobValue} with the specified name and value
+   *
+   * @param name name of the {@code Value}
+   * @param value content of the {@code Value}
+   */
+  public BlobValue(String name, @Nullable ByteBuffer value) {
+    this.name = checkNotNull(name);
+    if (value == null) {
+      this.value = Optional.empty();
+    } else {
+      byte[] bytes = new byte[value.remaining()];
+      value.get(bytes);
+      this.value = Optional.of(bytes);
+    }
+  }
+
+  /**
+   * Constructs a {@code BlobValue} with the specified value. The name of this value is anonymous.
+   *
+   * @param value content of the {@code Value}
+   */
+  public BlobValue(@Nullable ByteBuffer value) {
+    this(ANONYMOUS, value);
+  }
+
   @Override
   @Nonnull
   public Optional<byte[]> get() {
@@ -78,7 +105,7 @@ public final class BlobValue implements Value<Optional<byte[]>> {
       System.arraycopy(value.get(), 0, bytes, 0, value.get().length);
       return new BlobValue(name, bytes);
     } else {
-      return new BlobValue(name, null);
+      return new BlobValue(name, (byte[]) null);
     }
   }
 
