@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Optional;
 import org.junit.Test;
 
@@ -44,7 +44,7 @@ public class TextValueTest {
   @Test
   public void getAsBytes_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
     // Arrange
-    byte[] expected = "some_text".getBytes(StandardCharsets.UTF_8);
+    String expected = "some_text";
     Value<?> value = new TextValue(ANY_NAME, expected);
 
     // Act
@@ -52,8 +52,21 @@ public class TextValueTest {
 
     // Assert
     assertThat(actual.isPresent()).isTrue();
-    assertThat(Arrays.equals(expected, actual.get())).isTrue();
-    assertThat(expected == actual.get()).isFalse();
+    assertThat(new String(actual.get(), StandardCharsets.UTF_8)).isEqualTo(expected);
+  }
+
+  @Test
+  public void getAsByteBuffer_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    String expected = "some_text";
+    Value<?> value = new TextValue(ANY_NAME, expected);
+
+    // Act
+    Optional<ByteBuffer> actual = value.getAsByteBuffer();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(new String(actual.get().array(), StandardCharsets.UTF_8)).isEqualTo(expected);
   }
 
   @Test

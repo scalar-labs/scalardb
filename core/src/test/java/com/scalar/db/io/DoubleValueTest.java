@@ -98,6 +98,17 @@ public class DoubleValueTest {
   }
 
   @Test
+  public void
+      getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    double expected = Double.MAX_VALUE;
+    Value<?> value = new DoubleValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsByteBuffer).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     double some = Double.MAX_VALUE;
