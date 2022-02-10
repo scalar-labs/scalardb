@@ -93,6 +93,11 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   }
 
   @Override
+  public Optional<ByteBuffer> getAsByteBuffer() {
+    return get().map(ByteBuffer::wrap);
+  }
+
+  @Override
   @Nonnull
   public String getName() {
     return name;

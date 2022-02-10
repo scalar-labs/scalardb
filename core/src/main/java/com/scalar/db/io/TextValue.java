@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Optional;
@@ -117,6 +118,11 @@ public final class TextValue implements Value<Optional<String>> {
   @Override
   public Optional<byte[]> getAsBytes() {
     return value.map(v -> v.getBytes(StandardCharsets.UTF_8));
+  }
+
+  @Override
+  public Optional<ByteBuffer> getAsByteBuffer() {
+    return getAsBytes().map(ByteBuffer::wrap);
   }
 
   @Override

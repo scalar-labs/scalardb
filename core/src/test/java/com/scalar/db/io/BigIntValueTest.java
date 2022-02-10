@@ -104,6 +104,17 @@ public class BigIntValueTest {
   }
 
   @Test
+  public void
+      getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    long expected = BigIntValue.MAX_VALUE;
+    Value<?> value = new BigIntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsByteBuffer).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     long some = BigIntValue.MAX_VALUE;
