@@ -30,7 +30,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SelectStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace_name";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -58,14 +58,14 @@ public class SelectStatementHandlerTest {
 
   private Get prepareGet() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Get prepareGetWithClusteringKey() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -77,7 +77,7 @@ public class SelectStatementHandlerTest {
 
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private void configureBehavior(String expected) {
@@ -97,7 +97,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?;",
                 });
@@ -120,7 +120,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?;",
                 });
@@ -144,7 +144,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -196,7 +196,7 @@ public class SelectStatementHandlerTest {
                   "SELECT",
                   ANY_NAME_1,
                   "FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -222,7 +222,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -250,7 +250,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -281,7 +281,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -310,7 +310,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",
@@ -343,7 +343,7 @@ public class SelectStatementHandlerTest {
             .join(
                 new String[] {
                   "SELECT * FROM",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "WHERE",
                   ANY_NAME_1 + "=?",
                   "AND",

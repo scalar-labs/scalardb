@@ -43,7 +43,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
 public class SelectStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -84,13 +84,13 @@ public class SelectStatementHandlerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class SelectStatementHandlerTest {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Get get = new Get(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Get get = new Get(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     String expectedKeyCondition =
         DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();
@@ -202,7 +202,7 @@ public class SelectStatementHandlerTest {
     when(queryResponse.items()).thenReturn(Collections.singletonList(new HashMap<>()));
 
     Key indexKey = new Key(ANY_NAME_3, ANY_TEXT_3);
-    Scan scan = new Scan(indexKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Scan scan = new Scan(indexKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     String expectedKeyCondition =
         DynamoOperation.COLUMN_NAME_ALIAS + "0 = " + DynamoOperation.VALUE_ALIAS + "0";
     Map<String, AttributeValue> expectedBindMap = new HashMap<>();

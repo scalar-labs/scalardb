@@ -37,7 +37,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class CrudHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_ID_1 = "id1";
   private static final String ANY_ID_2 = "id2";
@@ -76,13 +76,13 @@ public class CrudHandlerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
   private Scan prepareScan() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Scan(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private void configureResult(Result mock, boolean hasClusteringKey, TransactionState state) {
@@ -373,7 +373,7 @@ public class CrudHandlerTest {
 
     Delete delete =
         new Delete(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act
