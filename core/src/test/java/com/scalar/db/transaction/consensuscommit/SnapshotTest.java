@@ -38,7 +38,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class SnapshotTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_ID = "id";
   private static final int ANY_VERSION = 1;
@@ -116,7 +116,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -125,7 +125,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
     return new Get(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -135,7 +135,7 @@ public class SnapshotTest {
     return new Scan(partitionKey)
         .withStart(clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -144,7 +144,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
         .withValue(ANY_NAME_3, ANY_TEXT_3)
         .withValue(ANY_NAME_4, ANY_TEXT_4);
@@ -155,7 +155,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
     return new Put(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -163,7 +163,7 @@ public class SnapshotTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     return new Put(partitionKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME)
         .withValue(ANY_NAME_3, ANY_TEXT_3)
         .withValue(ANY_NAME_4, ANY_TEXT_4);
@@ -174,7 +174,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Delete(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -183,7 +183,7 @@ public class SnapshotTest {
     Key clusteringKey = new Key(ANY_NAME_6, ANY_TEXT_6);
     return new Delete(partitionKey, clusteringKey)
         .withConsistency(Consistency.LINEARIZABLE)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -236,7 +236,7 @@ public class SnapshotTest {
     Put put2 =
         new Put(partitionKey, clusteringKey)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_TEXT_5);
 
@@ -292,7 +292,7 @@ public class SnapshotTest {
     Put put =
         new Put(partitionKey, clusteringKey)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withValue(ANY_NAME_3, ANY_TEXT_5);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
@@ -773,13 +773,13 @@ public class SnapshotTest {
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     Result result1 = mock(TransactionResult.class);
@@ -832,7 +832,7 @@ public class SnapshotTest {
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2))
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withProjection(Attribute.ID)
             .withProjection(Attribute.VERSION);
@@ -844,7 +844,7 @@ public class SnapshotTest {
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_2))
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1))
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
             .withProjection(Attribute.ID)
             .withProjection(Attribute.VERSION);
@@ -904,7 +904,7 @@ public class SnapshotTest {
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_3), true)
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_4), true)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
@@ -944,7 +944,7 @@ public class SnapshotTest {
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, infinite)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
@@ -1018,21 +1018,21 @@ public class SnapshotTest {
             // (-infinite, "text3"]
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_3), true)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text2"]
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), true)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan3 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // (-infinite, "text2")
             .withEnd(new Key(ANY_NAME_2, ANY_TEXT_2), false)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert
@@ -1060,21 +1060,21 @@ public class SnapshotTest {
             // ["text1", infinite)
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_1), true)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan2 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // ["text2", infinite)
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), true)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     Scan scan3 =
         new Scan(new Key(ANY_NAME_1, ANY_TEXT_1))
             // ("text2", infinite)
             .withStart(new Key(ANY_NAME_2, ANY_TEXT_2), false)
             .withConsistency(Consistency.LINEARIZABLE)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
     // Act Assert

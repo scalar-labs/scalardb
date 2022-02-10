@@ -11,7 +11,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class PartitionedMutationsTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -28,7 +28,7 @@ public class PartitionedMutationsTest {
 
   private Put preparePut(Key partitionKey, Key clusteringKey) {
     return new Put(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
