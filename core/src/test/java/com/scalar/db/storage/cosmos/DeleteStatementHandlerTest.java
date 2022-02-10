@@ -42,7 +42,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class DeleteStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -85,7 +85,7 @@ public class DeleteStatementHandlerTest {
     id = ANY_TEXT_1 + ":" + ANY_TEXT_2;
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     return new Delete(partitionKey, clusteringKey)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -134,7 +134,7 @@ public class DeleteStatementHandlerTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     cosmosPartitionKey = new PartitionKey(ANY_TEXT_1);
     Delete delete =
-        new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+        new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
 
     CosmosMutation cosmosMutation = new CosmosMutation(delete, metadata);
     String query = cosmosMutation.makeConditionalQuery();

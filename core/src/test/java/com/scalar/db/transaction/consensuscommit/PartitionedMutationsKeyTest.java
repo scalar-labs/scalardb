@@ -7,7 +7,7 @@ import com.scalar.db.io.Key;
 import org.junit.Test;
 
 public class PartitionedMutationsKeyTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_TEXT_1 = "text1";
@@ -15,12 +15,12 @@ public class PartitionedMutationsKeyTest {
 
   private Put preparePut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    return new Put(partitionKey, null).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Put(partitionKey, null).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   private Put prepareAnotherPut() {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_3);
-    return new Put(partitionKey, null).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    return new Put(partitionKey, null).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
   @Test

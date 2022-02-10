@@ -36,7 +36,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class InsertStatementHandlerTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace_name";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table_name";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -64,7 +64,7 @@ public class InsertStatementHandlerTest {
     return new Put(partitionKey)
         .withValue(ANY_NAME_2, ANY_INT_1)
         .withValue(ANY_NAME_3, ANY_INT_2)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -73,7 +73,7 @@ public class InsertStatementHandlerTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     return new Put(partitionKey, clusteringKey)
         .withValue(ANY_NAME_3, ANY_INT_1)
-        .forNamespace(ANY_KEYSPACE_NAME)
+        .forNamespace(ANY_NAMESPACE_NAME)
         .forTable(ANY_TABLE_NAME);
   }
 
@@ -111,7 +111,7 @@ public class InsertStatementHandlerTest {
             .join(
                 new String[] {
                   "INSERT INTO",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
                   "(?,?,?);",
@@ -135,7 +135,7 @@ public class InsertStatementHandlerTest {
             .join(
                 new String[] {
                   "INSERT INTO",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
                   "(?,?,?);",
@@ -160,7 +160,7 @@ public class InsertStatementHandlerTest {
             .join(
                 new String[] {
                   "INSERT INTO",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
                   "(?,?,?);",
@@ -208,7 +208,7 @@ public class InsertStatementHandlerTest {
             .join(
                 new String[] {
                   "INSERT INTO",
-                  ANY_KEYSPACE_NAME + "." + ANY_TABLE_NAME,
+                  ANY_NAMESPACE_NAME + "." + ANY_TABLE_NAME,
                   "(" + ANY_NAME_1 + "," + ANY_NAME_2 + "," + ANY_NAME_3 + ")",
                   "VALUES",
                   "(?,?,?)",

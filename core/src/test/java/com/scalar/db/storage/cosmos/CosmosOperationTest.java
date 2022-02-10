@@ -21,7 +21,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class CosmosOperationTest {
-  private static final String ANY_KEYSPACE_NAME = "keyspace";
+  private static final String ANY_NAMESPACE_NAME = "namespace";
   private static final String ANY_TABLE_NAME = "table";
   private static final String ANY_NAME_1 = "name1";
   private static final String ANY_NAME_2 = "name2";
@@ -54,7 +54,7 @@ public class CosmosOperationTest {
     when(metadata.getClusteringKeyNames()).thenReturn(new LinkedHashSet<>());
 
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -74,7 +74,7 @@ public class CosmosOperationTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
@@ -93,7 +93,7 @@ public class CosmosOperationTest {
 
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_3, ANY_INT_1);
     Delete delete =
-        new Delete(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+        new Delete(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(delete, metadata);
 
     // Act
@@ -111,7 +111,7 @@ public class CosmosOperationTest {
 
     Key partitionKey =
         new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -129,7 +129,7 @@ public class CosmosOperationTest {
 
     Key partitionKey =
         new Key(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2, ANY_NAME_3, ANY_INT_1);
-    Get get = new Get(partitionKey).forNamespace(ANY_KEYSPACE_NAME).forTable(ANY_TABLE_NAME);
+    Get get = new Get(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
     // Act
@@ -151,7 +151,7 @@ public class CosmosOperationTest {
     Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Get get =
         new Get(partitionKey, clusteringKey)
-            .forNamespace(ANY_KEYSPACE_NAME)
+            .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
     CosmosOperation cosmosOperation = new CosmosOperation(get, metadata);
 
