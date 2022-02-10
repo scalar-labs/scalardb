@@ -1,5 +1,6 @@
 package com.scalar.db.io;
 
+import java.nio.ByteBuffer;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
@@ -100,6 +101,15 @@ public interface Value<T> extends Comparable<Value<T>> {
    * @return the content of this {@code Value}
    */
   default Optional<byte[]> getAsBytes() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the content of this {@code Value} as a byte buffer
+   *
+   * @return the content of this {@code Value}
+   */
+  default Optional<ByteBuffer> getAsByteBuffer() {
     throw new UnsupportedOperationException();
   }
 }

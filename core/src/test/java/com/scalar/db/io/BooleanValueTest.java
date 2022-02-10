@@ -97,6 +97,17 @@ public class BooleanValueTest {
   }
 
   @Test
+  public void
+      getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    boolean expected = Boolean.TRUE;
+    Value<?> value = new BooleanValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsByteBuffer).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     boolean some = Boolean.TRUE;

@@ -61,6 +61,23 @@ public class BlobValueTest {
     assertThat(expected == actual.get()).isFalse();
   }
 
+  @SuppressWarnings("ReferenceEquality")
+  @Test
+  public void getAsByteBuffer_ProperValueGivenInConstructor_ShouldReturnWhatsSet() {
+    // Arrange
+    ByteBuffer expected = ByteBuffer.wrap(SOME_TEXT_BYTES);
+    Value<?> value = new BlobValue(ANY_NAME, expected);
+    expected.clear();
+
+    // Act
+    Optional<ByteBuffer> actual = value.getAsByteBuffer();
+
+    // Assert
+    assertThat(actual.isPresent()).isTrue();
+    assertThat(actual.get()).isEqualTo(expected);
+    assertThat(expected == actual.get()).isFalse();
+  }
+
   @Test
   public void
       getAsBoolean_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {

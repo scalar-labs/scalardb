@@ -101,6 +101,17 @@ public class FloatValueTest {
   }
 
   @Test
+  public void
+      getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    float expected = Float.MAX_VALUE;
+    Value<?> value = new FloatValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsByteBuffer).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     float some = Float.MAX_VALUE;

@@ -107,6 +107,17 @@ public class IntValueTest {
   }
 
   @Test
+  public void
+      getAsByteBuffer_ProperValueGivenInConstructor_ShouldThrowUnsupportedOperationException() {
+    // Arrange
+    int expected = Integer.MAX_VALUE;
+    Value<?> value = new IntValue(ANY_NAME, expected);
+
+    // Act Assert
+    assertThatThrownBy(value::getAsByteBuffer).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
     int some = Integer.MAX_VALUE;
