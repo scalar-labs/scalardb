@@ -63,116 +63,118 @@ public class Put extends Mutation {
    *
    * @param value a {@code Value} to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Put withValue(Value<?> value) {
     values.put(value.getName(), Optional.of(value));
     return this;
   }
 
   /**
-   * Adds the specified Boolean value to the list of put values.
+   * Adds the specified BOOLEAN value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param booleanValue a BOOLEAN value to put
    * @return this object
    */
-  public Put withValue(String name, boolean value) {
-    values.put(name, Optional.of(new BooleanValue(name, value)));
+  public Put withValue(String columnName, boolean booleanValue) {
+    values.put(columnName, Optional.of(new BooleanValue(columnName, booleanValue)));
     return this;
   }
 
   /**
-   * Adds the specified Int value to the list of put values.
+   * Adds the specified INT value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param intValue a INT value to put
    * @return this object
    */
-  public Put withValue(String name, int value) {
-    values.put(name, Optional.of(new IntValue(name, value)));
+  public Put withValue(String columnName, int intValue) {
+    values.put(columnName, Optional.of(new IntValue(columnName, intValue)));
     return this;
   }
 
   /**
-   * Adds the specified BigInt value to the list of put values.
+   * Adds the specified BIGINT value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param bigIntValue a BIGINT value to put
    * @return this object
    */
-  public Put withValue(String name, long value) {
-    values.put(name, Optional.of(new BigIntValue(name, value)));
+  public Put withValue(String columnName, long bigIntValue) {
+    values.put(columnName, Optional.of(new BigIntValue(columnName, bigIntValue)));
     return this;
   }
 
   /**
-   * Adds the specified Float value to the list of put values.
+   * Adds the specified FLOAT value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param floatValue a value to put
    * @return this object
    */
-  public Put withValue(String name, float value) {
-    values.put(name, Optional.of(new FloatValue(name, value)));
+  public Put withValue(String columnName, float floatValue) {
+    values.put(columnName, Optional.of(new FloatValue(columnName, floatValue)));
     return this;
   }
 
   /**
-   * Adds the specified Double value to the list of put values.
+   * Adds the specified DOUBLE value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param doubleValue a DOUBLE value to put
    * @return this object
    */
-  public Put withValue(String name, double value) {
-    values.put(name, Optional.of(new DoubleValue(name, value)));
+  public Put withValue(String columnName, double doubleValue) {
+    values.put(columnName, Optional.of(new DoubleValue(columnName, doubleValue)));
     return this;
   }
 
   /**
-   * Adds the specified Text value to the list of put values.
+   * Adds the specified TEXT value to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param textValue a TEXT value to put
    * @return this object
    */
-  public Put withValue(String name, @Nullable String value) {
-    if (value == null) {
-      withNullValue(name);
+  public Put withValue(String columnName, @Nullable String textValue) {
+    if (textValue == null) {
+      withNullValue(columnName);
     } else {
-      values.put(name, Optional.of(new TextValue(name, value)));
+      values.put(columnName, Optional.of(new TextValue(columnName, textValue)));
     }
     return this;
   }
 
   /**
-   * Adds the specified Blob value to the list of put values.
+   * Adds the specified BLOB value as a byte array to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param blobValue a BLOB value to put
    * @return this object
    */
-  public Put withValue(String name, @Nullable byte[] value) {
-    if (value == null) {
-      withNullValue(name);
+  public Put withValue(String columnName, @Nullable byte[] blobValue) {
+    if (blobValue == null) {
+      withNullValue(columnName);
     } else {
-      values.put(name, Optional.of(new BlobValue(name, value)));
+      values.put(columnName, Optional.of(new BlobValue(columnName, blobValue)));
     }
     return this;
   }
 
   /**
-   * Adds the specified Blob value to the list of put values.
+   * Adds the specified Blob value as a ByteBuffer to the list of put values.
    *
-   * @param name a name of the value
-   * @param value a value to put
+   * @param columnName a column name of the value
+   * @param blobValue a BLOB value to put
    * @return this object
    */
-  public Put withValue(String name, @Nullable ByteBuffer value) {
-    if (value == null) {
-      withNullValue(name);
+  public Put withValue(String columnName, @Nullable ByteBuffer blobValue) {
+    if (blobValue == null) {
+      withNullValue(columnName);
     } else {
-      values.put(name, Optional.of(new BlobValue(name, value)));
+      values.put(columnName, Optional.of(new BlobValue(columnName, blobValue)));
     }
     return this;
   }
@@ -182,20 +184,22 @@ public class Put extends Mutation {
    *
    * @param values a collection of {@code Value}s to put
    * @return this object
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
    */
+  @Deprecated
   public Put withValues(Collection<Value<?>> values) {
     values.forEach(v -> this.values.put(v.getName(), Optional.of(v)));
     return this;
   }
 
   /**
-   * Adds NULL value for the specified name of the value.
+   * Adds NULL value to the list of put values.
    *
-   * @param name a name of the value
+   * @param columnName a column name of the value
    * @return this object
    */
-  public Put withNullValue(String name) {
-    values.put(name, Optional.empty());
+  public Put withNullValue(String columnName) {
+    values.put(columnName, Optional.empty());
     return this;
   }
 
@@ -215,6 +219,9 @@ public class Put extends Mutation {
   /**
    * Returns a map of {@link Value}s.
    *
+   * <p>This method is primarily for internal use. Breaking changes can and will be introduced to
+   * this method. Users should not depend on it.
+   *
    * @return a map of {@code Value}s
    */
   public Map<String, Optional<Value<?>>> getNullableValues() {
@@ -222,15 +229,15 @@ public class Put extends Mutation {
   }
 
   /**
-   * Indicates whether the value for the specified name added to the list of put values is NULL.
+   * Indicates whether the value of the specified column added to the list of put values is NULL.
    *
-   * @param name a name
-   * @return whether the value for the specified name is NULL
+   * @param columnName a column name of the value
+   * @return whether the value of the specified column is NULL
    */
-  public boolean isNullValue(String name) {
-    checkIfExists(name);
+  public boolean isNullValue(String columnName) {
+    checkIfExists(columnName);
 
-    Optional<Value<?>> value = values.get(name);
+    Optional<Value<?>> value = values.get(columnName);
     if (value.isPresent()) {
       if (value.get() instanceof TextValue) {
         return !value.get().getAsString().isPresent();
@@ -243,180 +250,180 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns the BOOLEAN value for the specified name added to the list of put values.
+   * Returns the BOOLEAN value of the specified column added to the list of put values.
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
    * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
-   * @param name a name
-   * @return the BOOLEAN value for the specified name
+   * @param columnName a column name of the value
+   * @return the BOOLEAN value of the specified column
    */
-  public boolean getBooleanValue(String name) {
-    checkIfExists(name);
+  public boolean getBooleanValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return false;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsBoolean();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsBoolean();
   }
 
   /**
-   * Returns the INT value for the specified name added to the list of put values.
+   * Returns the INT value of the specified column added to the list of put values.
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
    * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
-   * @param name a name
-   * @return the INT value for the specified name
+   * @param columnName a column name of the value
+   * @return the INT value of the specified column
    */
-  public int getIntValue(String name) {
-    checkIfExists(name);
+  public int getIntValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return 0;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsInt();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsInt();
   }
 
   /**
-   * Returns the BIGINT value for the specified name added to the list of put values.
+   * Returns the BIGINT value of the specified column added to the list of put values.
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
    * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
-   * @param name a name
-   * @return the BIGINT value for the specified name
+   * @param columnName a column name of the value
+   * @return the BIGINT value of the specified column
    */
-  public long getBigIntValue(String name) {
-    checkIfExists(name);
+  public long getBigIntValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return 0L;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsLong();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsLong();
   }
 
   /**
-   * Returns the FLOAT value for the specified name added to the list of put values.
+   * Returns the FLOAT value of the specified column added to the list of put values.
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
    * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
-   * @param name a name
-   * @return the FLOAT value for the specified name
+   * @param columnName a column name of the value
+   * @return the FLOAT value of the specified column
    */
-  public float getFloatValue(String name) {
-    checkIfExists(name);
+  public float getFloatValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return 0.0F;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsFloat();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsFloat();
   }
 
   /**
-   * Returns the DOUBLE value for the specified name added to the list of put values.
+   * Returns the DOUBLE value of the specified column added to the list of put values.
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
    * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
-   * @param name a name
-   * @return the DOUBLE value for the specified name
+   * @param columnName a column name of the value
+   * @return the DOUBLE value of the specified column
    */
-  public double getDoubleValue(String name) {
-    checkIfExists(name);
+  public double getDoubleValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return 0.0D;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsDouble();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsDouble();
   }
 
   /**
-   * Returns the TEXT value for the specified name added to the list of put values.
+   * Returns the TEXT value of the specified column added to the list of put values.
    *
-   * @param name a name
-   * @return the TEXT value for the specified name. If the value is NULL, null
+   * @param columnName a column name of the value
+   * @return the TEXT value of the specified column. If the value is NULL, null
    */
   @Nullable
-  public String getTextValue(String name) {
-    checkIfExists(name);
+  public String getTextValue(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsString().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsString().orElse(null);
   }
 
   /**
-   * Returns the BLOB value as a ByteBuffer type for the specified name added to the list of put
-   * values.
+   * Returns the BLOB value of the specified column added to the list of put values as a ByteBuffer
+   * type.
    *
-   * @param name a name
-   * @return the BLOB value for the specified name. If the value is NULL, null
+   * @param columnName a column name of the value
+   * @return the BLOB value of the specified column. If the value is NULL, null
    */
   @Nullable
-  public ByteBuffer getBlobValue(String name) {
-    return getBlobValueAsByteBuffer(name);
+  public ByteBuffer getBlobValue(String columnName) {
+    return getBlobValueAsByteBuffer(columnName);
   }
 
   /**
-   * Returns the BLOB value as a ByteBuffer type for the specified name added to the list of put
-   * values.
+   * Returns the BLOB value of the specified column added to the list of put values as a ByteBuffer
+   * type.
    *
-   * @param name a name
-   * @return the BLOB value for the specified name. If the value is NULL, null
+   * @param columnName a column name of the value
+   * @return the BLOB value of the specified column. If the value is NULL, null
    */
   @Nullable
-  public ByteBuffer getBlobValueAsByteBuffer(String name) {
-    checkIfExists(name);
+  public ByteBuffer getBlobValueAsByteBuffer(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsByteBuffer().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsByteBuffer().orElse(null);
   }
 
   /**
-   * Returns the BLOB value as a byte array type for the specified name added to the list of put
-   * values.
+   * Returns the BLOB value of the specified column added to the list of put values as a byte array
+   * type.
    *
-   * @param name a name
-   * @return the BLOB value for the specified name. If the value is NULL, null
+   * @param columnName a column name of the value
+   * @return the BLOB value of the specified column. If the value is NULL, null
    */
   @Nullable
-  public byte[] getBlobValueAsBytes(String name) {
-    checkIfExists(name);
+  public byte[] getBlobValueAsBytes(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNullValue(name)) {
+    if (isNullValue(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsBytes().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsBytes().orElse(null);
   }
 
   /**
-   * Returns the value as an Object type for the specified name added to the list of put values.
+   * Returns the value of the specified column added to the list of put values as an Object type.
    *
    * <p>If the columns is a BOOLEAN type, it returns a {@code Boolean} object. If the columns is an
    * INT type, it returns an {@code Integer} object. If the columns is a BIGINT type, it returns a
@@ -425,32 +432,32 @@ public class Put extends Mutation {
    * returns a {@code String} object. If the columns is a BLOB type, it returns a {@code ByteBuffer}
    * object.
    *
-   * @param name a name
-   * @return the value for the specified name. If the value is NULL, null
+   * @param columnName a column name of the value
+   * @return the value of the specified column. If the value is NULL, null
    */
   @Nullable
-  public Object getValueAsObject(String name) {
-    checkIfExists(name);
-    if (isNullValue(name)) {
+  public Object getValueAsObject(String columnName) {
+    checkIfExists(columnName);
+    if (isNullValue(columnName)) {
       return null;
     }
 
-    Optional<Value<?>> value = values.get(name);
+    Optional<Value<?>> value = values.get(columnName);
     assert value.isPresent();
     if (value.get() instanceof BooleanValue) {
-      return getBooleanValue(name);
+      return getBooleanValue(columnName);
     } else if (value.get() instanceof IntValue) {
-      return getIntValue(name);
+      return getIntValue(columnName);
     } else if (value.get() instanceof BigIntValue) {
-      return getBigIntValue(name);
+      return getBigIntValue(columnName);
     } else if (value.get() instanceof FloatValue) {
-      return getFloatValue(name);
+      return getFloatValue(columnName);
     } else if (value.get() instanceof DoubleValue) {
-      return getDoubleValue(name);
+      return getDoubleValue(columnName);
     } else if (value.get() instanceof TextValue) {
-      return getTextValue(name);
+      return getTextValue(columnName);
     } else if (value.get() instanceof BlobValue) {
-      return getBlobValue(name);
+      return getBlobValue(columnName);
     } else {
       throw new AssertionError();
     }
@@ -459,11 +466,11 @@ public class Put extends Mutation {
   /**
    * Indicates whether the list of put values contains the specified column.
    *
-   * @param name a name
+   * @param columnName a column name of the value
    * @return whether the result contains the specified column name
    */
-  public boolean containsColumn(String name) {
-    return values.containsKey(name);
+  public boolean containsColumn(String columnName) {
+    return values.containsKey(columnName);
   }
 
   /**

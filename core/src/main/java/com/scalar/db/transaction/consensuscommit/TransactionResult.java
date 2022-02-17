@@ -11,7 +11,6 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -20,7 +19,7 @@ public class TransactionResult extends AbstractResult {
   private final Result result;
 
   public TransactionResult(Result result) {
-    // assume that all the values are projected to the result
+    // assume that all the columns are projected to the result
     this.result = checkNotNull(result);
   }
 
@@ -34,74 +33,75 @@ public class TransactionResult extends AbstractResult {
     return result.getClusteringKey();
   }
 
+  @Deprecated
   @Override
-  public Optional<Value<?>> getValue(String name) {
-    return result.getValue(name);
+  public Optional<Value<?>> getValue(String columnName) {
+    return result.getValue(columnName);
   }
 
+  @Deprecated
   @Override
-  @Nonnull
   public Map<String, Value<?>> getValues() {
     return result.getValues();
   }
 
   @Override
-  public boolean isNull(String name) {
-    return result.isNull(name);
+  public boolean isNull(String columnName) {
+    return result.isNull(columnName);
   }
 
   @Override
-  public boolean getBoolean(String name) {
-    return result.getBoolean(name);
+  public boolean getBoolean(String columnName) {
+    return result.getBoolean(columnName);
   }
 
   @Override
-  public int getInt(String name) {
-    return result.getInt(name);
+  public int getInt(String columnName) {
+    return result.getInt(columnName);
   }
 
   @Override
-  public long getBigInt(String name) {
-    return result.getBigInt(name);
+  public long getBigInt(String columnName) {
+    return result.getBigInt(columnName);
   }
 
   @Override
-  public float getFloat(String name) {
-    return result.getFloat(name);
+  public float getFloat(String columnName) {
+    return result.getFloat(columnName);
   }
 
   @Override
-  public double getDouble(String name) {
-    return result.getDouble(name);
-  }
-
-  @Nullable
-  @Override
-  public String getText(String name) {
-    return result.getText(name);
+  public double getDouble(String columnName) {
+    return result.getDouble(columnName);
   }
 
   @Nullable
   @Override
-  public ByteBuffer getBlobAsByteBuffer(String name) {
-    return result.getBlobAsByteBuffer(name);
+  public String getText(String columnName) {
+    return result.getText(columnName);
   }
 
   @Nullable
   @Override
-  public byte[] getBlobAsBytes(String name) {
-    return result.getBlobAsBytes(name);
+  public ByteBuffer getBlobAsByteBuffer(String columnName) {
+    return result.getBlobAsByteBuffer(columnName);
   }
 
   @Nullable
   @Override
-  public Object getAsObject(String name) {
-    return result.getAsObject(name);
+  public byte[] getBlobAsBytes(String columnName) {
+    return result.getBlobAsBytes(columnName);
+  }
+
+  @Nullable
+  @Override
+  public Object getAsObject(String columnName) {
+    return result.getAsObject(columnName);
   }
 
   @Override
-  public boolean contains(String name) {
-    return result.contains(name);
+  public boolean contains(String columnName) {
+    return result.contains(columnName);
   }
 
   @Override

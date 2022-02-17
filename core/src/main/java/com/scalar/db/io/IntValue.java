@@ -9,7 +9,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A {@code Value} for a 32-bit signed integer
+ * A {@code Value} (column) for a 32-bit signed integer
  *
  * @author Hiroyuki Yamada
  */
@@ -22,8 +22,8 @@ public final class IntValue implements Value<Integer> {
   /**
    * Constructs a {@code IntValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value}
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column)
    */
   public IntValue(String name, int value) {
     this.name = checkNotNull(name);
@@ -31,9 +31,10 @@ public final class IntValue implements Value<Integer> {
   }
 
   /**
-   * Constructs a {@code IntValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code IntValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    */
   public IntValue(int value) {
     this(ANONYMOUS, value);
