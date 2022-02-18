@@ -221,6 +221,117 @@ public class PutTest {
   }
 
   @Test
+  public void withXXXValue_ProperValuesGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    Put put = preparePut();
+
+    // Act
+    put.withBooleanValue("val1", true)
+        .withIntValue("val2", 5678)
+        .withBigIntValue("val3", 1234L)
+        .withFloatValue("val4", 4.56f)
+        .withDoubleValue("val5", 1.23)
+        .withTextValue("val6", "string_value")
+        .withBlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))
+        .withBlobValue("val8", ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)))
+        .withNullValue("val9");
+
+    // Assert
+    Map<String, Value<?>> values = put.getValues();
+    assertThat(values.size()).isEqualTo(9);
+    assertThat(values.get("val1")).isEqualTo(new BooleanValue("val1", true));
+    assertThat(values.get("val2")).isEqualTo(new IntValue("val2", 5678));
+    assertThat(values.get("val3")).isEqualTo(new BigIntValue("val3", 1234L));
+    assertThat(values.get("val4")).isEqualTo(new FloatValue("val4", 4.56f));
+    assertThat(values.get("val5")).isEqualTo(new DoubleValue("val5", 1.23));
+    assertThat(values.get("val6")).isEqualTo(new TextValue("val6", "string_value"));
+    assertThat(values.get("val7"))
+        .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values.get("val8"))
+        .isEqualTo(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values).containsKey("val9");
+    assertThat(values.get("val9")).isNull();
+
+    Map<String, Optional<Value<?>>> nullableValues = put.getNullableValues();
+    assertThat(nullableValues.size()).isEqualTo(9);
+    assertThat(nullableValues.get("val1")).isEqualTo(Optional.of(new BooleanValue("val1", true)));
+    assertThat(nullableValues.get("val2")).isEqualTo(Optional.of(new IntValue("val2", 5678)));
+    assertThat(nullableValues.get("val3")).isEqualTo(Optional.of(new BigIntValue("val3", 1234L)));
+    assertThat(nullableValues.get("val4")).isEqualTo(Optional.of(new FloatValue("val4", 4.56f)));
+    assertThat(nullableValues.get("val5")).isEqualTo(Optional.of(new DoubleValue("val5", 1.23)));
+    assertThat(nullableValues.get("val6"))
+        .isEqualTo(Optional.of(new TextValue("val6", "string_value")));
+    assertThat(nullableValues.get("val7"))
+        .isEqualTo(
+            Optional.of(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))));
+    assertThat(nullableValues.get("val8"))
+        .isEqualTo(
+            Optional.of(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8))));
+    assertThat(nullableValues.get("val9")).isEqualTo(Optional.empty());
+
+    assertThat(put.getContainedColumnNames())
+        .isEqualTo(
+            ImmutableSet.of(
+                "val1", "val2", "val3", "val4", "val5", "val6", "val7", "val8", "val9"));
+
+    assertThat(put.containsColumn("val1")).isTrue();
+    assertThat(put.isNullValue("val1")).isFalse();
+    assertThat(put.getBooleanValue("val1")).isTrue();
+    assertThat(put.getValueAsObject("val1")).isEqualTo(true);
+
+    assertThat(put.containsColumn("val2")).isTrue();
+    assertThat(put.isNullValue("val2")).isFalse();
+    assertThat(put.getIntValue("val2")).isEqualTo(5678);
+    assertThat(put.getValueAsObject("val2")).isEqualTo(5678);
+
+    assertThat(put.containsColumn("val3")).isTrue();
+    assertThat(put.isNullValue("val3")).isFalse();
+    assertThat(put.getBigIntValue("val3")).isEqualTo(1234L);
+    assertThat(put.getValueAsObject("val3")).isEqualTo(1234L);
+
+    assertThat(put.containsColumn("val4")).isTrue();
+    assertThat(put.isNullValue("val4")).isFalse();
+    assertThat(put.getFloatValue("val4")).isEqualTo(4.56f);
+    assertThat(put.getValueAsObject("val4")).isEqualTo(4.56f);
+
+    assertThat(put.containsColumn("val5")).isTrue();
+    assertThat(put.isNullValue("val5")).isFalse();
+    assertThat(put.getDoubleValue("val5")).isEqualTo(1.23);
+    assertThat(put.getValueAsObject("val5")).isEqualTo(1.23);
+
+    assertThat(put.containsColumn("val6")).isTrue();
+    assertThat(put.isNullValue("val6")).isFalse();
+    assertThat(put.getTextValue("val6")).isEqualTo("string_value");
+    assertThat(put.getValueAsObject("val6")).isEqualTo("string_value");
+
+    assertThat(put.containsColumn("val7")).isTrue();
+    assertThat(put.isNullValue("val7")).isFalse();
+    assertThat(put.getBlobValue("val7"))
+        .isEqualTo(ByteBuffer.wrap("blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(put.getBlobValueAsByteBuffer("val7"))
+        .isEqualTo(ByteBuffer.wrap("blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(put.getBlobValueAsBytes("val7"))
+        .isEqualTo("blob_value".getBytes(StandardCharsets.UTF_8));
+    assertThat(put.getValueAsObject("val7"))
+        .isEqualTo(ByteBuffer.wrap("blob_value".getBytes(StandardCharsets.UTF_8)));
+
+    assertThat(put.containsColumn("val8")).isTrue();
+    assertThat(put.isNullValue("val8")).isFalse();
+    assertThat(put.getBlobValue("val8"))
+        .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(put.getBlobValueAsByteBuffer("val8"))
+        .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(put.getBlobValueAsBytes("val8"))
+        .isEqualTo("blob_value2".getBytes(StandardCharsets.UTF_8));
+    assertThat(put.getValueAsObject("val8"))
+        .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
+
+    assertThat(put.containsColumn("val9")).isTrue();
+    assertThat(put.isNullValue("val9")).isTrue();
+    assertThat(put.getValueAsObject("val9")).isNull();
+  }
+
+  @Test
   public void withValues_ProperValueGiven_ShouldReturnWhatsSet() {
     // Arrange
     Put put = preparePut();
