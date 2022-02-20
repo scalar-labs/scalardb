@@ -20,27 +20,32 @@ public abstract class AbstractDistributedStorage implements DistributedStorage {
     tableName = Optional.empty();
   }
 
+  @Deprecated
   @Override
   public void with(String namespace, String tableName) {
     this.namespace = Optional.ofNullable(namespace);
     this.tableName = Optional.ofNullable(tableName);
   }
 
+  @Deprecated
   @Override
   public void withNamespace(String namespace) {
     this.namespace = Optional.ofNullable(namespace);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getNamespace() {
     return namespace;
   }
 
+  @Deprecated
   @Override
   public void withTable(String tableName) {
     this.tableName = Optional.ofNullable(tableName);
   }
 
+  @Deprecated
   @Override
   public Optional<String> getTable() {
     return tableName;
