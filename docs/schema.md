@@ -6,9 +6,9 @@ This document briefly explains the Scalar DB data model, how data types are mapp
 
 ## Data model
 
-The data model of Scalar DB is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of values. The value is uniquely mapped by a primary key composed of partition-key, clustering-key and value-name as described in the following scheme.
+The data model of Scalar DB is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of columns. The column value is uniquely mapped by a primary key composed of partition-key, clustering-key and column-name as described in the following scheme.
 
-(partition-key, clustering-key, value-name) -> value-content
+(partition-key, clustering-key, column-name) -> column-value
 
 For each database implementation, there is an adapter that converts the database specific data model into the Scalar DB data model, thus; users usually don't need to care about how it is converted and can design database schema on the basis of the Scalar DB data model. 
 
@@ -26,10 +26,10 @@ Here are the supported data types in Scalar DB and their mapping to the data typ
 | TEXT      | text      | string (JSON)  | S        | longtext | text             | varchar2(4000) | varchar(8000)   |
 | BLOB      | blob      | string (JSON)  | B        | longblob | bytea            | blob           | varbinary(8000) |
 
-## Internal metadata
+## Internal metadata for Consensus Commit
 
-Scalar DB manages metadata (e.g., transaction ID, record version, transaction status) stored along with the actual records to handle transactions properly.
-Thus, along with any required values by the application, additional values for the metadata need to be defined in the schema.
+Scalar DB (Consensus Commit) manages metadata (e.g., transaction ID, record version, transaction status) stored along with the actual records to handle transactions properly.
+Thus, along with any required columns by the application, additional columns for the metadata need to be defined in the schema.
 
 ## Schema creation
 
