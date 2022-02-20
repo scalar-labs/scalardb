@@ -277,7 +277,10 @@ public class Scan extends Selection {
      *
      * @param columnName the column name of a clustering key in an entry to order
      * @param order the {@code Order} of results
+     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #asc(String)}
+     *     or {@link #desc(String)} to create an Ordering object
      */
+    @Deprecated
     public Ordering(String columnName, Order order) {
       this.columnName = columnName;
       this.order = order;
@@ -349,6 +352,26 @@ public class Scan extends Selection {
     public enum Order {
       ASC,
       DESC,
+    }
+
+    /**
+     * Creates an Ordering object for ASC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering asc(String columnName) {
+      return new Ordering(columnName, Order.ASC);
+    }
+
+    /**
+     * Creates an Ordering object for DESC order with the specified column.
+     *
+     * @param columnName a name of a target column
+     * @return an Ordering object
+     */
+    public static Ordering desc(String columnName) {
+      return new Ordering(columnName, Order.DESC);
     }
   }
 }
