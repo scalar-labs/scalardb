@@ -230,84 +230,84 @@ public class MergedResultTest {
     assertThat(mergedResult.contains(ANY_NAME_1)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_1)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(mergedResult.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(mergedResult.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(mergedResult.contains(ANY_NAME_2)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_2)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(mergedResult.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(mergedResult.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(mergedResult.contains(ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_3)).isFalse();
     assertThat(mergedResult.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_3);
-    assertThat(mergedResult.getObject(ANY_NAME_3)).isEqualTo(ANY_INT_3);
+    assertThat(mergedResult.get(ANY_NAME_3)).isEqualTo(ANY_INT_3);
 
     assertThat(mergedResult.contains(ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_4)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_4)).isEqualTo(ANY_TEXT_3);
-    assertThat(mergedResult.getObject(ANY_NAME_4)).isEqualTo(ANY_TEXT_3);
+    assertThat(mergedResult.get(ANY_NAME_4)).isEqualTo(ANY_TEXT_3);
 
     assertThat(mergedResult.contains(Attribute.ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.ID)).isFalse();
     assertThat(mergedResult.getText(Attribute.ID)).isEqualTo(ANY_ID_2);
-    assertThat(mergedResult.getObject(Attribute.ID)).isEqualTo(ANY_ID_2);
+    assertThat(mergedResult.get(Attribute.ID)).isEqualTo(ANY_ID_2);
 
     assertThat(mergedResult.contains(Attribute.PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.PREPARED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
-    assertThat(mergedResult.getObject(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
+    assertThat(mergedResult.get(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
 
     assertThat(mergedResult.contains(Attribute.COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.COMMITTED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
-    assertThat(mergedResult.getObject(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
+    assertThat(mergedResult.get(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
 
     assertThat(mergedResult.contains(Attribute.STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.STATE)).isFalse();
     assertThat(mergedResult.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(mergedResult.getObject(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(mergedResult.get(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(mergedResult.contains(Attribute.VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.VERSION)).isFalse();
     assertThat(mergedResult.getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
-    assertThat(mergedResult.getObject(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
+    assertThat(mergedResult.get(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isFalse();
     assertThat(mergedResult.getText(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_ID)).isFalse();
     assertThat(mergedResult.getText(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREPARED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_COMMITTED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
+    assertThat(mergedResult.get(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_STATE)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_STATE))
         .isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(mergedResult.getObject(Attribute.BEFORE_STATE))
+    assertThat(mergedResult.get(Attribute.BEFORE_STATE))
         .isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(mergedResult.contains(Attribute.BEFORE_VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_VERSION)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
   }
 
   @Test
@@ -375,82 +375,82 @@ public class MergedResultTest {
     assertThat(mergedResult.contains(ANY_NAME_1)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_1)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(mergedResult.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(mergedResult.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(mergedResult.contains(ANY_NAME_2)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_2)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(mergedResult.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(mergedResult.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(mergedResult.contains(ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_3)).isFalse();
     assertThat(mergedResult.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_3);
-    assertThat(mergedResult.getObject(ANY_NAME_3)).isEqualTo(ANY_INT_3);
+    assertThat(mergedResult.get(ANY_NAME_3)).isEqualTo(ANY_INT_3);
 
     assertThat(mergedResult.contains(ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_4)).isTrue();
     assertThat(mergedResult.getText(ANY_NAME_4)).isNull();
-    assertThat(mergedResult.getObject(ANY_NAME_4)).isNull();
+    assertThat(mergedResult.get(ANY_NAME_4)).isNull();
 
     assertThat(mergedResult.contains(Attribute.ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.ID)).isTrue();
     assertThat(mergedResult.getText(Attribute.ID)).isNull();
-    assertThat(mergedResult.getObject(Attribute.ID)).isNull();
+    assertThat(mergedResult.get(Attribute.ID)).isNull();
 
     assertThat(mergedResult.contains(Attribute.PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.PREPARED_AT)).isTrue();
     assertThat(mergedResult.getBigInt(Attribute.PREPARED_AT)).isEqualTo(0L);
-    assertThat(mergedResult.getObject(Attribute.PREPARED_AT)).isNull();
+    assertThat(mergedResult.get(Attribute.PREPARED_AT)).isNull();
 
     assertThat(mergedResult.contains(Attribute.COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.COMMITTED_AT)).isTrue();
     assertThat(mergedResult.getBigInt(Attribute.COMMITTED_AT)).isEqualTo(0L);
-    assertThat(mergedResult.getObject(Attribute.COMMITTED_AT)).isNull();
+    assertThat(mergedResult.get(Attribute.COMMITTED_AT)).isNull();
 
     assertThat(mergedResult.contains(Attribute.STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.STATE)).isTrue();
     assertThat(mergedResult.getInt(Attribute.STATE)).isEqualTo(0);
-    assertThat(mergedResult.getObject(Attribute.STATE)).isNull();
+    assertThat(mergedResult.get(Attribute.STATE)).isNull();
 
     assertThat(mergedResult.contains(Attribute.VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.VERSION)).isTrue();
     assertThat(mergedResult.getInt(Attribute.VERSION)).isEqualTo(0);
-    assertThat(mergedResult.getObject(Attribute.VERSION)).isNull();
+    assertThat(mergedResult.get(Attribute.VERSION)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
     assertThat(mergedResult.getInt(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(0);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isTrue();
     assertThat(mergedResult.getText(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isNull();
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_ID)).isTrue();
     assertThat(mergedResult.getText(Attribute.BEFORE_ID)).isNull();
-    assertThat(mergedResult.getObject(Attribute.BEFORE_ID)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_ID)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREPARED_AT)).isTrue();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_PREPARED_AT)).isEqualTo(0L);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREPARED_AT)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_PREPARED_AT)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_COMMITTED_AT)).isTrue();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(0L);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_COMMITTED_AT)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_COMMITTED_AT)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_STATE)).isTrue();
     assertThat(mergedResult.getInt(Attribute.BEFORE_STATE)).isEqualTo(0);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_STATE)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_STATE)).isNull();
 
     assertThat(mergedResult.contains(Attribute.BEFORE_VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_VERSION)).isTrue();
     assertThat(mergedResult.getInt(Attribute.BEFORE_VERSION)).isEqualTo(0);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_VERSION)).isNull();
+    assertThat(mergedResult.get(Attribute.BEFORE_VERSION)).isNull();
   }
 
   @Test
@@ -519,84 +519,84 @@ public class MergedResultTest {
     assertThat(mergedResult.contains(ANY_NAME_1)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_1)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(mergedResult.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(mergedResult.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(mergedResult.contains(ANY_NAME_2)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_2)).isFalse();
     assertThat(mergedResult.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(mergedResult.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(mergedResult.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(mergedResult.contains(ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_3)).isFalse();
     assertThat(mergedResult.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_3);
-    assertThat(mergedResult.getObject(ANY_NAME_3)).isEqualTo(ANY_INT_3);
+    assertThat(mergedResult.get(ANY_NAME_3)).isEqualTo(ANY_INT_3);
 
     assertThat(mergedResult.contains(ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(ANY_NAME_4)).isTrue();
     assertThat(mergedResult.getText(ANY_NAME_4)).isNull();
-    assertThat(mergedResult.getObject(ANY_NAME_4)).isNull();
+    assertThat(mergedResult.get(ANY_NAME_4)).isNull();
 
     assertThat(mergedResult.contains(Attribute.ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.ID)).isFalse();
     assertThat(mergedResult.getText(Attribute.ID)).isEqualTo(ANY_ID_2);
-    assertThat(mergedResult.getObject(Attribute.ID)).isEqualTo(ANY_ID_2);
+    assertThat(mergedResult.get(Attribute.ID)).isEqualTo(ANY_ID_2);
 
     assertThat(mergedResult.contains(Attribute.PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.PREPARED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
-    assertThat(mergedResult.getObject(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
+    assertThat(mergedResult.get(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
 
     assertThat(mergedResult.contains(Attribute.COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.COMMITTED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
-    assertThat(mergedResult.getObject(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
+    assertThat(mergedResult.get(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
 
     assertThat(mergedResult.contains(Attribute.STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.STATE)).isFalse();
     assertThat(mergedResult.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(mergedResult.getObject(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(mergedResult.get(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(mergedResult.contains(Attribute.VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.VERSION)).isFalse();
     assertThat(mergedResult.getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
-    assertThat(mergedResult.getObject(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
+    assertThat(mergedResult.get(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isFalse();
     assertThat(mergedResult.getText(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREFIX + ANY_NAME_4)).isEqualTo(ANY_TEXT_4);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_ID)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_ID)).isFalse();
     assertThat(mergedResult.getText(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_PREPARED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_PREPARED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_COMMITTED_AT)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_COMMITTED_AT)).isFalse();
     assertThat(mergedResult.getBigInt(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
+    assertThat(mergedResult.get(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
 
     assertThat(mergedResult.contains(Attribute.BEFORE_STATE)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_STATE)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_STATE))
         .isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(mergedResult.getObject(Attribute.BEFORE_STATE))
+    assertThat(mergedResult.get(Attribute.BEFORE_STATE))
         .isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(mergedResult.contains(Attribute.BEFORE_VERSION)).isTrue();
     assertThat(mergedResult.isNull(Attribute.BEFORE_VERSION)).isFalse();
     assertThat(mergedResult.getInt(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
-    assertThat(mergedResult.getObject(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
+    assertThat(mergedResult.get(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
   }
 
   @Test

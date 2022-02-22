@@ -147,9 +147,9 @@ public class FilteredResult extends AbstractResult {
 
   @Nullable
   @Override
-  public Object getObject(String name) {
+  public Object get(String name) {
     checkIfExists(name);
-    return original.getObject(name);
+    return original.get(name);
   }
 
   @Override

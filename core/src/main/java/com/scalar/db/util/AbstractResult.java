@@ -23,7 +23,7 @@ public abstract class AbstractResult implements Result {
               Collections.sort(containedColumnNames);
               Object[] values = new Object[containedColumnNames.size()];
               for (int i = 0; i < containedColumnNames.size(); i++) {
-                values[i] = getObject(containedColumnNames.get(i));
+                values[i] = get(containedColumnNames.get(i));
               }
               return Objects.hash(values);
             });
@@ -54,8 +54,8 @@ public abstract class AbstractResult implements Result {
       return false;
     }
     for (String containedColumnName : getContainedColumnNames()) {
-      Object value = getObject(containedColumnName);
-      Object otherValue = other.getObject(containedColumnName);
+      Object value = get(containedColumnName);
+      Object otherValue = other.get(containedColumnName);
       if (value == null && otherValue == null) {
         continue;
       }
@@ -72,7 +72,7 @@ public abstract class AbstractResult implements Result {
   @Override
   public String toString() {
     ToStringHelper toStringHelper = MoreObjects.toStringHelper(this);
-    getContainedColumnNames().forEach(c -> toStringHelper.add(c, getObject(c)));
+    getContainedColumnNames().forEach(c -> toStringHelper.add(c, get(c)));
     return toStringHelper.toString();
   }
 }

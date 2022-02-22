@@ -62,7 +62,7 @@ public interface Result {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNull(String)} before calling
-   * this method, or use {@link #getObject(String)} instead.
+   * this method, or use {@link #get(String)} instead.
    *
    * @param name a name
    * @return the BOOLEAN value for the specified name as a Java boolean type
@@ -74,7 +74,7 @@ public interface Result {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNull(String)} before calling
-   * this method, or use {@link #getObject(String)} instead.
+   * this method, or use {@link #get(String)} instead.
    *
    * @param name a name
    * @return the INT value for the specified name as a Java int type
@@ -86,7 +86,7 @@ public interface Result {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNull(String)} before calling
-   * this method, or use {@link #getObject(String)} instead.
+   * this method, or use {@link #get(String)} instead.
    *
    * @param name a name
    * @return the BIGINT value for the specified name as a Java long type
@@ -98,7 +98,7 @@ public interface Result {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNull(String)} before
-   * calling this method, or use {@link #getObject(String)} instead.
+   * calling this method, or use {@link #get(String)} instead.
    *
    * @param name a name
    * @return the FLOAT value for the specified name as a Java float type
@@ -110,7 +110,7 @@ public interface Result {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNull(String)} before
-   * calling this method, or use {@link #getObject(String)} instead.
+   * calling this method, or use {@link #get(String)} instead.
    *
    * @param name a name
    * @return the DOUBLE value for the specified name as a Java double type
@@ -172,7 +172,7 @@ public interface Result {
    * @return the value for the specified name as a Java Object type. If the value is NULL, null
    */
   @Nullable
-  Object getObject(String name);
+  Object get(String name);
 
   /**
    * Indicates whether it contains the specified column

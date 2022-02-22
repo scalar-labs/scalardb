@@ -123,42 +123,42 @@ public class ResultImplTest {
     assertThat(result.contains(ANY_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_NAME_1)).isFalse();
     assertThat(result.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(result.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(result.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(result.contains(ANY_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_NAME_2)).isFalse();
     assertThat(result.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(result.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(result.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(result.contains(ANY_COLUMN_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_1)).isFalse();
     assertThat(result.getBoolean(ANY_COLUMN_NAME_1)).isEqualTo(true);
-    assertThat(result.getObject(ANY_COLUMN_NAME_1)).isEqualTo(true);
+    assertThat(result.get(ANY_COLUMN_NAME_1)).isEqualTo(true);
 
     assertThat(result.contains(ANY_COLUMN_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_2)).isFalse();
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
     assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_5)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_5)).isFalse();
     assertThat(result.getDouble(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_6)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_6)).isFalse();
     assertThat(result.getText(ANY_COLUMN_NAME_6)).isEqualTo("string");
-    assertThat(result.getObject(ANY_COLUMN_NAME_6)).isEqualTo("string");
+    assertThat(result.get(ANY_COLUMN_NAME_6)).isEqualTo("string");
 
     assertThat(result.contains(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_7)).isFalse();
@@ -168,7 +168,7 @@ public class ResultImplTest {
         .isEqualTo(ByteBuffer.wrap("bytes".getBytes(StandardCharsets.UTF_8)));
     assertThat(result.getBlobAsBytes(ANY_COLUMN_NAME_7))
         .isEqualTo("bytes".getBytes(StandardCharsets.UTF_8));
-    assertThat(result.getObject(ANY_COLUMN_NAME_7))
+    assertThat(result.get(ANY_COLUMN_NAME_7))
         .isEqualTo(ByteBuffer.wrap("bytes".getBytes(StandardCharsets.UTF_8)));
   }
 
@@ -227,49 +227,49 @@ public class ResultImplTest {
     assertThat(result.contains(ANY_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_NAME_1)).isFalse();
     assertThat(result.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(result.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(result.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(result.contains(ANY_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_NAME_2)).isFalse();
     assertThat(result.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(result.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(result.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(result.contains(ANY_COLUMN_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_1)).isTrue();
     assertThat(result.getBoolean(ANY_COLUMN_NAME_1)).isEqualTo(false);
-    assertThat(result.getObject(ANY_COLUMN_NAME_1)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_1)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_2)).isTrue();
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(0);
-    assertThat(result.getObject(ANY_COLUMN_NAME_2)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_2)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(0L);
-    assertThat(result.getObject(ANY_COLUMN_NAME_3)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_3)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(0.0F);
-    assertThat(result.getObject(ANY_COLUMN_NAME_4)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_4)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_5)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_5)).isTrue();
     assertThat(result.getDouble(ANY_COLUMN_NAME_5)).isEqualTo(0.0D);
-    assertThat(result.getObject(ANY_COLUMN_NAME_5)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_5)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_6)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_6)).isTrue();
     assertThat(result.getText(ANY_COLUMN_NAME_6)).isNull();
-    assertThat(result.getObject(ANY_COLUMN_NAME_6)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_6)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(result.getBlob(ANY_COLUMN_NAME_7)).isNull();
     assertThat(result.getBlobAsByteBuffer(ANY_COLUMN_NAME_7)).isNull();
     assertThat(result.getBlobAsBytes(ANY_COLUMN_NAME_7)).isNull();
-    assertThat(result.getObject(ANY_COLUMN_NAME_7)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_7)).isNull();
   }
 
   @Test
@@ -338,49 +338,49 @@ public class ResultImplTest {
     assertThat(result.contains(ANY_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_NAME_1)).isFalse();
     assertThat(result.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(result.getObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(result.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(result.contains(ANY_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_NAME_2)).isFalse();
     assertThat(result.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(result.getObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(result.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(result.contains(ANY_COLUMN_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_1)).isFalse();
     assertThat(result.getBoolean(ANY_COLUMN_NAME_1)).isEqualTo(true);
-    assertThat(result.getObject(ANY_COLUMN_NAME_1)).isEqualTo(true);
+    assertThat(result.get(ANY_COLUMN_NAME_1)).isEqualTo(true);
 
     assertThat(result.contains(ANY_COLUMN_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_2)).isFalse();
     assertThat(result.getInt(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_2)).isEqualTo(Integer.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_3)).isFalse();
     assertThat(result.getBigInt(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_3)).isEqualTo(BigIntValue.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_4)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_4)).isFalse();
     assertThat(result.getFloat(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_4)).isEqualTo(Float.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_5)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_5)).isFalse();
     assertThat(result.getDouble(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
-    assertThat(result.getObject(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
+    assertThat(result.get(ANY_COLUMN_NAME_5)).isEqualTo(Double.MAX_VALUE);
 
     assertThat(result.contains(ANY_COLUMN_NAME_6)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_6)).isTrue();
     assertThat(result.getText(ANY_COLUMN_NAME_6)).isNull();
-    assertThat(result.getObject(ANY_COLUMN_NAME_6)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_6)).isNull();
 
     assertThat(result.contains(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(result.isNull(ANY_COLUMN_NAME_7)).isTrue();
     assertThat(result.getBlob(ANY_COLUMN_NAME_7)).isNull();
     assertThat(result.getBlobAsByteBuffer(ANY_COLUMN_NAME_7)).isNull();
     assertThat(result.getBlobAsBytes(ANY_COLUMN_NAME_7)).isNull();
-    assertThat(result.getObject(ANY_COLUMN_NAME_7)).isNull();
+    assertThat(result.get(ANY_COLUMN_NAME_7)).isNull();
   }
 
   @Test
