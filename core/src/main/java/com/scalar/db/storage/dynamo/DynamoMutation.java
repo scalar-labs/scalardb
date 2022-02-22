@@ -81,7 +81,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String unusedName : put.getValues().keySet()) {
+    for (String unusedName : put.getNullableValues().keySet()) {
       expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
       i++;
     }
@@ -117,7 +117,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String name : put.getValues().keySet()) {
+    for (String name : put.getNullableValues().keySet()) {
       columnMap.put(COLUMN_NAME_ALIAS + i, name);
       i++;
     }
@@ -169,7 +169,7 @@ public class DynamoMutation extends DynamoOperation {
       put.getClusteringKey().ifPresent(k -> k.get().forEach(v -> v.accept(binder)));
     }
 
-    put.getValues()
+    put.getNullableValues()
         .forEach(
             (k, v) -> {
               if (v.isPresent()) {

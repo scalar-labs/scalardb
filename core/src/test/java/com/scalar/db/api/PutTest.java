@@ -88,6 +88,9 @@ public class PutTest {
 
     // Assert
     assertThat(put.getValues())
+        .isEqualTo(ImmutableMap.of(value1.getName(), value1, value2.getName(), value2));
+
+    assertThat(put.getNullableValues())
         .isEqualTo(
             ImmutableMap.of(
                 value1.getName(), Optional.of(value1), value2.getName(), Optional.of(value2)));
@@ -110,21 +113,37 @@ public class PutTest {
         .withNullValue("val9");
 
     // Assert
-    Map<String, Optional<Value<?>>> values = put.getValues();
+    Map<String, Value<?>> values = put.getValues();
     assertThat(values.size()).isEqualTo(9);
-    assertThat(values.get("val1")).isEqualTo(Optional.of(new BooleanValue("val1", true)));
-    assertThat(values.get("val2")).isEqualTo(Optional.of(new IntValue("val2", 5678)));
-    assertThat(values.get("val3")).isEqualTo(Optional.of(new BigIntValue("val3", 1234L)));
-    assertThat(values.get("val4")).isEqualTo(Optional.of(new FloatValue("val4", 4.56f)));
-    assertThat(values.get("val5")).isEqualTo(Optional.of(new DoubleValue("val5", 1.23)));
-    assertThat(values.get("val6")).isEqualTo(Optional.of(new TextValue("val6", "string_value")));
+    assertThat(values.get("val1")).isEqualTo(new BooleanValue("val1", true));
+    assertThat(values.get("val2")).isEqualTo(new IntValue("val2", 5678));
+    assertThat(values.get("val3")).isEqualTo(new BigIntValue("val3", 1234L));
+    assertThat(values.get("val4")).isEqualTo(new FloatValue("val4", 4.56f));
+    assertThat(values.get("val5")).isEqualTo(new DoubleValue("val5", 1.23));
+    assertThat(values.get("val6")).isEqualTo(new TextValue("val6", "string_value"));
     assertThat(values.get("val7"))
+        .isEqualTo(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values.get("val8"))
+        .isEqualTo(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values).containsKey("val9");
+    assertThat(values.get("val9")).isNull();
+
+    Map<String, Optional<Value<?>>> nullableValues = put.getNullableValues();
+    assertThat(nullableValues.size()).isEqualTo(9);
+    assertThat(nullableValues.get("val1")).isEqualTo(Optional.of(new BooleanValue("val1", true)));
+    assertThat(nullableValues.get("val2")).isEqualTo(Optional.of(new IntValue("val2", 5678)));
+    assertThat(nullableValues.get("val3")).isEqualTo(Optional.of(new BigIntValue("val3", 1234L)));
+    assertThat(nullableValues.get("val4")).isEqualTo(Optional.of(new FloatValue("val4", 4.56f)));
+    assertThat(nullableValues.get("val5")).isEqualTo(Optional.of(new DoubleValue("val5", 1.23)));
+    assertThat(nullableValues.get("val6"))
+        .isEqualTo(Optional.of(new TextValue("val6", "string_value")));
+    assertThat(nullableValues.get("val7"))
         .isEqualTo(
             Optional.of(new BlobValue("val7", "blob_value".getBytes(StandardCharsets.UTF_8))));
-    assertThat(values.get("val8"))
+    assertThat(nullableValues.get("val8"))
         .isEqualTo(
             Optional.of(new BlobValue("val8", "blob_value2".getBytes(StandardCharsets.UTF_8))));
-    assertThat(values.get("val9")).isEqualTo(Optional.empty());
+    assertThat(nullableValues.get("val9")).isEqualTo(Optional.empty());
   }
 
   @Test
@@ -139,13 +158,16 @@ public class PutTest {
 
     // Assert
     assertThat(put.getValues())
+        .isEqualTo(ImmutableMap.of(value1.getName(), value1, value2.getName(), value2));
+
+    assertThat(put.getNullableValues())
         .isEqualTo(
             ImmutableMap.of(
                 value1.getName(), Optional.of(value1), value2.getName(), Optional.of(value2)));
   }
 
   @Test
-  public void getValues_TryToModifyReturned_ShouldThrowException() {
+  public void getNullableValues_TryToModifyReturned_ShouldThrowException() {
     // Arrange
     Put put = preparePut();
     TextValue value1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
@@ -153,7 +175,7 @@ public class PutTest {
     put.withValue(value1).withValue(value2);
 
     // Act Assert
-    Map<String, Optional<Value<?>>> values = put.getValues();
+    Map<String, Optional<Value<?>>> values = put.getNullableValues();
     assertThatThrownBy(
             () -> values.put(ANY_NAME_3, Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_3))))
         .isInstanceOf(UnsupportedOperationException.class);

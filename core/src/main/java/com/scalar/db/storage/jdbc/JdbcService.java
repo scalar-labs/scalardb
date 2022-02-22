@@ -143,7 +143,7 @@ public class JdbcService {
       UpsertQuery upsertQuery =
           queryBuilder
               .upsertInto(put.forNamespace().get(), put.forTable().get(), tableMetadata)
-              .values(put.getPartitionKey(), put.getClusteringKey(), put.getValues())
+              .values(put.getPartitionKey(), put.getClusteringKey(), put.getNullableValues())
               .build();
       try (PreparedStatement preparedStatement = connection.prepareStatement(upsertQuery.sql())) {
         upsertQuery.bind(preparedStatement);

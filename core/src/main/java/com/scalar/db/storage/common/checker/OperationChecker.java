@@ -206,7 +206,7 @@ public class OperationChecker {
   }
 
   private void checkValues(Put put, TableMetadata metadata) {
-    for (Map.Entry<String, Optional<Value<?>>> entry : put.getValues().entrySet()) {
+    for (Map.Entry<String, Optional<Value<?>>> entry : put.getNullableValues().entrySet()) {
       if (!new ColumnChecker(metadata, false, false, true)
           .check(entry.getKey(), entry.getValue())) {
         throw new IllegalArgumentException(

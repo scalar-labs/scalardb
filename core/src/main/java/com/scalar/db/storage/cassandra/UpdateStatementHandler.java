@@ -65,7 +65,8 @@ public class UpdateStatementHandler extends MutateStatementHandler {
             quoteIfNecessary(put.forNamespace().get()), quoteIfNecessary(put.forTable().get()));
 
     Update.Assignments assignments = update.with();
-    put.getValues().forEach((k, v) -> assignments.and(set(quoteIfNecessary(k), bindMarker())));
+    put.getNullableValues()
+        .forEach((k, v) -> assignments.and(set(quoteIfNecessary(k), bindMarker())));
     Update.Where where = update.where();
     put.getPartitionKey()
         .forEach(v -> where.and(QueryBuilder.eq(quoteIfNecessary(v.getName()), bindMarker())));
@@ -84,7 +85,7 @@ public class UpdateStatementHandler extends MutateStatementHandler {
     ValueBinder binder = new ValueBinder(bound);
 
     // bind from the front in the statement
-    put.getValues()
+    put.getNullableValues()
         .forEach(
             (k, v) -> {
               if (v.isPresent()) {

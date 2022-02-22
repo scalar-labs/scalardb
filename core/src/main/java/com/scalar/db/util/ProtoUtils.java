@@ -299,7 +299,7 @@ public final class ProtoUtils {
     mutation.getClusteringKey().ifPresent(k -> builder.setClusteringKey(toKey(k)));
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
-      ((Put) mutation).getValues().forEach((k, v) -> builder.addValue(toValue(k, v)));
+      ((Put) mutation).getNullableValues().forEach((k, v) -> builder.addValue(toValue(k, v)));
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }

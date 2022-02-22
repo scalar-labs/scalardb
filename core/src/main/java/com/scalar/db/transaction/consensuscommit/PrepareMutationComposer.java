@@ -59,7 +59,7 @@ public class PrepareMutationComposer extends AbstractMutationComposer {
     put.withValue(Attribute.toIdValue(id));
     put.withValue(Attribute.toStateValue(TransactionState.PREPARED));
     put.withValue(Attribute.toPreparedAtValue(current));
-    base.getValues()
+    base.getNullableValues()
         .forEach(
             (k, v) -> {
               if (v.isPresent()) {

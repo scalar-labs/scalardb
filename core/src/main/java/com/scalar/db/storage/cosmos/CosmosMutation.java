@@ -120,7 +120,7 @@ public class CosmosMutation extends CosmosOperation {
 
   private Map<String, Object> toMapForPut(Put put) {
     MapVisitor visitor = new MapVisitor();
-    put.getValues()
+    put.getNullableValues()
         .forEach(
             (k, v) -> {
               if (v.isPresent()) {

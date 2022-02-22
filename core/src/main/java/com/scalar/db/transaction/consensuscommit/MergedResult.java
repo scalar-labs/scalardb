@@ -31,7 +31,7 @@ public class MergedResult extends AbstractResult {
     this.put = put;
 
     putValues = new HashMap<>();
-    putValues.putAll(put.getValues());
+    putValues.putAll(put.getNullableValues());
     put.getPartitionKey().get().forEach(v -> putValues.put(v.getName(), Optional.of(v)));
     put.getClusteringKey()
         .ifPresent(k -> k.forEach(v -> putValues.put(v.getName(), Optional.of(v))));

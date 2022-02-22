@@ -266,7 +266,7 @@ public class SnapshotTest {
     snapshot.put(key, put2);
 
     // Assert
-    assertThat(writeSet.get(key).getValues())
+    assertThat(writeSet.get(key).getNullableValues())
         .isEqualTo(
             ImmutableMap.of(
                 ANY_NAME_3,

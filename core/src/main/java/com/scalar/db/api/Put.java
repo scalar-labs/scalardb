@@ -13,6 +13,7 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -197,11 +198,24 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns a map of {@link Value}s
+   * Returns a map of {@link Value}s.
+   *
+   * @return a map of {@code Value}s
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
+   */
+  @Deprecated
+  public Map<String, Value<?>> getValues() {
+    Map<String, Value<?>> ret = new HashMap<>();
+    values.forEach((k, v) -> ret.put(k, v.orElse(null)));
+    return ret;
+  }
+
+  /**
+   * Returns a map of {@link Value}s.
    *
    * @return a map of {@code Value}s
    */
-  public Map<String, Optional<Value<?>>> getValues() {
+  public Map<String, Optional<Value<?>>> getNullableValues() {
     return ImmutableMap.copyOf(values);
   }
 
@@ -270,7 +284,7 @@ public class Put extends Mutation {
         .add("table", forTable())
         .add("partitionKey", getPartitionKey())
         .add("clusteringKey", getClusteringKey())
-        .add("values", getValues())
+        .add("values", getNullableValues())
         .add("consistency", getConsistency())
         .add("condition", getCondition())
         .toString();

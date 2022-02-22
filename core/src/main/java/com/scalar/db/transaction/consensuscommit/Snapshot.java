@@ -112,7 +112,7 @@ public class Snapshot {
     if (writeSet.containsKey(key)) {
       // merge the previous put in the write set and the new put
       Put originalPut = writeSet.get(key);
-      put.getValues()
+      put.getNullableValues()
           .forEach(
               (k, v) -> {
                 if (v.isPresent()) {
