@@ -247,7 +247,7 @@ public class Put extends Mutation {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
-   * calling this method, or use {@link #getValue(String)} instead.
+   * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
    * @param name a name
    * @return the BOOLEAN value for the specified name
@@ -268,7 +268,7 @@ public class Put extends Mutation {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
-   * calling this method, or use {@link #getValue(String)} instead.
+   * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
    * @param name a name
    * @return the INT value for the specified name
@@ -289,7 +289,7 @@ public class Put extends Mutation {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
-   * calling this method, or use {@link #getValue(String)} instead.
+   * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
    * @param name a name
    * @return the BIGINT value for the specified name
@@ -310,7 +310,7 @@ public class Put extends Mutation {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
-   * calling this method, or use {@link #getValue(String)} instead.
+   * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
    * @param name a name
    * @return the FLOAT value for the specified name
@@ -331,7 +331,7 @@ public class Put extends Mutation {
    *
    * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
    * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
-   * calling this method, or use {@link #getValue(String)} instead.
+   * calling this method, or use {@link #getValueAsObject(String)} instead.
    *
    * @param name a name
    * @return the DOUBLE value for the specified name
@@ -397,7 +397,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns the BLOB value a byte array type for the specified name added to the list of put
+   * Returns the BLOB value as a byte array type for the specified name added to the list of put
    * values.
    *
    * @param name a name
@@ -416,7 +416,7 @@ public class Put extends Mutation {
   }
 
   /**
-   * Returns the value for the specified name added to the list of put values.
+   * Returns the value as an Object type for the specified name added to the list of put values.
    *
    * <p>If the columns is a BOOLEAN type, it returns a {@code Boolean} object. If the columns is an
    * INT type, it returns an {@code Integer} object. If the columns is a BIGINT type, it returns a
@@ -429,7 +429,7 @@ public class Put extends Mutation {
    * @return the value for the specified name. If the value is NULL, null
    */
   @Nullable
-  public Object getValue(String name) {
+  public Object getValueAsObject(String name) {
     checkIfExists(name);
     if (isNullValue(name)) {
       return null;

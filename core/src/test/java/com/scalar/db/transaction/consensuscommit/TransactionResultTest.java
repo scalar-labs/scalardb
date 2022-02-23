@@ -161,72 +161,73 @@ public class TransactionResultTest {
     assertThat(result.contains(ANY_NAME_1)).isTrue();
     assertThat(result.isNull(ANY_NAME_1)).isFalse();
     assertThat(result.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(result.get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(result.getAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(result.contains(ANY_NAME_2)).isTrue();
     assertThat(result.isNull(ANY_NAME_2)).isFalse();
     assertThat(result.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(result.get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(result.getAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(result.contains(ANY_NAME_3)).isTrue();
     assertThat(result.isNull(ANY_NAME_3)).isFalse();
     assertThat(result.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_2);
-    assertThat(result.get(ANY_NAME_3)).isEqualTo(ANY_INT_2);
+    assertThat(result.getAsObject(ANY_NAME_3)).isEqualTo(ANY_INT_2);
 
     assertThat(result.contains(Attribute.ID)).isTrue();
     assertThat(result.isNull(Attribute.ID)).isFalse();
     assertThat(result.getText(Attribute.ID)).isEqualTo(ANY_ID_2);
-    assertThat(result.get(Attribute.ID)).isEqualTo(ANY_ID_2);
+    assertThat(result.getAsObject(Attribute.ID)).isEqualTo(ANY_ID_2);
 
     assertThat(result.contains(Attribute.PREPARED_AT)).isTrue();
     assertThat(result.isNull(Attribute.PREPARED_AT)).isFalse();
     assertThat(result.getBigInt(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
-    assertThat(result.get(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
+    assertThat(result.getAsObject(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
 
     assertThat(result.contains(Attribute.COMMITTED_AT)).isTrue();
     assertThat(result.isNull(Attribute.COMMITTED_AT)).isFalse();
     assertThat(result.getBigInt(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
-    assertThat(result.get(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
+    assertThat(result.getAsObject(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
 
     assertThat(result.contains(Attribute.STATE)).isTrue();
     assertThat(result.isNull(Attribute.STATE)).isFalse();
     assertThat(result.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(result.get(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(result.getAsObject(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(result.contains(Attribute.VERSION)).isTrue();
     assertThat(result.isNull(Attribute.VERSION)).isFalse();
     assertThat(result.getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
-    assertThat(result.get(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
+    assertThat(result.getAsObject(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
 
     assertThat(result.contains(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isFalse();
     assertThat(result.getInt(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
-    assertThat(result.get(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
 
     assertThat(result.contains(Attribute.BEFORE_ID)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_ID)).isFalse();
     assertThat(result.getText(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
-    assertThat(result.get(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
 
     assertThat(result.contains(Attribute.BEFORE_PREPARED_AT)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_PREPARED_AT)).isFalse();
     assertThat(result.getBigInt(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
-    assertThat(result.get(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
 
     assertThat(result.contains(Attribute.BEFORE_COMMITTED_AT)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_COMMITTED_AT)).isFalse();
     assertThat(result.getBigInt(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
-    assertThat(result.get(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
+    assertThat(result.getAsObject(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
 
     assertThat(result.contains(Attribute.BEFORE_STATE)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_STATE)).isFalse();
     assertThat(result.getInt(Attribute.BEFORE_STATE)).isEqualTo(TransactionState.COMMITTED.get());
-    assertThat(result.get(Attribute.BEFORE_STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(result.getAsObject(Attribute.BEFORE_STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
 
     assertThat(result.contains(Attribute.BEFORE_VERSION)).isTrue();
     assertThat(result.isNull(Attribute.BEFORE_VERSION)).isFalse();
     assertThat(result.getInt(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
-    assertThat(result.get(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
   }
 
   @Test

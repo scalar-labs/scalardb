@@ -101,12 +101,12 @@ public class PutTest {
     assertThat(put.containsColumn(ANY_NAME_1)).isTrue();
     assertThat(put.isNullValue(ANY_NAME_1)).isFalse();
     assertThat(put.getTextValue(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(put.getValue(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(put.getValueAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(put.containsColumn(ANY_NAME_2)).isTrue();
     assertThat(put.isNullValue(ANY_NAME_2)).isFalse();
     assertThat(put.getTextValue(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(put.getValue(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(put.getValueAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
   }
 
   @Test
@@ -166,32 +166,32 @@ public class PutTest {
     assertThat(put.containsColumn("val1")).isTrue();
     assertThat(put.isNullValue("val1")).isFalse();
     assertThat(put.getBooleanValue("val1")).isTrue();
-    assertThat(put.getValue("val1")).isEqualTo(true);
+    assertThat(put.getValueAsObject("val1")).isEqualTo(true);
 
     assertThat(put.containsColumn("val2")).isTrue();
     assertThat(put.isNullValue("val2")).isFalse();
     assertThat(put.getIntValue("val2")).isEqualTo(5678);
-    assertThat(put.getValue("val2")).isEqualTo(5678);
+    assertThat(put.getValueAsObject("val2")).isEqualTo(5678);
 
     assertThat(put.containsColumn("val3")).isTrue();
     assertThat(put.isNullValue("val3")).isFalse();
     assertThat(put.getBigIntValue("val3")).isEqualTo(1234L);
-    assertThat(put.getValue("val3")).isEqualTo(1234L);
+    assertThat(put.getValueAsObject("val3")).isEqualTo(1234L);
 
     assertThat(put.containsColumn("val4")).isTrue();
     assertThat(put.isNullValue("val4")).isFalse();
     assertThat(put.getFloatValue("val4")).isEqualTo(4.56f);
-    assertThat(put.getValue("val4")).isEqualTo(4.56f);
+    assertThat(put.getValueAsObject("val4")).isEqualTo(4.56f);
 
     assertThat(put.containsColumn("val5")).isTrue();
     assertThat(put.isNullValue("val5")).isFalse();
     assertThat(put.getDoubleValue("val5")).isEqualTo(1.23);
-    assertThat(put.getValue("val5")).isEqualTo(1.23);
+    assertThat(put.getValueAsObject("val5")).isEqualTo(1.23);
 
     assertThat(put.containsColumn("val6")).isTrue();
     assertThat(put.isNullValue("val6")).isFalse();
     assertThat(put.getTextValue("val6")).isEqualTo("string_value");
-    assertThat(put.getValue("val6")).isEqualTo("string_value");
+    assertThat(put.getValueAsObject("val6")).isEqualTo("string_value");
 
     assertThat(put.containsColumn("val7")).isTrue();
     assertThat(put.isNullValue("val7")).isFalse();
@@ -201,7 +201,7 @@ public class PutTest {
         .isEqualTo(ByteBuffer.wrap("blob_value".getBytes(StandardCharsets.UTF_8)));
     assertThat(put.getBlobValueAsBytes("val7"))
         .isEqualTo("blob_value".getBytes(StandardCharsets.UTF_8));
-    assertThat(put.getValue("val7"))
+    assertThat(put.getValueAsObject("val7"))
         .isEqualTo(ByteBuffer.wrap("blob_value".getBytes(StandardCharsets.UTF_8)));
 
     assertThat(put.containsColumn("val8")).isTrue();
@@ -212,12 +212,12 @@ public class PutTest {
         .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
     assertThat(put.getBlobValueAsBytes("val8"))
         .isEqualTo("blob_value2".getBytes(StandardCharsets.UTF_8));
-    assertThat(put.getValue("val8"))
+    assertThat(put.getValueAsObject("val8"))
         .isEqualTo(ByteBuffer.wrap("blob_value2".getBytes(StandardCharsets.UTF_8)));
 
     assertThat(put.containsColumn("val9")).isTrue();
     assertThat(put.isNullValue("val9")).isTrue();
-    assertThat(put.getValue("val9")).isNull();
+    assertThat(put.getValueAsObject("val9")).isNull();
   }
 
   @Test
@@ -244,12 +244,12 @@ public class PutTest {
     assertThat(put.containsColumn(ANY_NAME_1)).isTrue();
     assertThat(put.isNullValue(ANY_NAME_1)).isFalse();
     assertThat(put.getTextValue(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(put.getValue(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(put.getValueAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(put.containsColumn(ANY_NAME_2)).isTrue();
     assertThat(put.isNullValue(ANY_NAME_2)).isFalse();
     assertThat(put.getTextValue(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(put.getValue(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(put.getValueAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
   }
 
   @Test

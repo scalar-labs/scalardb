@@ -370,32 +370,32 @@ public class SnapshotTest {
     assertThat(actual.get().contains(ANY_NAME_1)).isTrue();
     assertThat(actual.get().isNull(ANY_NAME_1)).isFalse();
     assertThat(actual.get().getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
-    assertThat(actual.get().get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.get().getAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
 
     assertThat(actual.get().contains(ANY_NAME_2)).isTrue();
     assertThat(actual.get().isNull(ANY_NAME_2)).isFalse();
     assertThat(actual.get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
-    assertThat(actual.get().get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.get().getAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
 
     assertThat(actual.get().contains(ANY_NAME_3)).isTrue();
     assertThat(actual.get().isNull(ANY_NAME_3)).isFalse();
     assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo(ANY_TEXT_5);
-    assertThat(actual.get().get(ANY_NAME_3)).isEqualTo(ANY_TEXT_5);
+    assertThat(actual.get().getAsObject(ANY_NAME_3)).isEqualTo(ANY_TEXT_5);
 
     assertThat(actual.get().contains(ANY_NAME_4)).isTrue();
     assertThat(actual.get().isNull(ANY_NAME_4)).isTrue();
     assertThat(actual.get().getText(ANY_NAME_4)).isNull();
-    assertThat(actual.get().get(ANY_NAME_4)).isNull();
+    assertThat(actual.get().getAsObject(ANY_NAME_4)).isNull();
 
     assertThat(actual.get().contains(Attribute.ID)).isTrue();
     assertThat(actual.get().isNull(Attribute.ID)).isFalse();
     assertThat(actual.get().getText(Attribute.ID)).isEqualTo(ANY_ID);
-    assertThat(actual.get().get(Attribute.ID)).isEqualTo(ANY_ID);
+    assertThat(actual.get().getAsObject(Attribute.ID)).isEqualTo(ANY_ID);
 
     assertThat(actual.get().contains(Attribute.VERSION)).isTrue();
     assertThat(actual.get().isNull(Attribute.VERSION)).isFalse();
     assertThat(actual.get().getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION);
-    assertThat(actual.get().get(Attribute.VERSION)).isEqualTo(ANY_VERSION);
+    assertThat(actual.get().getAsObject(Attribute.VERSION)).isEqualTo(ANY_VERSION);
   }
 
   @Test

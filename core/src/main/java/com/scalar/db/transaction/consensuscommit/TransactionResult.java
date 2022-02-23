@@ -95,8 +95,8 @@ public class TransactionResult extends AbstractResult {
 
   @Nullable
   @Override
-  public Object get(String name) {
-    return result.get(name);
+  public Object getAsObject(String name) {
+    return result.getAsObject(name);
   }
 
   @Override

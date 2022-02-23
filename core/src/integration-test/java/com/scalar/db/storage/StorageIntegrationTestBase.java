@@ -960,27 +960,27 @@ public abstract class StorageIntegrationTestBase {
     assertThat(result.contains(COL_NAME1)).isTrue();
     assertThat(result.isNull(COL_NAME1)).isFalse();
     assertThat(result.getInt(COL_NAME1)).isEqualTo(0);
-    assertThat(result.get(COL_NAME1)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME1)).isEqualTo(0);
 
     assertThat(result.contains(COL_NAME4)).isTrue();
     assertThat(result.isNull(COL_NAME4)).isFalse();
     assertThat(result.getInt(COL_NAME4)).isEqualTo(0);
-    assertThat(result.get(COL_NAME4)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME4)).isEqualTo(0);
 
     assertThat(result.contains(COL_NAME2)).isTrue();
     assertThat(result.isNull(COL_NAME2)).isTrue();
     assertThat(result.getText(COL_NAME2)).isNull();
-    assertThat(result.get(COL_NAME2)).isNull();
+    assertThat(result.getAsObject(COL_NAME2)).isNull();
 
     assertThat(result.contains(COL_NAME3)).isTrue();
     assertThat(result.isNull(COL_NAME3)).isFalse();
     assertThat(result.getInt(COL_NAME3)).isEqualTo(0);
-    assertThat(result.get(COL_NAME3)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME3)).isEqualTo(0);
 
     assertThat(result.contains(COL_NAME5)).isTrue();
     assertThat(result.isNull(COL_NAME5)).isFalse();
     assertThat(result.getBoolean(COL_NAME5)).isEqualTo(true);
-    assertThat(result.get(COL_NAME5)).isEqualTo(true);
+    assertThat(result.getAsObject(COL_NAME5)).isEqualTo(true);
   }
 
   @Test

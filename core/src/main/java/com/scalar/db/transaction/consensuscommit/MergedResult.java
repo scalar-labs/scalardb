@@ -179,7 +179,7 @@ public class MergedResult extends AbstractResult {
 
   @Nullable
   @Override
-  public Object get(String name) {
+  public Object getAsObject(String name) {
     checkIfExists(name);
     if (isNull(name)) {
       return null;

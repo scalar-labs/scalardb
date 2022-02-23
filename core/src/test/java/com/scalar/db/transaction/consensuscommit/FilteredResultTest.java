@@ -120,17 +120,17 @@ public class FilteredResultTest {
     assertThat(filteredResult.contains(ACCOUNT_ID)).isTrue();
     assertThat(filteredResult.isNull(ACCOUNT_ID)).isFalse();
     assertThat(filteredResult.getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(filteredResult.get(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(filteredResult.getAsObject(ACCOUNT_ID)).isEqualTo(0);
 
     assertThat(filteredResult.contains(ACCOUNT_TYPE)).isTrue();
     assertThat(filteredResult.isNull(ACCOUNT_TYPE)).isFalse();
     assertThat(filteredResult.getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(filteredResult.get(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(filteredResult.getAsObject(ACCOUNT_TYPE)).isEqualTo(1);
 
     assertThat(filteredResult.contains(BALANCE)).isTrue();
     assertThat(filteredResult.isNull(BALANCE)).isFalse();
     assertThat(filteredResult.getInt(BALANCE)).isEqualTo(2);
-    assertThat(filteredResult.get(BALANCE)).isEqualTo(2);
+    assertThat(filteredResult.getAsObject(BALANCE)).isEqualTo(2);
 
     assertThat(filteredResult.contains(Attribute.ID)).isFalse();
     assertThat(filteredResult.contains(Attribute.STATE)).isFalse();
@@ -182,14 +182,14 @@ public class FilteredResultTest {
     assertThat(filteredResult.contains(ACCOUNT_ID)).isTrue();
     assertThat(filteredResult.isNull(ACCOUNT_ID)).isFalse();
     assertThat(filteredResult.getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(filteredResult.get(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(filteredResult.getAsObject(ACCOUNT_ID)).isEqualTo(0);
 
     assertThat(filteredResult.contains(ACCOUNT_TYPE)).isFalse();
 
     assertThat(filteredResult.contains(BALANCE)).isTrue();
     assertThat(filteredResult.isNull(BALANCE)).isFalse();
     assertThat(filteredResult.getInt(BALANCE)).isEqualTo(2);
-    assertThat(filteredResult.get(BALANCE)).isEqualTo(2);
+    assertThat(filteredResult.getAsObject(BALANCE)).isEqualTo(2);
 
     assertThat(filteredResult.contains(Attribute.ID)).isFalse();
     assertThat(filteredResult.contains(Attribute.STATE)).isFalse();
@@ -241,7 +241,7 @@ public class FilteredResultTest {
     assertThat(filteredResult.contains(ACCOUNT_ID)).isTrue();
     assertThat(filteredResult.isNull(ACCOUNT_ID)).isFalse();
     assertThat(filteredResult.getInt(ACCOUNT_ID)).isEqualTo(0);
-    assertThat(filteredResult.get(ACCOUNT_ID)).isEqualTo(0);
+    assertThat(filteredResult.getAsObject(ACCOUNT_ID)).isEqualTo(0);
 
     assertThat(filteredResult.contains(ACCOUNT_TYPE)).isFalse();
 
@@ -300,7 +300,7 @@ public class FilteredResultTest {
     assertThat(filteredResult.contains(ACCOUNT_TYPE)).isTrue();
     assertThat(filteredResult.isNull(ACCOUNT_TYPE)).isFalse();
     assertThat(filteredResult.getInt(ACCOUNT_TYPE)).isEqualTo(1);
-    assertThat(filteredResult.get(ACCOUNT_TYPE)).isEqualTo(1);
+    assertThat(filteredResult.getAsObject(ACCOUNT_TYPE)).isEqualTo(1);
 
     assertThat(filteredResult.contains(BALANCE)).isFalse();
 
@@ -355,7 +355,7 @@ public class FilteredResultTest {
     assertThat(filteredResult.contains(BALANCE)).isTrue();
     assertThat(filteredResult.isNull(BALANCE)).isFalse();
     assertThat(filteredResult.getInt(BALANCE)).isEqualTo(2);
-    assertThat(filteredResult.get(BALANCE)).isEqualTo(2);
+    assertThat(filteredResult.getAsObject(BALANCE)).isEqualTo(2);
 
     assertThat(filteredResult.contains(Attribute.ID)).isFalse();
     assertThat(filteredResult.contains(Attribute.STATE)).isFalse();
