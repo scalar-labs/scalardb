@@ -30,7 +30,7 @@ public class ResultImpl extends AbstractResult {
   private final Supplier<Map<String, Value<?>>> valuesWithDefaultValues;
 
   public ResultImpl(Map<String, Optional<Value<?>>> values, TableMetadata metadata) {
-    this.values = Objects.requireNonNull(values);
+    this.values = ImmutableMap.copyOf(Objects.requireNonNull(values));
     this.metadata = Objects.requireNonNull(metadata);
 
     // lazy loading

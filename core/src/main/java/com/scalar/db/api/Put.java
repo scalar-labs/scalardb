@@ -2,6 +2,7 @@ package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.scalar.db.io.BigIntValue;
 import com.scalar.db.io.BlobValue;
 import com.scalar.db.io.BooleanValue;
@@ -18,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -217,6 +219,266 @@ public class Put extends Mutation {
    */
   public Map<String, Optional<Value<?>>> getNullableValues() {
     return ImmutableMap.copyOf(values);
+  }
+
+  /**
+   * Indicates whether the value for the specified name added to the list of put values is NULL.
+   *
+   * @param name a name
+   * @return whether the value for the specified name is NULL
+   */
+  public boolean isNullValue(String name) {
+    checkIfExists(name);
+
+    Optional<Value<?>> value = values.get(name);
+    if (value.isPresent()) {
+      if (value.get() instanceof TextValue) {
+        return !value.get().getAsString().isPresent();
+      } else if (value.get() instanceof BlobValue) {
+        return !value.get().getAsBytes().isPresent();
+      }
+    }
+
+    return !value.isPresent();
+  }
+
+  /**
+   * Returns the BOOLEAN value for the specified name added to the list of put values.
+   *
+   * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
+   * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
+   * calling this method, or use {@link #getValue(String)} instead.
+   *
+   * @param name a name
+   * @return the BOOLEAN value for the specified name
+   */
+  public boolean getBooleanValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return false;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsBoolean();
+  }
+
+  /**
+   * Returns the INT value for the specified name added to the list of put values.
+   *
+   * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
+   * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
+   * calling this method, or use {@link #getValue(String)} instead.
+   *
+   * @param name a name
+   * @return the INT value for the specified name
+   */
+  public int getIntValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return 0;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsInt();
+  }
+
+  /**
+   * Returns the BIGINT value for the specified name added to the list of put values.
+   *
+   * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
+   * will return 0. If this doesn't work for you, either call {@link #isNullValue(String)} before
+   * calling this method, or use {@link #getValue(String)} instead.
+   *
+   * @param name a name
+   * @return the BIGINT value for the specified name
+   */
+  public long getBigIntValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return 0L;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsLong();
+  }
+
+  /**
+   * Returns the FLOAT value for the specified name added to the list of put values.
+   *
+   * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
+   * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
+   * calling this method, or use {@link #getValue(String)} instead.
+   *
+   * @param name a name
+   * @return the FLOAT value for the specified name
+   */
+  public float getFloatValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return 0.0F;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsFloat();
+  }
+
+  /**
+   * Returns the DOUBLE value for the specified name added to the list of put values.
+   *
+   * <p>Note that, due to its signature, this method cannot return null. If the value is NULL, it
+   * will return 0.0. If this doesn't work for you, either call {@link #isNullValue(String)} before
+   * calling this method, or use {@link #getValue(String)} instead.
+   *
+   * @param name a name
+   * @return the DOUBLE value for the specified name
+   */
+  public double getDoubleValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return 0.0D;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsDouble();
+  }
+
+  /**
+   * Returns the TEXT value for the specified name added to the list of put values.
+   *
+   * @param name a name
+   * @return the TEXT value for the specified name. If the value is NULL, null
+   */
+  @Nullable
+  public String getTextValue(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return null;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsString().orElse(null);
+  }
+
+  /**
+   * Returns the BLOB value as a ByteBuffer type for the specified name added to the list of put
+   * values.
+   *
+   * @param name a name
+   * @return the BLOB value for the specified name. If the value is NULL, null
+   */
+  @Nullable
+  public ByteBuffer getBlobValue(String name) {
+    return getBlobValueAsByteBuffer(name);
+  }
+
+  /**
+   * Returns the BLOB value as a ByteBuffer type for the specified name added to the list of put
+   * values.
+   *
+   * @param name a name
+   * @return the BLOB value for the specified name. If the value is NULL, null
+   */
+  @Nullable
+  public ByteBuffer getBlobValueAsByteBuffer(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return null;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsByteBuffer().orElse(null);
+  }
+
+  /**
+   * Returns the BLOB value a byte array type for the specified name added to the list of put
+   * values.
+   *
+   * @param name a name
+   * @return the BLOB value for the specified name. If the value is NULL, null
+   */
+  @Nullable
+  public byte[] getBlobValueAsBytes(String name) {
+    checkIfExists(name);
+
+    if (isNullValue(name)) {
+      // default value
+      return null;
+    }
+    assert values.get(name).isPresent();
+    return values.get(name).get().getAsBytes().orElse(null);
+  }
+
+  /**
+   * Returns the value for the specified name added to the list of put values.
+   *
+   * <p>If the columns is a BOOLEAN type, it returns a {@code Boolean} object. If the columns is an
+   * INT type, it returns an {@code Integer} object. If the columns is a BIGINT type, it returns a
+   * {@code LONG} object. If the columns is a FLOAT type, it returns a {@code FLOAT} object. If the
+   * columns is a DOUBLE type, it returns a {@code DOUBLE} object. If the columns is a TEXT type, it
+   * returns a {@code String} object. If the columns is a BLOB type, it returns a {@code ByteBuffer}
+   * object.
+   *
+   * @param name a name
+   * @return the value for the specified name. If the value is NULL, null
+   */
+  @Nullable
+  public Object getValue(String name) {
+    checkIfExists(name);
+    if (isNullValue(name)) {
+      return null;
+    }
+
+    Optional<Value<?>> value = values.get(name);
+    assert value.isPresent();
+    if (value.get() instanceof BooleanValue) {
+      return getBooleanValue(name);
+    } else if (value.get() instanceof IntValue) {
+      return getIntValue(name);
+    } else if (value.get() instanceof BigIntValue) {
+      return getBigIntValue(name);
+    } else if (value.get() instanceof FloatValue) {
+      return getFloatValue(name);
+    } else if (value.get() instanceof DoubleValue) {
+      return getDoubleValue(name);
+    } else if (value.get() instanceof TextValue) {
+      return getTextValue(name);
+    } else if (value.get() instanceof BlobValue) {
+      return getBlobValue(name);
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  /**
+   * Indicates whether the list of put values contains the specified column.
+   *
+   * @param name a name
+   * @return whether the result contains the specified column name
+   */
+  public boolean containsColumn(String name) {
+    return values.containsKey(name);
+  }
+
+  /**
+   * Returns a set of the contained column names for the values added to the list of put values.
+   *
+   * @return a set of the contained column names
+   */
+  public Set<String> getContainedColumnNames() {
+    return ImmutableSet.copyOf(values.keySet());
+  }
+
+  private void checkIfExists(String name) {
+    if (!containsColumn(name)) {
+      throw new IllegalArgumentException(name + " doesn't exist");
+    }
   }
 
   @Override

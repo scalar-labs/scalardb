@@ -175,7 +175,7 @@ public interface Result {
   Object get(String name);
 
   /**
-   * Indicates whether it contains the specified column
+   * Indicates whether it contains the specified column.
    *
    * @param name a name
    * @return whether the result contains the specified column name
@@ -183,7 +183,7 @@ public interface Result {
   boolean contains(String name);
 
   /**
-   * Returns a set of the contained column names
+   * Returns a set of the contained column names.
    *
    * @return a set of the contained column names
    */
