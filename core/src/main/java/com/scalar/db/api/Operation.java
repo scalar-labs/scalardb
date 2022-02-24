@@ -89,7 +89,7 @@ public abstract class Operation {
   }
 
   /**
-   * Sets the specified target namespace for this operation
+   * Sets the specified target table for this operation
    *
    * @param tableName target table name for this operation
    * @return this object
