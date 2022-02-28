@@ -13,11 +13,12 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.util.ResultImpl;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
@@ -32,19 +33,29 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Row row) {
-    Map<String, Value<?>> ret = new HashMap<>();
+    Map<String, Optional<Value<?>>> ret = new HashMap<>();
     if (projections.isEmpty()) {
       metadata
           .getColumnNames()
-          .forEach(name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
+          .forEach(
+              name ->
+                  ret.put(
+                      name,
+                      Optional.ofNullable(convert(row, name, metadata.getColumnDataType(name)))));
     } else {
       projections.forEach(
-          name -> ret.put(name, convert(row, name, metadata.getColumnDataType(name))));
+          name ->
+              ret.put(
+                  name, Optional.ofNullable(convert(row, name, metadata.getColumnDataType(name)))));
     }
     return new ResultImpl(ret, metadata);
   }
 
+  @Nullable
   private Value<?> convert(Row row, String name, DataType type) {
+    if (row.isNull(name)) {
+      return null;
+    }
     switch (type) {
       case BOOLEAN:
         return new BooleanValue(name, row.getBool(name));
@@ -59,13 +70,7 @@ public class ResultInterpreter {
       case TEXT:
         return new TextValue(name, row.getString(name));
       case BLOB:
-        ByteBuffer buffer = row.getBytes(name);
-        if (buffer == null) {
-          return new BlobValue(name, (byte[]) null);
-        }
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-        return new BlobValue(name, bytes);
+        return new BlobValue(name, row.getBytes(name));
       default:
         throw new AssertionError();
     }

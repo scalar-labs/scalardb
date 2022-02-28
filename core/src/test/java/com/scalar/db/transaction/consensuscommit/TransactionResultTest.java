@@ -2,14 +2,20 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.api.TransactionState;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.IntValue;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.Test;
@@ -30,43 +36,55 @@ public class TransactionResultTest {
   private static final int ANY_INT_2 = 200;
   private static final int ANY_VERSION_1 = 1;
   private static final int ANY_VERSION_2 = 2;
-  private TransactionResult result;
 
-  private void configureResult(Result mock) {
-    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
-    when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
-
-    ImmutableMap<String, Value<?>> values =
-        ImmutableMap.<String, Value<?>>builder()
-            .put(ANY_NAME_3, new IntValue(ANY_NAME_3, ANY_INT_2))
-            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
-            .put(Attribute.PREPARED_AT, Attribute.toPreparedAtValue(ANY_TIME_3))
-            .put(Attribute.COMMITTED_AT, Attribute.toCommittedAtValue(ANY_TIME_4))
-            .put(Attribute.STATE, Attribute.toStateValue(TransactionState.COMMITTED))
-            .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION_2))
-            .put(
-                Attribute.BEFORE_PREFIX + ANY_NAME_3,
-                new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1))
-            .put(Attribute.BEFORE_ID, Attribute.toBeforeIdValue(ANY_ID_1))
-            .put(Attribute.BEFORE_PREPARED_AT, Attribute.toBeforePreparedAtValue(ANY_TIME_1))
-            .put(Attribute.BEFORE_COMMITTED_AT, Attribute.toBeforeCommittedAtValue(ANY_TIME_2))
-            .put(Attribute.BEFORE_STATE, Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .put(Attribute.BEFORE_VERSION, Attribute.toBeforeVersionValue(ANY_VERSION_1))
-            .build();
-
-    when(mock.getValues()).thenReturn(values);
-  }
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionalTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.INT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
 
   private TransactionResult prepareResult() {
-    Result result = mock(Result.class);
-    configureResult(result);
-    return new TransactionResult(result);
+    return new TransactionResult(
+        new ResultImpl(
+            ImmutableMap.<String, Optional<Value<?>>>builder()
+                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+                .put(ANY_NAME_3, Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)))
+                .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+                .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)))
+                .put(Attribute.COMMITTED_AT, Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(
+                    Attribute.STATE,
+                    Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)))
+                .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(ANY_VERSION_2)))
+                .put(
+                    Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                    Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)))
+                .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(
+                    Attribute.BEFORE_PREPARED_AT,
+                    Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                .put(
+                    Attribute.BEFORE_COMMITTED_AT,
+                    Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                .put(
+                    Attribute.BEFORE_STATE,
+                    Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                .put(
+                    Attribute.BEFORE_VERSION,
+                    Optional.of(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                .build(),
+            TABLE_METADATA));
   }
 
   @Test
   public void getPartitionKey_ResultGiven_ShouldReturnCorrectKey() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     Optional<Key> actual = result.getPartitionKey();
@@ -78,7 +96,7 @@ public class TransactionResultTest {
   @Test
   public void getClusteringKey_ResultGiven_ShouldReturnCorrectKey() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     Optional<Key> actual = result.getClusteringKey();
@@ -90,20 +108,133 @@ public class TransactionResultTest {
   @Test
   public void getValue_ResultGiven_ShouldReturnCorrectValue() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
-    // Act
-    Optional<Value<?>> actual = result.getValue(ANY_NAME_3);
+    // Act Assert
+    assertThat(result.getValue(ANY_NAME_1))
+        .isEqualTo(Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)));
+    assertThat(result.getValue(ANY_NAME_2))
+        .isEqualTo(Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)));
+    assertThat(result.getValue(ANY_NAME_3))
+        .isEqualTo(Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)));
+    assertThat(result.getValue(Attribute.ID)).isEqualTo(Optional.of(Attribute.toIdValue(ANY_ID_2)));
+    assertThat(result.getValue(Attribute.PREPARED_AT))
+        .isEqualTo(Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)));
+    assertThat(result.getValue(Attribute.COMMITTED_AT))
+        .isEqualTo(Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)));
+    assertThat(result.getValue(Attribute.STATE))
+        .isEqualTo(Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)));
+    assertThat(result.getValue(Attribute.VERSION))
+        .isEqualTo(Optional.of(Attribute.toVersionValue(ANY_VERSION_2)));
+    assertThat(result.getValue(Attribute.BEFORE_PREFIX + ANY_NAME_3))
+        .isEqualTo(Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)));
+    assertThat(result.getValue(Attribute.BEFORE_ID))
+        .isEqualTo(Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)));
+    assertThat(result.getValue(Attribute.BEFORE_PREPARED_AT))
+        .isEqualTo(Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)));
+    assertThat(result.getValue(Attribute.BEFORE_COMMITTED_AT))
+        .isEqualTo(Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)));
+    assertThat(result.getValue(Attribute.BEFORE_STATE))
+        .isEqualTo(Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)));
+    assertThat(result.getValue(Attribute.BEFORE_VERSION))
+        .isEqualTo(Optional.of(Attribute.toBeforeVersionValue(ANY_VERSION_1)));
 
-    // Assert
-    assertThat(actual).isEqualTo(Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)));
+    assertThat(result.getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    ANY_NAME_1,
+                    ANY_NAME_2,
+                    ANY_NAME_3,
+                    Attribute.ID,
+                    Attribute.PREPARED_AT,
+                    Attribute.COMMITTED_AT,
+                    Attribute.STATE,
+                    Attribute.VERSION,
+                    Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                    Attribute.BEFORE_ID,
+                    Attribute.BEFORE_PREPARED_AT,
+                    Attribute.BEFORE_COMMITTED_AT,
+                    Attribute.BEFORE_STATE,
+                    Attribute.BEFORE_VERSION)));
+
+    assertThat(result.contains(ANY_NAME_1)).isTrue();
+    assertThat(result.isNull(ANY_NAME_1)).isFalse();
+    assertThat(result.getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(result.getAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+
+    assertThat(result.contains(ANY_NAME_2)).isTrue();
+    assertThat(result.isNull(ANY_NAME_2)).isFalse();
+    assertThat(result.getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(result.getAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+
+    assertThat(result.contains(ANY_NAME_3)).isTrue();
+    assertThat(result.isNull(ANY_NAME_3)).isFalse();
+    assertThat(result.getInt(ANY_NAME_3)).isEqualTo(ANY_INT_2);
+    assertThat(result.getAsObject(ANY_NAME_3)).isEqualTo(ANY_INT_2);
+
+    assertThat(result.contains(Attribute.ID)).isTrue();
+    assertThat(result.isNull(Attribute.ID)).isFalse();
+    assertThat(result.getText(Attribute.ID)).isEqualTo(ANY_ID_2);
+    assertThat(result.getAsObject(Attribute.ID)).isEqualTo(ANY_ID_2);
+
+    assertThat(result.contains(Attribute.PREPARED_AT)).isTrue();
+    assertThat(result.isNull(Attribute.PREPARED_AT)).isFalse();
+    assertThat(result.getBigInt(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
+    assertThat(result.getAsObject(Attribute.PREPARED_AT)).isEqualTo(ANY_TIME_3);
+
+    assertThat(result.contains(Attribute.COMMITTED_AT)).isTrue();
+    assertThat(result.isNull(Attribute.COMMITTED_AT)).isFalse();
+    assertThat(result.getBigInt(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
+    assertThat(result.getAsObject(Attribute.COMMITTED_AT)).isEqualTo(ANY_TIME_4);
+
+    assertThat(result.contains(Attribute.STATE)).isTrue();
+    assertThat(result.isNull(Attribute.STATE)).isFalse();
+    assertThat(result.getInt(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(result.getAsObject(Attribute.STATE)).isEqualTo(TransactionState.COMMITTED.get());
+
+    assertThat(result.contains(Attribute.VERSION)).isTrue();
+    assertThat(result.isNull(Attribute.VERSION)).isFalse();
+    assertThat(result.getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
+    assertThat(result.getAsObject(Attribute.VERSION)).isEqualTo(ANY_VERSION_2);
+
+    assertThat(result.contains(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isFalse();
+    assertThat(result.getInt(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_PREFIX + ANY_NAME_3)).isEqualTo(ANY_INT_1);
+
+    assertThat(result.contains(Attribute.BEFORE_ID)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_ID)).isFalse();
+    assertThat(result.getText(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_ID)).isEqualTo(ANY_ID_1);
+
+    assertThat(result.contains(Attribute.BEFORE_PREPARED_AT)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_PREPARED_AT)).isFalse();
+    assertThat(result.getBigInt(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_PREPARED_AT)).isEqualTo(ANY_TIME_1);
+
+    assertThat(result.contains(Attribute.BEFORE_COMMITTED_AT)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_COMMITTED_AT)).isFalse();
+    assertThat(result.getBigInt(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
+    assertThat(result.getAsObject(Attribute.BEFORE_COMMITTED_AT)).isEqualTo(ANY_TIME_2);
+
+    assertThat(result.contains(Attribute.BEFORE_STATE)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_STATE)).isFalse();
+    assertThat(result.getInt(Attribute.BEFORE_STATE)).isEqualTo(TransactionState.COMMITTED.get());
+    assertThat(result.getAsObject(Attribute.BEFORE_STATE))
+        .isEqualTo(TransactionState.COMMITTED.get());
+
+    assertThat(result.contains(Attribute.BEFORE_VERSION)).isTrue();
+    assertThat(result.isNull(Attribute.BEFORE_VERSION)).isFalse();
+    assertThat(result.getInt(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
+    assertThat(result.getAsObject(Attribute.BEFORE_VERSION)).isEqualTo(ANY_VERSION_1);
   }
 
   @Test
-  public void getValues_ValuesGiven_ShouldReturnCorrectValues() {
+  public void getValues_ResultGiven_ShouldReturnCorrectValues() {
     // Arrange
     Result given = prepareResult();
-    result = new TransactionResult(given);
+    TransactionResult result = prepareResult();
 
     // Act
     Map<String, Value<?>> values = result.getValues();
@@ -114,10 +245,10 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void equals_SameValuesGiven_ShouldReturnTrue() {
+  public void equals_SameResultGiven_ShouldReturnTrue() {
     // Arrange
-    result = new TransactionResult(prepareResult());
-    TransactionResult another = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
+    TransactionResult another = prepareResult();
 
     // Act
     boolean isEqual = result.equals(another);
@@ -127,9 +258,9 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void equals_DifferentValuesGiven_ShouldReturnFalse() {
+  public void equals_DifferentResultGiven_ShouldReturnFalse() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
     TransactionResult another = new TransactionResult(mock(Result.class));
 
     // Act
@@ -140,9 +271,9 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void getTransactionId_ValuesGiven_ShouldReturnCorrectId() {
+  public void getTransactionId_ResultGiven_ShouldReturnCorrectId() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     String id = result.getId();
@@ -152,9 +283,9 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void getTransactionState_ValuesGiven_ShouldReturnCorrectState() {
+  public void getTransactionState_ResultGiven_ShouldReturnCorrectState() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     TransactionState state = result.getState();
@@ -164,9 +295,9 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void getTransactionVersion_ValuesGiven_ShouldReturnCorrectVersion() {
+  public void getTransactionVersion_ResultGiven_ShouldReturnCorrectVersion() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     int version = result.getVersion();
@@ -176,14 +307,95 @@ public class TransactionResultTest {
   }
 
   @Test
-  public void isCommitted_ValuesGiven_ShouldReturnCommitted() {
+  public void isCommitted_ResultGiven_ShouldReturnCommitted() {
     // Arrange
-    result = new TransactionResult(prepareResult());
+    TransactionResult result = prepareResult();
 
     // Act
     boolean isCommitted = result.isCommitted();
 
     // Assert
     assertThat(isCommitted).isTrue();
+  }
+
+  @Test
+  public void equals_ResultImplWithSameValuesGiven_ShouldReturnTrue() {
+    // Arrange
+    Result r1 =
+        new ResultImpl(
+            ImmutableMap.<String, Optional<Value<?>>>builder()
+                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+                .put(ANY_NAME_3, Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)))
+                .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+                .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)))
+                .put(Attribute.COMMITTED_AT, Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(
+                    Attribute.STATE,
+                    Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)))
+                .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(ANY_VERSION_2)))
+                .put(
+                    Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                    Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)))
+                .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(
+                    Attribute.BEFORE_PREPARED_AT,
+                    Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                .put(
+                    Attribute.BEFORE_COMMITTED_AT,
+                    Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                .put(
+                    Attribute.BEFORE_STATE,
+                    Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                .put(
+                    Attribute.BEFORE_VERSION,
+                    Optional.of(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                .build(),
+            TABLE_METADATA);
+    Result r2 = new TransactionResult(r1);
+
+    // Act Assert
+    assertThat(r1.equals(r2)).isTrue();
+  }
+
+  @Test
+  public void equals_ResultImplWithDifferentValuesGiven_ShouldReturnFalse() {
+    // Arrange
+    Result r1 =
+        new ResultImpl(
+            ImmutableMap.<String, Optional<Value<?>>>builder()
+                .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+                .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+                .put(ANY_NAME_3, Optional.of(new IntValue(ANY_NAME_3, ANY_INT_2)))
+                .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+                .put(Attribute.PREPARED_AT, Optional.of(Attribute.toPreparedAtValue(ANY_TIME_3)))
+                .put(Attribute.COMMITTED_AT, Optional.of(Attribute.toCommittedAtValue(ANY_TIME_4)))
+                .put(
+                    Attribute.STATE,
+                    Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)))
+                .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(ANY_VERSION_2)))
+                .put(
+                    Attribute.BEFORE_PREFIX + ANY_NAME_3,
+                    Optional.of(new IntValue(Attribute.BEFORE_PREFIX + ANY_NAME_3, ANY_INT_1)))
+                .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+                .put(
+                    Attribute.BEFORE_PREPARED_AT,
+                    Optional.of(Attribute.toBeforePreparedAtValue(ANY_TIME_1)))
+                .put(
+                    Attribute.BEFORE_COMMITTED_AT,
+                    Optional.of(Attribute.toBeforeCommittedAtValue(ANY_TIME_2)))
+                .put(
+                    Attribute.BEFORE_STATE,
+                    Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+                .put(
+                    Attribute.BEFORE_VERSION,
+                    Optional.of(Attribute.toBeforeVersionValue(ANY_VERSION_1)))
+                .build(),
+            TABLE_METADATA);
+    Map<String, Optional<Value<?>>> emptyValues = Collections.emptyMap();
+    Result r2 = new TransactionResult(new ResultImpl(emptyValues, TABLE_METADATA));
+
+    // Act Assert
+    assertThat(r1.equals(r2)).isFalse();
   }
 }

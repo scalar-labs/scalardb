@@ -137,17 +137,6 @@ public final class TestUtils {
     return Arrays.asList(new BooleanValue(columnName, false), new BooleanValue(columnName, true));
   }
 
-  public static Value<?> getNullValue(String columnName, DataType dataType) {
-    switch (dataType) {
-      case BLOB:
-        return new BlobValue(columnName, (byte[]) null); // null value
-      case TEXT:
-        return new TextValue(columnName, (String) null); // null value
-      default:
-        throw new AssertionError();
-    }
-  }
-
   /**
    * Add a suffix to the metadata database/namespace/schema name and the consensus-commit
    * coordinator table name.

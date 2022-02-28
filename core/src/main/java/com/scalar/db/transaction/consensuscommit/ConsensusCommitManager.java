@@ -132,7 +132,8 @@ public class ConsensusCommitManager extends AbstractDistributedTransactionManage
           "Setting different isolation level or serializable strategy from the ones"
               + "in DatabaseConfig might cause unexpected anomalies.");
     }
-    Snapshot snapshot = new Snapshot(txId, isolation, strategy, parallelExecutor);
+    Snapshot snapshot =
+        new Snapshot(txId, isolation, strategy, tableMetadataManager, parallelExecutor);
     CrudHandler crud = new CrudHandler(storage, snapshot, tableMetadataManager);
     ConsensusCommit consensus = new ConsensusCommit(crud, commit, recovery);
     getNamespace().ifPresent(consensus::withNamespace);

@@ -130,4 +130,10 @@ public final class ValueBinder implements ValueVisitor {
     values.put(alias + i, builder.build());
     i++;
   }
+
+  /** Bind a NULL value */
+  public void bindNullValue() {
+    values.put(alias + i, AttributeValue.builder().nul(true).build());
+    i++;
+  }
 }

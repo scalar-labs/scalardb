@@ -117,6 +117,19 @@ public class ValueBinderTest {
   }
 
   @Test
+  public void visit_TextValueWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    TextValue value = new TextValue(ANY_NAME, (String) null);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    value.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
+  }
+
+  @Test
   public void visit_BlobValueAcceptCalled_ShouldCallSetString() {
     // Arrange
     BlobValue value = new BlobValue(ANY_NAME, ANY_STRING.getBytes(StandardCharsets.UTF_8));
@@ -133,6 +146,19 @@ public class ValueBinderTest {
                 ByteBuffer.allocate(ANY_STRING.length())
                     .put(ANY_STRING.getBytes(StandardCharsets.UTF_8))
                     .flip());
+  }
+
+  @Test
+  public void visit_BlobValueWithNullValueAcceptCalled_ShouldCallSetToNull() {
+    // Arrange
+    BlobValue value = new BlobValue(ANY_NAME, (byte[]) null);
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    value.accept(binder);
+
+    // Assert
+    verify(bound).setToNull(0);
   }
 
   @Test
@@ -156,7 +182,7 @@ public class ValueBinderTest {
     // Arrange
     IntValue value1 = new IntValue(ANY_NAME, ANY_INT);
     BlobValue value2 = new BlobValue(ANY_NAME, (byte[]) null);
-    TextValue value3 = new TextValue(ANY_NAME, (byte[]) null);
+    TextValue value3 = new TextValue(ANY_NAME, (String) null);
     IntValue value4 = new IntValue(ANY_NAME, ANY_INT);
     ValueBinder binder = new ValueBinder(bound);
 
@@ -177,5 +203,17 @@ public class ValueBinderTest {
   public void constructor_NullGiven_ShouldThrowNullPointerException() {
     // Act Assert
     assertThatThrownBy(() -> new ValueBinder(null)).isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  public void bindNullValue_ShouldCallSetToNull() {
+    // Arrange
+    ValueBinder binder = new ValueBinder(bound);
+
+    // Act
+    binder.bindNullValue();
+
+    // Assert
+    verify(bound).setToNull(0);
   }
 }

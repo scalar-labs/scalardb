@@ -12,10 +12,12 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
-import com.scalar.db.io.Value;
+import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.transaction.consensuscommit.ParallelExecutor.ParallelExecutorTask;
+import com.scalar.db.util.ScalarDbUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +40,7 @@ public class Snapshot {
   private final String id;
   private final Isolation isolation;
   private final SerializableStrategy strategy;
+  private final TransactionalTableMetadataManager tableMetadataManager;
   private final ParallelExecutor parallelExecutor;
   private final Map<Key, Optional<TransactionResult>> readSet;
   private final Map<Scan, List<Key>> scanSet;
@@ -48,10 +51,12 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
+      TransactionalTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor) {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     readSet = new HashMap<>();
     scanSet = new HashMap<>();
@@ -64,6 +69,7 @@ public class Snapshot {
       String id,
       Isolation isolation,
       SerializableStrategy strategy,
+      TransactionalTableMetadataManager tableMetadataManager,
       ParallelExecutor parallelExecutor,
       Map<Key, Optional<TransactionResult>> readSet,
       Map<Scan, List<Key>> scanSet,
@@ -72,6 +78,7 @@ public class Snapshot {
     this.id = id;
     this.isolation = isolation;
     this.strategy = strategy;
+    this.tableMetadataManager = tableMetadataManager;
     this.parallelExecutor = parallelExecutor;
     this.readSet = readSet;
     this.scanSet = scanSet;
@@ -104,7 +111,16 @@ public class Snapshot {
     }
     if (writeSet.containsKey(key)) {
       // merge the previous put in the write set and the new put
-      writeSet.get(key).withValues(put.getValues().values());
+      Put originalPut = writeSet.get(key);
+      put.getNullableValues()
+          .forEach(
+              (k, v) -> {
+                if (v.isPresent()) {
+                  originalPut.withValue(v.get());
+                } else {
+                  originalPut.withNullValue(k);
+                }
+              });
     } else {
       writeSet.put(key, put);
     }
@@ -119,20 +135,36 @@ public class Snapshot {
     return readSet.containsKey(key);
   }
 
-  public Optional<TransactionResult> get(Key key) {
+  public Optional<TransactionResult> get(Key key) throws CrudException {
     if (deleteSet.containsKey(key)) {
       return Optional.empty();
     } else if (readSet.containsKey(key)) {
       if (writeSet.containsKey(key)) {
         // merge the result in the read set and the put in the write set
         return Optional.of(
-            new TransactionResult(new MergedResult(readSet.get(key), writeSet.get(key))));
+            new TransactionResult(
+                new MergedResult(readSet.get(key), writeSet.get(key), getTableMetadata(key))));
       } else {
         return readSet.get(key);
       }
     }
     throw new IllegalArgumentException(
         "getting data neither in the read set nor the delete set is not allowed");
+  }
+
+  private TableMetadata getTableMetadata(Key key) throws CrudException {
+    try {
+      TransactionalTableMetadata metadata =
+          tableMetadataManager.getTransactionalTableMetadata(key.getNamespace(), key.getTable());
+      if (metadata == null) {
+        throw new IllegalArgumentException(
+            "The specified table is not found: "
+                + ScalarDbUtils.getFullTableName(key.getNamespace(), key.getTable()));
+      }
+      return metadata.getTableMetadata();
+    } catch (ExecutionException e) {
+      throw new CrudException("getting a table metadata failed", e);
+    }
   }
 
   public Optional<List<Key>> get(Scan scan) {
@@ -463,43 +495,6 @@ public class Snapshot {
               o.clusteringKey.orElse(null),
               Ordering.natural().nullsFirst())
           .result();
-    }
-  }
-
-  @Immutable
-  private static class MergedResult implements Result {
-    private final Optional<TransactionResult> result;
-    private final Put put;
-
-    public MergedResult(Optional<TransactionResult> result, Put put) {
-      this.result = result;
-      this.put = put;
-    }
-
-    @Override
-    public Optional<com.scalar.db.io.Key> getPartitionKey() {
-      return Optional.of(put.getPartitionKey());
-    }
-
-    @Override
-    public Optional<com.scalar.db.io.Key> getClusteringKey() {
-      return put.getClusteringKey();
-    }
-
-    @Override
-    public Optional<Value<?>> getValue(String name) {
-      if (put.getValues().containsKey(name)) {
-        return Optional.of(put.getValues().get(name));
-      }
-      return result.flatMap(r -> r.getValue(name));
-    }
-
-    @Override
-    public Map<String, Value<?>> getValues() {
-      Map<String, Value<?>> values = new HashMap<>();
-      result.ifPresent(r -> values.putAll(r.getValues()));
-      values.putAll(put.getValues());
-      return values;
     }
   }
 }

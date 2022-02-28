@@ -2,96 +2,131 @@ package com.scalar.db.transaction.consensuscommit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.TransactionState;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.AbstractResult;
+import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class TransactionResult implements Result {
+public class TransactionResult extends AbstractResult {
   private final Result result;
-  private final Map<String, Value<?>> values;
 
   public TransactionResult(Result result) {
     // assume that all the values are projected to the result
     this.result = checkNotNull(result);
-    this.values = result.getValues();
   }
 
   @Override
   public Optional<Key> getPartitionKey() {
-    if (result != null) {
-      return result.getPartitionKey();
-    }
-    return Optional.empty();
+    return result.getPartitionKey();
   }
 
   @Override
   public Optional<Key> getClusteringKey() {
-    if (result != null) {
-      return result.getClusteringKey();
-    }
-    return Optional.empty();
+    return result.getClusteringKey();
   }
 
   @Override
   public Optional<Value<?>> getValue(String name) {
-    return Optional.ofNullable(values.get(name));
+    return result.getValue(name);
   }
 
   @Override
   @Nonnull
-  public ImmutableMap<String, Value<?>> getValues() {
-    return ImmutableMap.copyOf(values);
+  public Map<String, Value<?>> getValues() {
+    return result.getValues();
   }
 
   @Override
-  public int hashCode() {
-    return Objects.hash(values);
+  public boolean isNull(String name) {
+    return result.isNull(name);
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    }
-    if (!(o instanceof TransactionResult)) {
-      return false;
-    }
-    TransactionResult other = (TransactionResult) o;
-    return this.values.equals(other.values);
+  public boolean getBoolean(String name) {
+    return result.getBoolean(name);
   }
 
   @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this).add("values", values).toString();
+  public int getInt(String name) {
+    return result.getInt(name);
+  }
+
+  @Override
+  public long getBigInt(String name) {
+    return result.getBigInt(name);
+  }
+
+  @Override
+  public float getFloat(String name) {
+    return result.getFloat(name);
+  }
+
+  @Override
+  public double getDouble(String name) {
+    return result.getDouble(name);
+  }
+
+  @Nullable
+  @Override
+  public String getText(String name) {
+    return result.getText(name);
+  }
+
+  @Nullable
+  @Override
+  public ByteBuffer getBlobAsByteBuffer(String name) {
+    return result.getBlobAsByteBuffer(name);
+  }
+
+  @Nullable
+  @Override
+  public byte[] getBlobAsBytes(String name) {
+    return result.getBlobAsBytes(name);
+  }
+
+  @Nullable
+  @Override
+  public Object getAsObject(String name) {
+    return result.getAsObject(name);
+  }
+
+  @Override
+  public boolean contains(String name) {
+    return result.contains(name);
+  }
+
+  @Override
+  public Set<String> getContainedColumnNames() {
+    return result.getContainedColumnNames();
   }
 
   public String getId() {
-    return getValue(Attribute.ID).get().getAsString().get();
+    return getText(Attribute.ID);
   }
 
   public TransactionState getState() {
-    return TransactionState.getInstance(getValue(Attribute.STATE).get().getAsInt());
+    return TransactionState.getInstance(getInt(Attribute.STATE));
   }
 
   public int getVersion() {
-    return getValue(Attribute.VERSION).get().getAsInt();
+    return getInt(Attribute.VERSION);
   }
 
   public long getPreparedAt() {
-    return getValue(Attribute.PREPARED_AT).get().getAsLong();
+    return getBigInt(Attribute.PREPARED_AT);
   }
 
   public long getCommittedAt() {
-    return getValue(Attribute.COMMITTED_AT).get().getAsLong();
+    return getBigInt(Attribute.COMMITTED_AT);
   }
 
   public boolean isCommitted() {

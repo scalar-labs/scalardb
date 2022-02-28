@@ -22,17 +22,6 @@ public class DynamoMutation extends DynamoOperation {
   }
 
   @Nonnull
-  public Map<String, AttributeValue> getValueMapWithKey() {
-    Put put = (Put) getOperation();
-    Map<String, AttributeValue> values = getKeyMap();
-    values.putAll(toMap(put.getPartitionKey().get()));
-    put.getClusteringKey().ifPresent(k -> values.putAll(toMap(k.get())));
-    values.putAll(toMap(put.getValues().values()));
-
-    return values;
-  }
-
-  @Nonnull
   public String getIfNotExistsCondition() {
     List<String> expressions = new ArrayList<>();
     expressions.add("attribute_not_exists(" + PARTITION_KEY + ")");
@@ -92,7 +81,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String unusedName : put.getValues().keySet()) {
+    for (String unusedName : put.getNullableValues().keySet()) {
       expressions.add(COLUMN_NAME_ALIAS + i + " = " + VALUE_ALIAS + i);
       i++;
     }
@@ -128,7 +117,7 @@ public class DynamoMutation extends DynamoOperation {
       }
     }
 
-    for (String name : put.getValues().keySet()) {
+    for (String name : put.getNullableValues().keySet()) {
       columnMap.put(COLUMN_NAME_ALIAS + i, name);
       i++;
     }
@@ -180,7 +169,15 @@ public class DynamoMutation extends DynamoOperation {
       put.getClusteringKey().ifPresent(k -> k.get().forEach(v -> v.accept(binder)));
     }
 
-    put.getValues().forEach((a, v) -> v.accept(binder));
+    put.getNullableValues()
+        .forEach(
+            (k, v) -> {
+              if (v.isPresent()) {
+                v.get().accept(binder);
+              } else {
+                binder.bindNullValue();
+              }
+            });
 
     return binder.build();
   }

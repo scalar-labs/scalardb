@@ -22,7 +22,9 @@ import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CrudException;
 import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,6 +49,16 @@ public class CrudHandlerTest {
   private static final String ANY_TEXT_2 = "text2";
   private static final String ANY_TEXT_3 = "text3";
   private static final String ANY_TX_ID = "tx_id";
+
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionalTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
+
   @InjectMocks private CrudHandler handler;
   @Mock private DistributedStorage storage;
   @Mock private Snapshot snapshot;
@@ -61,15 +73,9 @@ public class CrudHandlerTest {
 
     // Arrange
     when(tableMetadataManager.getTransactionalTableMetadata(any()))
-        .thenReturn(
-            new TransactionalTableMetadata(
-                ConsensusCommitUtils.buildTransactionalTableMetadata(
-                    TableMetadata.newBuilder()
-                        .addColumn(ANY_NAME_1, DataType.TEXT)
-                        .addColumn(ANY_NAME_2, DataType.TEXT)
-                        .addPartitionKey(ANY_NAME_1)
-                        .addClusteringKey(ANY_NAME_2)
-                        .build())));
+        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
+    when(tableMetadataManager.getTransactionalTableMetadata(any(), any()))
+        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
   }
 
   private Get prepareGet() {
@@ -85,39 +91,28 @@ public class CrudHandlerTest {
     return new Scan(partitionKey).forNamespace(ANY_NAMESPACE_NAME).forTable(ANY_TABLE_NAME);
   }
 
-  private void configureResult(Result mock, boolean hasClusteringKey, TransactionState state) {
-    when(mock.getPartitionKey()).thenReturn(Optional.of(new Key(ANY_NAME_1, ANY_TEXT_1)));
-    if (hasClusteringKey) {
-      when(mock.getClusteringKey()).thenReturn(Optional.of(new Key(ANY_NAME_2, ANY_TEXT_2)));
-    } else {
-      when(mock.getClusteringKey()).thenReturn(Optional.empty());
-    }
-
-    ImmutableMap<String, Value<?>> values =
-        ImmutableMap.<String, Value<?>>builder()
-            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
-            .put(Attribute.STATE, Attribute.toStateValue(state))
-            .put(Attribute.VERSION, Attribute.toVersionValue(2))
-            .put(Attribute.BEFORE_ID, Attribute.toBeforeIdValue(ANY_ID_1))
-            .put(Attribute.BEFORE_STATE, Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .put(Attribute.BEFORE_VERSION, Attribute.toBeforeVersionValue(1))
+  private TransactionResult prepareResult(TransactionState state) {
+    ImmutableMap<String, Optional<Value<?>>> values =
+        ImmutableMap.<String, Optional<Value<?>>>builder()
+            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(state)))
+            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(2)))
+            .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+            .put(
+                Attribute.BEFORE_STATE,
+                Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+            .put(Attribute.BEFORE_VERSION, Optional.of(Attribute.toBeforeVersionValue(1)))
             .build();
-
-    when(mock.getValues()).thenReturn(values);
-  }
-
-  private TransactionResult prepareResult(boolean hasClusteringKey, TransactionState state) {
-    Result result = mock(Result.class);
-    configureResult(result, hasClusteringKey, state);
-    return new TransactionResult(result);
+    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
   }
 
   @Test
   public void get_KeyExistsInSnapshot_ShouldReturnFromSnapshot() throws CrudException {
     // Arrange
     Get get = prepareGet();
-    Optional<TransactionResult> expected =
-        Optional.of(prepareResult(true, TransactionState.COMMITTED));
+    Optional<TransactionResult> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     when(snapshot.containsKeyInReadSet(new Snapshot.Key(get))).thenReturn(true);
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(expected);
 
@@ -125,7 +120,10 @@ public class CrudHandlerTest {
     Optional<Result> actual = handler.get(get);
 
     // Assert
-    assertThat(actual).isEqualTo(expected);
+    assertThat(actual)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected.get(), Collections.emptyList(), TABLE_METADATA)));
   }
 
   @Test
@@ -134,7 +132,7 @@ public class CrudHandlerTest {
           throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
-    Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.COMMITTED));
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.COMMITTED));
     Snapshot.Key key = new Snapshot.Key(get);
     when(snapshot.containsKeyInReadSet(key)).thenReturn(false);
     doNothing()
@@ -147,7 +145,10 @@ public class CrudHandlerTest {
     Optional<Result> result = handler.get(get);
 
     // Assert
-    assertThat(result).isEqualTo(expected);
+    assertThat(result)
+        .isEqualTo(
+            Optional.of(
+                new FilteredResult(expected.get(), Collections.emptyList(), TABLE_METADATA)));
     verify(storage).get(get);
     verify(snapshot).put(key, Optional.of((TransactionResult) expected.get()));
   }
@@ -155,10 +156,10 @@ public class CrudHandlerTest {
   @Test
   public void
       get_KeyNotExistsInSnapshotAndRecordInStorageNotCommitted_ShouldThrowUncommittedRecordException()
-          throws ExecutionException {
+          throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
-    Optional<Result> expected = Optional.of(prepareResult(true, TransactionState.PREPARED));
+    Optional<Result> expected = Optional.of(prepareResult(TransactionState.PREPARED));
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
     when(storage.get(get)).thenReturn(expected);
 
@@ -183,7 +184,7 @@ public class CrudHandlerTest {
 
   @Test
   public void get_KeyNotExistsInCrudSetAndExceptionThrownInStorage_ShouldThrowCrudException()
-      throws ExecutionException {
+      throws CrudException, ExecutionException {
     // Arrange
     Get get = prepareGet();
     when(snapshot.get(new Snapshot.Key(get))).thenReturn(Optional.empty());
@@ -199,7 +200,7 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
+    result = prepareResult(TransactionState.COMMITTED);
     Snapshot.Key key = new Snapshot.Key(scan, result);
     when(snapshot.get(key)).thenReturn(Optional.of((TransactionResult) result));
     doNothing()
@@ -215,7 +216,8 @@ public class CrudHandlerTest {
     TransactionResult expected = new TransactionResult(result);
     verify(snapshot).put(key, Optional.of(expected));
     assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0)).isEqualTo(expected);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
   }
 
   @Test
@@ -224,7 +226,7 @@ public class CrudHandlerTest {
           throws ExecutionException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(false, TransactionState.PREPARED);
+    result = prepareResult(TransactionState.PREPARED);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
 
@@ -241,7 +243,7 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
+    result = prepareResult(TransactionState.COMMITTED);
     doNothing()
         .when(snapshot)
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
@@ -262,7 +264,8 @@ public class CrudHandlerTest {
     TransactionResult expected = new TransactionResult(result);
     verify(snapshot).put(key, Optional.of(expected));
     assertThat(results1.size()).isEqualTo(1);
-    assertThat(results1.get(0)).isEqualTo(expected);
+    assertThat(results1.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
     assertThat(results1).isEqualTo(results2);
   }
 
@@ -271,8 +274,9 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
-    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
+    result = prepareResult(TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -284,7 +288,8 @@ public class CrudHandlerTest {
     // Assert
     TransactionResult expected = new TransactionResult(result);
     assertThat(results1.size()).isEqualTo(1);
-    assertThat(results1.get(0)).isEqualTo(expected);
+    assertThat(results1.get(0))
+        .isEqualTo(new FilteredResult(expected, Collections.emptyList(), TABLE_METADATA));
     assertThat(results1).isEqualTo(results2);
   }
 
@@ -293,7 +298,7 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
+    result = prepareResult(TransactionState.COMMITTED);
     doNothing()
         .when(snapshot)
         .put(any(Snapshot.Key.class), ArgumentMatchers.<Optional<TransactionResult>>any());
@@ -318,8 +323,9 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
-    snapshot = new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, parallelExecutor);
+    result = prepareResult(TransactionState.COMMITTED);
+    snapshot =
+        new Snapshot(ANY_TX_ID, Isolation.SNAPSHOT, null, tableMetadataManager, parallelExecutor);
     handler = new CrudHandler(storage, snapshot, tableMetadataManager);
     when(scanner.iterator()).thenReturn(Collections.singletonList(result).iterator());
     when(storage.scan(scan)).thenReturn(scanner);
@@ -337,23 +343,22 @@ public class CrudHandlerTest {
       throws ExecutionException, CrudException {
     // Arrange
     Scan scan = prepareScan();
-    result = prepareResult(true, TransactionState.COMMITTED);
+    result = prepareResult(TransactionState.COMMITTED);
 
-    Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
-    Key clusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
-    Result result2 = mock(Result.class);
-    when(result2.getPartitionKey()).thenReturn(Optional.of(partitionKey));
-    when(result2.getClusteringKey()).thenReturn(Optional.of(clusteringKey));
-    ImmutableMap<String, Value<?>> values =
-        ImmutableMap.<String, Value<?>>builder()
-            .put(Attribute.ID, Attribute.toIdValue(ANY_ID_2))
-            .put(Attribute.STATE, Attribute.toStateValue(TransactionState.COMMITTED))
-            .put(Attribute.VERSION, Attribute.toVersionValue(2))
-            .put(Attribute.BEFORE_ID, Attribute.toBeforeIdValue(ANY_ID_1))
-            .put(Attribute.BEFORE_STATE, Attribute.toBeforeStateValue(TransactionState.COMMITTED))
-            .put(Attribute.BEFORE_VERSION, Attribute.toBeforeVersionValue(1))
+    ImmutableMap<String, Optional<Value<?>>> values =
+        ImmutableMap.<String, Optional<Value<?>>>builder()
+            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_3)))
+            .put(Attribute.ID, Optional.of(Attribute.toIdValue(ANY_ID_2)))
+            .put(Attribute.STATE, Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)))
+            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(2)))
+            .put(Attribute.BEFORE_ID, Optional.of(Attribute.toBeforeIdValue(ANY_ID_1)))
+            .put(
+                Attribute.BEFORE_STATE,
+                Optional.of(Attribute.toBeforeStateValue(TransactionState.COMMITTED)))
+            .put(Attribute.BEFORE_VERSION, Optional.of(Attribute.toBeforeVersionValue(1)))
             .build();
-    when(result2.getValues()).thenReturn(values);
+    Result result2 = new ResultImpl(values, TABLE_METADATA);
 
     Map<Snapshot.Key, Optional<TransactionResult>> readSet = new HashMap<>();
     Map<Snapshot.Key, Delete> deleteSet = new HashMap<>();
@@ -362,6 +367,7 @@ public class CrudHandlerTest {
             ANY_TX_ID,
             Isolation.SNAPSHOT,
             null,
+            tableMetadataManager,
             parallelExecutor,
             readSet,
             new HashMap<>(),
@@ -372,7 +378,7 @@ public class CrudHandlerTest {
     when(storage.scan(scan)).thenReturn(scanner);
 
     Delete delete =
-        new Delete(partitionKey, clusteringKey)
+        new Delete(new Key(ANY_NAME_1, ANY_TEXT_1), new Key(ANY_NAME_2, ANY_TEXT_3))
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
@@ -382,7 +388,8 @@ public class CrudHandlerTest {
 
     // Assert
     assertThat(results.size()).isEqualTo(1);
-    assertThat(results.get(0)).isEqualTo(result);
+    assertThat(results.get(0))
+        .isEqualTo(new FilteredResult(result, Collections.emptyList(), TABLE_METADATA));
 
     // check the delete set
     assertThat(deleteSet.size()).isEqualTo(1);

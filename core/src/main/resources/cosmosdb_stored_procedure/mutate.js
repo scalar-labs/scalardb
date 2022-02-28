@@ -15,7 +15,9 @@ function mutate(num, ...args) {
 
   function merge(source, update) {
     for (var column in update) {
-      if (update[column].constructor == Object) {
+      if (update[column] == null) {
+        delete source[column];
+      } else if (update[column].constructor == Object) {
         source[column] = merge(source[column], update[column]);
       } else {
         source[column] = update[column];
@@ -72,11 +74,22 @@ function mutate(num, ...args) {
     });
   }
 
+  function deleteNullValues(record) {
+    for (var column in record) {
+      if (record[column] == null) {
+        delete record[column];
+      } else if (record[column].constructor == Object) {
+        deleteNullValues(record[column]);
+      }
+    }
+    return record;
+  }
+
   function checkQueryResult(mutation, record, reads) {
     if (!reads || !reads.length) {
       // The specified record does not exist
       if (mutation == MUTATION.PUT || mutation == MUTATION.PUT_IF_NOT_EXISTS) {
-        return [record];
+        return [deleteNullValues(record)];
       } else {
         // For other conditional mutations, the condition isn't satisfied
         return [];

@@ -19,11 +19,11 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class SimpleSelectQuery implements SelectQuery {
 
-  private final TableMetadata tableMetadata;
   private final List<String> projections;
   private final RdbEngine rdbEngine;
   private final String schema;
   private final String table;
+  private final TableMetadata tableMetadata;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
   private final Optional<Key> commonClusteringKey;
@@ -36,11 +36,11 @@ public class SimpleSelectQuery implements SelectQuery {
   private final Optional<String> indexedColumn;
 
   SimpleSelectQuery(Builder builder) {
-    tableMetadata = builder.tableMetadata;
     projections = builder.projections;
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
+    tableMetadata = builder.tableMetadata;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     commonClusteringKey = builder.commonClusteringKey;
@@ -122,7 +122,8 @@ public class SimpleSelectQuery implements SelectQuery {
 
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
-    PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
+    PreparedStatementBinder binder =
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     for (Value<?> value : partitionKey) {
       value.accept(binder);

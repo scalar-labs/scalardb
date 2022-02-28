@@ -17,7 +17,6 @@ import com.scalar.db.exception.transaction.UnknownTransactionStatusException;
 import com.scalar.db.transaction.common.AbstractDistributedTransaction;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,10 +57,10 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
-  public Optional<Result> get(Get originalGet) throws CrudException {
-    Get get = copyAndSetTargetToIfNot(originalGet);
+  public Optional<Result> get(Get get) throws CrudException {
+    get = copyAndSetTargetToIfNot(get);
     try {
-      return crud.get(get).map(r -> new FilteredResult(r, originalGet.getProjections()));
+      return crud.get(get);
     } catch (UncommittedRecordException e) {
       lazyRecovery(get, e.getResults());
       throw e;
@@ -69,12 +68,10 @@ public class ConsensusCommit extends AbstractDistributedTransaction {
   }
 
   @Override
-  public List<Result> scan(Scan originalScan) throws CrudException {
-    Scan scan = copyAndSetTargetToIfNot(originalScan);
+  public List<Result> scan(Scan scan) throws CrudException {
+    scan = copyAndSetTargetToIfNot(scan);
     try {
-      return crud.scan(scan).stream()
-          .map(r -> new FilteredResult(r, originalScan.getProjections()))
-          .collect(Collectors.toList());
+      return crud.scan(scan);
     } catch (UncommittedRecordException e) {
       lazyRecovery(scan, e.getResults());
       throw e;

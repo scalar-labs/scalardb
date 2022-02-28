@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -31,7 +33,7 @@ public class ResultInterpreter {
   }
 
   public Result interpret(Map<String, AttributeValue> item) {
-    Map<String, Value<?>> ret = new HashMap<>();
+    Map<String, Optional<Value<?>>> ret = new HashMap<>();
     if (projections.isEmpty()) {
       metadata.getColumnNames().forEach(name -> add(ret, name, item.get(name)));
     } else {
@@ -40,29 +42,31 @@ public class ResultInterpreter {
     return new ResultImpl(ret, metadata);
   }
 
-  private void add(Map<String, Value<?>> values, String name, AttributeValue itemValue) {
-    values.put(name, convert(itemValue, name, metadata.getColumnDataType(name)));
+  private void add(Map<String, Optional<Value<?>>> values, String name, AttributeValue itemValue) {
+    values.put(
+        name, Optional.ofNullable(convert(itemValue, name, metadata.getColumnDataType(name))));
   }
 
-  private Value<?> convert(AttributeValue itemValue, String name, DataType dataType) {
-    // When itemValue is NULL, the value will be the default value.
-    // It is the same behavior as the datastax C* driver
-    boolean isNull = itemValue == null || (itemValue.nul() != null && itemValue.nul());
+  @Nullable
+  private Value<?> convert(@Nullable AttributeValue itemValue, String name, DataType dataType) {
+    if (itemValue == null || (itemValue.nul() != null && itemValue.nul())) {
+      return null;
+    }
     switch (dataType) {
       case BOOLEAN:
-        return new BooleanValue(name, !isNull && itemValue.bool());
+        return new BooleanValue(name, itemValue.bool());
       case INT:
-        return new IntValue(name, isNull ? 0 : Integer.parseInt(itemValue.n()));
+        return new IntValue(name, Integer.parseInt(itemValue.n()));
       case BIGINT:
-        return new BigIntValue(name, isNull ? 0L : Long.parseLong(itemValue.n()));
+        return new BigIntValue(name, Long.parseLong(itemValue.n()));
       case FLOAT:
-        return new FloatValue(name, isNull ? 0.0f : Float.parseFloat(itemValue.n()));
+        return new FloatValue(name, Float.parseFloat(itemValue.n()));
       case DOUBLE:
-        return new DoubleValue(name, isNull ? 0.0 : Double.parseDouble(itemValue.n()));
+        return new DoubleValue(name, Double.parseDouble(itemValue.n()));
       case TEXT:
-        return new TextValue(name, isNull ? null : itemValue.s());
+        return new TextValue(name, itemValue.s());
       case BLOB:
-        return new BlobValue(name, isNull ? null : itemValue.b().asByteArray());
+        return new BlobValue(name, itemValue.b().asByteArray());
       default:
         throw new AssertionError();
     }

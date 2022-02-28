@@ -105,10 +105,10 @@ public class CoordinatorTest {
 
     // Assert
     assertThat(put.getPartitionKey().get().get(0)).isEqualTo(new TextValue(Attribute.ID, ANY_ID_1));
-    assertThat(put.getValues().get(Attribute.STATE))
-        .isEqualTo(Attribute.toStateValue(TransactionState.COMMITTED));
-    assertThat(put.getValues().get(Attribute.CREATED_AT))
-        .isEqualTo(Attribute.toCreatedAtValue(current));
+    assertThat(put.getNullableValues().get(Attribute.STATE))
+        .isEqualTo(Optional.of(Attribute.toStateValue(TransactionState.COMMITTED)));
+    assertThat(put.getNullableValues().get(Attribute.CREATED_AT))
+        .isEqualTo(Optional.of(Attribute.toCreatedAtValue(current)));
     assertThat(put.getConsistency()).isEqualTo(Consistency.LINEARIZABLE);
     assertThat(put.getCondition().get()).isExactlyInstanceOf(PutIfNotExists.class);
     assertThat(put.forNamespace().get()).isEqualTo(Coordinator.NAMESPACE);

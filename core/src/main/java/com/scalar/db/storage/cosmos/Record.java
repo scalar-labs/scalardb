@@ -58,7 +58,7 @@ public class Record {
   }
 
   public Map<String, Object> getValues() {
-    return ImmutableMap.copyOf(values);
+    return Collections.unmodifiableMap(values);
   }
 
   @Override
