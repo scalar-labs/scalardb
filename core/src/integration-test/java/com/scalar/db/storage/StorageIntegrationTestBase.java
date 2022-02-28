@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -927,6 +928,59 @@ public abstract class StorageIntegrationTestBase {
     assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, cKey)));
     assertThat(result.getValue(COL_NAME3))
         .isEqualTo(Optional.of(new IntValue(COL_NAME3, pKey + cKey)));
+  }
+
+  @Test
+  public void put_PutWithNullValue_ShouldPutProperly() throws ExecutionException {
+    // Arrange
+    Put put = preparePuts().get(0);
+    storage.put(put);
+
+    put.withNullValue(COL_NAME2);
+
+    // Act
+    storage.put(put);
+
+    // Assert
+    Optional<Result> actual = storage.get(prepareGet(0, 0));
+    assertThat(actual.isPresent()).isTrue();
+    Result result = actual.get();
+    assertThat(result.getValue(COL_NAME1)).isEqualTo(Optional.of(new IntValue(COL_NAME1, 0)));
+    assertThat(result.getValue(COL_NAME4)).isEqualTo(Optional.of(new IntValue(COL_NAME4, 0)));
+    assertThat(result.getValue(COL_NAME2))
+        .isEqualTo(Optional.of(new TextValue(COL_NAME2, (String) null)));
+    assertThat(result.getValue(COL_NAME3)).isEqualTo(Optional.of(new IntValue(COL_NAME3, 0)));
+    assertThat(result.getValue(COL_NAME5))
+        .isEqualTo(Optional.of(new BooleanValue(COL_NAME5, true)));
+
+    assertThat(result.getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(Arrays.asList(COL_NAME1, COL_NAME2, COL_NAME3, COL_NAME4, COL_NAME5)));
+
+    assertThat(result.contains(COL_NAME1)).isTrue();
+    assertThat(result.isNull(COL_NAME1)).isFalse();
+    assertThat(result.getInt(COL_NAME1)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME1)).isEqualTo(0);
+
+    assertThat(result.contains(COL_NAME4)).isTrue();
+    assertThat(result.isNull(COL_NAME4)).isFalse();
+    assertThat(result.getInt(COL_NAME4)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME4)).isEqualTo(0);
+
+    assertThat(result.contains(COL_NAME2)).isTrue();
+    assertThat(result.isNull(COL_NAME2)).isTrue();
+    assertThat(result.getText(COL_NAME2)).isNull();
+    assertThat(result.getAsObject(COL_NAME2)).isNull();
+
+    assertThat(result.contains(COL_NAME3)).isTrue();
+    assertThat(result.isNull(COL_NAME3)).isFalse();
+    assertThat(result.getInt(COL_NAME3)).isEqualTo(0);
+    assertThat(result.getAsObject(COL_NAME3)).isEqualTo(0);
+
+    assertThat(result.contains(COL_NAME5)).isTrue();
+    assertThat(result.isNull(COL_NAME5)).isFalse();
+    assertThat(result.getBoolean(COL_NAME5)).isEqualTo(true);
+    assertThat(result.getAsObject(COL_NAME5)).isEqualTo(true);
   }
 
   @Test

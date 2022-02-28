@@ -29,8 +29,11 @@ import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.rpc.MutateCondition;
 import com.scalar.db.rpc.Order;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 public final class ProtoUtils {
   private ProtoUtils() {}
@@ -79,6 +82,7 @@ public final class ProtoUtils {
     return builder.build();
   }
 
+  @Nullable
   private static Value<?> toValue(com.scalar.db.rpc.Value value) {
     switch (value.getValueCase()) {
       case BOOLEAN_VALUE:
@@ -95,41 +99,52 @@ public final class ProtoUtils {
         if (value.getTextValue().hasValue()) {
           return new TextValue(value.getName(), value.getTextValue().getValue());
         } else {
-          return new TextValue(value.getName(), (String) null);
+          return null;
         }
       case BLOB_VALUE:
         if (value.getBlobValue().hasValue()) {
           return new BlobValue(value.getName(), value.getBlobValue().getValue().toByteArray());
         } else {
-          return new BlobValue(value.getName(), (byte[]) null);
+          return null;
         }
+      case VALUE_NOT_SET:
+        return null;
       default:
         throw new AssertionError();
     }
   }
 
   private static com.scalar.db.rpc.Value toValue(Value<?> value) {
-    com.scalar.db.rpc.Value.Builder builder =
-        com.scalar.db.rpc.Value.newBuilder().setName(value.getName());
-    if (value instanceof BooleanValue) {
-      return builder.setBooleanValue(value.getAsBoolean()).build();
-    } else if (value instanceof IntValue) {
-      return builder.setIntValue(value.getAsInt()).build();
-    } else if (value instanceof BigIntValue) {
-      return builder.setBigintValue(value.getAsLong()).build();
-    } else if (value instanceof FloatValue) {
-      return builder.setFloatValue(value.getAsFloat()).build();
-    } else if (value instanceof DoubleValue) {
-      return builder.setDoubleValue(value.getAsDouble()).build();
-    } else if (value instanceof TextValue) {
+    return toValue(value.getName(), Optional.of(value));
+  }
+
+  private static com.scalar.db.rpc.Value toValue(String name, Optional<Value<?>> value) {
+    com.scalar.db.rpc.Value.Builder builder = com.scalar.db.rpc.Value.newBuilder().setName(name);
+
+    if (!value.isPresent()) {
+      return builder.build();
+    }
+
+    Value<?> val = value.get();
+    if (val instanceof BooleanValue) {
+      return builder.setBooleanValue(val.getAsBoolean()).build();
+    } else if (val instanceof IntValue) {
+      return builder.setIntValue(val.getAsInt()).build();
+    } else if (val instanceof BigIntValue) {
+      return builder.setBigintValue(val.getAsLong()).build();
+    } else if (val instanceof FloatValue) {
+      return builder.setFloatValue(val.getAsFloat()).build();
+    } else if (val instanceof DoubleValue) {
+      return builder.setDoubleValue(val.getAsDouble()).build();
+    } else if (val instanceof TextValue) {
       com.scalar.db.rpc.Value.TextValue.Builder textValueBuilder =
           com.scalar.db.rpc.Value.TextValue.newBuilder();
-      value.getAsString().ifPresent(textValueBuilder::setValue);
+      val.getAsString().ifPresent(textValueBuilder::setValue);
       return builder.setTextValue(textValueBuilder).build();
-    } else if (value instanceof BlobValue) {
+    } else if (val instanceof BlobValue) {
       com.scalar.db.rpc.Value.BlobValue.Builder blobValueBuilder =
           com.scalar.db.rpc.Value.BlobValue.newBuilder();
-      value.getAsBytes().ifPresent(v -> blobValueBuilder.setValue(ByteString.copyFrom(v)));
+      val.getAsBytes().ifPresent(v -> blobValueBuilder.setValue(ByteString.copyFrom(v)));
       return builder.setBlobValue(blobValueBuilder).build();
     } else {
       throw new AssertionError();
@@ -250,7 +265,17 @@ public final class ProtoUtils {
     Mutation ret;
     if (mutation.getType() == com.scalar.db.rpc.Mutation.Type.PUT) {
       Put put = new Put(partitionKey, clusteringKey);
-      mutation.getValueList().forEach(v -> put.withValue(toValue(v)));
+      mutation
+          .getValueList()
+          .forEach(
+              v -> {
+                Value<?> value = toValue(v);
+                if (value == null) {
+                  put.withNullValue(v.getName());
+                } else {
+                  put.withValue(value);
+                }
+              });
       ret = put;
     } else {
       ret = new Delete(partitionKey, clusteringKey);
@@ -274,7 +299,7 @@ public final class ProtoUtils {
     mutation.getClusteringKey().ifPresent(k -> builder.setClusteringKey(toKey(k)));
     if (mutation instanceof Put) {
       builder.setType(com.scalar.db.rpc.Mutation.Type.PUT);
-      ((Put) mutation).getValues().values().forEach(v -> builder.addValue(toValue(v)));
+      ((Put) mutation).getNullableValues().forEach((k, v) -> builder.addValue(toValue(k, v)));
     } else {
       builder.setType(com.scalar.db.rpc.Mutation.Type.DELETE);
     }
@@ -392,11 +417,19 @@ public final class ProtoUtils {
   }
 
   public static Result toResult(com.scalar.db.rpc.Result result, TableMetadata metadata) {
-    return new ResultImpl(
-        result.getValueList().stream()
-            .map(ProtoUtils::toValue)
-            .collect(Collectors.toMap(Value::getName, v -> v)),
-        metadata);
+    Map<String, Optional<Value<?>>> values = new HashMap<>();
+    result
+        .getValueList()
+        .forEach(
+            v -> {
+              Value<?> value = toValue(v);
+              if (value == null) {
+                values.put(v.getName(), Optional.empty());
+              } else {
+                values.put(v.getName(), Optional.of(value));
+              }
+            });
+    return new ResultImpl(values, metadata);
   }
 
   public static com.scalar.db.rpc.Result toResult(Result result) {

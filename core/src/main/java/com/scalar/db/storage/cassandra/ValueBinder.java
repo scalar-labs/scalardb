@@ -91,7 +91,11 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(TextValue value) {
-    value.get().ifPresent(s -> bound.setString(i, s));
+    if (value.get().isPresent()) {
+      bound.setString(i, value.get().get());
+    } else {
+      bound.setToNull(i);
+    }
     i++;
   }
 
@@ -102,10 +106,17 @@ public final class ValueBinder implements ValueVisitor {
    */
   @Override
   public void visit(BlobValue value) {
-    value
-        .get()
-        .ifPresent(
-            b -> bound.setBytes(i, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip()));
+    if (value.get().isPresent()) {
+      byte[] b = value.get().get();
+      bound.setBytes(i, (ByteBuffer) ByteBuffer.allocate(b.length).put(b).flip());
+    } else {
+      bound.setToNull(i);
+    }
     i++;
+  }
+
+  /** Bind a NULL value */
+  public void bindNullValue() {
+    bound.setToNull(i++);
   }
 }

@@ -52,8 +52,22 @@ public class TransactionalTableMetadataManager {
     if (!operation.forNamespace().isPresent() || !operation.forTable().isPresent()) {
       throw new IllegalArgumentException("operation has no target namespace and table name");
     }
+    return getTransactionalTableMetadata(
+        operation.forNamespace().get(), operation.forTable().get());
+  }
+
+  /**
+   * Returns a transactional table metadata corresponding to the specified namespace and table.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @return a table metadata. null if the table is not found.
+   * @throws ExecutionException if the operation failed
+   */
+  public TransactionalTableMetadata getTransactionalTableMetadata(String namespace, String table)
+      throws ExecutionException {
     try {
-      TableKey key = new TableKey(operation.forNamespace().get(), operation.forTable().get());
+      TableKey key = new TableKey(namespace, table);
       return tableMetadataCache.get(key).orElse(null);
     } catch (java.util.concurrent.ExecutionException e) {
       throw new ExecutionException("getting a table metadata failed", e);

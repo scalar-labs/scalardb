@@ -9,6 +9,13 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Selection;
 import com.scalar.db.api.TableMetadata;
+import com.scalar.db.io.BigIntValue;
+import com.scalar.db.io.BlobValue;
+import com.scalar.db.io.BooleanValue;
+import com.scalar.db.io.DoubleValue;
+import com.scalar.db.io.FloatValue;
+import com.scalar.db.io.IntValue;
+import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import java.util.List;
 import java.util.Optional;
@@ -135,5 +142,26 @@ public final class ScalarDbUtils {
    */
   public static String getFullTableName(String namespace, String table) {
     return namespace + "." + table;
+  }
+
+  public static Value<?> getDefaultValue(String name, TableMetadata metadata) {
+    switch (metadata.getColumnDataType(name)) {
+      case BOOLEAN:
+        return new BooleanValue(name, false);
+      case INT:
+        return new IntValue(name, 0);
+      case BIGINT:
+        return new BigIntValue(name, 0L);
+      case FLOAT:
+        return new FloatValue(name, 0.0F);
+      case DOUBLE:
+        return new DoubleValue(name, 0.0D);
+      case TEXT:
+        return new TextValue(name, (String) null);
+      case BLOB:
+        return new BlobValue(name, (byte[]) null);
+      default:
+        throw new AssertionError();
+    }
   }
 }

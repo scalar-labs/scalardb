@@ -82,6 +82,28 @@ public class CosmosMutationTest {
   }
 
   @Test
+  public void makeRecord_PutWithNullValueGiven_ShouldReturnWithValues() {
+    // Arrange
+    Put put = preparePut();
+    put.withNullValue(ANY_NAME_3);
+    CosmosMutation cosmosMutation = new CosmosMutation(put, metadata);
+    String id = cosmosMutation.getId();
+    String concatenatedPartitionKey = cosmosMutation.getConcatenatedPartitionKey();
+
+    // Act
+    Record actual = cosmosMutation.makeRecord();
+
+    // Assert
+    assertThat(actual.getId()).isEqualTo(id);
+    assertThat(actual.getConcatenatedPartitionKey()).isEqualTo(concatenatedPartitionKey);
+    assertThat(actual.getPartitionKey().get(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.getClusteringKey().get(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.getValues().containsKey(ANY_NAME_3)).isTrue();
+    assertThat(actual.getValues().get(ANY_NAME_3)).isNull();
+    assertThat(actual.getValues().get(ANY_NAME_4)).isEqualTo(ANY_INT_2);
+  }
+
+  @Test
   public void makeRecord_DeleteGiven_ShouldReturnEmpty() {
     // Arrange
     Delete delete = prepareDelete();

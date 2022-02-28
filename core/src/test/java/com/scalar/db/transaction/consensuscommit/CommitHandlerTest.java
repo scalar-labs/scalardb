@@ -93,6 +93,7 @@ public class CommitHandlerTest {
             ANY_ID,
             Isolation.SNAPSHOT,
             SerializableStrategy.EXTRA_WRITE,
+            tableMetadataManager,
             new ParallelExecutor(config));
 
     // different partition
@@ -110,6 +111,7 @@ public class CommitHandlerTest {
             ANY_ID,
             Isolation.SNAPSHOT,
             SerializableStrategy.EXTRA_WRITE,
+            tableMetadataManager,
             new ParallelExecutor(config));
 
     // same partition

@@ -64,7 +64,7 @@ public class CosmosMutation extends CosmosOperation {
     record.setConcatenatedPartitionKey(getConcatenatedPartitionKey());
     record.setPartitionKey(toMap(put.getPartitionKey().get()));
     put.getClusteringKey().ifPresent(k -> record.setClusteringKey(toMap(k.get())));
-    record.setValues(toMap(put.getValues().values()));
+    record.setValues(toMapForPut(put));
 
     return record;
   }
@@ -114,6 +114,21 @@ public class CosmosMutation extends CosmosOperation {
   private Map<String, Object> toMap(Collection<Value<?>> values) {
     MapVisitor visitor = new MapVisitor();
     values.forEach(v -> v.accept(visitor));
+
+    return visitor.get();
+  }
+
+  private Map<String, Object> toMapForPut(Put put) {
+    MapVisitor visitor = new MapVisitor();
+    put.getNullableValues()
+        .forEach(
+            (k, v) -> {
+              if (v.isPresent()) {
+                v.get().accept(visitor);
+              } else {
+                visitor.addNullValue(k);
+              }
+            });
 
     return visitor.get();
   }

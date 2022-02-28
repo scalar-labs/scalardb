@@ -92,6 +92,16 @@ public class MapVisitorTest {
   }
 
   @Test
+  public void visit_TextValueWithNullValueAcceptCalled_ShouldGetMap() {
+    // Act
+    new TextValue("any_text", (String) null).accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().containsKey("any_text")).isTrue();
+    assertThat(visitor.get().get("any_text")).isNull();
+  }
+
+  @Test
   public void visit_BlobValueAcceptCalled_ShouldGetMap() {
     // Act
     ANY_BLOB_VALUE.accept(visitor);
@@ -103,5 +113,25 @@ public class MapVisitorTest {
                 .put(ANY_TEXT.getBytes(StandardCharsets.UTF_8))
                 .flip();
     assertThat(visitor.get().get(ANY_BLOB_VALUE.getName())).isEqualTo(expected);
+  }
+
+  @Test
+  public void visit_BlobValueWithNullValueAcceptCalled_ShouldGetMap() {
+    // Act
+    new BlobValue("any_blob", (byte[]) null).accept(visitor);
+
+    // Assert
+    assertThat(visitor.get().containsKey("any_blob")).isTrue();
+    assertThat(visitor.get().get("any_blob")).isNull();
+  }
+
+  @Test
+  public void addNullValue_ShouldGetMap() {
+    // Act
+    visitor.addNullValue("any_name");
+
+    // Assert
+    assertThat(visitor.get().containsKey("any_name")).isTrue();
+    assertThat(visitor.get().get("any_name")).isNull();
   }
 }

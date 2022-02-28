@@ -570,6 +570,25 @@ public class OperationCheckerTest {
   }
 
   @Test
+  public void whenCheckingPutOperationWithNullValue_shouldNotThrowAnyException() {
+    // Arrange
+    Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");
+    Key clusteringKey = new Key(CKEY1, 2, CKEY2, "val1");
+    MutationCondition condition = new PutIfNotExists();
+    Put put =
+        new Put(partitionKey, clusteringKey)
+            .withValue(COL1, 1)
+            .withValue(COL2, 0.1D)
+            .withNullValue(COL3)
+            .withCondition(condition)
+            .forNamespace(NAMESPACE)
+            .forTable(TABLE_NAME);
+
+    // Act Assert
+    assertThatCode(() -> operationChecker.check(put)).doesNotThrowAnyException();
+  }
+
+  @Test
   public void whenCheckingPutOperationWithoutAnyCondition_shouldNotThrowAnyException() {
     // Arrange
     Key partitionKey = new Key(PKEY1, 1, PKEY2, "val1");

@@ -3,6 +3,7 @@ package com.scalar.db.storage.jdbc.query;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclose;
 import static com.scalar.db.storage.jdbc.query.QueryUtils.enclosedFullTableName;
 
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.Value;
 import com.scalar.db.storage.jdbc.RdbEngine;
@@ -11,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
@@ -21,14 +23,16 @@ public class MergeQuery implements UpsertQuery {
   private final RdbEngine rdbEngine;
   private final String schema;
   private final String table;
+  private final TableMetadata tableMetadata;
   private final Key partitionKey;
   private final Optional<Key> clusteringKey;
-  private final Map<String, Value<?>> values;
+  private final Map<String, Optional<Value<?>>> values;
 
   public MergeQuery(Builder builder) {
     rdbEngine = builder.rdbEngine;
     schema = builder.schema;
     table = builder.table;
+    tableMetadata = builder.tableMetadata;
     partitionKey = builder.partitionKey;
     clusteringKey = builder.clusteringKey;
     values = builder.values;
@@ -89,7 +93,8 @@ public class MergeQuery implements UpsertQuery {
 
   @Override
   public void bind(PreparedStatement preparedStatement) throws SQLException {
-    PreparedStatementBinder binder = new PreparedStatementBinder(preparedStatement);
+    PreparedStatementBinder binder =
+        new PreparedStatementBinder(preparedStatement, tableMetadata, rdbEngine);
 
     // For the USING SELECT statement
     for (Value<?> value : partitionKey) {
@@ -104,8 +109,12 @@ public class MergeQuery implements UpsertQuery {
     }
 
     // For the UPDATE statement
-    for (Value<?> value : values.values()) {
-      value.accept(binder);
+    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
+      if (entry.getValue().isPresent()) {
+        entry.getValue().get().accept(binder);
+      } else {
+        binder.bindNullValue(entry.getKey());
+      }
       binder.throwSQLExceptionIfOccurred();
     }
 
@@ -120,8 +129,12 @@ public class MergeQuery implements UpsertQuery {
         binder.throwSQLExceptionIfOccurred();
       }
     }
-    for (Value<?> value : values.values()) {
-      value.accept(binder);
+    for (Entry<String, Optional<Value<?>>> entry : values.entrySet()) {
+      if (entry.getValue().isPresent()) {
+        entry.getValue().get().accept(binder);
+      } else {
+        binder.bindNullValue(entry.getKey());
+      }
       binder.throwSQLExceptionIfOccurred();
     }
   }

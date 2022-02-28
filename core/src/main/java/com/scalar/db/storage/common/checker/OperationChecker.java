@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -205,8 +206,9 @@ public class OperationChecker {
   }
 
   private void checkValues(Put put, TableMetadata metadata) {
-    for (Map.Entry<String, Value<?>> entry : put.getValues().entrySet()) {
-      if (!new ColumnChecker(metadata, false, false, true).check(entry.getValue())) {
+    for (Map.Entry<String, Optional<Value<?>>> entry : put.getNullableValues().entrySet()) {
+      if (!new ColumnChecker(metadata, false, false, true)
+          .check(entry.getKey(), entry.getValue())) {
         throw new IllegalArgumentException(
             "The values are not properly specified. Operation: " + put);
       }
@@ -287,6 +289,9 @@ public class OperationChecker {
 
     Iterator<String> iterator = keyNames.iterator();
     for (Value<?> value : values) {
+      if (value == null) {
+        return false;
+      }
       String keyName = iterator.next();
 
       if (!keyName.equals(value.getName())) {

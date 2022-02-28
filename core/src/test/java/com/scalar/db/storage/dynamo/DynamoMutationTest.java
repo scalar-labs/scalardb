@@ -56,22 +56,6 @@ public class DynamoMutationTest {
   }
 
   @Test
-  public void getValueMapWithKey_PutGiven_ShouldReturnValueMap() {
-    // Arrange
-    Put put = preparePut();
-    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
-
-    // Act
-    Map<String, AttributeValue> actual = dynamoMutation.getValueMapWithKey();
-
-    // Assert
-    assertThat(actual.get(ANY_NAME_1).s()).isEqualTo(ANY_TEXT_1);
-    assertThat(actual.get(ANY_NAME_2).s()).isEqualTo(ANY_TEXT_2);
-    assertThat(Integer.valueOf(actual.get(ANY_NAME_3).n())).isEqualTo(ANY_INT_1);
-    assertThat(Integer.valueOf(actual.get(ANY_NAME_4).n())).isEqualTo(ANY_INT_2);
-  }
-
-  @Test
   public void getIfNotExistsCondition_PutGiven_ShouldReturnCondition() {
     // Arrange
     Put put = preparePut();
@@ -214,6 +198,25 @@ public class DynamoMutationTest {
     expected.put(
         DynamoOperation.VALUE_ALIAS + "0",
         AttributeValue.builder().n(String.valueOf(ANY_INT_1)).build());
+    expected.put(
+        DynamoOperation.VALUE_ALIAS + "1",
+        AttributeValue.builder().n(String.valueOf(ANY_INT_2)).build());
+
+    DynamoMutation dynamoMutation = new DynamoMutation(put, metadata);
+
+    // Act
+    Map<String, AttributeValue> actual = dynamoMutation.getValueBindMap();
+
+    // Assert
+    assertThat(actual).isEqualTo(expected);
+  }
+
+  @Test
+  public void getValueBindMap_PutWithNullValueGiven_ShouldReturnBindMap() {
+    // Arrange
+    Put put = preparePut().withNullValue(ANY_NAME_3);
+    Map<String, AttributeValue> expected = new HashMap<>();
+    expected.put(DynamoOperation.VALUE_ALIAS + "0", AttributeValue.builder().nul(true).build());
     expected.put(
         DynamoOperation.VALUE_ALIAS + "1",
         AttributeValue.builder().n(String.valueOf(ANY_INT_2)).build());

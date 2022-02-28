@@ -11,6 +11,7 @@ import com.scalar.db.io.IntValue;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
 import com.scalar.db.io.ValueVisitor;
+import java.util.Optional;
 import javax.annotation.concurrent.NotThreadSafe;
 
 @NotThreadSafe
@@ -31,7 +32,19 @@ class ColumnChecker implements ValueVisitor {
   }
 
   public boolean check(Value<?> value) {
-    String name = getName(value);
+    return check(value.getName(), Optional.of(value));
+  }
+
+  public boolean check(String name, Value<?> value) {
+    return check(name, Optional.of(value));
+  }
+
+  public boolean check(String name, Optional<Value<?>> value) {
+    if (!value.isPresent()) {
+      return !notNull;
+    }
+
+    this.name = name;
 
     // Check if the column exists
     if (!tableMetadata.getColumnNames().contains(name)) {
@@ -47,42 +60,33 @@ class ColumnChecker implements ValueVisitor {
     }
 
     // Check if the column data type is correct and the column value is null or empty
-    value.accept(this);
+    value.get().accept(this);
     return isValid;
-  }
-
-  public boolean check(String name, Value<?> value) {
-    this.name = name;
-    return check(value);
-  }
-
-  private String getName(Value<?> value) {
-    return name != null ? name : value.getName();
   }
 
   @Override
   public void visit(BooleanValue value) {
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.BOOLEAN;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.BOOLEAN;
   }
 
   @Override
   public void visit(IntValue value) {
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.INT;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.INT;
   }
 
   @Override
   public void visit(BigIntValue value) {
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.BIGINT;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.BIGINT;
   }
 
   @Override
   public void visit(FloatValue value) {
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.FLOAT;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.FLOAT;
   }
 
   @Override
   public void visit(DoubleValue value) {
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.DOUBLE;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.DOUBLE;
   }
 
   @Override
@@ -95,8 +99,7 @@ class ColumnChecker implements ValueVisitor {
       isValid = false;
       return;
     }
-
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.TEXT;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.TEXT;
   }
 
   @Override
@@ -109,6 +112,6 @@ class ColumnChecker implements ValueVisitor {
       isValid = false;
       return;
     }
-    isValid = tableMetadata.getColumnDataType(getName(value)) == DataType.BLOB;
+    isValid = tableMetadata.getColumnDataType(name) == DataType.BLOB;
   }
 }

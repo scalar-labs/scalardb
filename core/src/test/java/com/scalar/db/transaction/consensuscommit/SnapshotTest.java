@@ -22,13 +22,19 @@ import com.scalar.db.api.Put;
 import com.scalar.db.api.Result;
 import com.scalar.db.api.Scan;
 import com.scalar.db.api.Scanner;
+import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
 import com.scalar.db.exception.transaction.CommitConflictException;
+import com.scalar.db.exception.transaction.CrudException;
+import com.scalar.db.io.DataType;
 import com.scalar.db.io.Key;
 import com.scalar.db.io.TextValue;
 import com.scalar.db.io.Value;
+import com.scalar.db.util.ResultImpl;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +60,18 @@ public class SnapshotTest {
   private static final String ANY_TEXT_4 = "text4";
   private static final String ANY_TEXT_5 = "text5";
   private static final String ANY_TEXT_6 = "text6";
+
+  private static final TableMetadata TABLE_METADATA =
+      ConsensusCommitUtils.buildTransactionalTableMetadata(
+          TableMetadata.newBuilder()
+              .addColumn(ANY_NAME_1, DataType.TEXT)
+              .addColumn(ANY_NAME_2, DataType.TEXT)
+              .addColumn(ANY_NAME_3, DataType.TEXT)
+              .addColumn(ANY_NAME_4, DataType.TEXT)
+              .addPartitionKey(ANY_NAME_1)
+              .addClusteringKey(ANY_NAME_2)
+              .build());
+
   private Snapshot snapshot;
   private Map<Snapshot.Key, Optional<TransactionResult>> readSet;
   private Map<Scan, List<Snapshot.Key>> scanSet;
@@ -64,10 +82,17 @@ public class SnapshotTest {
   @Mock private PrepareMutationComposer prepareComposer;
   @Mock private CommitMutationComposer commitComposer;
   @Mock private RollbackMutationComposer rollbackComposer;
+  @Mock private TransactionalTableMetadataManager tableMetadataManager;
 
   @Before
   public void setUp() throws Exception {
     MockitoAnnotations.openMocks(this).close();
+
+    // Arrange
+    when(tableMetadataManager.getTransactionalTableMetadata(any()))
+        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
+    when(tableMetadataManager.getTransactionalTableMetadata(any(), any()))
+        .thenReturn(new TransactionalTableMetadata(TABLE_METADATA));
   }
 
   private Snapshot prepareSnapshot(Isolation isolation) {
@@ -85,6 +110,7 @@ public class SnapshotTest {
             ANY_ID,
             isolation,
             strategy,
+            tableMetadataManager,
             new ParallelExecutor(config),
             readSet,
             scanSet,
@@ -93,22 +119,16 @@ public class SnapshotTest {
   }
 
   private TransactionResult prepareResult(String txId) {
-    TransactionResult result = mock(TransactionResult.class);
-    when(result.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(result.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
-    when(result.getValues())
-        .thenReturn(
-            ImmutableMap.<String, Value<?>>builder()
-                .put(ANY_NAME_1, new TextValue(ANY_NAME_1, ANY_TEXT_1))
-                .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
-                .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_3))
-                .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
-                .put(Attribute.ID, Attribute.toIdValue(txId))
-                .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
-                .build());
-    return result;
+    ImmutableMap<String, Optional<Value<?>>> values =
+        ImmutableMap.<String, Optional<Value<?>>>builder()
+            .put(ANY_NAME_1, Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)))
+            .put(ANY_NAME_2, Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)))
+            .put(ANY_NAME_3, Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_3)))
+            .put(ANY_NAME_4, Optional.of(new TextValue(ANY_NAME_4, ANY_TEXT_4)))
+            .put(Attribute.ID, Optional.of(Attribute.toIdValue(txId)))
+            .put(Attribute.VERSION, Optional.of(Attribute.toVersionValue(ANY_VERSION)))
+            .build();
+    return new TransactionResult(new ResultImpl(values, TABLE_METADATA));
   }
 
   private Get prepareGet() {
@@ -238,20 +258,21 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_TEXT_5);
+            .withValue(ANY_NAME_3, ANY_TEXT_5)
+            .withNullValue(ANY_NAME_4);
 
     // Act
     snapshot.put(key, put1);
     snapshot.put(key, put2);
 
     // Assert
-    assertThat(writeSet.get(key).getValues())
+    assertThat(writeSet.get(key).getNullableValues())
         .isEqualTo(
             ImmutableMap.of(
                 ANY_NAME_3,
-                new TextValue(ANY_NAME_3, ANY_TEXT_5),
+                Optional.of(new TextValue(ANY_NAME_3, ANY_TEXT_5)),
                 ANY_NAME_4,
-                new TextValue(ANY_NAME_4, ANY_TEXT_4)));
+                Optional.empty()));
   }
 
   @Test
@@ -284,7 +305,8 @@ public class SnapshotTest {
   }
 
   @Test
-  public void get_KeyGivenContainedInWriteSetAndReadSet_ShouldReturnMergedResult() {
+  public void get_KeyGivenContainedInWriteSetAndReadSet_ShouldReturnMergedResult()
+      throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
@@ -294,7 +316,8 @@ public class SnapshotTest {
             .withConsistency(Consistency.LINEARIZABLE)
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME)
-            .withValue(ANY_NAME_3, ANY_TEXT_5);
+            .withValue(ANY_NAME_3, ANY_TEXT_5)
+            .withNullValue(ANY_NAME_4);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
     TransactionResult result = prepareResult(ANY_ID);
     snapshot.put(key, Optional.of(result));
@@ -311,19 +334,72 @@ public class SnapshotTest {
                 .put(ANY_NAME_1, new TextValue(ANY_NAME_1, ANY_TEXT_1))
                 .put(ANY_NAME_2, new TextValue(ANY_NAME_2, ANY_TEXT_2))
                 .put(ANY_NAME_3, new TextValue(ANY_NAME_3, ANY_TEXT_5))
-                .put(ANY_NAME_4, new TextValue(ANY_NAME_4, ANY_TEXT_4))
+                .put(ANY_NAME_4, new TextValue(ANY_NAME_4, (String) null))
                 .put(Attribute.ID, Attribute.toIdValue(ANY_ID))
                 .put(Attribute.VERSION, Attribute.toVersionValue(ANY_VERSION))
                 .build());
-    assertThat(actual.get().getValue(ANY_NAME_1).get().getAsString().get()).isEqualTo(ANY_TEXT_1);
-    assertThat(actual.get().getValue(ANY_NAME_2).get().getAsString().get()).isEqualTo(ANY_TEXT_2);
-    assertThat(actual.get().getValue(ANY_NAME_3).get().getAsString().get()).isEqualTo(ANY_TEXT_5);
-    assertThat(actual.get().getValue(ANY_NAME_4).get().getAsString().get()).isEqualTo(ANY_TEXT_4);
-    assertThat(actual.get().getValue(Attribute.ID).get().getAsString().get()).isEqualTo(ANY_ID);
+    assertThat(actual.get().getValue(ANY_NAME_1).isPresent()).isTrue();
+    assertThat(actual.get().getValue(ANY_NAME_1).get())
+        .isEqualTo(new TextValue(ANY_NAME_1, ANY_TEXT_1));
+    assertThat(actual.get().getValue(ANY_NAME_2).isPresent()).isTrue();
+    assertThat(actual.get().getValue(ANY_NAME_2).get())
+        .isEqualTo(new TextValue(ANY_NAME_2, ANY_TEXT_2));
+    assertThat(actual.get().getValue(ANY_NAME_3).isPresent()).isTrue();
+    assertThat(actual.get().getValue(ANY_NAME_3).get())
+        .isEqualTo(new TextValue(ANY_NAME_3, ANY_TEXT_5));
+    assertThat(actual.get().getValue(ANY_NAME_4).isPresent()).isTrue();
+    assertThat(actual.get().getValue(ANY_NAME_4).get())
+        .isEqualTo(new TextValue(ANY_NAME_4, (String) null));
+    assertThat(actual.get().getValue(Attribute.ID).isPresent()).isTrue();
+    assertThat(actual.get().getValue(Attribute.ID).get()).isEqualTo(Attribute.toIdValue(ANY_ID));
+    assertThat(actual.get().getValue(Attribute.VERSION).isPresent()).isTrue();
+    assertThat(actual.get().getValue(Attribute.VERSION).get())
+        .isEqualTo(Attribute.toVersionValue(ANY_VERSION));
+
+    assertThat(actual.get().getContainedColumnNames())
+        .isEqualTo(
+            new HashSet<>(
+                Arrays.asList(
+                    ANY_NAME_1,
+                    ANY_NAME_2,
+                    ANY_NAME_3,
+                    ANY_NAME_4,
+                    Attribute.ID,
+                    Attribute.VERSION)));
+
+    assertThat(actual.get().contains(ANY_NAME_1)).isTrue();
+    assertThat(actual.get().isNull(ANY_NAME_1)).isFalse();
+    assertThat(actual.get().getText(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+    assertThat(actual.get().getAsObject(ANY_NAME_1)).isEqualTo(ANY_TEXT_1);
+
+    assertThat(actual.get().contains(ANY_NAME_2)).isTrue();
+    assertThat(actual.get().isNull(ANY_NAME_2)).isFalse();
+    assertThat(actual.get().getText(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+    assertThat(actual.get().getAsObject(ANY_NAME_2)).isEqualTo(ANY_TEXT_2);
+
+    assertThat(actual.get().contains(ANY_NAME_3)).isTrue();
+    assertThat(actual.get().isNull(ANY_NAME_3)).isFalse();
+    assertThat(actual.get().getText(ANY_NAME_3)).isEqualTo(ANY_TEXT_5);
+    assertThat(actual.get().getAsObject(ANY_NAME_3)).isEqualTo(ANY_TEXT_5);
+
+    assertThat(actual.get().contains(ANY_NAME_4)).isTrue();
+    assertThat(actual.get().isNull(ANY_NAME_4)).isTrue();
+    assertThat(actual.get().getText(ANY_NAME_4)).isNull();
+    assertThat(actual.get().getAsObject(ANY_NAME_4)).isNull();
+
+    assertThat(actual.get().contains(Attribute.ID)).isTrue();
+    assertThat(actual.get().isNull(Attribute.ID)).isFalse();
+    assertThat(actual.get().getText(Attribute.ID)).isEqualTo(ANY_ID);
+    assertThat(actual.get().getAsObject(Attribute.ID)).isEqualTo(ANY_ID);
+
+    assertThat(actual.get().contains(Attribute.VERSION)).isTrue();
+    assertThat(actual.get().isNull(Attribute.VERSION)).isFalse();
+    assertThat(actual.get().getInt(Attribute.VERSION)).isEqualTo(ANY_VERSION);
+    assertThat(actual.get().getAsObject(Attribute.VERSION)).isEqualTo(ANY_VERSION);
   }
 
   @Test
-  public void get_KeyGivenContainedInReadSet_ShouldReturnFromReadSet() {
+  public void get_KeyGivenContainedInReadSet_ShouldReturnFromReadSet() throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
@@ -360,7 +436,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void get_KeyGivenContainedInDeleteSet_ShouldReturnEmpty() {
+  public void get_KeyGivenContainedInDeleteSet_ShouldReturnEmpty() throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Delete delete = prepareDelete();
@@ -375,7 +451,7 @@ public class SnapshotTest {
   }
 
   @Test
-  public void get_KeyGivenContainedInReadSetAndDeleteSet_ShouldReturnEmpty() {
+  public void get_KeyGivenContainedInReadSetAndDeleteSet_ShouldReturnEmpty() throws CrudException {
     // Arrange
     snapshot = prepareSnapshot(Isolation.SNAPSHOT);
     Snapshot.Key key = new Snapshot.Key(prepareGet());
@@ -782,39 +858,33 @@ public class SnapshotTest {
             .forNamespace(ANY_NAMESPACE_NAME)
             .forTable(ANY_TABLE_NAME);
 
-    Result result1 = mock(TransactionResult.class);
-    when(result1.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_1))));
-    when(result1.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_2))));
-    when(result1.getValues())
-        .thenReturn(
-            ImmutableMap.of(
-                ANY_NAME_1,
-                new TextValue(ANY_NAME_1, ANY_TEXT_1),
-                ANY_NAME_2,
-                new TextValue(ANY_NAME_2, ANY_TEXT_2),
-                Attribute.ID,
-                Attribute.toIdValue("id1"),
-                Attribute.VERSION,
-                Attribute.toVersionValue(ANY_VERSION)));
+    Result result1 =
+        new TransactionResult(
+            new ResultImpl(
+                ImmutableMap.of(
+                    ANY_NAME_1,
+                    Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_1)),
+                    ANY_NAME_2,
+                    Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_2)),
+                    Attribute.ID,
+                    Optional.of(Attribute.toIdValue("id1")),
+                    Attribute.VERSION,
+                    Optional.of(Attribute.toVersionValue(ANY_VERSION))),
+                TABLE_METADATA));
 
-    Result result2 = mock(TransactionResult.class);
-    when(result2.getPartitionKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_1, ANY_TEXT_2))));
-    when(result2.getClusteringKey())
-        .thenReturn(Optional.of(new Key(new TextValue(ANY_NAME_2, ANY_TEXT_1))));
-    when(result2.getValues())
-        .thenReturn(
-            ImmutableMap.of(
-                ANY_NAME_1,
-                new TextValue(ANY_NAME_1, ANY_TEXT_2),
-                ANY_NAME_2,
-                new TextValue(ANY_NAME_2, ANY_TEXT_1),
-                Attribute.ID,
-                Attribute.toIdValue("id2"),
-                Attribute.VERSION,
-                Attribute.toVersionValue(ANY_VERSION)));
+    Result result2 =
+        new TransactionResult(
+            new ResultImpl(
+                ImmutableMap.of(
+                    ANY_NAME_1,
+                    Optional.of(new TextValue(ANY_NAME_1, ANY_TEXT_2)),
+                    ANY_NAME_2,
+                    Optional.of(new TextValue(ANY_NAME_2, ANY_TEXT_1)),
+                    Attribute.ID,
+                    Optional.of(Attribute.toIdValue("id2")),
+                    Attribute.VERSION,
+                    Optional.of(Attribute.toVersionValue(ANY_VERSION))),
+                TABLE_METADATA));
 
     Snapshot.Key key1 = new Snapshot.Key(scan1, result1);
     Snapshot.Key key2 = new Snapshot.Key(scan2, result2);
