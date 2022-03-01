@@ -26,7 +26,7 @@ public class MergedResult extends AbstractResult {
   private final Supplier<Map<String, Value<?>>> valuesWithDefaultValues;
 
   public MergedResult(Optional<TransactionResult> result, Put put, TableMetadata metadata) {
-    // assume that all the values are projected to the result
+    // assume that all the columns are projected to the result
     this.result = result;
     this.put = put;
 
@@ -83,133 +83,135 @@ public class MergedResult extends AbstractResult {
     return put.getClusteringKey();
   }
 
+  @Deprecated
   @Override
-  public Optional<Value<?>> getValue(String name) {
-    return Optional.of(valuesWithDefaultValues.get().get(name));
+  public Optional<Value<?>> getValue(String columnName) {
+    return Optional.of(valuesWithDefaultValues.get().get(columnName));
   }
 
+  @Deprecated
   @Override
   public Map<String, Value<?>> getValues() {
     return valuesWithDefaultValues.get();
   }
 
   @Override
-  public boolean isNull(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return !putValues.get(name).isPresent();
+  public boolean isNull(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return !putValues.get(columnName).isPresent();
     }
-    return result.map(transactionResult -> transactionResult.isNull(name)).orElse(true);
+    return result.map(transactionResult -> transactionResult.isNull(columnName)).orElse(true);
   }
 
   @Override
-  public boolean getBoolean(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).map(Value::getAsBoolean).orElse(false);
+  public boolean getBoolean(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).map(Value::getAsBoolean).orElse(false);
     }
-    return result.map(r -> r.getBoolean(name)).orElse(false);
+    return result.map(r -> r.getBoolean(columnName)).orElse(false);
   }
 
   @Override
-  public int getInt(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).map(Value::getAsInt).orElse(0);
+  public int getInt(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).map(Value::getAsInt).orElse(0);
     }
-    return result.map(r -> r.getInt(name)).orElse(0);
+    return result.map(r -> r.getInt(columnName)).orElse(0);
   }
 
   @Override
-  public long getBigInt(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).map(Value::getAsLong).orElse(0L);
+  public long getBigInt(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).map(Value::getAsLong).orElse(0L);
     }
-    return result.map(r -> r.getBigInt(name)).orElse(0L);
+    return result.map(r -> r.getBigInt(columnName)).orElse(0L);
   }
 
   @Override
-  public float getFloat(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).map(Value::getAsFloat).orElse(0.0F);
+  public float getFloat(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).map(Value::getAsFloat).orElse(0.0F);
     }
-    return result.map(r -> r.getFloat(name)).orElse(0.0F);
+    return result.map(r -> r.getFloat(columnName)).orElse(0.0F);
   }
 
   @Override
-  public double getDouble(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).map(Value::getAsDouble).orElse(0.0D);
+  public double getDouble(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).map(Value::getAsDouble).orElse(0.0D);
     }
-    return result.map(r -> r.getDouble(name)).orElse(0.0D);
-  }
-
-  @Nullable
-  @Override
-  public String getText(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).flatMap(Value::getAsString).orElse(null);
-    }
-    return result.map(r -> r.getText(name)).orElse(null);
+    return result.map(r -> r.getDouble(columnName)).orElse(0.0D);
   }
 
   @Nullable
   @Override
-  public ByteBuffer getBlobAsByteBuffer(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).flatMap(Value::getAsByteBuffer).orElse(null);
+  public String getText(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).flatMap(Value::getAsString).orElse(null);
     }
-    return result.map(r -> r.getBlobAsByteBuffer(name)).orElse(null);
+    return result.map(r -> r.getText(columnName)).orElse(null);
   }
 
   @Nullable
   @Override
-  public byte[] getBlobAsBytes(String name) {
-    checkIfExists(name);
-    if (putValues.containsKey(name)) {
-      return putValues.get(name).flatMap(Value::getAsBytes).orElse(null);
+  public ByteBuffer getBlobAsByteBuffer(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).flatMap(Value::getAsByteBuffer).orElse(null);
     }
-    return result.map(r -> r.getBlobAsBytes(name)).orElse(null);
+    return result.map(r -> r.getBlobAsByteBuffer(columnName)).orElse(null);
   }
 
   @Nullable
   @Override
-  public Object getAsObject(String name) {
-    checkIfExists(name);
-    if (isNull(name)) {
+  public byte[] getBlobAsBytes(String columnName) {
+    checkIfExists(columnName);
+    if (putValues.containsKey(columnName)) {
+      return putValues.get(columnName).flatMap(Value::getAsBytes).orElse(null);
+    }
+    return result.map(r -> r.getBlobAsBytes(columnName)).orElse(null);
+  }
+
+  @Nullable
+  @Override
+  public Object getAsObject(String columnName) {
+    checkIfExists(columnName);
+    if (isNull(columnName)) {
       return null;
     }
 
-    switch (metadata.getColumnDataType(name)) {
+    switch (metadata.getColumnDataType(columnName)) {
       case BOOLEAN:
-        return getBoolean(name);
+        return getBoolean(columnName);
       case INT:
-        return getInt(name);
+        return getInt(columnName);
       case BIGINT:
-        return getBigInt(name);
+        return getBigInt(columnName);
       case FLOAT:
-        return getFloat(name);
+        return getFloat(columnName);
       case DOUBLE:
-        return getDouble(name);
+        return getDouble(columnName);
       case TEXT:
-        return getText(name);
+        return getText(columnName);
       case BLOB:
-        return getBlob(name);
+        return getBlob(columnName);
       default:
         throw new AssertionError();
     }
   }
 
   @Override
-  public boolean contains(String name) {
+  public boolean contains(String columnName) {
     return result
-        .map(r -> r.getContainedColumnNames().contains(name))
-        .orElse(metadata.getColumnNames().contains(name));
+        .map(r -> r.getContainedColumnNames().contains(columnName))
+        .orElse(metadata.getColumnNames().contains(columnName));
   }
 
   @Override

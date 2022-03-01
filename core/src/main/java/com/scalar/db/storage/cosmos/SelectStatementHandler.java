@@ -188,7 +188,7 @@ public class SelectStatementHandler extends StatementHandler {
     boolean reverse = false;
     if (!scanOrderings.isEmpty()) {
       reverse =
-          tableMetadata.getClusteringOrder(scanOrderings.get(0).getName())
+          tableMetadata.getClusteringOrder(scanOrderings.get(0).getColumnName())
               != scanOrderings.get(0).getOrder();
     }
 

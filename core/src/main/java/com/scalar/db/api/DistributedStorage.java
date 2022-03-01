@@ -12,10 +12,10 @@ import java.util.Optional;
  *
  * <p>The data model behind this abstraction is a multi-dimensional map based on key-value data
  * model. A logical record (or entry) is composed of partition key, clustering key and a set of
- * values. The value is uniquely mapped by a primary key composed of partition key, clustering key
- * and value name as described in the following scheme.
+ * columns. The column value is uniquely mapped by a primary key composed of partition key,
+ * clustering key and column name as described in the following scheme.
  *
- * <p>(partition key, clustering key, value name) {@code =>} value content
+ * <p>(partition key, clustering key, column name) {@code =>} column value
  *
  * <p>The physical data model is a multi-dimensional map distributed to multiple nodes by key-based
  * hash partitioning. Entries are assumed to be hash-partitioned by partition key (even though an
@@ -38,7 +38,7 @@ import java.util.Optional;
  * storage.with(NAMESPACE, TABLE);
  *
  * // Inserts a new entry which has the primary key value 0 to the storage.
- * // Assumes that the primary key is composed of a integer value named COL_NAME.
+ * // Assumes that the primary key is composed of a integer column named COL_NAME.
  * Put put = new Put(new Key(COL_NAME, 0);
  * storage.put(put);
  *

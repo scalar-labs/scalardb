@@ -226,7 +226,7 @@ public final class ProtoUtils {
 
   private static com.scalar.db.rpc.Ordering toOrdering(Scan.Ordering ordering) {
     return com.scalar.db.rpc.Ordering.newBuilder()
-        .setName(ordering.getName())
+        .setName(ordering.getColumnName())
         .setOrder(toOrder(ordering.getOrder()))
         .build();
   }
@@ -370,7 +370,7 @@ public final class ProtoUtils {
   private static com.scalar.db.rpc.ConditionalExpression toExpression(
       ConditionalExpression expression) {
     return com.scalar.db.rpc.ConditionalExpression.newBuilder()
-        .setName(expression.getName())
+        .setName(expression.getColumnName())
         .setValue(toValue(expression.getValue()))
         .setOperator(toOperator(expression.getOperator()))
         .build();

@@ -13,7 +13,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A {@code Value} for a string
+ * A {@code Value} (column) for a string
  *
  * @author Hiroyuki Yamada
  */
@@ -26,8 +26,8 @@ public final class TextValue implements Value<Optional<String>> {
   /**
    * Constructs a {@code TextValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value} in byte array
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column) in byte array
    * @deprecated As of release 3.5.0. Will be removed in release 5.0.0
    */
   @Deprecated
@@ -41,9 +41,10 @@ public final class TextValue implements Value<Optional<String>> {
   }
 
   /**
-   * Constructs a {@code TextValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code TextValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    * @deprecated As of release 3.5.0. Will be removed in release 5.0.0
    */
   @Deprecated
@@ -54,8 +55,8 @@ public final class TextValue implements Value<Optional<String>> {
   /**
    * Constructs a {@code TextValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value} in {@code String}
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column) in {@code String}
    */
   public TextValue(String name, @Nullable String value) {
     checkNotNull(name);
@@ -68,9 +69,10 @@ public final class TextValue implements Value<Optional<String>> {
   }
 
   /**
-   * Constructs a {@code TextValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code TextValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    */
   public TextValue(@Nullable String value) {
     this(ANONYMOUS, value);
@@ -83,7 +85,7 @@ public final class TextValue implements Value<Optional<String>> {
   }
 
   /**
-   * Returns the content of this {@code Value}
+   * Returns the value of this {@code Value} (column)
    *
    * @return an {@code Optional} of the content of this {@code Value} in byte array
    * @deprecated As of release 3.2.0, replaced by {@link #getAsBytes()}. Will be removed in release
@@ -97,7 +99,7 @@ public final class TextValue implements Value<Optional<String>> {
   }
 
   /**
-   * Returns the content of this {@code Value}
+   * Returns the value of this {@code Value} (column)
    *
    * @return an {@code Optional} of the content of this {@code Value} in {@code String}
    * @deprecated As of release 3.2.0, replaced by {@link #getAsString()}. Will be removed in release

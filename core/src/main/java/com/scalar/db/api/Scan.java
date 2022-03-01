@@ -268,28 +268,39 @@ public class Scan extends Selection {
   /** An optional parameter of {@link Scan} command to specify ordering of returned results. */
   @Immutable
   public static class Ordering {
-    private final String name;
+    private final String columnName;
     private final Order order;
 
     /**
      * Constructs a {@code Ordering} with the specified name of a clustering key of an entry and the
      * given order
      *
-     * @param name the name of a clustering key in an entry to order
+     * @param columnName the column name of a clustering key in an entry to order
      * @param order the {@code Order} of results
      */
-    public Ordering(String name, Order order) {
-      this.name = name;
+    public Ordering(String columnName, Order order) {
+      this.columnName = columnName;
       this.order = order;
     }
 
     /**
-     * Returns the name of the ordering clustering key
+     * Returns the column name of the ordering clustering key
      *
-     * @return the name of the ordering clustering key
+     * @return the column name of the ordering clustering key
+     * @deprecated As of release 3.6.0. Will be removed in release 5.0.0
      */
+    @Deprecated
     public String getName() {
-      return name;
+      return columnName;
+    }
+
+    /**
+     * Returns the column name of the ordering clustering key
+     *
+     * @return the column name of the ordering clustering key
+     */
+    public String getColumnName() {
+      return columnName;
     }
 
     /**
@@ -307,7 +318,7 @@ public class Scan extends Selection {
      *
      * <ul>
      *   <li>it is also an {@code Ordering}
-     *   <li>both instances have the same name and order
+     *   <li>both instances have the same column name and order
      * </ul>
      *
      * @param o an object to be tested for equality
@@ -322,17 +333,17 @@ public class Scan extends Selection {
         return false;
       }
       Ordering other = (Ordering) o;
-      return (name.equals(other.name) && order.equals(other.order));
+      return (columnName.equals(other.columnName) && order.equals(other.order));
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(name, order);
+      return Objects.hash(columnName, order);
     }
 
     @Override
     public String toString() {
-      return name + "-" + order;
+      return columnName + "-" + order;
     }
 
     public enum Order {

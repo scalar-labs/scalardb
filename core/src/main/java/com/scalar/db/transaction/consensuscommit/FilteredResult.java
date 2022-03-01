@@ -78,83 +78,85 @@ public class FilteredResult extends AbstractResult {
     return key;
   }
 
+  @Deprecated
   @Override
-  public Optional<Value<?>> getValue(String name) {
-    return Optional.ofNullable(valuesWithDefaultValues.get().get(name));
+  public Optional<Value<?>> getValue(String columnName) {
+    return Optional.ofNullable(valuesWithDefaultValues.get().get(columnName));
   }
 
+  @Deprecated
   @Override
   public Map<String, Value<?>> getValues() {
     return valuesWithDefaultValues.get();
   }
 
   @Override
-  public boolean isNull(String name) {
-    checkIfExists(name);
-    return original.isNull(name);
+  public boolean isNull(String columnName) {
+    checkIfExists(columnName);
+    return original.isNull(columnName);
   }
 
   @Override
-  public boolean getBoolean(String name) {
-    checkIfExists(name);
-    return original.getBoolean(name);
+  public boolean getBoolean(String columnName) {
+    checkIfExists(columnName);
+    return original.getBoolean(columnName);
   }
 
   @Override
-  public int getInt(String name) {
-    checkIfExists(name);
-    return original.getInt(name);
+  public int getInt(String columnName) {
+    checkIfExists(columnName);
+    return original.getInt(columnName);
   }
 
   @Override
-  public long getBigInt(String name) {
-    checkIfExists(name);
-    return original.getBigInt(name);
+  public long getBigInt(String columnName) {
+    checkIfExists(columnName);
+    return original.getBigInt(columnName);
   }
 
   @Override
-  public float getFloat(String name) {
-    checkIfExists(name);
-    return original.getFloat(name);
+  public float getFloat(String columnName) {
+    checkIfExists(columnName);
+    return original.getFloat(columnName);
   }
 
   @Override
-  public double getDouble(String name) {
-    checkIfExists(name);
-    return original.getDouble(name);
-  }
-
-  @Nullable
-  @Override
-  public String getText(String name) {
-    checkIfExists(name);
-    return original.getText(name);
+  public double getDouble(String columnName) {
+    checkIfExists(columnName);
+    return original.getDouble(columnName);
   }
 
   @Nullable
   @Override
-  public ByteBuffer getBlobAsByteBuffer(String name) {
-    checkIfExists(name);
-    return original.getBlobAsByteBuffer(name);
+  public String getText(String columnName) {
+    checkIfExists(columnName);
+    return original.getText(columnName);
   }
 
   @Nullable
   @Override
-  public byte[] getBlobAsBytes(String name) {
-    checkIfExists(name);
-    return original.getBlobAsBytes(name);
+  public ByteBuffer getBlobAsByteBuffer(String columnName) {
+    checkIfExists(columnName);
+    return original.getBlobAsByteBuffer(columnName);
   }
 
   @Nullable
   @Override
-  public Object getAsObject(String name) {
-    checkIfExists(name);
-    return original.getAsObject(name);
+  public byte[] getBlobAsBytes(String columnName) {
+    checkIfExists(columnName);
+    return original.getBlobAsBytes(columnName);
+  }
+
+  @Nullable
+  @Override
+  public Object getAsObject(String columnName) {
+    checkIfExists(columnName);
+    return original.getAsObject(columnName);
   }
 
   @Override
-  public boolean contains(String name) {
-    return containedColumnNames.contains(name);
+  public boolean contains(String columnName) {
+    return containedColumnNames.contains(columnName);
   }
 
   @Override

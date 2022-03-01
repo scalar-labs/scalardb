@@ -10,8 +10,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A {@code Value} for a signed integer from -2^53 to 2^53. The range is determined by the numbers
- * Double-precision floating-point format can exactly represent.
+ * A {@code Value} (column) for a signed integer from -2^53 to 2^53. The range is determined by the
+ * numbers Double-precision floating-point format can exactly represent.
  *
  * @author Hiroyuki Yamada
  */
@@ -28,8 +28,8 @@ public final class BigIntValue implements Value<Long> {
   /**
    * Constructs a {@code BigIntValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value}
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column)
    */
   public BigIntValue(String name, long value) {
     this.name = checkNotNull(name);
@@ -38,9 +38,10 @@ public final class BigIntValue implements Value<Long> {
   }
 
   /**
-   * Constructs a {@code BigIntValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code BigIntValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    */
   public BigIntValue(long value) {
     this(ANONYMOUS, value);

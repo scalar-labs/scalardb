@@ -107,7 +107,7 @@ public class ConditionSetter implements MutationConditionVisitor {
   }
 
   private Clause createClauseWith(ConditionalExpression e) {
-    String name = quoteIfNecessary(e.getName());
+    String name = quoteIfNecessary(e.getColumnName());
     switch (e.getOperator()) {
       case EQ:
         return eq(name, bindMarker());

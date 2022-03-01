@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A {@code Value} for a binary data
+ * A {@code Value} (column) for a binary data
  *
  * @author Hiroyuki Yamada
  */
@@ -27,8 +27,8 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   /**
    * Constructs a {@code BlobValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value}
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column)
    */
   public BlobValue(String name, @Nullable byte[] value) {
     this.name = checkNotNull(name);
@@ -42,9 +42,10 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   }
 
   /**
-   * Constructs a {@code BlobValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code BlobValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    */
   public BlobValue(@Nullable byte[] value) {
     this(ANONYMOUS, value);
@@ -53,8 +54,8 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   /**
    * Constructs a {@code BlobValue} with the specified name and value
    *
-   * @param name name of the {@code Value}
-   * @param value content of the {@code Value}
+   * @param name name of the {@code Value} (column)
+   * @param value value of the {@code Value} (column)
    */
   public BlobValue(String name, @Nullable ByteBuffer value) {
     this.name = checkNotNull(name);
@@ -68,9 +69,10 @@ public final class BlobValue implements Value<Optional<byte[]>> {
   }
 
   /**
-   * Constructs a {@code BlobValue} with the specified value. The name of this value is anonymous.
+   * Constructs a {@code BlobValue} with the specified value. The name of this value (column) is
+   * anonymous.
    *
-   * @param value content of the {@code Value}
+   * @param value value of the {@code Value} (column)
    */
   public BlobValue(@Nullable ByteBuffer value) {
     this(ANONYMOUS, value);

@@ -245,7 +245,7 @@ public class DynamoAdmin implements DistributedStorageAdmin {
       }
       if (metadata.getColumnDataType(partitionKeyName) == DataType.BLOB) {
         throw new IllegalArgumentException(
-            "BLOB type is supported only for the last value in partition key in DynamoDB: "
+            "BLOB type is supported only for the last column in partition key in DynamoDB: "
                 + partitionKeyName);
       }
     }

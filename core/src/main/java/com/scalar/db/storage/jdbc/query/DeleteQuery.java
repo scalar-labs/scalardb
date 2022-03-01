@@ -54,7 +54,7 @@ public class DeleteQuery implements Query {
     otherConditions.forEach(
         c ->
             conditions.add(
-                enclose(c.getName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
+                enclose(c.getColumnName(), rdbEngine) + getOperatorString(c.getOperator()) + "?"));
     return String.join(" AND ", conditions);
   }
 
