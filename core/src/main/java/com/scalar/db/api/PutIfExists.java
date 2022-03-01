@@ -1,6 +1,5 @@
 package com.scalar.db.api;
 
-import com.scalar.db.io.Value;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -18,9 +17,10 @@ public class PutIfExists implements MutationCondition {
   public PutIfExists() {}
 
   /**
-   * Returns an empty list of {@link Value}s since any conditions are not given to this object.
+   * Returns an empty list of {@link ConditionalExpression}s since any conditions are not given to
+   * this object.
    *
-   * @return an empty list of {@code Value}s
+   * @return an empty list of {@code ConditionalExpression}s
    */
   @Override
   @Nonnull

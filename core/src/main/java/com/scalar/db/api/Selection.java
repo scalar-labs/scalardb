@@ -2,7 +2,6 @@ package com.scalar.db.api;
 
 import com.google.common.base.MoreObjects;
 import com.scalar.db.io.Key;
-import com.scalar.db.io.Value;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,9 +30,9 @@ public abstract class Selection extends Operation {
   }
 
   /**
-   * Appends the specified name of {@link Value} to the list of projections.
+   * Appends the specified column name to the list of projections.
    *
-   * @param projection a name of {@code Value} to project
+   * @param projection a column name to project
    * @return this object
    */
   public Selection withProjection(String projection) {
@@ -42,10 +41,9 @@ public abstract class Selection extends Operation {
   }
 
   /**
-   * Appends the specified collection of the specified names of {@code Value}s to the list of
-   * projections.
+   * Appends the specified collection of the specified column names to the list of projections.
    *
-   * @param projections a collection of the name of {@code Value}s to project
+   * @param projections a collection of the column names to project
    * @return this object
    */
   public Selection withProjections(Collection<String> projections) {

@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.slf4j.Logger;
@@ -76,22 +75,23 @@ public class ResultImpl extends AbstractResult {
     return Optional.of(builder.build());
   }
 
+  @Deprecated
   @Override
-  public Optional<Value<?>> getValue(String name) {
-    return Optional.ofNullable(valuesWithDefaultValues.get().get(name));
+  public Optional<Value<?>> getValue(String columnName) {
+    return Optional.ofNullable(valuesWithDefaultValues.get().get(columnName));
   }
 
+  @Deprecated
   @Override
-  @Nonnull
   public Map<String, Value<?>> getValues() {
     return valuesWithDefaultValues.get();
   }
 
   @Override
-  public boolean isNull(String name) {
-    checkIfExists(name);
+  public boolean isNull(String columnName) {
+    checkIfExists(columnName);
 
-    Optional<Value<?>> value = values.get(name);
+    Optional<Value<?>> value = values.get(columnName);
     if (value.isPresent()) {
       if (value.get() instanceof TextValue) {
         return !value.get().getAsString().isPresent();
@@ -104,135 +104,135 @@ public class ResultImpl extends AbstractResult {
   }
 
   @Override
-  public boolean getBoolean(String name) {
-    checkIfExists(name);
+  public boolean getBoolean(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return false;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsBoolean();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsBoolean();
   }
 
   @Override
-  public int getInt(String name) {
-    checkIfExists(name);
+  public int getInt(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return 0;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsInt();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsInt();
   }
 
   @Override
-  public long getBigInt(String name) {
-    checkIfExists(name);
+  public long getBigInt(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return 0L;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsLong();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsLong();
   }
 
   @Override
-  public float getFloat(String name) {
-    checkIfExists(name);
+  public float getFloat(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return 0.0F;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsFloat();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsFloat();
   }
 
   @Override
-  public double getDouble(String name) {
-    checkIfExists(name);
+  public double getDouble(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return 0.0D;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsDouble();
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsDouble();
   }
 
   @Nullable
   @Override
-  public String getText(String name) {
-    checkIfExists(name);
+  public String getText(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsString().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsString().orElse(null);
   }
 
   @Nullable
   @Override
-  public ByteBuffer getBlobAsByteBuffer(String name) {
-    checkIfExists(name);
+  public ByteBuffer getBlobAsByteBuffer(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsByteBuffer().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsByteBuffer().orElse(null);
   }
 
   @Nullable
   @Override
-  public byte[] getBlobAsBytes(String name) {
-    checkIfExists(name);
+  public byte[] getBlobAsBytes(String columnName) {
+    checkIfExists(columnName);
 
-    if (isNull(name)) {
+    if (isNull(columnName)) {
       // default value
       return null;
     }
-    assert values.get(name).isPresent();
-    return values.get(name).get().getAsBytes().orElse(null);
+    assert values.get(columnName).isPresent();
+    return values.get(columnName).get().getAsBytes().orElse(null);
   }
 
   @Nullable
   @Override
-  public Object getAsObject(String name) {
-    checkIfExists(name);
-    if (isNull(name)) {
+  public Object getAsObject(String columnName) {
+    checkIfExists(columnName);
+    if (isNull(columnName)) {
       return null;
     }
 
-    switch (metadata.getColumnDataType(name)) {
+    switch (metadata.getColumnDataType(columnName)) {
       case BOOLEAN:
-        return getBoolean(name);
+        return getBoolean(columnName);
       case INT:
-        return getInt(name);
+        return getInt(columnName);
       case BIGINT:
-        return getBigInt(name);
+        return getBigInt(columnName);
       case FLOAT:
-        return getFloat(name);
+        return getFloat(columnName);
       case DOUBLE:
-        return getDouble(name);
+        return getDouble(columnName);
       case TEXT:
-        return getText(name);
+        return getText(columnName);
       case BLOB:
-        return getBlob(name);
+        return getBlob(columnName);
       default:
         throw new AssertionError();
     }
   }
 
   @Override
-  public boolean contains(String name) {
-    return values.containsKey(name);
+  public boolean contains(String columnName) {
+    return values.containsKey(columnName);
   }
 
   @Override

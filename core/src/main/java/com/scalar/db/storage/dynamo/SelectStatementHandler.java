@@ -145,7 +145,7 @@ public class SelectStatementHandler extends StatementHandler {
 
     if (!scan.getOrderings().isEmpty()) {
       Ordering ordering = scan.getOrderings().get(0);
-      if (ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getName())) {
+      if (ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getColumnName())) {
         // reverse scan
         builder.scanIndexForward(false);
       }

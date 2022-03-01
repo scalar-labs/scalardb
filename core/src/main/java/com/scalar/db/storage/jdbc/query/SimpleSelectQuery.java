@@ -98,7 +98,8 @@ public class SimpleSelectQuery implements SelectQuery {
       if (i < orderings.size()) {
         Scan.Ordering ordering = orderings.get(i++);
         if (reverse == null) {
-          reverse = ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getName());
+          reverse =
+              ordering.getOrder() != tableMetadata.getClusteringOrder(ordering.getColumnName());
         }
       } else {
         Scan.Ordering.Order order = tableMetadata.getClusteringOrder(clusteringKeyName);
@@ -116,7 +117,7 @@ public class SimpleSelectQuery implements SelectQuery {
 
     return " ORDER BY "
         + orderingList.stream()
-            .map(o -> enclose(o.getName(), rdbEngine) + " " + o.getOrder())
+            .map(o -> enclose(o.getColumnName(), rdbEngine) + " " + o.getOrder())
             .collect(Collectors.joining(","));
   }
 

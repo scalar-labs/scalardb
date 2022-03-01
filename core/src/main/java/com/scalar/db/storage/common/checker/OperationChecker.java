@@ -160,11 +160,12 @@ public class OperationChecker {
     Iterator<String> iterator = metadata.getClusteringKeyNames().iterator();
     for (Scan.Ordering ordering : orderings) {
       String clusteringKeyName = iterator.next();
-      if (!ordering.getName().equals(clusteringKeyName)) {
+      if (!ordering.getColumnName().equals(clusteringKeyName)) {
         throw new IllegalArgumentException(message.get());
       }
 
-      boolean rightOrder = ordering.getOrder() != metadata.getClusteringOrder(ordering.getName());
+      boolean rightOrder =
+          ordering.getOrder() != metadata.getClusteringOrder(ordering.getColumnName());
       if (reverse == null) {
         reverse = rightOrder;
       } else {
