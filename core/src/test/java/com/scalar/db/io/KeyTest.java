@@ -262,17 +262,261 @@ public class KeyTest {
   }
 
   @Test
-  public void get_ProperKeysGivenInConstructor_ShouldReturnWhatsSet() {
+  public void ofBoolean_ShouldReturnWhatsSet() {
     // Arrange
-    TextValue key1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue key2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key key = new Key(key1, key2);
+    String name = ANY_NAME_1;
+    boolean value = true;
+    Key key = Key.ofBoolean(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsBoolean()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getBoolean(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofInt_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    int value = 100;
+    Key key = Key.ofInt(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsInt()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getInt(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofBigInt_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    long value = 1000L;
+    Key key = Key.ofBigInt(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsLong()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getBigInt(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofFloat_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    float value = 1.0f;
+    Key key = Key.ofFloat(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsFloat()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getFloat(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofDouble_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    double value = 1.01d;
+    Key key = Key.ofDouble(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsDouble()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getDouble(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofText_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    String value = "value";
+    Key key = Key.ofText(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsString().isPresent()).isTrue();
+    assertThat(values.get(0).getAsString().get()).isEqualTo(value);
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getText(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofBlob_ByteArrayValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+    Key key = Key.ofBlob(name, value);
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsBytes().isPresent()).isTrue();
+    assertThat(Arrays.equals(values.get(0).getAsBytes().get(), value)).isTrue();
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getBlob(0)).isEqualTo(ByteBuffer.wrap(value));
+    assertThat(key.getBlobAsByteBuffer(0)).isEqualTo(ByteBuffer.wrap(value));
+    assertThat(key.getBlobAsBytes(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void ofBlob_ByteBufferValueGiven_ShouldReturnWhatsSet() {
+    // Arrange
+    String name = ANY_NAME_1;
+    byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+    Key key = Key.ofBlob(name, ByteBuffer.wrap(value));
+
+    // Act Assert
+    List<Value<?>> values = key.get();
+    assertThat(values.size()).isEqualTo(1);
+    assertThat(values.get(0).getName()).isEqualTo(name);
+    assertThat(values.get(0).getAsBytes().isPresent()).isTrue();
+    assertThat(Arrays.equals(values.get(0).getAsBytes().get(), value)).isTrue();
+
+    assertThat(key.size()).isEqualTo(1);
+    assertThat(key.getColumnName(0)).isEqualTo(name);
+    assertThat(key.getBlob(0)).isEqualTo(ByteBuffer.wrap(value));
+    assertThat(key.getBlobAsByteBuffer(0)).isEqualTo(ByteBuffer.wrap(value));
+    assertThat(key.getBlobAsBytes(0)).isEqualTo(value);
+  }
+
+  @Test
+  public void of_ShouldReturnWhatsSet() {
+    // Arrange
+    Key key1 = Key.of("key1", true, "key2", 5678);
+    Key key2 = Key.of("key3", 1234L, "key4", 4.56f, "key5", 1.23);
+    Key key3 =
+        Key.of(
+            "key6",
+            "string_key",
+            "key7",
+            "blob_key".getBytes(StandardCharsets.UTF_8),
+            "key8",
+            ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)),
+            "key9",
+            2468);
+    Key key4 = Key.of("key1", true, "key2", 5678, "key3", 1234L, "key4", 4.56f, "key5", 1.23);
+
+    // Act Assert
+    List<Value<?>> values1 = key1.get();
+    assertThat(values1.size()).isEqualTo(2);
+    assertThat(values1.get(0)).isEqualTo(new BooleanValue("key1", true));
+    assertThat(values1.get(1)).isEqualTo(new IntValue("key2", 5678));
+
+    assertThat(key1.size()).isEqualTo(2);
+    assertThat(key1.getColumnName(0)).isEqualTo("key1");
+    assertThat(key1.getBoolean(0)).isEqualTo(true);
+    assertThat(key1.getColumnName(1)).isEqualTo("key2");
+    assertThat(key1.getInt(1)).isEqualTo(5678);
+
+    List<Value<?>> values2 = key2.get();
+    assertThat(values2.size()).isEqualTo(3);
+    assertThat(values2.get(0)).isEqualTo(new BigIntValue("key3", 1234L));
+    assertThat(values2.get(1)).isEqualTo(new FloatValue("key4", 4.56f));
+    assertThat(values2.get(2)).isEqualTo(new DoubleValue("key5", 1.23));
+
+    assertThat(key2.size()).isEqualTo(3);
+    assertThat(key2.getColumnName(0)).isEqualTo("key3");
+    assertThat(key2.getBigInt(0)).isEqualTo(1234L);
+    assertThat(key2.getColumnName(1)).isEqualTo("key4");
+    assertThat(key2.getFloat(1)).isEqualTo(4.56f);
+    assertThat(key2.getColumnName(2)).isEqualTo("key5");
+    assertThat(key2.getDouble(2)).isEqualTo(1.23);
+
+    List<Value<?>> values3 = key3.get();
+    assertThat(values3.size()).isEqualTo(4);
+    assertThat(values3.get(0)).isEqualTo(new TextValue("key6", "string_key"));
+    assertThat(values3.get(1))
+        .isEqualTo(new BlobValue("key7", "blob_key".getBytes(StandardCharsets.UTF_8)));
+    assertThat(values3.get(2))
+        .isEqualTo(
+            new BlobValue("key8", ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8))));
+    assertThat(values3.get(3)).isEqualTo(new IntValue("key9", 2468));
+
+    assertThat(key3.size()).isEqualTo(4);
+    assertThat(key3.getColumnName(0)).isEqualTo("key6");
+    assertThat(key3.getText(0)).isEqualTo("string_key");
+    assertThat(key3.getColumnName(1)).isEqualTo("key7");
+    assertThat(key3.getBlob(1))
+        .isEqualTo(ByteBuffer.wrap("blob_key".getBytes(StandardCharsets.UTF_8)));
+    assertThat(key3.getBlobAsByteBuffer(1))
+        .isEqualTo(ByteBuffer.wrap("blob_key".getBytes(StandardCharsets.UTF_8)));
+    assertThat(key3.getBlobAsBytes(1)).isEqualTo("blob_key".getBytes(StandardCharsets.UTF_8));
+    assertThat(key3.getColumnName(2)).isEqualTo("key8");
+    assertThat(key3.getBlob(2))
+        .isEqualTo(ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(key3.getBlobAsByteBuffer(2))
+        .isEqualTo(ByteBuffer.wrap("blob_key2".getBytes(StandardCharsets.UTF_8)));
+    assertThat(key3.getBlobAsBytes(2)).isEqualTo("blob_key2".getBytes(StandardCharsets.UTF_8));
+    assertThat(key3.getColumnName(3)).isEqualTo("key9");
+    assertThat(key3.getInt(3)).isEqualTo(2468);
+
+    List<Value<?>> values4 = key4.get();
+    assertThat(values4.size()).isEqualTo(5);
+    assertThat(values4.get(0)).isEqualTo(new BooleanValue("key1", true));
+    assertThat(values4.get(1)).isEqualTo(new IntValue("key2", 5678));
+    assertThat(values4.get(2)).isEqualTo(new BigIntValue("key3", 1234L));
+    assertThat(values4.get(3)).isEqualTo(new FloatValue("key4", 4.56f));
+    assertThat(values4.get(4)).isEqualTo(new DoubleValue("key5", 1.23));
+
+    assertThat(key4.size()).isEqualTo(5);
+    assertThat(key1.getColumnName(0)).isEqualTo("key1");
+    assertThat(key1.getBoolean(0)).isEqualTo(true);
+    assertThat(key1.getColumnName(1)).isEqualTo("key2");
+    assertThat(key1.getInt(1)).isEqualTo(5678);
+    assertThat(key4.getColumnName(2)).isEqualTo("key3");
+    assertThat(key4.getBigInt(2)).isEqualTo(1234L);
+    assertThat(key4.getColumnName(3)).isEqualTo("key4");
+    assertThat(key4.getFloat(3)).isEqualTo(4.56f);
+    assertThat(key4.getColumnName(4)).isEqualTo("key5");
+    assertThat(key4.getDouble(4)).isEqualTo(1.23);
+  }
+
+  @Test
+  public void get_ProperKeysGivenInFactoryMethod_ShouldReturnWhatsSet() {
+    // Arrange
+    Key key = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
 
     // Act
     List<Value<?>> values = key.get();
 
     // Assert
-    assertThat(values).isEqualTo(Arrays.asList(key1, key2));
+    assertThat(values)
+        .isEqualTo(
+            Arrays.asList(
+                new TextValue(ANY_NAME_1, ANY_TEXT_1), new TextValue(ANY_NAME_2, ANY_TEXT_2)));
   }
 
   @Test
@@ -346,9 +590,7 @@ public class KeyTest {
   @Test
   public void get_TryToModifyReturned_ShouldThrowException() {
     // Arrange
-    TextValue key1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue key2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key key = new Key(key1, key2);
+    Key key = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
 
     // Act Assert
     List<Value<?>> values = key.get();
@@ -359,12 +601,8 @@ public class KeyTest {
   @Test
   public void equals_DifferentObjectsSameValuesGiven_ShouldReturnTrue() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    TextValue anotherKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue anotherKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Key anotherKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
 
     // Act
     boolean result = oneKey.equals(anotherKey);
@@ -376,9 +614,7 @@ public class KeyTest {
   @Test
   public void equals_SameObjectsGiven_ShouldReturnTrue() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
 
     // Act
     @SuppressWarnings("SelfEquals")
@@ -391,12 +627,8 @@ public class KeyTest {
   @Test
   public void equals_DifferentObjectsDifferentValuesGiven_ShouldReturnFalse() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    TextValue anotherKey1 = new TextValue(ANY_NAME_3, ANY_TEXT_3);
-    TextValue anotherKey2 = new TextValue(ANY_NAME_4, ANY_TEXT_4);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Key anotherKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
 
     // Act
     boolean result = oneKey.equals(anotherKey);
@@ -408,12 +640,13 @@ public class KeyTest {
   @Test
   public void equals_DifferentTypesSameValuesGiven_ShouldReturnFalse() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    BlobValue anotherKey1 = new BlobValue(ANY_NAME_1, ANY_TEXT_1.getBytes(StandardCharsets.UTF_8));
-    BlobValue anotherKey2 = new BlobValue(ANY_NAME_2, ANY_TEXT_2.getBytes(StandardCharsets.UTF_8));
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Key anotherKey =
+        Key.of(
+            ANY_NAME_1,
+            ANY_TEXT_1.getBytes(StandardCharsets.UTF_8),
+            ANY_NAME_2,
+            ANY_TEXT_2.getBytes(StandardCharsets.UTF_8));
 
     // Act
     boolean result = oneKey.equals(anotherKey);
@@ -425,12 +658,8 @@ public class KeyTest {
   @Test
   public void compareTo_ThisTextBiggerThanGiven_ShouldReturnPositive() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_3, ANY_TEXT_3);
-    TextValue oneKey2 = new TextValue(ANY_NAME_4, ANY_TEXT_4);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    TextValue anotherKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue anotherKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
+    Key anotherKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
 
     // Act
     int actual = oneKey.compareTo(anotherKey);
@@ -442,12 +671,8 @@ public class KeyTest {
   @Test
   public void compareTo_ThisNumberBiggerThanGiven_ShouldReturnPositive() {
     // Arrange
-    IntValue oneKey1 = new IntValue(ANY_NAME_1, ANY_INT_1);
-    IntValue oneKey2 = new IntValue(ANY_NAME_2, ANY_INT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    IntValue anotherKey1 = new IntValue(ANY_NAME_1, ANY_INT_1);
-    IntValue anotherKey2 = new IntValue(ANY_NAME_2, ANY_INT_1);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_INT_1, ANY_NAME_2, ANY_INT_2);
+    Key anotherKey = Key.of(ANY_NAME_1, ANY_INT_1, ANY_NAME_2, ANY_INT_1);
 
     // Act
     int actual = oneKey.compareTo(anotherKey);
@@ -459,12 +684,8 @@ public class KeyTest {
   @Test
   public void compareTo_ThisEqualsToGiven_ShouldReturnZero() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    IntValue oneKey2 = new IntValue(ANY_NAME_2, ANY_INT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    TextValue anotherKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    IntValue anotherKey2 = new IntValue(ANY_NAME_2, ANY_INT_2);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_INT_2);
+    Key anotherKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_INT_2);
 
     // Act
     int actual = oneKey.compareTo(anotherKey);
@@ -476,12 +697,8 @@ public class KeyTest {
   @Test
   public void compareTo_ThisTextSmallerThanGiven_ShouldReturnNegative() {
     // Arrange
-    TextValue oneKey1 = new TextValue(ANY_NAME_1, ANY_TEXT_1);
-    TextValue oneKey2 = new TextValue(ANY_NAME_2, ANY_TEXT_2);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    TextValue anotherKey1 = new TextValue(ANY_NAME_3, ANY_TEXT_3);
-    TextValue anotherKey2 = new TextValue(ANY_NAME_4, ANY_TEXT_4);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_TEXT_1, ANY_NAME_2, ANY_TEXT_2);
+    Key anotherKey = Key.of(ANY_NAME_3, ANY_TEXT_3, ANY_NAME_4, ANY_TEXT_4);
 
     // Act
     int actual = oneKey.compareTo(anotherKey);
@@ -493,12 +710,8 @@ public class KeyTest {
   @Test
   public void compareTo_ThisNumberSmallerThanGiven_ShouldReturnNegative() {
     // Arrange
-    IntValue oneKey1 = new IntValue(ANY_NAME_1, ANY_INT_1);
-    IntValue oneKey2 = new IntValue(ANY_NAME_2, ANY_INT_1);
-    Key oneKey = new Key(oneKey1, oneKey2);
-    IntValue anotherKey1 = new IntValue(ANY_NAME_1, ANY_INT_1);
-    IntValue anotherKey2 = new IntValue(ANY_NAME_2, ANY_INT_2);
-    Key anotherKey = new Key(anotherKey1, anotherKey2);
+    Key oneKey = Key.of(ANY_NAME_1, ANY_INT_1, ANY_NAME_2, ANY_INT_1);
+    Key anotherKey = Key.of(ANY_NAME_1, ANY_INT_1, ANY_NAME_2, ANY_INT_2);
 
     // Act
     int actual = oneKey.compareTo(anotherKey);
