@@ -3,7 +3,6 @@ package com.scalar.db.io;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -56,7 +55,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param booleanValue a BOOLEAN value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link
+   *     #ofBoolean(String, boolean)} instead
    */
+  @Deprecated
   public Key(String columnName, boolean booleanValue) {
     values = Collections.singletonList(new BooleanValue(columnName, booleanValue));
   }
@@ -65,8 +67,11 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * Constructs a {@code Key} with a single column with an INT type
    *
    * @param columnName a column name
-   * @param intValue a INT value of the column
+   * @param intValue an INT value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofInt(String,
+   *     int)} instead
    */
+  @Deprecated
   public Key(String columnName, int intValue) {
     values = Collections.singletonList(new IntValue(columnName, intValue));
   }
@@ -76,7 +81,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param bigIntValue a BIGINT value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBigInt(String,
+   *     long)} instead
    */
+  @Deprecated
   public Key(String columnName, long bigIntValue) {
     values = Collections.singletonList(new BigIntValue(columnName, bigIntValue));
   }
@@ -86,7 +94,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param floatValue a FLOAT value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofFloat(String,
+   *     float)} instead
    */
+  @Deprecated
   public Key(String columnName, float floatValue) {
     values = Collections.singletonList(new FloatValue(columnName, floatValue));
   }
@@ -96,7 +107,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param doubleValue a DOUBLE value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofDouble(String,
+   *     double)} instead
    */
+  @Deprecated
   public Key(String columnName, double doubleValue) {
     values = Collections.singletonList(new DoubleValue(columnName, doubleValue));
   }
@@ -106,7 +120,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param textValue a TEXT value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofText(String,
+   *     String)} instead
    */
+  @Deprecated
   public Key(String columnName, String textValue) {
     values = Collections.singletonList(new TextValue(columnName, textValue));
   }
@@ -116,7 +133,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param blobValue a BLOB value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBlob(String,
+   *     byte[])} instead
    */
+  @Deprecated
   public Key(String columnName, byte[] blobValue) {
     values = Collections.singletonList(new BlobValue(columnName, blobValue));
   }
@@ -126,7 +146,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    *
    * @param columnName a column name
    * @param blobValue a BLOB value of the column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #ofBlob(String,
+   *     ByteBuffer)} instead
    */
+  @Deprecated
   public Key(String columnName, ByteBuffer blobValue) {
     values = Collections.singletonList(new BlobValue(columnName, blobValue));
   }
@@ -138,7 +161,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v1 a value of the 1st column
    * @param n2 a column name of the 2nd column
    * @param v2 a value of the 2nd column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   *     Object, String, Object)} instead
    */
+  @Deprecated
   public Key(String n1, Object v1, String n2, Object v2) {
     values = Arrays.asList(toValue(n1, v1), toValue(n2, v2));
   }
@@ -152,7 +178,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v2 a value of the 2nd column
    * @param n3 a column name of the 3rd column
    * @param v3 a value of the 3rd column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   *     Object, String, Object, String, Object)} instead
    */
+  @Deprecated
   public Key(String n1, Object v1, String n2, Object v2, String n3, Object v3) {
     values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3));
   }
@@ -168,7 +197,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v3 a value of the 3rd column
    * @param n4 a column of the 4th column
    * @param v4 a value of the 4th column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   *     Object, String, Object, String, Object, String, Object)} instead
    */
+  @Deprecated
   public Key(
       String n1, Object v1, String n2, Object v2, String n3, Object v3, String n4, Object v4) {
     values = Arrays.asList(toValue(n1, v1), toValue(n2, v2), toValue(n3, v3), toValue(n4, v4));
@@ -187,7 +219,10 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
    * @param v4 a value of the 4th column
    * @param n5 a column of the 5th column
    * @param v5 a value of the 5th column
+   * @deprecated As of release 3.6.0. Will be removed in release 5.0.0. Use {@link #of(String,
+   *     Object, String, Object, String, Object, String, Object, String, Object)} instead
    */
+  @Deprecated
   public Key(
       String n1,
       Object v1,
@@ -427,9 +462,170 @@ public final class Key implements Comparable<Key>, Iterable<Value<?>> {
 
   @Override
   public int compareTo(Key o) {
-    return ComparisonChain.start()
-        .compare(values, o.values, Ordering.<Value<?>>natural().lexicographical())
-        .result();
+    return Ordering.<Value<?>>natural().lexicographical().compare(values, o.values);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a BOOLEAN type
+   *
+   * @param columnName a column name
+   * @param value a BOOLEAN value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofBoolean(String columnName, boolean value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with an INT type
+   *
+   * @param columnName a column name
+   * @param value an INT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofInt(String columnName, int value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a BIGINT type
+   *
+   * @param columnName a column name
+   * @param value a BIGINT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofBigInt(String columnName, long value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a FLOAT type
+   *
+   * @param columnName a column name
+   * @param value a FLOAT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofFloat(String columnName, float value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a DOUBLE type
+   *
+   * @param columnName a column name
+   * @param value a DOUBLE value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofDouble(String columnName, double value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a TEXT type
+   *
+   * @param columnName a column name
+   * @param value a TEXT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofText(String columnName, String value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a BLOB type from a byte array
+   *
+   * @param columnName a column name
+   * @param value a TEXT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofBlob(String columnName, byte[] value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Creates a {@code Key} object with a single column with a BLOB type from a ByteBuffer
+   *
+   * @param columnName a column name
+   * @param value a TEXT value of the column
+   * @return a {@code Key} object
+   */
+  public static Key ofBlob(String columnName, ByteBuffer value) {
+    return new Key(columnName, value);
+  }
+
+  /**
+   * Create a {@code Key} object with two columns
+   *
+   * @param n1 a column name of the 1st column
+   * @param v1 a value of the 1st column
+   * @param n2 a column name of the 2nd column
+   * @param v2 a value of the 2nd column
+   * @return a {@code Key} object
+   */
+  public static Key of(String n1, Object v1, String n2, Object v2) {
+    return new Key(n1, v1, n2, v2);
+  }
+
+  /**
+   * Create a {@code Key} object with three columns
+   *
+   * @param n1 a column name of the 1st column
+   * @param v1 a value of the 1st column
+   * @param n2 a column name of the 2nd column
+   * @param v2 a value of the 2nd column
+   * @param n3 a column name of the 3rd column
+   * @param v3 a value of the 3rd column
+   * @return a {@code Key} object
+   */
+  public static Key of(String n1, Object v1, String n2, Object v2, String n3, Object v3) {
+    return new Key(n1, v1, n2, v2, n3, v3);
+  }
+
+  /**
+   * Create a {@code Key} object with four columns
+   *
+   * @param n1 a column name of the 1st column
+   * @param v1 a value of the 1st column
+   * @param n2 a column name of the 2nd column
+   * @param v2 a value of the 2nd column
+   * @param n3 a column name of the 3rd column
+   * @param v3 a value of the 3rd column
+   * @param n4 a column of the 4th column
+   * @param v4 a value of the 4th column
+   * @return a {@code Key} object
+   */
+  public static Key of(
+      String n1, Object v1, String n2, Object v2, String n3, Object v3, String n4, Object v4) {
+    return new Key(n1, v1, n2, v2, n3, v3, n4, v4);
+  }
+
+  /**
+   * Create a {@code Key} object with five columns
+   *
+   * @param n1 a column name of the 1st column
+   * @param v1 a value of the 1st column
+   * @param n2 a column name of the 2nd column
+   * @param v2 a value of the 2nd column
+   * @param n3 a column name of the 3rd column
+   * @param v3 a value of the 3rd column
+   * @param n4 a column of the 4th column
+   * @param v4 a value of the 4th column
+   * @param n5 a column of the 5th column
+   * @param v5 a value of the 5th column
+   * @return a {@code Key} object
+   */
+  public static Key of(
+      String n1,
+      Object v1,
+      String n2,
+      Object v2,
+      String n3,
+      Object v3,
+      String n4,
+      Object v4,
+      String n5,
+      Object v5) {
+    return new Key(n1, v1, n2, v2, n3, v3, n4, v4, n5, v5);
   }
 
   /**
