@@ -25,9 +25,9 @@ Scalar DB is composed of universal transaction manager, storage abstraction, and
 
 ## Data Model
 
-The data model of Scalar DB is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of values. The value is uniquely mapped by a primary key composed of partition-key, clustering-key and value-name as described in the following scheme.
+The data model of Scalar DB is a multi-dimensional map based on the key-value data model. A logical record is composed of partition-key, clustering-key and a set of columns. The column value is uniquely mapped by a primary key composed of partition-key, clustering-key and column-name as described in the following scheme.
 
-(partition-key, clustering-key, value-name) -> value-content
+(partition-key, clustering-key, column-name) -> column-value
 
 
 <p align="center">
