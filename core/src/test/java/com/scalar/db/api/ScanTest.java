@@ -21,7 +21,7 @@ public class ScanTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
-    Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
+    Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     return new Scan(partitionKey)
         .withStart(startClusteringKey, false)
@@ -35,7 +35,7 @@ public class ScanTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_4);
-    Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
+    Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     return new Scan(partitionKey)
         .withStart(startClusteringKey, false)
@@ -51,7 +51,7 @@ public class ScanTest {
     Key partitionKey = new Key(ANY_NAME_1, ANY_TEXT_1);
     Key startClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_2);
     Key endClusteringKey = new Key(ANY_NAME_2, ANY_TEXT_3);
-    Scan.Ordering ordering = new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC);
+    Scan.Ordering ordering = Scan.Ordering.asc(ANY_NAME_2);
 
     // Act
     Scan scan =
@@ -140,9 +140,9 @@ public class ScanTest {
   public void equals_ScanWithDifferentOrderingGiven_ShouldReturnFalse() {
     // Arrange
     Scan scan = prepareScan();
-    scan.withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.DESC));
+    scan.withOrdering(Scan.Ordering.desc(ANY_NAME_2));
     Scan another = prepareScan();
-    another.withOrdering(new Scan.Ordering(ANY_NAME_2, Scan.Ordering.Order.ASC));
+    another.withOrdering(Scan.Ordering.asc(ANY_NAME_2));
 
     // Act
     boolean ret = scan.equals(another);
