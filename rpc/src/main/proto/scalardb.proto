@@ -163,6 +163,10 @@ service DistributedStorageAdmin {
   }
   rpc TruncateTable(TruncateTableRequest) returns (google.protobuf.Empty) {
   }
+  rpc CreateIndex(CreateIndexRequest) returns (google.protobuf.Empty) {
+  }
+  rpc DropIndex(DropIndexRequest) returns (google.protobuf.Empty) {
+  }
   rpc GetTableMetadata(GetTableMetadataRequest) returns (GetTableMetadataResponse) {
   }
   rpc GetNamespaceTableNames(GetNamespaceTableNamesRequest) returns (GetNamespaceTableNamesResponse) {
@@ -215,6 +219,19 @@ message DropTableRequest {
 message TruncateTableRequest {
   string namespace = 1;
   string table = 2;
+}
+
+message CreateIndexRequest {
+  string namespace = 1;
+  string table = 2;
+  string column_name = 3;
+  map<string, string> options = 4;
+}
+
+message DropIndexRequest {
+  string namespace = 1;
+  string table = 2;
+  string column_name = 3;
 }
 
 message GetTableMetadataRequest {

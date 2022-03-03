@@ -1,5 +1,6 @@
 package com.scalar.db.storage.dynamo;
 
+import static com.scalar.db.util.ScalarDbUtils.getFullTableName;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,8 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
+import software.amazon.awssdk.services.dynamodb.model.IndexStatus;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesRequest;
 import software.amazon.awssdk.services.dynamodb.model.ListTablesResponse;
@@ -59,6 +62,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import software.amazon.awssdk.services.dynamodb.model.TableStatus;
 import software.amazon.awssdk.services.dynamodb.model.UpdateContinuousBackupsRequest;
+import software.amazon.awssdk.services.dynamodb.model.UpdateTableRequest;
 
 public class DynamoAdminTest {
 
@@ -918,5 +922,134 @@ public class DynamoAdminTest {
 
     // Assert
     assertThat(actualNames).isEqualTo(tableNames);
+  }
+
+  @Test
+  public void createIndex_ShouldCreateIndexProperly() throws ExecutionException {
+    // Arrange
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("bigint").build())
+                                .put("c3", AttributeValue.builder().s("boolean").build())
+                                .put("c4", AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
+                    AttributeValue.builder()
+                        .l(
+                            AttributeValue.builder().s("c2").build(),
+                            AttributeValue.builder().s("c3").build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c2", AttributeValue.builder().s("DESC").build())
+                                .put("c3", AttributeValue.builder().s("ASC").build())
+                                .build())
+                        .build())
+                .build());
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    GlobalSecondaryIndexDescription globalSecondaryIndexDescription =
+        mock(GlobalSecondaryIndexDescription.class);
+    when(tableDescription.globalSecondaryIndexes())
+        .thenReturn(Collections.singletonList(globalSecondaryIndexDescription));
+    String indexName = getFullTableName(NAMESPACE, TABLE) + ".global_index.c4";
+    when(globalSecondaryIndexDescription.indexName()).thenReturn(indexName);
+    when(globalSecondaryIndexDescription.indexStatus()).thenReturn(IndexStatus.ACTIVE);
+
+    // Act
+    admin.createIndex(NAMESPACE, TABLE, "c4", Collections.emptyMap());
+
+    // Assert
+    verify(client).updateTable(any(UpdateTableRequest.class));
+    verify(applicationAutoScalingClient, times(2))
+        .putScalingPolicy(any(PutScalingPolicyRequest.class));
+    verify(applicationAutoScalingClient, times(2))
+        .registerScalableTarget(any(RegisterScalableTargetRequest.class));
+  }
+
+  @Test
+  public void dropIndex_ShouldDropIndexProperly() throws ExecutionException {
+    // Arrange
+    GetItemResponse getItemResponse = mock(GetItemResponse.class);
+    when(client.getItem(any(GetItemRequest.class))).thenReturn(getItemResponse);
+    when(getItemResponse.item())
+        .thenReturn(
+            ImmutableMap.<String, AttributeValue>builder()
+                .put(
+                    DynamoAdmin.METADATA_ATTR_TABLE,
+                    AttributeValue.builder().s(FULL_TABLE_NAME).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_COLUMNS,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c1", AttributeValue.builder().s("text").build())
+                                .put("c2", AttributeValue.builder().s("bigint").build())
+                                .put("c3", AttributeValue.builder().s("boolean").build())
+                                .put("c4", AttributeValue.builder().s("int").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_PARTITION_KEY,
+                    AttributeValue.builder().l(AttributeValue.builder().s("c1").build()).build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_ORDERS,
+                    AttributeValue.builder()
+                        .l(
+                            AttributeValue.builder().s("c2").build(),
+                            AttributeValue.builder().s("c3").build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_CLUSTERING_KEY,
+                    AttributeValue.builder()
+                        .m(
+                            ImmutableMap.<String, AttributeValue>builder()
+                                .put("c2", AttributeValue.builder().s("DESC").build())
+                                .put("c3", AttributeValue.builder().s("ASC").build())
+                                .build())
+                        .build())
+                .put(
+                    DynamoAdmin.METADATA_ATTR_SECONDARY_INDEX,
+                    AttributeValue.builder().ss("c4").build())
+                .build());
+
+    DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+    when(client.describeTable(any(DescribeTableRequest.class))).thenReturn(describeTableResponse);
+    TableDescription tableDescription = mock(TableDescription.class);
+    when(describeTableResponse.table()).thenReturn(tableDescription);
+    when(tableDescription.globalSecondaryIndexes()).thenReturn(Collections.emptyList());
+
+    // Act
+    admin.dropIndex(NAMESPACE, TABLE, "c4");
+
+    // Assert
+    verify(client).updateTable(any(UpdateTableRequest.class));
+    verify(applicationAutoScalingClient, times(2))
+        .deleteScalingPolicy(any(DeleteScalingPolicyRequest.class));
+    verify(applicationAutoScalingClient, times(2))
+        .deregisterScalableTarget(any(DeregisterScalableTargetRequest.class));
   }
 }

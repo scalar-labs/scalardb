@@ -5,9 +5,11 @@ import com.google.inject.Inject;
 import com.scalar.db.api.DistributedStorageAdmin;
 import com.scalar.db.api.TableMetadata;
 import com.scalar.db.exception.storage.ExecutionException;
+import com.scalar.db.rpc.CreateIndexRequest;
 import com.scalar.db.rpc.CreateNamespaceRequest;
 import com.scalar.db.rpc.CreateTableRequest;
 import com.scalar.db.rpc.DistributedStorageAdminGrpc;
+import com.scalar.db.rpc.DropIndexRequest;
 import com.scalar.db.rpc.DropNamespaceRequest;
 import com.scalar.db.rpc.DropTableRequest;
 import com.scalar.db.rpc.GetNamespaceTableNamesRequest;
@@ -161,6 +163,36 @@ public class GrpcAdmin implements DistributedStorageAdmin {
                     TruncateTableRequest.newBuilder()
                         .setNamespace(namespace)
                         .setTable(table)
+                        .build()));
+  }
+
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .createIndex(
+                    CreateIndexRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setColumnName(columnName)
+                        .putAllOptions(options)
+                        .build()));
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    execute(
+        () ->
+            stub.withDeadlineAfter(config.getDeadlineDurationMillis(), TimeUnit.MILLISECONDS)
+                .dropIndex(
+                    DropIndexRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTable(table)
+                        .setColumnName(columnName)
                         .build()));
   }
 

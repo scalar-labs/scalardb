@@ -79,10 +79,7 @@ public interface DistributedStorageAdmin {
    * @throws ExecutionException if the operation failed
    */
   default void createNamespace(String namespace, boolean ifNotExists) throws ExecutionException {
-    if (ifNotExists && namespaceExists(namespace)) {
-      return;
-    }
-    createNamespace(namespace, Collections.emptyMap());
+    createNamespace(namespace, ifNotExists, Collections.emptyMap());
   }
 
   /**
@@ -147,10 +144,7 @@ public interface DistributedStorageAdmin {
   default void createTable(
       String namespace, String table, TableMetadata metadata, boolean ifNotExists)
       throws ExecutionException {
-    if (ifNotExists && tableExists(namespace, table)) {
-      return;
-    }
-    createTable(namespace, table, metadata, Collections.emptyMap());
+    createTable(namespace, table, metadata, ifNotExists, Collections.emptyMap());
   }
 
   /**
@@ -225,6 +219,115 @@ public interface DistributedStorageAdmin {
   void truncateTable(String namespace, String table) throws ExecutionException;
 
   /**
+   * Creates a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to create a secondary index
+   * @param table a table to create a secondary index
+   * @param columnName a name of the target column
+   * @param options options to create a secondary index
+   * @throws ExecutionException if the operation failed
+   */
+  void createIndex(String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException;
+
+  /**
+   * Creates a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to create a secondary index
+   * @param table a table to create a secondary index
+   * @param columnName a name of the target column
+   * @param ifNotExists if set to true, the secondary index will be created only if it does not
+   *     exist already. If set to false, it will try to create the secondary index but may throw an
+   *     exception if it already exists
+   * @param options options to create a secondary index
+   * @throws ExecutionException if the operation failed
+   */
+  default void createIndex(
+      String namespace,
+      String table,
+      String columnName,
+      boolean ifNotExists,
+      Map<String, String> options)
+      throws ExecutionException {
+    if (ifNotExists && indexExists(namespace, table, columnName)) {
+      return;
+    }
+    createIndex(namespace, table, columnName, options);
+  }
+
+  /**
+   * Creates a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to create a secondary index
+   * @param table a table to create a secondary index
+   * @param columnName a name of the target column
+   * @param ifNotExists if set to true, the secondary index will be created only if it does not
+   *     exist already. If set to false, it will try to create the secondary index but may throw an
+   *     exception if it already exists
+   * @throws ExecutionException if the operation failed
+   */
+  default void createIndex(String namespace, String table, String columnName, boolean ifNotExists)
+      throws ExecutionException {
+    createIndex(namespace, table, columnName, ifNotExists, Collections.emptyMap());
+  }
+
+  /**
+   * Creates a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to create a secondary index
+   * @param table a table to create a secondary index
+   * @param columnName a name of the target column
+   * @throws ExecutionException if the operation failed
+   */
+  default void createIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    createIndex(namespace, table, columnName, Collections.emptyMap());
+  }
+
+  /**
+   * Drops a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to drop a secondary index
+   * @param table a table to drop a secondary index
+   * @param columnName a name of the target column
+   * @throws ExecutionException if the operation failed
+   */
+  void dropIndex(String namespace, String table, String columnName) throws ExecutionException;
+
+  /**
+   * Drops a secondary index for the specified column of the specified table.
+   *
+   * @param namespace a namespace to drop a secondary index
+   * @param table a table to drop a secondary index
+   * @param columnName a name of the target column
+   * @param ifExists if set to true, the secondary index will be dropped only if it exists. If set
+   *     to false, it will try to drop the secondary index but may throw an exception if it does not
+   *     exist
+   * @throws ExecutionException if the operation failed
+   */
+  default void dropIndex(String namespace, String table, String columnName, boolean ifExists)
+      throws ExecutionException {
+    if (ifExists && !indexExists(namespace, table, columnName)) {
+      return;
+    }
+    dropIndex(namespace, table, columnName);
+  }
+
+  /**
+   * Returns true if the secondary index exists.
+   *
+   * @param namespace a namespace
+   * @param table a table
+   * @param columnName a name of the target column
+   * @return true if the secondary index exists, false otherwise
+   * @throws ExecutionException if the operation failed
+   */
+  default boolean indexExists(String namespace, String table, String columnName)
+      throws ExecutionException {
+    return getTableMetadata(namespace, table).getSecondaryIndexNames().contains(columnName);
+  }
+
+  /**
    * Retrieves the table metadata of the specified table.
    *
    * @param namespace a namespace to retrieve
@@ -244,7 +347,7 @@ public interface DistributedStorageAdmin {
   Set<String> getNamespaceTableNames(String namespace) throws ExecutionException;
 
   /**
-   * Return true if the namespace exists.
+   * Returns true if the namespace exists.
    *
    * @param namespace a namespace
    * @return true if the namespace exists, false otherwise
@@ -253,7 +356,7 @@ public interface DistributedStorageAdmin {
   boolean namespaceExists(String namespace) throws ExecutionException;
 
   /**
-   * Return true if the table exists.
+   * Returns true if the table exists.
    *
    * @param namespace a namespace
    * @param table a table

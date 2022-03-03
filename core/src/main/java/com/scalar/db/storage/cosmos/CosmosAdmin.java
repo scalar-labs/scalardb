@@ -12,6 +12,7 @@ import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.models.CompositePath;
 import com.azure.cosmos.models.CompositePathSortOrder;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosContainerResponse;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.CosmosStoredProcedureProperties;
@@ -89,7 +90,7 @@ public class CosmosAdmin implements DistributedStorageAdmin {
     checkMetadata(metadata);
     try {
       createContainer(namespace, table, metadata);
-      addTableMetadata(namespace, table, metadata);
+      putTableMetadata(namespace, table, metadata);
     } catch (RuntimeException e) {
       throw new ExecutionException("creating the container failed", e);
     }
@@ -140,6 +141,12 @@ public class CosmosAdmin implements DistributedStorageAdmin {
 
   private CosmosContainerProperties computeContainerProperties(
       String table, TableMetadata metadata) {
+    IndexingPolicy indexingPolicy = computeIndexingPolicy(metadata);
+    return new CosmosContainerProperties(table, PARTITION_KEY_PATH)
+        .setIndexingPolicy(indexingPolicy);
+  }
+
+  private IndexingPolicy computeIndexingPolicy(TableMetadata metadata) {
     IndexingPolicy indexingPolicy = new IndexingPolicy();
     List<IncludedPath> paths = new ArrayList<>();
 
@@ -181,12 +188,10 @@ public class CosmosAdmin implements DistributedStorageAdmin {
       indexingPolicy.setIncludedPaths(paths);
     }
     indexingPolicy.setExcludedPaths(Collections.singletonList(new ExcludedPath(EXCLUDED_PATH)));
-
-    return new CosmosContainerProperties(table, PARTITION_KEY_PATH)
-        .setIndexingPolicy(indexingPolicy);
+    return indexingPolicy;
   }
 
-  private void addTableMetadata(String namespace, String table, TableMetadata metadata)
+  private void putTableMetadata(String namespace, String table, TableMetadata metadata)
       throws ExecutionException {
     try {
       createMetadataDatabaseAndContainerIfNotExists();
@@ -317,6 +322,53 @@ public class CosmosAdmin implements DistributedStorageAdmin {
                   new CosmosItemRequestOptions()));
     } catch (RuntimeException e) {
       throw new ExecutionException("truncating the container failed", e);
+    }
+  }
+
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    TableMetadata newTableMetadata =
+        TableMetadata.newBuilder(tableMetadata).addSecondaryIndex(columnName).build();
+
+    updateIndexingPolicy(namespace, table, newTableMetadata);
+
+    // update metadata
+    putTableMetadata(namespace, table, newTableMetadata);
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    TableMetadata tableMetadata = getTableMetadata(namespace, table);
+    TableMetadata newTableMetadata =
+        TableMetadata.newBuilder(tableMetadata).removeSecondaryIndex(columnName).build();
+
+    updateIndexingPolicy(namespace, table, newTableMetadata);
+
+    // update metadata
+    putTableMetadata(namespace, table, newTableMetadata);
+  }
+
+  private void updateIndexingPolicy(
+      String databaseName, String containerName, TableMetadata newTableMetadata)
+      throws ExecutionException {
+    CosmosDatabase database = client.getDatabase(databaseName);
+    try {
+      // get the existing container properties
+      CosmosContainerResponse response =
+          database.createContainerIfNotExists(containerName, PARTITION_KEY_PATH);
+      CosmosContainerProperties properties = response.getProperties();
+
+      // set the new index policy to the container properties
+      properties.setIndexingPolicy(computeIndexingPolicy(newTableMetadata));
+
+      // update the container properties
+      database.getContainer(containerName).replace(properties);
+    } catch (RuntimeException e) {
+      throw new ExecutionException("dropping the secondary index failed", e);
     }
   }
 

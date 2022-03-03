@@ -53,7 +53,7 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       String namespace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     createTableInternal(namespace, table, metadata, options);
-    createSecondaryIndex(namespace, table, metadata.getSecondaryIndexNames());
+    createSecondaryIndexes(namespace, table, metadata.getSecondaryIndexNames(), options);
   }
 
   @Override
@@ -116,6 +116,44 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       throw new ExecutionException(
           String.format("truncating the %s table failed", getFullTableName(namespace, table)), e);
     }
+  }
+
+  @Override
+  public void createIndex(
+      String namespace, String table, String columnName, Map<String, String> options)
+      throws ExecutionException {
+    String indexName = getIndexName(table, columnName);
+    SchemaStatement createIndex =
+        SchemaBuilder.createIndex(indexName)
+            .onTable(quoteIfNecessary(namespace), quoteIfNecessary(table))
+            .andColumn(quoteIfNecessary(columnName));
+    try {
+      clusterManager.getSession().execute(createIndex.getQueryString());
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "creating the secondary index for %s.%s.%s failed", namespace, table, columnName),
+          e);
+    }
+  }
+
+  @Override
+  public void dropIndex(String namespace, String table, String columnName)
+      throws ExecutionException {
+    String indexName = getIndexName(table, columnName);
+    SchemaStatement dropIndex = SchemaBuilder.dropIndex(quoteIfNecessary(namespace), indexName);
+    try {
+      clusterManager.getSession().execute(dropIndex.getQueryString());
+    } catch (RuntimeException e) {
+      throw new ExecutionException(
+          String.format(
+              "dropping the secondary index for %s.%s.%s failed", namespace, table, columnName),
+          e);
+    }
+  }
+
+  private String getIndexName(String table, String columnName) {
+    return String.format("%s_%s_%s", table, INDEX_NAME_PREFIX, columnName);
   }
 
   @Override
@@ -196,10 +234,10 @@ public class CassandraAdmin implements DistributedStorageAdmin {
 
   @VisibleForTesting
   void createTableInternal(
-      String fullKeyspace, String table, TableMetadata metadata, Map<String, String> options)
+      String keyspace, String table, TableMetadata metadata, Map<String, String> options)
       throws ExecutionException {
     Create createTable =
-        SchemaBuilder.createTable(quoteIfNecessary(fullKeyspace), quoteIfNecessary(table));
+        SchemaBuilder.createTable(quoteIfNecessary(keyspace), quoteIfNecessary(table));
     // Add columns
     for (String pk : metadata.getPartitionKeyNames()) {
       createTable =
@@ -250,27 +288,16 @@ public class CassandraAdmin implements DistributedStorageAdmin {
       clusterManager.getSession().execute(createTableWithOptions.getQueryString());
     } catch (RuntimeException e) {
       throw new ExecutionException(
-          String.format("creating the table %s.%s failed", fullKeyspace, table), e);
+          String.format("creating the table %s.%s failed", keyspace, table), e);
     }
   }
 
   @VisibleForTesting
-  void createSecondaryIndex(String fullKeyspace, String table, Set<String> secondaryIndexNames)
+  void createSecondaryIndexes(
+      String keyspace, String table, Set<String> secondaryIndexNames, Map<String, String> options)
       throws ExecutionException {
-    for (String index : secondaryIndexNames) {
-      String indexName = String.format("%s_%s_%s", table, INDEX_NAME_PREFIX, index);
-      SchemaStatement createIndex =
-          SchemaBuilder.createIndex(indexName)
-              .onTable(quoteIfNecessary(fullKeyspace), quoteIfNecessary(table))
-              .andColumn(quoteIfNecessary(index));
-      try {
-        clusterManager.getSession().execute(createIndex.getQueryString());
-      } catch (RuntimeException e) {
-        throw new ExecutionException(
-            String.format(
-                "creating the secondary index for %s.%s.%s failed", fullKeyspace, table, index),
-            e);
-      }
+    for (String name : secondaryIndexNames) {
+      createIndex(keyspace, table, name, options);
     }
   }
 
